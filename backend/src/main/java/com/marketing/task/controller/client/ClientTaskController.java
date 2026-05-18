@@ -1,10 +1,16 @@
 package com.marketing.task.controller.client;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.Result;
 import com.marketing.task.context.UserContext;
 import com.marketing.task.context.UserContextHolder;
+import com.marketing.task.domain.dto.TaskInstanceDetailDTO;
 import com.marketing.task.domain.entity.Task;
+import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.domain.entity.TaskStepPlatform;
 import com.marketing.task.domain.entity.UserTaskInstance;
+import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +24,8 @@ import java.util.List;
 public class ClientTaskController {
     private final TaskService taskService;
     private final StepAdvanceEngine stepAdvanceEngine;
+    private final TaskStepMapper taskStepMapper;
+    private final TaskStepPlatformMapper taskStepPlatformMapper;
 
     @GetMapping("/list")
     public Result<List<Task>> list() {
@@ -26,10 +34,18 @@ public class ClientTaskController {
     }
 
     @GetMapping("/{taskId}")
-    public Result<UserTaskInstance> detail(@PathVariable Long taskId) {
+    public Result<TaskInstanceDetailDTO> detail(@PathVariable Long taskId) {
         UserContext userContext = UserContextHolder.get();
         Task task = taskService.requireTask(taskId);
-        return Result.ok(taskService.getOrCreateInstance(task, userContext));
+        UserTaskInstance instance = taskService.getOrCreateInstance(task, userContext);
+        List<TaskStep> steps = taskStepMapper.selectList(new LambdaQueryWrapper<TaskStep>()
+                .eq(TaskStep::getTaskId, taskId).orderByAsc(TaskStep::getSeq));
+        List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
+                new LambdaQueryWrapper<TaskStepPlatform>()
+                        .inSql(TaskStepPlatform::getStepId,
+                                "SELECT id FROM task_step WHERE task_id = " + taskId)
+                        .eq(TaskStepPlatform::getPlatform, userContext.getPlatform().name()));
+        return Result.ok(new TaskInstanceDetailDTO(instance, steps, stepPlatforms));
     }
 
     @PostMapping("/{taskId}/start")

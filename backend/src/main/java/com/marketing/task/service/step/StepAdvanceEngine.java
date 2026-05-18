@@ -50,6 +50,77 @@ public class StepAdvanceEngine {
         return instanceMapper.selectById(instance.getId());
     }
 
+    @Transactional
+    public UserTaskInstance callback(UserTaskInstance instance, String callbackEventKey) {
+        TaskStep step = taskStepMapper.selectOne(new LambdaQueryWrapper<TaskStep>()
+                .eq(TaskStep::getTaskId, instance.getTaskId())
+                .eq(TaskStep::getSeq, instance.getCurrentStepSeq()));
+        if (step == null) {
+            throw new BusinessException("当前步骤不存在");
+        }
+        if (!StepType.CALLBACK.name().equals(step.getType())) {
+            throw new BusinessException("当前步骤不是CALLBACK类型");
+        }
+        if (step.getCallbackEventKey() == null || !step.getCallbackEventKey().equals(callbackEventKey)) {
+            throw new BusinessException("回调事件Key不匹配");
+        }
+        completeStep(instance, step);
+        cascade(instance);
+        return instanceMapper.selectById(instance.getId());
+    }
+
+    @Transactional
+    public UserTaskInstance progress(UserTaskInstance instance, Long stepId, int progressValue) {
+        TaskStep step = taskStepMapper.selectById(stepId);
+        if (step == null || !step.getTaskId().equals(instance.getTaskId())) {
+            throw new BusinessException("步骤不存在");
+        }
+        if (!StepType.PROGRESS.name().equals(step.getType())) {
+            throw new BusinessException("当前步骤不是PROGRESS类型");
+        }
+
+        UserTaskStepProgress progress = progressMapper.selectOne(new LambdaQueryWrapper<UserTaskStepProgress>()
+                .eq(UserTaskStepProgress::getInstanceId, instance.getId())
+                .eq(UserTaskStepProgress::getStepId, step.getId()));
+
+        if (progress != null && StepProgressStatus.COMPLETED.name().equals(progress.getStatus())) {
+            return instanceMapper.selectById(instance.getId());
+        }
+
+        if (progress == null) {
+            progress = new UserTaskStepProgress();
+            progress.setInstanceId(instance.getId());
+            progress.setStepId(step.getId());
+        }
+
+        progress.setProgressValue(progressValue);
+
+        if (step.getTargetValue() != null && progressValue >= step.getTargetValue()) {
+            // Reach target: complete the step
+            progress.setStatus(StepProgressStatus.COMPLETED.name());
+            progress.setCompleteTime(LocalDateTime.now());
+            if (progress.getId() == null) {
+                progressMapper.insert(progress);
+            } else {
+                progressMapper.updateById(progress);
+            }
+            instance.setCurrentStepSeq(step.getSeq() + 1);
+            instanceMapper.updateById(instance);
+            cascade(instance);
+        } else {
+            // Still in progress
+            progress.setStatus(StepProgressStatus.IN_PROGRESS.name());
+            if (progress.getId() == null) {
+                progressMapper.insert(progress);
+            } else {
+                progressMapper.updateById(progress);
+            }
+            markInProgress(instance);
+        }
+
+        return instanceMapper.selectById(instance.getId());
+    }
+
     private void cascade(UserTaskInstance instance) {
         List<TaskStep> steps = taskStepMapper.selectList(new LambdaQueryWrapper<TaskStep>()
                 .eq(TaskStep::getTaskId, instance.getTaskId())

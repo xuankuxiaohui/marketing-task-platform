@@ -7,7 +7,14 @@ import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.InstanceStatus;
 import com.marketing.task.domain.enums.TaskStatus;
+import com.marketing.task.domain.dto.TaskAggregateDTO;
+import com.marketing.task.domain.entity.TaskFilter;
+import com.marketing.task.domain.entity.TaskPlatform;
+import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.mapper.TaskFilterMapper;
 import com.marketing.task.mapper.TaskMapper;
+import com.marketing.task.mapper.TaskPlatformMapper;
+import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.service.cycle.CycleKeyResolver;
 import com.marketing.task.service.filter.FilterEvaluator;
@@ -30,6 +37,9 @@ public class TaskService {
     private final CycleKeyResolver cycleKeyResolver;
     private final FilterEvaluator filterEvaluator;
     private final StepAdvanceEngine stepAdvanceEngine;
+    private final TaskStepMapper taskStepMapper;
+    private final TaskFilterMapper taskFilterMapper;
+    private final TaskPlatformMapper taskPlatformMapper;
 
     public List<Task> listPublished(UserContext userContext) {
         LocalDateTime now = LocalDateTime.now();
@@ -77,6 +87,50 @@ public class TaskService {
         if (task == null) {
             throw new BusinessException("任务不存在");
         }
+        return task;
+    }
+
+    @Transactional
+    public Task saveAggregate(TaskAggregateDTO dto) {
+        Task task = dto.getTask();
+        if (task.getId() == null) {
+            taskMapper.insert(task);
+        } else {
+            taskMapper.updateById(task);
+        }
+        Long taskId = task.getId();
+
+        if (dto.getSteps() != null) {
+            taskStepMapper.delete(new LambdaQueryWrapper<TaskStep>().eq(TaskStep::getTaskId, taskId));
+            int seq = 1;
+            for (TaskStep step : dto.getSteps()) {
+                step.setId(null);
+                step.setTaskId(taskId);
+                if (step.getSeq() == null) step.setSeq(seq++);
+                taskStepMapper.insert(step);
+            }
+        }
+
+        if (dto.getFilters() != null) {
+            taskFilterMapper.delete(new LambdaQueryWrapper<TaskFilter>().eq(TaskFilter::getTaskId, taskId));
+            int seq = 1;
+            for (TaskFilter filter : dto.getFilters()) {
+                filter.setId(null);
+                filter.setTaskId(taskId);
+                if (filter.getSeq() == null) filter.setSeq(seq++);
+                taskFilterMapper.insert(filter);
+            }
+        }
+
+        if (dto.getPlatforms() != null) {
+            taskPlatformMapper.delete(new LambdaQueryWrapper<TaskPlatform>().eq(TaskPlatform::getTaskId, taskId));
+            for (TaskPlatform platform : dto.getPlatforms()) {
+                platform.setId(null);
+                platform.setTaskId(taskId);
+                taskPlatformMapper.insert(platform);
+            }
+        }
+
         return task;
     }
 

@@ -1,4 +1,7 @@
 import { http } from './http'
+import type { Step } from './step'
+import type { TaskFilter } from './filter'
+import type { TaskPlatform } from './platform'
 
 export interface Task {
   id?: number
@@ -10,12 +13,27 @@ export interface Task {
   version?: number
 }
 
+export interface TaskAggregateDTO {
+  task: Task
+  steps?: Step[]
+  filters?: TaskFilter[]
+  platforms?: TaskPlatform[]
+}
+
 export function listTasks() {
   return http.get('/admin/task')
 }
 
 export function saveTask(task: Task) {
   return http.post('/admin/task', task)
+}
+
+export function saveTaskAggregate(dto: TaskAggregateDTO) {
+  return http.post('/admin/task', dto)
+}
+
+export function getTaskById(id: number) {
+  return http.get(`/admin/task/${id}`)
 }
 
 export function publishTask(id: number) {

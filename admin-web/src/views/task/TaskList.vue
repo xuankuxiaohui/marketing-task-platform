@@ -13,8 +13,9 @@
       <el-table-column prop="periodType" label="周期" width="120" />
       <el-table-column prop="status" label="状态" width="120" />
       <el-table-column prop="version" label="版本" width="100" />
-      <el-table-column label="操作" width="220">
+      <el-table-column label="操作" width="300">
         <template #default="scope">
+          <el-button size="small" @click="$router.push(`/tasks/${scope.row.id}`)">编辑</el-button>
           <el-button size="small" @click="publish(scope.row.id)">发布</el-button>
           <el-button size="small" @click="offline(scope.row.id)">下线</el-button>
         </template>

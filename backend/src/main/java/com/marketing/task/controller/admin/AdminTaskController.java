@@ -3,6 +3,7 @@ package com.marketing.task.controller.admin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
+import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.service.task.TaskService;
@@ -24,13 +25,14 @@ public class AdminTaskController {
     }
 
     @PostMapping
-    public Result<Task> save(@Valid @RequestBody Task task) {
-        if (task.getId() == null) {
-            taskMapper.insert(task);
-        } else {
-            taskMapper.updateById(task);
-        }
-        return Result.ok(task);
+    public Result<Task> save(@Valid @RequestBody TaskAggregateDTO dto) {
+        Task saved = taskService.saveAggregate(dto);
+        return Result.ok(saved);
+    }
+
+    @GetMapping("/{id}")
+    public Result<Task> getById(@PathVariable Long id) {
+        return Result.ok(taskService.requireTask(id));
     }
 
     @PostMapping("/{id}/publish")
