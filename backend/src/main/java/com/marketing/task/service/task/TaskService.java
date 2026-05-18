@@ -13,12 +13,15 @@ import com.marketing.task.service.cycle.CycleKeyResolver;
 import com.marketing.task.service.filter.FilterEvaluator;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskService {
@@ -56,7 +59,16 @@ public class TaskService {
         instance.setCycleKey(cycleKey);
         instance.setStatus(InstanceStatus.PENDING.name());
         instance.setCurrentStepSeq(1);
-        instanceMapper.insert(instance);
+        try {
+            instanceMapper.insert(instance);
+        } catch (DuplicateKeyException ex) {
+            log.warn("Concurrent instance creation detected, re-querying: userId={}, taskId={}, cycleKey={}",
+                    userContext.getUserId(), task.getId(), cycleKey);
+            return instanceMapper.selectOne(new LambdaQueryWrapper<UserTaskInstance>()
+                    .eq(UserTaskInstance::getUserId, userContext.getUserId())
+                    .eq(UserTaskInstance::getTaskId, task.getId())
+                    .eq(UserTaskInstance::getCycleKey, cycleKey));
+        }
         return stepAdvanceEngine.enter(instance);
     }
 
