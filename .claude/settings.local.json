@@ -3,5 +3,20 @@
     "superpowers@superpowers-marketplace": true,
     "codex@openai-codex": true,
     "feature-dev@claude-plugins-official": true
+  },
+  "disabledMcpjsonServers": [
+    "github"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/session-start-check.sh \"${CLAUDE_PROJECT_DIR}\""
+          }
+        ]
+      }
+    ]
   }
 }
