@@ -7,13 +7,17 @@ import com.ql.util.express.ExpressRunner;
 import com.ql.util.express.Operator;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Component
 public class FilterExpressionEngine {
     private static final int MAX_LENGTH = 1024;
@@ -31,7 +35,10 @@ public class FilterExpressionEngine {
         try {
             return CompletableFuture.supplyAsync(() -> execute(expression, userContext))
                     .get(100, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ex) {
+            return false;
         } catch (Exception ex) {
+            log.warn("Unexpected error evaluating filter expression: {}", expression, ex);
             return false;
         }
     }
@@ -94,13 +101,13 @@ public class FilterExpressionEngine {
         runner.addFunction("inAllowlist", new Operator() {
             @Override
             public Object executeInner(Object[] list) {
-                return true;
+                throw new BusinessException("inAllowlist 函数暂未实现");
             }
         });
         runner.addFunction("notInDenylist", new Operator() {
             @Override
             public Object executeInner(Object[] list) {
-                return true;
+                throw new BusinessException("notInDenylist 函数暂未实现");
             }
         });
         runner.addFunction("orgEquals", new Operator() {
@@ -141,7 +148,13 @@ public class FilterExpressionEngine {
     }
 
     private static boolean containsArg(Object value, Object candidate) {
-        return candidate instanceof Collection<?> collection ? collection.contains(value) : Objects.equals(value, candidate);
+        if (candidate instanceof Collection<?> collection) {
+            return collection.contains(value);
+        }
+        if (candidate instanceof Object[] array) {
+            return List.of(array).contains(value);
+        }
+        return Objects.equals(value, candidate);
     }
 
     private static boolean intersects(Collection<String> values, Object candidate) {

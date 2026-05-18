@@ -5,6 +5,7 @@ import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.enums.Platform;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -13,6 +14,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class UserContextInterceptor implements HandlerInterceptor {
 
@@ -43,13 +45,23 @@ public class UserContextInterceptor implements HandlerInterceptor {
         if (value == null || value.isBlank()) {
             return null;
         }
-        return Integer.parseInt(value);
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            log.warn("Invalid X-User-Level header: {}", value);
+            return null;
+        }
     }
 
     private Platform parsePlatform(String value) {
         if (value == null || value.isBlank()) {
             return Platform.WEB;
         }
-        return Platform.valueOf(value.toUpperCase(Locale.ROOT));
+        try {
+            return Platform.valueOf(value.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            log.warn("Invalid X-Platform header: {}", value);
+            return Platform.WEB;
+        }
     }
 }
