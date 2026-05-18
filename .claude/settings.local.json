@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "codex@openai-codex": true,
+    "feature-dev@claude-plugins-official": true
+  }
+}

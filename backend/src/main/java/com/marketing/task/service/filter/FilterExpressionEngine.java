@@ -1,0 +1,156 @@
+package com.marketing.task.service.filter;
+
+import com.marketing.task.common.BusinessException;
+import com.marketing.task.context.UserContext;
+import com.ql.util.express.DefaultContext;
+import com.ql.util.express.ExpressRunner;
+import com.ql.util.express.Operator;
+import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+
+@Component
+public class FilterExpressionEngine {
+    private static final int MAX_LENGTH = 1024;
+    private static final Pattern FORBIDDEN = Pattern.compile("System|Runtime|Process|Thread|Class\\.forName|import\\s|new\\s|exec|eval", Pattern.CASE_INSENSITIVE);
+    private static final ThreadLocal<UserContext> CURRENT = new ThreadLocal<>();
+    private final ExpressRunner runner;
+
+    public FilterExpressionEngine() throws Exception {
+        this.runner = new ExpressRunner(false, false);
+        registerFunctions();
+    }
+
+    public boolean evaluate(String expression, UserContext userContext) {
+        validate(expression);
+        try {
+            return CompletableFuture.supplyAsync(() -> execute(expression, userContext))
+                    .get(100, TimeUnit.MILLISECONDS);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public void validate(String expression) {
+        if (expression == null || expression.isBlank()) {
+            throw new BusinessException("过滤表达式不能为空");
+        }
+        if (expression.length() > MAX_LENGTH) {
+            throw new BusinessException("过滤表达式长度不能超过1024字符");
+        }
+        if (FORBIDDEN.matcher(expression).find()) {
+            throw new BusinessException("过滤表达式包含禁用关键字");
+        }
+    }
+
+    private boolean execute(String expression, UserContext userContext) {
+        try {
+            CURRENT.set(userContext);
+            Object result = runner.execute(expression, new DefaultContext<>(), null, false, false);
+            return Boolean.TRUE.equals(result);
+        } catch (Exception ex) {
+            return false;
+        } finally {
+            CURRENT.remove();
+        }
+    }
+
+    private void registerFunctions() throws Exception {
+        runner.addFunction("inProvince", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return containsArg(current().getProvince(), arg(list, 0));
+            }
+        });
+        runner.addFunction("hasTag", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return current().getTags().contains(arg(list, 0));
+            }
+        });
+        runner.addFunction("hasAnyTag", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return intersects(current().getTags(), arg(list, 0));
+            }
+        });
+        runner.addFunction("roleEquals", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return Objects.equals(current().getRole(), arg(list, 0));
+            }
+        });
+        runner.addFunction("roleIn", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return containsArg(current().getRole(), arg(list, 0));
+            }
+        });
+        runner.addFunction("inAllowlist", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return true;
+            }
+        });
+        runner.addFunction("notInDenylist", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return true;
+            }
+        });
+        runner.addFunction("orgEquals", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return Objects.equals(current().getOrgId(), arg(list, 0));
+            }
+        });
+        runner.addFunction("orgIn", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                return containsArg(current().getOrgId(), arg(list, 0));
+            }
+        });
+        runner.addFunction("levelGte", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                Integer level = current().getLevel();
+                Object target = arg(list, 0);
+                return level != null && target instanceof Number number && level >= number.intValue();
+            }
+        });
+        runner.addFunction("levelEq", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                Object target = arg(list, 0);
+                return target instanceof Number number && Objects.equals(current().getLevel(), number.intValue());
+            }
+        });
+    }
+
+    private static UserContext current() {
+        return CURRENT.get();
+    }
+
+    private static Object arg(Object[] list, int index) {
+        return list.length <= index ? null : list[index];
+    }
+
+    private static boolean containsArg(Object value, Object candidate) {
+        return candidate instanceof Collection<?> collection ? collection.contains(value) : Objects.equals(value, candidate);
+    }
+
+    private static boolean intersects(Collection<String> values, Object candidate) {
+        if (candidate instanceof Collection<?> collection) {
+            return collection.stream().anyMatch(values::contains);
+        }
+        if (candidate instanceof Object[] array) {
+            return List.of(array).stream().anyMatch(values::contains);
+        }
+        return values.contains(candidate);
+    }
+}

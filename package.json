@@ -1,0 +1,10 @@
+{
+  "name": "marketing-task-platform",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:admin": "pnpm --filter admin-web dev",
+    "build:admin": "pnpm --filter admin-web build"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
