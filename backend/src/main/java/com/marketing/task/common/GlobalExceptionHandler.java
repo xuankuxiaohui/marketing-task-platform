@@ -18,11 +18,11 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(error -> error.getDefaultMessage() == null ? "参数错误" : error.getDefaultMessage())
                 .orElse("参数错误");
-        return Result.fail(400, message);
+        return Result.fail(ErrorCode.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception ex) {
-        return Result.fail(500, ex.getMessage());
+        return Result.fail(ErrorCode.INTERNAL_ERROR, ex.getMessage());
     }
 }

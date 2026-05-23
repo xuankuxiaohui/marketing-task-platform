@@ -2,10 +2,12 @@ package com.marketing.task.controller.internal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.CallbackRequest;
 import com.marketing.task.domain.dto.ProgressRequest;
 import com.marketing.task.domain.entity.UserTaskInstance;
+import com.marketing.task.domain.vo.UserTaskInstanceVO;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import jakarta.validation.Valid;
@@ -20,23 +22,23 @@ public class InternalCallbackController {
     private final StepAdvanceEngine stepAdvanceEngine;
 
     @PostMapping("/callback")
-    public Result<UserTaskInstance> callback(@Valid @RequestBody CallbackRequest request) {
+    public Result<UserTaskInstanceVO> callback(@Valid @RequestBody CallbackRequest request) {
         UserTaskInstance instance = resolveInstance(request.getInstanceId(),
                 request.getUserId(), request.getTaskId(), request.getCycleKey());
-        return Result.ok(stepAdvanceEngine.callback(instance, request.getCallbackEventKey()));
+        return Result.ok(UserTaskInstanceVO.from(stepAdvanceEngine.callback(instance, request.getCallbackEventKey())));
     }
 
     @PostMapping("/progress")
-    public Result<UserTaskInstance> progress(@Valid @RequestBody ProgressRequest request) {
+    public Result<UserTaskInstanceVO> progress(@Valid @RequestBody ProgressRequest request) {
         UserTaskInstance instance = resolveInstance(request.getInstanceId(),
                 request.getUserId(), request.getTaskId(), request.getCycleKey());
-        return Result.ok(stepAdvanceEngine.progress(instance, request.getStepId(), request.getProgressValue()));
+        return Result.ok(UserTaskInstanceVO.from(stepAdvanceEngine.progress(instance, request.getStepId(), request.getProgressValue())));
     }
 
     private UserTaskInstance resolveInstance(Long instanceId, String userId, Long taskId, String cycleKey) {
         if (instanceId != null) {
             UserTaskInstance inst = instanceMapper.selectById(instanceId);
-            if (inst == null) throw new BusinessException(404, "实例不存在");
+            if (inst == null) throw new BusinessException(ErrorCode.NOT_FOUND, "实例不存在");
             return inst;
         }
         if (userId == null || taskId == null || cycleKey == null) {

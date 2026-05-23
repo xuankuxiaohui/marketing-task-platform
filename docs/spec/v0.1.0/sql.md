@@ -204,5 +204,5 @@ user_task_instance ── user_task_step_progress
 
 完整 SQL 以 Flyway 文件为准：
 
-- [V1__init_task_core.sql](./sql/V1__init_task_core.sql)
-- [V2__init_task_instance.sql](./sql/V2__init_task_instance.sql)
+- [V1__init_task_core.sql](sql/V1__init_task_core.sql)
+- [V2__init_task_instance.sql](sql/V2__init_task_instance.sql)

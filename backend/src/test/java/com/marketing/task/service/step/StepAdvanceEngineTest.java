@@ -14,6 +14,7 @@ import com.marketing.task.domain.enums.StepType;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.mapper.UserTaskStepProgressMapper;
+import com.marketing.task.service.task.TaskDefinitionCacheService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,8 @@ class StepAdvanceEngineTest {
     private UserTaskInstanceMapper instanceMapper;
     @Mock
     private UserTaskStepProgressMapper progressMapper;
+    @Mock
+    private TaskDefinitionCacheService cacheService;
 
     private StepAdvanceEngine engine;
 
@@ -67,7 +70,7 @@ class StepAdvanceEngineTest {
                 new ProgressStepHandler(),
                 new RewardStepHandler(mock(com.marketing.task.service.reward.RewardService.class))
         );
-        engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers);
+        engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService);
 
         // Setup instance
         instance = new UserTaskInstance();
@@ -109,7 +112,7 @@ class StepAdvanceEngineTest {
         when(taskStepMapper.selectOne(any())).thenReturn(callbackStep);
         when(progressMapper.selectOne(any())).thenReturn(null);
         when(instanceMapper.updateById(any(UserTaskInstance.class))).thenReturn(1);
-        when(taskStepMapper.selectList(any())).thenReturn(List.of(callbackStep, rewardStep));
+        when(cacheService.getSteps(any())).thenReturn(List.of(callbackStep, rewardStep));
         when(instanceMapper.update(any(), any())).thenReturn(1);
         when(instanceMapper.selectById(100L)).thenReturn(instance);
 
@@ -161,7 +164,7 @@ class StepAdvanceEngineTest {
         when(progressMapper.selectOne(any())).thenReturn(completedProgress);
 
         // cascade needs a step list to fetch
-        when(taskStepMapper.selectList(any())).thenReturn(List.of(callbackStep, rewardStep));
+        when(cacheService.getSteps(any())).thenReturn(List.of(callbackStep, rewardStep));
 
         // Should not throw
         UserTaskInstance result = engine.callback(instance, "survey_completed");
@@ -191,7 +194,7 @@ class StepAdvanceEngineTest {
         when(taskStepMapper.selectById(30L)).thenReturn(progressStep);
         when(progressMapper.selectOne(any())).thenReturn(null);
         when(instanceMapper.updateById(any(UserTaskInstance.class))).thenReturn(1);
-        when(taskStepMapper.selectList(any())).thenReturn(List.of(progressStep, rewardStep));
+        when(cacheService.getSteps(any())).thenReturn(List.of(progressStep, rewardStep));
         when(instanceMapper.update(any(), any())).thenReturn(1);
         when(instanceMapper.selectById(100L)).thenReturn(instance);
 

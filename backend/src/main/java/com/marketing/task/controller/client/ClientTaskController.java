@@ -9,9 +9,10 @@ import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.TaskStepPlatform;
 import com.marketing.task.domain.entity.UserTaskInstance;
-import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.domain.vo.*;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.service.step.StepAdvanceEngine;
+import com.marketing.task.service.task.TaskDefinitionCacheService;
 import com.marketing.task.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -24,11 +25,11 @@ import java.util.List;
 public class ClientTaskController {
     private final TaskService taskService;
     private final StepAdvanceEngine stepAdvanceEngine;
-    private final TaskStepMapper taskStepMapper;
     private final TaskStepPlatformMapper taskStepPlatformMapper;
+    private final TaskDefinitionCacheService cacheService;
 
     @GetMapping("/list")
-    public Result<List<Task>> list() {
+    public Result<List<TaskClientVO>> list() {
         UserContext userContext = UserContextHolder.get();
         return Result.ok(taskService.listPublished(userContext));
     }
@@ -38,28 +39,31 @@ public class ClientTaskController {
         UserContext userContext = UserContextHolder.get();
         Task task = taskService.requireTask(taskId);
         UserTaskInstance instance = taskService.getOrCreateInstance(task, userContext);
-        List<TaskStep> steps = taskStepMapper.selectList(new LambdaQueryWrapper<TaskStep>()
-                .eq(TaskStep::getTaskId, taskId).orderByAsc(TaskStep::getSeq));
+        List<TaskStep> steps = cacheService.getSteps(taskId);
         List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
                 new LambdaQueryWrapper<TaskStepPlatform>()
-                        .inSql(TaskStepPlatform::getStepId,
-                                "SELECT id FROM task_step WHERE task_id = " + taskId)
+                        .apply("step_id IN (SELECT id FROM task_step WHERE task_id = {0})", taskId)
                         .eq(TaskStepPlatform::getPlatform, userContext.getPlatform().name()));
-        return Result.ok(new TaskInstanceDetailDTO(instance, steps, stepPlatforms));
+
+        UserTaskInstanceVO instanceVO = UserTaskInstanceVO.from(instance);
+        List<TaskStepVO> stepVOs = steps.stream().map(TaskStepVO::from).toList();
+        List<TaskStepPlatformVO> spVOs = stepPlatforms.stream().map(TaskStepPlatformVO::from).toList();
+
+        return Result.ok(new TaskInstanceDetailDTO(instanceVO, stepVOs, spVOs));
     }
 
     @PostMapping("/{taskId}/start")
-    public Result<UserTaskInstance> start(@PathVariable Long taskId) {
+    public Result<UserTaskInstanceVO> start(@PathVariable Long taskId) {
         UserContext userContext = UserContextHolder.get();
         Task task = taskService.requireTask(taskId);
-        return Result.ok(taskService.getOrCreateInstance(task, userContext));
+        return Result.ok(UserTaskInstanceVO.from(taskService.getOrCreateInstance(task, userContext)));
     }
 
     @PostMapping("/{taskId}/step/{stepId}/click")
-    public Result<UserTaskInstance> click(@PathVariable Long taskId, @PathVariable Long stepId) {
+    public Result<UserTaskInstanceVO> click(@PathVariable Long taskId, @PathVariable Long stepId) {
         UserContext userContext = UserContextHolder.get();
         Task task = taskService.requireTask(taskId);
         UserTaskInstance instance = taskService.getOrCreateInstance(task, userContext);
-        return Result.ok(stepAdvanceEngine.click(instance, stepId));
+        return Result.ok(UserTaskInstanceVO.from(stepAdvanceEngine.click(instance, stepId)));
     }
 }

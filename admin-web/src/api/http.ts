@@ -17,3 +17,17 @@ http.interceptors.request.use((config) => {
   config.headers.set('X-Platform', user.platform)
   return config
 })
+
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || error.message || '请求失败'
+    if (error.response?.status === 401) {
+      // 未授权，跳转 Mock 登录页
+      window.location.href = '/login'
+    } else if (error.response?.status >= 500) {
+      console.error('Server error:', message)
+    }
+    return Promise.reject(error)
+  }
+)

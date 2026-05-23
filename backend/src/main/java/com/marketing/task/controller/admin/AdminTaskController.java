@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.Task;
+import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.service.task.TaskService;
 import jakarta.validation.Valid;
@@ -19,20 +20,20 @@ public class AdminTaskController {
     private final TaskService taskService;
 
     @GetMapping
-    public Result<IPage<Task>> page(@RequestParam(defaultValue = "1") long page,
-                                    @RequestParam(defaultValue = "20") long size) {
-        return Result.ok(taskMapper.selectPage(Page.of(page, size), null));
+    public Result<IPage<TaskAdminVO>> page(@RequestParam(defaultValue = "1") long page,
+                                           @RequestParam(defaultValue = "20") long size) {
+        IPage<Task> taskPage = taskMapper.selectPage(Page.of(page, size), null);
+        return Result.ok(taskPage.convert(TaskAdminVO::from));
     }
 
     @PostMapping
-    public Result<Task> save(@Valid @RequestBody TaskAggregateDTO dto) {
-        Task saved = taskService.saveAggregate(dto);
-        return Result.ok(saved);
+    public Result<TaskAdminVO> save(@Valid @RequestBody TaskAggregateDTO dto) {
+        return Result.ok(taskService.saveAggregate(dto));
     }
 
     @GetMapping("/{id}")
-    public Result<Task> getById(@PathVariable Long id) {
-        return Result.ok(taskService.requireTask(id));
+    public Result<TaskAdminVO> getById(@PathVariable Long id) {
+        return Result.ok(TaskAdminVO.from(taskService.requireTask(id)));
     }
 
     @PostMapping("/{id}/publish")

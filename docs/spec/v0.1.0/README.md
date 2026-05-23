@@ -8,10 +8,10 @@
 
 | 文档 | 类型 | 内容 |
 |---|---|---|
-| [设计文档](./design.md) | Explanation / Architecture | 系统边界、领域模型、核心引擎、MVP 范围和后续演进 |
-| [API 文档](./api.md) | Reference | 当前 Spring Controller 暴露的 Admin / Client / Internal API |
-| [SQL 文档](./sql.md) | Reference | v0.1.0 数据表、索引、约束和 Flyway 迁移索引 |
-| [版本说明](./release-notes.md) | Release notes | 本版本新增内容、验证结果、已知限制 |
+| [设计文档](design.md) | Explanation / Architecture | 系统边界、领域模型、核心引擎、MVP 范围和后续演进 |
+| [API 文档](api.md) | Reference | 当前 Spring Controller 暴露的 Admin / Client / Internal API |
+| [SQL 文档](sql.md) | Reference | v0.1.0 数据表、索引、约束和 Flyway 迁移索引 |
+| [版本说明](release-notes.md) | Release notes | 本版本新增内容、验证结果、已知限制 |
 
 ## 代码入口
 

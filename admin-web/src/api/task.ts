@@ -11,6 +11,7 @@ export interface Task {
   periodType: string
   status?: string
   version?: number
+  mutexGroupKey?: string
 }
 
 export interface TaskAggregateDTO {

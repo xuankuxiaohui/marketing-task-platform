@@ -1,8 +1,10 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.TaskStepPlatform;
+import com.marketing.task.domain.vo.TaskStepPlatformVO;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,15 +19,17 @@ public class AdminStepPlatformController {
     private final TaskStepPlatformMapper taskStepPlatformMapper;
 
     @GetMapping
-    public Result<List<TaskStepPlatform>> list(@PathVariable Long taskId, @PathVariable Long stepId) {
-        return Result.ok(taskStepPlatformMapper.selectList(
+    public Result<List<TaskStepPlatformVO>> list(@PathVariable Long taskId, @PathVariable Long stepId) {
+        List<TaskStepPlatform> platforms = taskStepPlatformMapper.selectList(
                 new LambdaQueryWrapper<TaskStepPlatform>()
-                        .eq(TaskStepPlatform::getStepId, stepId)));
+                        .eq(TaskStepPlatform::getStepId, stepId));
+        return Result.ok(platforms.stream().map(TaskStepPlatformVO::from).toList());
     }
 
     @PostMapping
-    public Result<TaskStepPlatform> create(@PathVariable Long taskId, @PathVariable Long stepId,
-                                           @Valid @RequestBody TaskStepPlatform stepPlatform) {
+    public Result<TaskStepPlatformVO> create(@PathVariable Long taskId, @PathVariable Long stepId,
+                                             @Valid @RequestBody TaskStepPlatformVO vo) {
+        TaskStepPlatform stepPlatform = vo.toEntity();
         stepPlatform.setId(null);
         stepPlatform.setStepId(stepId);
 
@@ -40,7 +44,7 @@ public class AdminStepPlatformController {
         } else {
             taskStepPlatformMapper.insert(stepPlatform);
         }
-        return Result.ok(stepPlatform);
+        return Result.ok(TaskStepPlatformVO.from(stepPlatform));
     }
 
     @DeleteMapping("/{stepPlatformId}")
@@ -48,7 +52,7 @@ public class AdminStepPlatformController {
                                @PathVariable Long stepPlatformId) {
         TaskStepPlatform existing = taskStepPlatformMapper.selectById(stepPlatformId);
         if (existing == null || !existing.getStepId().equals(stepId)) {
-            return Result.fail(404, "步骤端配置不存在");
+            return Result.fail(ErrorCode.NOT_FOUND, "步骤端配置不存在");
         }
         taskStepPlatformMapper.deleteById(stepPlatformId);
         return Result.ok(null);

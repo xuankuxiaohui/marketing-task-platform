@@ -12,6 +12,7 @@ import com.marketing.task.domain.enums.StepType;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.mapper.UserTaskStepProgressMapper;
+import com.marketing.task.service.task.TaskDefinitionCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class StepAdvanceEngine {
     private final UserTaskInstanceMapper instanceMapper;
     private final UserTaskStepProgressMapper progressMapper;
     private final List<StepHandler> handlers;
+    private final TaskDefinitionCacheService cacheService;
 
     @Transactional
     public UserTaskInstance enter(UserTaskInstance instance) {
@@ -122,9 +124,7 @@ public class StepAdvanceEngine {
     }
 
     private void cascade(UserTaskInstance instance) {
-        List<TaskStep> steps = taskStepMapper.selectList(new LambdaQueryWrapper<TaskStep>()
-                .eq(TaskStep::getTaskId, instance.getTaskId())
-                .orderByAsc(TaskStep::getSeq));
+        List<TaskStep> steps = cacheService.getSteps(instance.getTaskId());
         Map<StepType, StepHandler> handlerMap = handlerMapByType();
         while (true) {
             TaskStep current = steps.stream()

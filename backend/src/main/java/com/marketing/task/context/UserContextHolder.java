@@ -1,6 +1,7 @@
 package com.marketing.task.context;
 
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 
 public final class UserContextHolder {
     private static final ThreadLocal<UserContext> HOLDER = new ThreadLocal<>();
@@ -15,7 +16,7 @@ public final class UserContextHolder {
     public static UserContext get() {
         UserContext context = HOLDER.get();
         if (context == null) {
-            throw new BusinessException(401, "缺少用户上下文");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "缺少用户上下文");
         }
         return context;
     }

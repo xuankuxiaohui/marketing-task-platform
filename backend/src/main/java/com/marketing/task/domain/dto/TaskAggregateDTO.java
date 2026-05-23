@@ -1,19 +1,25 @@
 package com.marketing.task.domain.dto;
 
-import com.marketing.task.domain.entity.Task;
-import com.marketing.task.domain.entity.TaskFilter;
-import com.marketing.task.domain.entity.TaskPlatform;
-import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.domain.vo.TaskAdminVO;
+import com.marketing.task.domain.vo.TaskFilterVO;
+import com.marketing.task.domain.vo.TaskPlatformVO;
+import com.marketing.task.domain.vo.TaskStepVO;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@Schema(description = "任务聚合 DTO")
 public class TaskAggregateDTO {
     @Valid
-    private Task task;
-    private List<TaskStep> steps;
-    private List<TaskFilter> filters;
-    private List<TaskPlatform> platforms;
+    @Schema(description = "任务主体")
+    private TaskAdminVO task;
+    @Schema(description = "任务步骤列表")
+    private List<TaskStepVO> steps;
+    @Schema(description = "过滤器列表")
+    private List<TaskFilterVO> filters;
+    @Schema(description = "端配置列表")
+    private List<TaskPlatformVO> platforms;
 }

@@ -1,0 +1,196 @@
+:root {
+  /* Brand blue primary */
+  --el-color-primary: #2563eb;
+  --el-color-primary-light-3: #60a5fa;
+  --el-color-primary-light-5: #93bbfd;
+  --el-color-primary-light-7: #bfdbfe;
+  --el-color-primary-light-8: #dbeafe;
+  --el-color-primary-light-9: #eff6ff;
+  --el-color-primary-dark-2: #1d4ed8;
+
+  --el-color-success: #10b981;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+  --el-color-info: #6b7280;
+
+  /* Border radius */
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 20px;
+
+  /* Shadows */
+  --el-box-shadow-light: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --el-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Fonts */
+  --el-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Global page background */
+body {
+  background: #f8fafc;
+  margin: 0;
+  color: #1e293b;
+}
+
+/* Card */
+.el-card {
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+.el-card__header {
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-weight: 600;
+  color: #0f172a;
+  padding: 16px 20px !important;
+}
+.el-card__body {
+  padding: 20px !important;
+}
+
+/* Table */
+.el-table th.el-table__cell {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.el-table--border .el-table__cell {
+  border-right-color: #f1f5f9 !important;
+}
+.el-table--border {
+  border-color: #e2e8f0 !important;
+}
+.el-table td.el-table__cell {
+  border-bottom-color: #f1f5f9 !important;
+}
+.el-table__row:hover > td {
+  background: #f8fafc !important;
+}
+
+/* Primary button */
+.el-button--primary {
+  background: #2563eb !important;
+  border: 1px solid #2563eb !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  font-weight: 500 !important;
+  transition: background 0.15s !important;
+}
+.el-button--primary:hover {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+.el-button--primary:active {
+  background: #1e40af !important;
+}
+
+/* Default button */
+.el-button {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Plain button variants */
+.el-button--primary.is-plain {
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #2563eb !important;
+}
+.el-button--primary.is-plain:hover {
+  background: #dbeafe !important;
+  border-color: #93bbfd !important;
+  color: #1d4ed8 !important;
+}
+
+/* Small button */
+.el-button--small {
+  border-radius: 5px !important;
+  padding: 5px 11px !important;
+  font-size: 12px !important;
+}
+
+/* Input / Select focus */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select .el-input__wrapper {
+  border-radius: 6px !important;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+/* Tabs */
+.el-tabs__active-bar {
+  background: #2563eb !important;
+  height: 2px !important;
+}
+.el-tabs__item.is-active {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+.el-tabs__item:hover {
+  color: #2563eb !important;
+}
+.el-tabs__nav-wrap::after {
+  background-color: #e2e8f0 !important;
+  height: 1px !important;
+}
+
+/* Form label */
+.el-form-item__label {
+  color: #334155 !important;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* Select dropdown */
+.el-select-dropdown__item.is-selected {
+  color: #2563eb !important;
+  background: #eff6ff !important;
+}
+
+/* Switch */
+.el-switch.is-checked .el-switch__core {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+/* Checkbox */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+/* Menu */
+.el-menu {
+  border-right: none !important;
+}
+
+/* Pagination */
+.el-pagination .el-pager li.is-active {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+/* Dialog */
+.el-dialog {
+  border-radius: 12px !important;
+}
+.el-dialog__header {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Tag */
+.el-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Pager active */
+.el-pager li.is-active {
+  background: #2563eb !important;
+}

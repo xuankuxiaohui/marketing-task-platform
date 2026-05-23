@@ -61,6 +61,7 @@ public class FilterExpressionEngine {
             Object result = runner.execute(expression, new DefaultContext<>(), null, false, false);
             return Boolean.TRUE.equals(result);
         } catch (Exception ex) {
+            log.warn("Filter evaluation error: expression={}, userId={}", expression, userContext.getUserId(), ex);
             return false;
         } finally {
             CURRENT.remove();
