@@ -85,9 +85,9 @@
           <span v-else class="empty-cell">--</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="90" fixed="right">
+      <el-table-column label="操作" width="90" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button size="small" type="primary" link @click.stop="showDetail(row)">详情</el-button>
+          <el-button size="small" type="primary" plain @click.stop="showDetail(row)">详情</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -117,9 +117,9 @@
             <el-descriptions-item label="用户 ID">{{ detail.instance.userId }}</el-descriptions-item>
             <el-descriptions-item label="任务名称">
               <template v-if="detail.instance.taskName">
-                <el-link type="primary" @click="$router.push(`/tasks/${detail.instance.taskId}`)" :underline="false">
+                <span class="drawer-task-link" @click="$router.push(`/tasks/${detail.instance.taskId}`)">
                   {{ detail.instance.taskName }}
-                </el-link>
+                </span>
               </template>
               <span v-else>任务 #{{ detail.instance.taskId }}</span>
             </el-descriptions-item>
@@ -628,6 +628,18 @@ onMounted(() => {
   font-size: 11px;
   color: #94a3b8;
   margin-top: 4px;
+}
+
+.drawer-task-link {
+  color: #6d28d9;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.drawer-task-link:hover {
+  color: #4c1d95;
+  text-decoration: underline;
 }
 
 .detail-actions {

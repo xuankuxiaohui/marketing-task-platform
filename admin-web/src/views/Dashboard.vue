@@ -30,11 +30,11 @@
     <el-card class="table-card">
       <template #header><span>Top 10 任务指标</span></template>
       <el-table :data="topTasks" stripe>
-        <el-table-column prop="taskId" label="任务 ID" width="100">
+        <el-table-column prop="taskId" label="任务 ID" width="100" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="router.push(`/tasks/${row.taskId}/metrics`)">
+            <span class="task-link" @click="router.push(`/tasks/${row.taskId}/metrics`)">
               #{{ row.taskId }}
-            </el-button>
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="views" label="曝光" />
@@ -105,5 +105,19 @@ onMounted(async () => {
 }
 .table-card {
   margin-top: 16px;
+}
+.task-link {
+  color: #6d28d9;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.task-link:hover {
+  background: #f5f3ff;
+  color: #4c1d95;
+  text-decoration: underline;
 }
 </style>

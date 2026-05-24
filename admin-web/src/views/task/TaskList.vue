@@ -139,6 +139,15 @@
           >
             下线
           </el-button>
+          <el-button
+            v-if="row.status === 'OFFLINE'"
+            size="small"
+            type="success"
+            :loading="publishingId === row.id"
+            @click="publish(row.id)"
+          >
+            上线
+          </el-button>
         </template>
       </el-table-column>
     </el-table>

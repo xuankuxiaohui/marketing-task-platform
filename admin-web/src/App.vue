@@ -91,7 +91,12 @@
       <el-container>
         <el-header class="top-header">
           <div class="header-left">
-            <span class="header-title">任务管理</span>
+            <span class="header-breadcrumb">
+              <template v-for="(crumb, i) in breadcrumbs" :key="i">
+                <span v-if="i > 0" class="bc-sep">/</span>
+                <span :class="['bc-item', { 'bc-last': i === breadcrumbs.length - 1 }]">{{ crumb }}</span>
+              </template>
+            </span>
           </div>
           <div class="header-right">
             <span class="user-avatar">
@@ -115,11 +120,40 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useUserStore } from './stores/user'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const userStore = useUserStore()
 const router = useRouter()
+const route = useRoute()
+
+const titleMap: Record<string, string> = {
+  '/dashboard': '运营仪表盘',
+  '/tasks': '任务管理',
+  '/tasks/new': '新建任务',
+  '/instances': '实例查询',
+  '/mutex-groups': '互斥组管理',
+  '/prizes': '奖品管理',
+  '/simulate': '模拟测试',
+}
+
+const breadcrumbs = computed(() => {
+  const path = route.path
+  const parts: string[] = []
+  if (path.startsWith('/tasks/') && path.endsWith('/metrics')) {
+    parts.push('任务管理', '任务指标')
+  } else if (path.startsWith('/tasks/') && path !== '/tasks' && path !== '/tasks/new') {
+    parts.push('任务管理', '编辑任务')
+  } else if (path.startsWith('/mutex-groups/') && path !== '/mutex-groups') {
+    parts.push('互斥组管理', '互斥组详情')
+  } else if (path.startsWith('/prizes/') && path !== '/prizes') {
+    parts.push('奖品管理', path === '/prizes/new' ? '新建奖品' : '编辑奖品')
+  } else {
+    parts.push(titleMap[path] || '营销任务平台')
+  }
+  return parts
+})
 
 const handleLogout = () => {
   userStore.logout()
@@ -235,10 +269,24 @@ const handleLogout = () => {
   align-items: center;
   gap: 12px;
 }
-.header-title {
-  font-size: 14px;
-  font-weight: 600;
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.bc-sep {
+  color: #cbd5e1;
+  font-size: 11px;
+}
+.bc-item {
+  color: #94a3b8;
+  font-weight: 500;
+}
+.bc-last {
   color: #1e293b;
+  font-weight: 700;
+  font-size: 14px;
 }
 .header-right {
   display: flex;

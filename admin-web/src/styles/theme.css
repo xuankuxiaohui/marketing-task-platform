@@ -194,3 +194,61 @@ body {
 .el-pager li.is-active {
   background: #2563eb !important;
 }
+
+/* Drawer */
+.el-drawer__header {
+  margin-bottom: 0 !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #1e293b !important;
+  font-weight: 700 !important;
+}
+.el-drawer__body {
+  padding: 20px !important;
+}
+
+/* Descriptions */
+.el-descriptions {
+  border-radius: 6px !important;
+}
+.el-descriptions__label {
+  color: #64748b !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+}
+.el-descriptions__content {
+  color: #1e293b !important;
+  font-size: 13px !important;
+}
+
+/* Date-picker */
+.el-date-editor .el-range-separator {
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+}
+
+/* Empty state */
+.el-empty__description p {
+  color: #94a3b8 !important;
+}
+
+/* Badge styling */
+.el-badge__content {
+  border: none !important;
+}
+
+/* Transition for filter bar */
+.filter-bar {
+  animation: fadeInDown 0.2s ease;
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Link-like span cursor */
+span[role="link"],
+.task-link,
+.drawer-task-link {
+  cursor: pointer;
+}
