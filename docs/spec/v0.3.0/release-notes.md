@@ -116,6 +116,68 @@ npm --prefix client-web run build
 - `admin-web/src/router/index.ts` 新增 2 条路由
 - `admin-web/src/views/task/TaskEdit.vue` 新增模拟测试 Tab
 
+## v0.3.1 — 任务灰度 (2026-05-24)
+
+### gray_type / gray_config 表扩展
+
+- **Flyway V11**：task 表新增 `gray_type VARCHAR(16) DEFAULT 'NONE'` 和 `gray_config JSON DEFAULT NULL`
+- `grayType`: `NONE` | `PERCENTAGE` | `AB` | `CROWD`
+- `grayConfig` JSON 示例：
+  - PERCENTAGE: `{"percent": 10}`
+  - AB: `{"groups": [{"name":"A","percent":50},{"name":"B","percent":50}]}`
+  - CROWD: `{"crowdIds": [1, 2]}`
+
+### GrayService
+
+- `isInGray(userId, taskId, grayType, grayConfig)` — hash-based PERCENTAGE + AB + CROWD 判断
+- `getABGroup(userId, taskId, grayConfig)` — 基于 `Math.abs(hash % 100)` 和累计百分比分配
+- PERCENTAGE: `Math.abs((userId + taskId).hashCode() % 100) < percent`
+- AB: hash mod 100，按 groups 累计百分比分配
+- CROWD: 查 `list_data` 表（listType=CROWD）
+
+### 新增过滤函数
+
+在 FilterExpressionEngine 中注册：
+
+| 函数 | 参数 | 行为 |
+|---|---|---|
+| `inGrayPercent(percent)` | 10 | hash-based 百分比分流（需 taskId 上下文） |
+| `inABGroup(groupName)` | "A" | 是否在指定 AB 组（需 taskId + grayConfig 上下文） |
+| `inCrowd(crowdId)` | 1 | 是否在指定人群包（查 list_data） |
+
+### Admin 前端
+
+- BasicTab 新增灰度类型选择器（NONE/PERCENTAGE/AB/CROWD）
+- PERCENTAGE → 百分比滑块
+- AB → 分组名 + 百分比分配表格
+- CROWD → 人群包 ID 输入
+- task.ts Task 接口新增 grayType/grayConfig 字段
+
+### 验证结果
+
+- 后端：156 tests passed（新增 GrayServiceTest 7 + FilterExpressionEngineTest 3）
+- Admin 前端构建：通过
+- Client 前端构建：通过
+
+### 新增文件
+
+| 文件 | 说明 |
+|---|---|
+| `backend/.../service/filter/GrayService.java` | 灰度服务 |
+| `backend/.../db/migration/V11__task_gray_config.sql` | Flyway 迁移 |
+
+### 修改文件
+
+| 文件 | 说明 |
+|---|---|
+| `backend/.../domain/entity/Task.java` | 新增 grayType/grayConfig 字段 |
+| `backend/.../domain/vo/TaskAdminVO.java` | 新增 grayType/grayConfig + from/toEntity 映射 |
+| `backend/.../service/filter/FilterExpressionEngine.java` | 注入 GrayService + 3 个新函数 + 异步 ThreadLocal 传播 |
+| `backend/.../service/filter/FilterEvaluator.java` | match() 中设置 task 灰度上下文 |
+| `backend/.../test/resources/schema-h2.sql` | task 表新增 gray_type/gray_config 列 |
+| `admin-web/src/api/task.ts` | Task 接口新增 grayType/grayConfig |
+| `admin-web/src/views/task/tabs/BasicTab.vue` | 灰度配置 UI |
+
 ## 已知限制
 
 | 项 | 状态 |

@@ -176,10 +176,11 @@
    - Task 表 mutex_group_key 迁移为 mutex_group_id 外键。
    - 任务编辑中互斥组改为下拉选择器；死锁修复（keyOwner 模式）。
    - 待完成：互斥范围扩展配置（跨周期互斥）。
-5. 增加任务灰度与实验能力：
-   - 百分比分流。
-   - AB 实验分组。
-   - 人群包绑定。
+5. ~~增加任务灰度与实验能力~~ ✅ 已完成 (2026-05-24, v0.3.1)：
+   - 百分比分流 (inGrayPercent)。
+   - AB 实验分组 (inABGroup)。
+   - 人群包绑定 (inCrowd)。
+   - GrayService hash-based 灰度决策 + Flyway V11 (gray_type/gray_config)。
 
 ### P2：运营效率与可观测性
 

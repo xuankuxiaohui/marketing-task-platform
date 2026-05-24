@@ -7,6 +7,7 @@
 | 版本 | 文件 | 内容 |
 |---|---|---|
 | V10 | `V10__event_log_and_metrics.sql` | 事件日志 + 指标聚合表 |
+| V11 | `V11__task_gray_config.sql` | 任务灰度配置字段 |
 
 ## V10 — event_log 表
 
@@ -59,3 +60,17 @@ CREATE TABLE task_metrics (
 ```
 
 TaskMetricsScheduler 每 5 分钟从 event_log 聚合写入 task_metrics（ON DUPLICATE KEY UPDATE）。
+
+## V11 — task 表灰度字段
+
+```sql
+ALTER TABLE task ADD COLUMN gray_type   VARCHAR(16) DEFAULT 'NONE';
+ALTER TABLE task ADD COLUMN gray_config JSON DEFAULT NULL;
+```
+
+`gray_type` 取值: `NONE` | `PERCENTAGE` | `AB` | `CROWD`
+
+`gray_config` JSON 示例：
+- PERCENTAGE: `{"percent": 10}`
+- AB: `{"groups": [{"name":"A","percent":50},{"name":"B","percent":50}]}`
+- CROWD: `{"crowdIds": [1, 2]}`

@@ -112,3 +112,23 @@ POST /api/admin/simulate/full-flow/{taskId}
 ```
 GET /api/admin/simulate/status
 ```
+
+## v0.3.1 — 过滤表达式新增灰度函数
+
+在 FilterExpressionEngine 中新增 3 个过滤函数：
+
+| 函数 | 参数 | 示例 | 行为 |
+|---|---|---|---|
+| `inGrayPercent(percent)` | 0-100 整数 | `inGrayPercent(10)` | hash(userId+taskId) % 100 < percent |
+| `inABGroup(groupName)` | 字符串 | `inABGroup('A')` | 基于 hash + grayConfig 分组分配判断 |
+| `inCrowd(crowdId)` | 整数 | `inCrowd(1)` | 查 list_data 表 (listType=CROWD) |
+
+### 表达式示例
+
+```
+inGrayPercent(30)                                   // 30% 灰度
+inABGroup('A')                                      // AB 实验 A 组
+inCrowd(1) || inCrowd(2)                            // 人群包 1 或 2
+inGrayPercent(50) && inABGroup('A')                 // 50% 灰度中的 A 组
+inProvince(['BJ','SH']) && inGrayPercent(10)         // 仅京沪 10% 灰度
+```
