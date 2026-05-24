@@ -1,6 +1,7 @@
 package com.marketing.task.prize.service.handlers;
 
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.prize.domain.config.BadgeParams;
 import com.marketing.task.prize.domain.entity.Prize;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
@@ -25,12 +26,12 @@ public class BadgePrizeHandler implements PrizeHandler {
         try {
             BadgeParams params = JsonUtil.jsonToObjV2(prize.getParamsJson(), BadgeParams.class);
             if (params.getBadgeId() == null || params.getBadgeId().isBlank()) {
-                throw new BusinessException("徽章ID不能为空");
+                throw new BusinessException(ErrorCode.PRIZE_HANDLER_VALIDATION, "徽章ID不能为空");
             }
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            throw new BusinessException("徽章参数校验失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_VALIDATION, "徽章参数校验失败: " + e.getMessage());
         }
     }
 
@@ -44,7 +45,7 @@ public class BadgePrizeHandler implements PrizeHandler {
             String tradeNo = "BDG-" + UUID.randomUUID().toString().substring(0, 8);
             return GrantResult.success(tradeNo);
         } catch (Exception e) {
-            throw new BusinessException("徽章发放失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "徽章发放失败: " + e.getMessage());
         }
     }
 }

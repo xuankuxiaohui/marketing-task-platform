@@ -31,7 +31,7 @@ public class ClaimService {
     public ClaimResult claim(Long recordId) {
         PrizeRecord record = recordMapper.selectById(recordId);
         if (record == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "中奖记录不存在");
+            throw new BusinessException(ErrorCode.PRIZE_RECORD_NOT_FOUND);
         }
 
         String currentStatus = record.getStatus();
@@ -70,7 +70,7 @@ public class ClaimService {
 
             Prize prize = prizeMapper.selectById(record.getPrizeId());
             if (prize == null) {
-                throw new BusinessException(ErrorCode.NOT_FOUND, "奖品配置不存在");
+                throw new BusinessException(ErrorCode.PRIZE_CONFIG_MISSING);
             }
 
             PrizeHandler handler = applicationContext.getBean(prize.getHandlerBean(), PrizeHandler.class);

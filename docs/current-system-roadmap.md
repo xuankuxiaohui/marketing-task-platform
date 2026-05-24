@@ -125,7 +125,12 @@
    - H2 内存库 + @SpringBootTest + @ActiveProfiles("test")。
    - 覆盖：每日签到/问卷回调/阅读进度全链路、互斥组、省份过滤、配置快照、奖品集成。
    - 修复 cascade 双步进 bug（completeStep + cascade 重复递增 currentStepSeq）。
-5. 完善异常码和错误文案，区分用户可见错误与系统错误。
+5. ~~完善异常码和错误文案~~ ✅ 已完成 (2026-05-24)：
+   - ErrorCode 枚举从 5 个扩展为 28 个，新增 subCode 业务子码（如 TASK_001, PRIZE_001）。
+   - 全量替换 31 处 throw new BusinessException 使用具体 ErrorCode。
+   - GlobalExceptionHandler 新增 BindException / HttpMessageNotReadableException / NoResourceFoundException / AccessDeniedException 处理。
+   - Catch-all 不再泄露 ex.getMessage()，只返回通用"服务器内部错误"。
+   - BusinessException / Result 新增 ErrorCode 构造函数，subCode 通过 @JsonInclude(NON_NULL) 仅在错误时返回。
 
 ### P1：任务能力增强
 

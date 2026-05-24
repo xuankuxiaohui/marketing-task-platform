@@ -16,7 +16,7 @@ public final class UserContextHolder {
     public static UserContext get() {
         UserContext context = HOLDER.get();
         if (context == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED, "缺少用户上下文");
+            throw new BusinessException(ErrorCode.AUTH_REQUIRED);
         }
         return context;
     }

@@ -43,17 +43,17 @@ public class CaptchaService {
 
     public void verify(String key, String code) {
         if (key == null || code == null) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "验证码参数缺失");
+            throw new BusinessException(ErrorCode.CAPTCHA_MISSING);
         }
         CaptchaEntry entry = store.remove(key);
         if (entry == null) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "验证码已过期，请刷新后重试");
+            throw new BusinessException(ErrorCode.CAPTCHA_EXPIRED);
         }
         if (System.currentTimeMillis() > entry.expireAt()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "验证码已过期，请刷新后重试");
+            throw new BusinessException(ErrorCode.CAPTCHA_EXPIRED);
         }
         if (!entry.code().equalsIgnoreCase(code.trim())) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "验证码错误");
+            throw new BusinessException(ErrorCode.CAPTCHA_WRONG);
         }
     }
 

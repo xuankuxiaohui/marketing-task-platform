@@ -56,7 +56,7 @@ public class PrizeService {
 
         Prize prize = prizeMapper.selectById(prizeId);
         if (prize == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "奖品不存在: " + prizeId);
+            throw new BusinessException(ErrorCode.PRIZE_NOT_FOUND, "奖品不存在: " + prizeId);
         }
 
         LocalDateTime now = LocalDateTime.now();

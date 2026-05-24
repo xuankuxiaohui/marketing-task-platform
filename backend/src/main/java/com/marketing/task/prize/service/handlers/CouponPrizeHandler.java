@@ -1,6 +1,7 @@
 package com.marketing.task.prize.service.handlers;
 
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.prize.domain.config.CouponParams;
 import com.marketing.task.prize.domain.entity.Prize;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
@@ -25,12 +26,12 @@ public class CouponPrizeHandler implements PrizeHandler {
         try {
             CouponParams params = JsonUtil.jsonToObjV2(prize.getParamsJson(), CouponParams.class);
             if (params.getTemplateId() == null || params.getTemplateId().isBlank()) {
-                throw new BusinessException("优惠券模板ID不能为空");
+                throw new BusinessException(ErrorCode.PRIZE_HANDLER_VALIDATION, "优惠券模板ID不能为空");
             }
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            throw new BusinessException("优惠券参数校验失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_VALIDATION, "优惠券参数校验失败: " + e.getMessage());
         }
     }
 
@@ -44,7 +45,7 @@ public class CouponPrizeHandler implements PrizeHandler {
             String tradeNo = "CPN-" + UUID.randomUUID().toString().substring(0, 8);
             return GrantResult.success(tradeNo);
         } catch (Exception e) {
-            throw new BusinessException("优惠券发放失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "优惠券发放失败: " + e.getMessage());
         }
     }
 }

@@ -38,17 +38,17 @@ public class InternalCallbackController {
     private UserTaskInstance resolveInstance(Long instanceId, String userId, Long taskId, String cycleKey) {
         if (instanceId != null) {
             UserTaskInstance inst = instanceMapper.selectById(instanceId);
-            if (inst == null) throw new BusinessException(ErrorCode.NOT_FOUND, "实例不存在");
+            if (inst == null) throw new BusinessException(ErrorCode.INSTANCE_NOT_FOUND);
             return inst;
         }
         if (userId == null || taskId == null || cycleKey == null) {
-            throw new BusinessException("参数不足：需提供instanceId或(userId+taskId+cycleKey)");
+            throw new BusinessException(ErrorCode.INSTANCE_PARAM_INSUFFICIENT);
         }
         UserTaskInstance inst = instanceMapper.selectOne(new LambdaQueryWrapper<UserTaskInstance>()
                 .eq(UserTaskInstance::getUserId, userId)
                 .eq(UserTaskInstance::getTaskId, taskId)
                 .eq(UserTaskInstance::getCycleKey, cycleKey));
-        if (inst == null) throw new BusinessException(404, "实例不存在");
+        if (inst == null) throw new BusinessException(ErrorCode.INSTANCE_NOT_FOUND);
         return inst;
     }
 }

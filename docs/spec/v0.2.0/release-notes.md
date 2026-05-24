@@ -178,6 +178,25 @@ mvn -f backend/pom.xml test  # 109 tests passed (39 new + 70 existing)
 mvn -f backend/pom.xml test  # 118 tests passed (9 new + 109 existing)
 ```
 
+## v0.2.5 — 异常码与错误文案标准化
+
+发布日期：2026-05-24
+
+- **ErrorCode 枚举扩展**：从 5 个通用码扩展为 28 个业务子码，覆盖 AUTH / CAPTCHA / TASK / STEP / INSTANCE / MUTEX / PRIZE / REWARD / FILTER 九个域
+- **31 处全量替换**：所有 `throw new BusinessException` 从裸字符串或 `ErrorCode.NOT_FOUND` 替换为具体 ErrorCode（如 `ErrorCode.INSTANCE_NOT_FOUND`）
+- **GlobalExceptionHandler 增强**：新增 BindException (400) / HttpMessageNotReadableException (400) / NoResourceFoundException (404) / AccessDeniedException (403) 处理器，覆盖 5+ 异常类型
+- **安全加固**：Catch-all Exception handler 不再通过 `ex.getMessage()` 泄露内部异常细节
+- **BusinessException 重构**：新增 ErrorCode 字段 + `BusinessException(ErrorCode)` / `BusinessException(ErrorCode, String)` 构造函数，保留 `BusinessException(int, String)` 向后兼容
+- **Result 增强**：新增 subCode 字段 + `fail(ErrorCode)` 工厂方法，`@JsonInclude(NON_NULL)` 确保成功时不返回 subCode
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 118 tests passed
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |

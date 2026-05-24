@@ -1,6 +1,7 @@
 package com.marketing.task.service.filter;
 
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.context.UserContext;
 import com.ql.util.express.DefaultContext;
 import com.ql.util.express.ExpressRunner;
@@ -45,13 +46,13 @@ public class FilterExpressionEngine {
 
     public void validate(String expression) {
         if (expression == null || expression.isBlank()) {
-            throw new BusinessException("过滤表达式不能为空");
+            throw new BusinessException(ErrorCode.FILTER_EXPRESSION_EMPTY);
         }
         if (expression.length() > MAX_LENGTH) {
-            throw new BusinessException("过滤表达式长度不能超过1024字符");
+            throw new BusinessException(ErrorCode.FILTER_EXPRESSION_TOO_LONG);
         }
         if (FORBIDDEN.matcher(expression).find()) {
-            throw new BusinessException("过滤表达式包含禁用关键字");
+            throw new BusinessException(ErrorCode.FILTER_EXPRESSION_DISALLOWED);
         }
     }
 
@@ -102,13 +103,13 @@ public class FilterExpressionEngine {
         runner.addFunction("inAllowlist", new Operator() {
             @Override
             public Object executeInner(Object[] list) {
-                throw new BusinessException("inAllowlist 函数暂未实现");
+                throw new BusinessException(ErrorCode.FILTER_NOT_IMPLEMENTED, "inAllowlist 函数暂未实现");
             }
         });
         runner.addFunction("notInDenylist", new Operator() {
             @Override
             public Object executeInner(Object[] list) {
-                throw new BusinessException("notInDenylist 函数暂未实现");
+                throw new BusinessException(ErrorCode.FILTER_NOT_IMPLEMENTED, "notInDenylist 函数暂未实现");
             }
         });
         runner.addFunction("orgEquals", new Operator() {

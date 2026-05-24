@@ -2,6 +2,7 @@ package com.marketing.task.service.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.context.UserContext;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;
@@ -110,14 +111,14 @@ public class TaskService {
                 .in(UserTaskInstance::getTaskId, mutexTaskIds)
                 .in(UserTaskInstance::getStatus, InstanceStatus.PENDING.name(), InstanceStatus.IN_PROGRESS.name()));
         if (count > 0) {
-            throw new BusinessException("您有一个互斥任务正在进行中，请先完成它");
+            throw new BusinessException(ErrorCode.MUTEX_CONFLICT);
         }
     }
 
     public Task requireTask(Long taskId) {
         Task task = cacheService.getTask(taskId);
         if (task == null) {
-            throw new BusinessException("任务不存在");
+            throw new BusinessException(ErrorCode.TASK_NOT_FOUND);
         }
         return task;
     }

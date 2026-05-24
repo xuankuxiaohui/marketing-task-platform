@@ -2,6 +2,7 @@ package com.marketing.task.service.reward;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.domain.entity.RewardRecord;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
@@ -80,6 +81,6 @@ public class LogRewardService implements RewardService {
                 return handler;
             }
         }
-        throw new BusinessException("未找到匹配的发奖处理器: " + config.getType());
+        throw new BusinessException(ErrorCode.REWARD_HANDLER_NOT_FOUND, "未找到匹配的发奖处理器: " + config.getType());
     }
 }

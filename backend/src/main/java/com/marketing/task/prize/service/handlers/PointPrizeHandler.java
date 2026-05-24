@@ -1,6 +1,7 @@
 package com.marketing.task.prize.service.handlers;
 
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.prize.domain.config.PointParams;
 import com.marketing.task.prize.domain.entity.Prize;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
@@ -25,10 +26,10 @@ public class PointPrizeHandler implements PrizeHandler {
         try {
             PointParams params = JsonUtil.jsonToObjV2(prize.getParamsJson(), PointParams.class);
             if (params.getAmount() <= 0) {
-                throw new BusinessException("积分数量必须大于0");
+                throw new BusinessException(ErrorCode.PRIZE_HANDLER_VALIDATION, "积分数量必须大于0");
             }
         } catch (Exception e) {
-            throw new BusinessException("积分参数校验失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_VALIDATION, "积分参数校验失败: " + e.getMessage());
         }
     }
 
@@ -43,7 +44,7 @@ public class PointPrizeHandler implements PrizeHandler {
             // TODO: 对接真实积分账户系统后替换
             return GrantResult.success("PNT-" + UUID.randomUUID().toString().substring(0, 8));
         } catch (Exception e) {
-            throw new BusinessException("积分发放失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "积分发放失败: " + e.getMessage());
         }
     }
 }

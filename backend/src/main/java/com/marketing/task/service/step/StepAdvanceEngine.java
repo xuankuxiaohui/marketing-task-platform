@@ -3,6 +3,7 @@ package com.marketing.task.service.step;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.entity.UserTaskStepProgress;
@@ -42,10 +43,10 @@ public class StepAdvanceEngine {
     public UserTaskInstance click(UserTaskInstance instance, Long stepId) {
         TaskStep step = taskStepMapper.selectById(stepId);
         if (step == null || !step.getTaskId().equals(instance.getTaskId())) {
-            throw new BusinessException("步骤不存在");
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
         if (!StepType.CLICK.name().equals(step.getType())) {
-            throw new BusinessException("当前步骤不是CLICK类型");
+            throw new BusinessException(ErrorCode.STEP_TYPE_MISMATCH, "当前步骤不是CLICK类型");
         }
         completeStep(instance, step);
         cascade(instance);
@@ -58,13 +59,13 @@ public class StepAdvanceEngine {
                 .eq(TaskStep::getTaskId, instance.getTaskId())
                 .eq(TaskStep::getSeq, instance.getCurrentStepSeq()));
         if (step == null) {
-            throw new BusinessException("当前步骤不存在");
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
         if (!StepType.CALLBACK.name().equals(step.getType())) {
-            throw new BusinessException("当前步骤不是CALLBACK类型");
+            throw new BusinessException(ErrorCode.STEP_TYPE_MISMATCH, "当前步骤不是CALLBACK类型");
         }
         if (step.getCallbackEventKey() == null || !step.getCallbackEventKey().equals(callbackEventKey)) {
-            throw new BusinessException("回调事件Key不匹配");
+            throw new BusinessException(ErrorCode.CALLBACK_KEY_MISMATCH);
         }
         completeStep(instance, step);
         cascade(instance);
@@ -75,10 +76,10 @@ public class StepAdvanceEngine {
     public UserTaskInstance progress(UserTaskInstance instance, Long stepId, int progressValue) {
         TaskStep step = taskStepMapper.selectById(stepId);
         if (step == null || !step.getTaskId().equals(instance.getTaskId())) {
-            throw new BusinessException("步骤不存在");
+            throw new BusinessException(ErrorCode.STEP_NOT_FOUND);
         }
         if (!StepType.PROGRESS.name().equals(step.getType())) {
-            throw new BusinessException("当前步骤不是PROGRESS类型");
+            throw new BusinessException(ErrorCode.STEP_TYPE_MISMATCH, "当前步骤不是PROGRESS类型");
         }
 
         UserTaskStepProgress progress = progressMapper.selectOne(new LambdaQueryWrapper<UserTaskStepProgress>()

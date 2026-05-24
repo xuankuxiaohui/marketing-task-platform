@@ -29,7 +29,7 @@ public class ClientAuthService {
 
     public LoginResult register(RegisterRequest req) {
         if (clientUserMapper.exists(new LambdaQueryWrapper<ClientUser>().eq(ClientUser::getUsername, req.username()))) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户名已存在");
+            throw new BusinessException(ErrorCode.USER_EXISTS);
         }
         ClientUser user = new ClientUser();
         user.setUsername(req.username());
