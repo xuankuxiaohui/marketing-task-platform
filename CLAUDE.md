@@ -42,6 +42,10 @@ scripts/        工程脚本
 | `docs/conventions/git.md` | Git 提交规范、分支命名 |
 | `docs/spec/current/` | 当前版本规格 (API、SQL、发布说明) |
 
+## Skill routing
+
+- 持续开发/多任务推进/多天自主工作 → invoke `/continuous-workflow`
+
 ## 开发注意事项
 
 - 所有详细文档在 `docs/` 目录下，本文件只做索引
