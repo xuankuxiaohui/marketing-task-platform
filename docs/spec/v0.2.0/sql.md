@@ -9,6 +9,7 @@
 | V2 | `V2__seed_demo_data.sql` | v0.2.0 种子数据：3 个演示任务 |
 | V3 | `V3__auth_tables.sql` | v0.2.x 鉴权用户表：admin_user + client_user |
 | V4 | `V4__task_snapshot.sql` | v0.2.1 任务配置快照表：task_definition_snapshot |
+| V5 | `V5__reward_record.sql` | v0.2.2 发奖流水表：reward_record |
 
 ## V3 鉴权用户表
 
@@ -64,6 +65,26 @@
 唯一约束: `(task_id, version)`，索引: `idx_task_id`。
 
 `snapshot_json` 内容为 `TaskSnapshotDTO` 的 JSON 序列化：`{ task, steps[], filters[], platforms[] }`。
+
+## V5 发奖流水表
+
+`backend/src/main/resources/db/migration/V5__reward_record.sql`
+
+### reward_record
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | BIGINT PK AUTO_INCREMENT | 主键 |
+| instance_id | BIGINT NOT NULL | 用户任务实例 ID |
+| step_id | BIGINT NOT NULL | 奖励步骤 ID |
+| reward_type | VARCHAR(32) NOT NULL | 奖励类型：point / coupon / badge |
+| reward_config_json | JSON NULL | 原始奖励配置 JSON |
+| status | VARCHAR(16) DEFAULT 'PENDING' | PENDING / SUCCESS / FAILED |
+| idempotent_key | VARCHAR(128) NOT NULL | 幂等键：`{instance_id}:{step_id}` |
+| error_message | VARCHAR(1024) NULL | 失败原因（仅 FAILED 状态） |
+| created_at | DATETIME DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+唯一约束: `(instance_id, step_id)`，索引: `idx_instance_id`, `idx_status`。
 
 ## V2 种子数据
 

@@ -21,6 +21,8 @@ public class TaskStep {
     private Integer targetValue;
     private String callbackEventKey;
     private String rewardConfigJson;
+    private Long prizeId;
+    private Integer prizeQuantity;
     private String flowDesc;
     private String extraJson;
     private LocalDateTime createdAt;

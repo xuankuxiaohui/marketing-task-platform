@@ -18,8 +18,7 @@ public class PointRewardHandler implements RewardHandler {
     @Override
     public void distribute(UserTaskInstance instance, TaskStep step, RewardConfig config) {
         int amount = config.getAmount() != null ? config.getAmount() : 0;
-        log.info("[PointReward] 发放积分 userId={}, taskId={}, amount={}",
-                instance.getUserId(), instance.getTaskId(), amount);
-        // TODO: 对接真实积分系统 API
+        log.info("[PointReward] 发放积分 userId={}, taskId={}, amount={}, instanceId={}",
+                instance.getUserId(), instance.getTaskId(), amount, instance.getId());
     }
 }

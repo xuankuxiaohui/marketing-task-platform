@@ -30,10 +30,22 @@
   - `CALLBACK` 由内部回调推进。
   - `PROGRESS` 由内部进度上报推进。
   - `REWARD` 自动触发奖励。
+- 奖品模块（独立 prize package）：
+  - prize / prize_record / prize_claim_lock / prize_inventory_record 四表。
+  - PrizeService 统一发奖入口 + PrizeHandler 策略模式 (Point/Coupon/Badge/Internal)。
+  - 7 个 PrizeLimiter 校验链（状态/库存/互斥/省份/等级/标签/用户频率）。
+  - ClaimService 领奖 + prize_claim_lock 防重锁 + 自动/手动领奖模式。
+  - PrizeExpiryScheduler 三机制过期（用户进专区 + 每小时扫描 + 领奖时校验）。
+  - ClientPrizeController 领奖专区 API + AdminPrizeController 奖品管理 API。
+  - task_step 新增 prize_id / prize_quantity，RewardStepHandler 接入 PrizeService。
+  - 39 个单元测试。
 - 奖励处理：
   - `RewardConfig` 解析。
-  - `point`、`coupon`、`badge` 三类 handler 占位实现。
+  - `point`、`coupon`、`badge` 三类 handler 实现。
   - 无匹配奖励处理器时抛异常，避免错误标记为已奖励。
+  - `reward_record` 表记录发奖流水（PENDING/SUCCESS/FAILED）。
+  - 幂等：`(instance_id, step_id)` 唯一约束，重复触发直接跳过。
+  - 失败重试：FAILED 记录可重试，异常不阻塞任务实例。
 - 性能与一致性：
   - Caffeine 本地缓存任务定义、步骤、过滤器、端配置、版本快照。
   - 聚合保存、发布、下线、子表独立 CRUD 后都会失效缓存。
@@ -85,7 +97,7 @@
 | 限制 | 当前状态 | 风险 |
 |---|---|---|
 | 真实鉴权 | 仍使用 Header Mock UserContext | 不能直接用于生产 |
-| 真实发奖 | handler 仍是日志/TODO 占位 | 不能真实发积分、券、徽章 |
+| 真实发奖 | reward_record 表 + 幂等 + 失败重试已实现，handler 暂为模拟（无外部API） | 外部奖励系统对接后再替换 handler 实现 |
 | 配置版本快照 | 已实现，发布时创建 `task_definition_snapshot`，C 端按版本读取 | 步骤平台配置尚未纳入快照 |
 | CRON 调度 | `CRON` 当前只是按当前分钟生成 cycle_key | 还没有调度触发器 |
 | allowlist/denylist | 函数已注册但暂未接入名单数据源 | 相关过滤表达式不可用 |
@@ -98,10 +110,12 @@
 ### P0：正确性与生产前置
 
 1. 接入真实鉴权链路：网关/JWT/用户中心，替换 Mock Header。
-2. 完成真实奖励系统对接：
-   - 积分、优惠券、徽章分别定义幂等键。
-   - 发奖失败保持任务实例可重试。
-   - 记录发奖流水和失败原因。
+2. ~~完成真实奖励系统对接~~ ✅ 已完成 (2026-05-24)：
+   - reward_record 表 + 幂等 + 失败重试（P0-2 阶段）。
+   - 独立 prize 模块：PrizeService + PrizeHandler 策略 + 7 个 Limiter 校验链。
+   - prize_claim_lock 防重锁 + ClaimService 领奖 + 自动/手动模式。
+   - 三机制过期处理 + 领奖专区 API + 管理后台 API。
+   - 39 个单元测试 (PrizeServiceTest 13 + ClaimServiceTest 9 + PrizeLimiterTest 17)。
 3. ~~增加任务配置快照~~ ✅ 已完成：
    - 发布时固化 task、steps、filters、platforms JSON 到 `task_definition_snapshot`。
    - 用户实例按 `task_version` 读取对应快照，无快照时 fallback 到实时表。

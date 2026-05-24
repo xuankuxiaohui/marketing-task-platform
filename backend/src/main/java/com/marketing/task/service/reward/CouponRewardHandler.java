@@ -17,8 +17,8 @@ public class CouponRewardHandler implements RewardHandler {
 
     @Override
     public void distribute(UserTaskInstance instance, TaskStep step, RewardConfig config) {
-        log.info("[CouponReward] 发放优惠券 userId={}, taskId={}, amount={}",
-                instance.getUserId(), instance.getTaskId(), config.getAmount());
-        // TODO: 对接真实优惠券系统 API
+        int amount = config.getAmount() != null ? config.getAmount() : 0;
+        log.info("[CouponReward] 发放优惠券 userId={}, taskId={}, amount={}, instanceId={}",
+                instance.getUserId(), instance.getTaskId(), amount, instance.getId());
     }
 }

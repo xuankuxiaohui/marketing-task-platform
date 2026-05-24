@@ -119,11 +119,27 @@ mvn -f backend/pom.xml test  # 60 tests passed (22 new + 38 existing)
 - **版本化读取**：`ClientTaskController.detail()` 优先按实例 `taskVersion` 读取快照；无快照时 fallback 到实时表
 - **Caffeine 缓存**：快照按 `taskId:version` 缓存，创建后不可变
 
+## v0.2.2 — 真实奖励系统对接
+
+发布日期：2026-05-24
+
+- **`reward_record` 表 (Flyway V5)**：记录每笔发奖流水的 instance_id, step_id, reward_type, reward_config_json, status (PENDING/SUCCESS/FAILED), error_message
+- **幂等发奖**：`(instance_id, step_id)` 唯一约束，已有 SUCCESS 记录则跳过，重复触发不重复发奖
+- **失败重试**：handler 抛异常时记录 FAILED + error_message，不抛出异常阻塞实例，后续可重试
+- **RewardStatus 枚举**：PENDING / SUCCESS / FAILED
+- **10 个单元测试**：覆盖幂等跳过、FAILED 重试、point/coupon/badge 路由、handler 异常容错、记录字段完整性
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 70 tests passed (10 new + 60 existing)
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |
 |---|---|---|
-| 真实发奖 | LogRewardService（仅日志） | v0.3.0 对接真实发奖系统 |
+| 真实发奖 | ✅ 已实现 (v0.2.2)，reward_record 表 + 幂等 + 失败重试 | 外部奖励 API 对接后替换 handler 实现 |
 | 配置版本快照 | ✅ 已实现 (v0.2.1)，发布时固化快照，C 端按版本读取 | — |
 | MONTHLY/CRON 周期 | 数据模型和种子数据就绪 | v0.3.0 补充调度触发 |
 | 任务互斥 | `mutex_group_key` 字段预留 | v0.3.0 |

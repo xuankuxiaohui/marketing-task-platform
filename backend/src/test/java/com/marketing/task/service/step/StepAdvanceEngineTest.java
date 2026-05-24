@@ -68,7 +68,7 @@ class StepAdvanceEngineTest {
                 new ClickStepHandler(),
                 new CallbackStepHandler(),
                 new ProgressStepHandler(),
-                new RewardStepHandler(mock(com.marketing.task.service.reward.RewardService.class))
+                new RewardStepHandler(mock(com.marketing.task.prize.service.PrizeService.class), mock(com.marketing.task.service.reward.RewardService.class))
         );
         engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService);
 
