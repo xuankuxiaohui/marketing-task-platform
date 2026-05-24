@@ -252,6 +252,28 @@ npm --prefix admin-web run build  # 通过
 npm --prefix client-web run build  # 通过
 ```
 
+## v0.2.9 — 奖品管理后台 + 领奖专区前端
+
+发布日期：2026-05-24
+
+### Admin 前端：奖品配置管理
+- PrizeList.vue: 奖品列表分页、类型/库存/状态展示、启用/禁用切换
+- PrizeEdit.vue: 新建/编辑奖品（类型/库存/限制/领取设置/时间窗口/奖品组）
+- 路由 /prizes, /prizes/new, /prizes/:id，侧边栏"奖品管理"菜单
+
+### Client 前端：领奖专区
+- PrizeRecords.vue: 状态 Tab（全部/待领取/已到账/已过期）+ 计数 badge
+- 奖品卡片 + 过期倒计时 + 错误信息
+- 详情弹窗 (van-action-sheet) + "立即领取"按钮 (claimPrize API)
+- 入口: 任务列表 NavBar gift-o 图标, 路由 /prizes
+
+### 验证
+```bash
+mvn -f backend/pom.xml test  # 128 tests passed
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |

@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import Login from '../views/login/Login.vue'
 import InstanceList from '../views/instance/InstanceList.vue'
+import PrizeEdit from '../views/prize/PrizeEdit.vue'
+import PrizeList from '../views/prize/PrizeList.vue'
 import TaskEdit from '../views/task/TaskEdit.vue'
 import TaskList from '../views/task/TaskList.vue'
 
@@ -14,6 +16,9 @@ export const router = createRouter({
     { path: '/tasks/new', component: TaskEdit, meta: { requiresAuth: true } },
     { path: '/tasks/:id', component: TaskEdit, meta: { requiresAuth: true } },
     { path: '/instances', component: InstanceList, meta: { requiresAuth: true } },
+    { path: '/prizes', component: PrizeList, meta: { requiresAuth: true } },
+    { path: '/prizes/new', component: PrizeEdit, meta: { requiresAuth: true } },
+    { path: '/prizes/:id', component: PrizeEdit, meta: { requiresAuth: true } },
   ],
 })
 

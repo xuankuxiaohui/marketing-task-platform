@@ -1,6 +1,11 @@
 <template>
   <div class="task-list-page">
-    <van-nav-bar title="任务中心" right-text="退出" @click-right="handleSwitchUser" />
+    <van-nav-bar title="任务中心" @click-right="handleSwitchUser">
+      <template #right>
+        <van-icon name="gift-o" size="20" class="nav-prize-icon" @click="$router.push('/prizes')" />
+        <span class="nav-logout" @click="handleSwitchUser">退出</span>
+      </template>
+    </van-nav-bar>
 
     <van-pull-refresh v-model="refreshing" @refresh="loadTasks" class="pull-area">
       <van-loading v-if="loading" size="24px" vertical class="loading-wrap">加载中...</van-loading>
@@ -98,6 +103,17 @@ onMounted(loadTasks)
 </script>
 
 <style scoped>
+.nav-prize-icon {
+  margin-right: 14px;
+  color: #f59e0b;
+  cursor: pointer;
+}
+.nav-logout {
+  font-size: 13px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
 .task-list-page {
   min-height: 100vh;
   background: #f7f8fa;

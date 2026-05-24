@@ -32,6 +32,16 @@
               <span>任务管理</span>
             </template>
           </el-menu-item>
+          <el-menu-item index="/prizes">
+            <template #title>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
+                <circle cx="12" cy="8" r="5"/>
+                <path d="M3 21l3-7h12l3 7"/>
+                <line x1="12" y1="3" x2="12" y2="6"/>
+              </svg>
+              <span>奖品管理</span>
+            </template>
+          </el-menu-item>
           <el-menu-item index="/instances">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">

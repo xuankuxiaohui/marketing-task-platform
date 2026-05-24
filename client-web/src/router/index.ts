@@ -12,6 +12,7 @@ export const router = createRouter({
     { path: '/mock-login', component: () => import('../views/login/MockLogin.vue') },
     { path: '/tasks', component: () => import('../views/task/TaskList.vue'), meta: { requiresAuth: true } },
     { path: '/task/:id', component: () => import('../views/task/TaskDetail.vue'), meta: { requiresAuth: true } },
+    { path: '/prizes', component: () => import('../views/prize/PrizeRecords.vue'), meta: { requiresAuth: true } },
   ],
 })
 
