@@ -216,6 +216,24 @@ npm --prefix admin-web run build  # 通过
 npm --prefix client-web run build  # 通过
 ```
 
+## v0.2.7 — 名单过滤 (allowlist/denylist)
+
+发布日期：2026-05-24
+
+- **list_data 表 (Flyway V7)**：list_type(ALLOWLIST/DENYLIST), list_key, user_id, UNIQUE(list_type, list_key, user_id)
+- **ListDataService**：`isInList(listType, listKey, userId)` 查询名单
+- **FilterExpressionEngine 实现**：`inAllowlist(listKey)` 查 ALLOWLIST 返回 true/false，`notInDenylist(listKey)` 查 DENYLIST 取反
+- **构造函数注入**：FilterExpressionEngine 改为 `FilterExpressionEngine(ListDataService)` 构造函数注入，替换无参构造
+- **17 个过滤器测试**（原 14 + 新增 3）：覆盖 inAllowlist 命中/未命中、notInDenylist 命中/未命中
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 128 tests passed (3 new + 125 existing)
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |

@@ -4,18 +4,27 @@ import com.marketing.task.common.BusinessException;
 import com.marketing.task.context.UserContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class FilterExpressionEngineTest {
+
+    @Mock
+    private ListDataService listDataService;
 
     private FilterExpressionEngine engine;
 
     @BeforeEach
     void setUp() throws Exception {
-        engine = new FilterExpressionEngine();
+        engine = new FilterExpressionEngine(listDataService);
     }
 
     @Test
@@ -89,9 +98,31 @@ class FilterExpressionEngineTest {
     }
 
     @Test
-    void evaluate_inAllowlist_shouldThrowNotImplemented() {
-        UserContext ctx = UserContext.builder().build();
-        assertFalse(engine.evaluate("inAllowlist(['uid1'])", ctx));
+    void evaluate_inAllowlist_shouldReturnTrueWhenInList() {
+        UserContext ctx = UserContext.builder().userId("u1").build();
+        when(listDataService.isInList("ALLOWLIST", "vip_users", "u1")).thenReturn(true);
+        assertTrue(engine.evaluate("inAllowlist('vip_users')", ctx));
+    }
+
+    @Test
+    void evaluate_inAllowlist_shouldReturnFalseWhenNotInList() {
+        UserContext ctx = UserContext.builder().userId("u2").build();
+        when(listDataService.isInList("ALLOWLIST", "vip_users", "u2")).thenReturn(false);
+        assertFalse(engine.evaluate("inAllowlist('vip_users')", ctx));
+    }
+
+    @Test
+    void evaluate_notInDenylist_shouldReturnTrueWhenNotInBlacklist() {
+        UserContext ctx = UserContext.builder().userId("u1").build();
+        when(listDataService.isInList("DENYLIST", "blocked", "u1")).thenReturn(false);
+        assertTrue(engine.evaluate("notInDenylist('blocked')", ctx));
+    }
+
+    @Test
+    void evaluate_notInDenylist_shouldReturnFalseWhenInBlacklist() {
+        UserContext ctx = UserContext.builder().userId("u3").build();
+        when(listDataService.isInList("DENYLIST", "blocked", "u3")).thenReturn(true);
+        assertFalse(engine.evaluate("notInDenylist('blocked')", ctx));
     }
 
     @Test

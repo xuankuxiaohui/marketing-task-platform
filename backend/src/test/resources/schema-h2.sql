@@ -250,3 +250,14 @@ CREATE TABLE prize_inventory_record (
     UNIQUE KEY uk_prize_record (prize_id, record_id),
     INDEX idx_prize_created (prize_id, created_at)
 );
+
+-- V7: list_data
+CREATE TABLE list_data (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    list_type VARCHAR(16) NOT NULL,
+    list_key VARCHAR(64) NOT NULL,
+    user_id VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_list_entry (list_type, list_key, user_id),
+    INDEX idx_list_query (list_type, list_key)
+);

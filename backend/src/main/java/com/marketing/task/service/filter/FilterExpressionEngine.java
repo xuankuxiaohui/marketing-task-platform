@@ -26,8 +26,11 @@ public class FilterExpressionEngine {
     private static final ThreadLocal<UserContext> CURRENT = new ThreadLocal<>();
     private final ExpressRunner runner;
 
-    public FilterExpressionEngine() throws Exception {
+    private final ListDataService listDataService;
+
+    public FilterExpressionEngine(ListDataService listDataService) throws Exception {
         this.runner = new ExpressRunner(false, false);
+        this.listDataService = listDataService;
         registerFunctions();
     }
 
@@ -103,13 +106,13 @@ public class FilterExpressionEngine {
         runner.addFunction("inAllowlist", new Operator() {
             @Override
             public Object executeInner(Object[] list) {
-                throw new BusinessException(ErrorCode.FILTER_NOT_IMPLEMENTED, "inAllowlist 函数暂未实现");
+                return listDataService.isInList("ALLOWLIST", String.valueOf(arg(list, 0)), current().getUserId());
             }
         });
         runner.addFunction("notInDenylist", new Operator() {
             @Override
             public Object executeInner(Object[] list) {
-                throw new BusinessException(ErrorCode.FILTER_NOT_IMPLEMENTED, "notInDenylist 函数暂未实现");
+                return !listDataService.isInList("DENYLIST", String.valueOf(arg(list, 0)), current().getUserId());
             }
         });
         runner.addFunction("orgEquals", new Operator() {

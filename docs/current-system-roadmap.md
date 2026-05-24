@@ -101,7 +101,7 @@
 | 真实发奖 | reward_record 表 + 幂等 + 失败重试已实现，handler 暂为模拟（无外部API） | 外部奖励系统对接后再替换 handler 实现 |
 | 配置版本快照 | 已实现，发布时创建 `task_definition_snapshot`，C 端按版本读取 | 步骤平台配置尚未纳入快照 |
 | CRON 调度 | `TaskCycleScheduler` 每 5 分钟扫描并激活新周期 | 尚未实现批量预创建用户实例 |
-| allowlist/denylist | 函数已注册但暂未接入名单数据源 | 相关过滤表达式不可用 |
+| allowlist/denylist | ✅ list_data 表 + ListDataService 已实现，inAllowlist/notInDenylist 可查表 | — |
 | 平台适配器 | Adapter 已注册，但 C 端详情仍主要返回原始 stepPlatforms | 端差异渲染还不完整 |
 | 集成测试 | 已支持 9 个 @SpringBootTest 端到端场景 (H2) | 仅覆盖服务层，HTTP 层集成待补充 |
 | OpenAPI 类型 | 已加入生成脚本，但前端类型仍有手写部分 | 接口变更可能导致类型漂移 |
@@ -139,9 +139,11 @@
    - 检测 cycleKey 变更自动激活新周期，ConcurrentHashMap 跟踪已激活周期防重复。
    - CycleKeyResolver 已有周期 key 生成逻辑（CRON=yyyyMMddHHmm, MONTHLY=yyyyMM），调度器复用。
    - 7 个单元测试。
-2. 完成 allowlist/denylist：
-   - 接入名单表、Redis 或外部画像服务。
-   - 支持名单版本和缓存。
+2. ~~完成 allowlist/denylist~~ ✅ 已完成 (2026-05-24)：
+   - list_data 表 (Flyway V7) + ListData entity/mapper/service。
+   - inAllowlist(listKey) / notInDenylist(listKey) 查 list_data 表。
+   - FilterExpressionEngine 构造函数注入 ListDataService。
+   - 4 个新增 + 1 个修改测试 (FilterExpressionEngineTest: 17 tests)。
 3. 完善平台适配：
    - 在 C 端详情按 `X-Platform` 合并 step + stepPlatform。
    - 使用 `PlatformAdapterRegistry` 输出统一前端渲染模型。
