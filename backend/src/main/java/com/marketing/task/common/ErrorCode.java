@@ -5,6 +5,8 @@ import lombok.Getter;
 @Getter
 public enum ErrorCode {
     // ---- Generic ----
+    // HTTP status conventions: 400=malformed request, 401=auth, 403=forbidden,
+    //   404=not found, 409=conflict, 410=expired, 422=business validation, 500=server error
     BAD_REQUEST(400, "BAD_REQUEST", "参数错误"),
     UNAUTHORIZED(401, "UNAUTHORIZED", "未授权"),
     FORBIDDEN(403, "FORBIDDEN", "无权限"),
@@ -26,8 +28,8 @@ public enum ErrorCode {
 
     // ---- Step ----
     STEP_NOT_FOUND(404, "STEP_001", "步骤不存在"),
-    STEP_TYPE_MISMATCH(400, "STEP_002", "步骤类型不匹配"),
-    CALLBACK_KEY_MISMATCH(400, "STEP_003", "回调事件Key不匹配"),
+    STEP_TYPE_MISMATCH(422, "STEP_002", "步骤类型不匹配"),
+    CALLBACK_KEY_MISMATCH(422, "STEP_003", "回调事件Key不匹配"),
 
     // ---- Instance ----
     INSTANCE_NOT_FOUND(404, "INSTANCE_001", "实例不存在"),
@@ -35,23 +37,23 @@ public enum ErrorCode {
     MUTEX_CONFLICT(409, "MUTEX_001", "互斥任务冲突，请先完成正在进行中的同类任务"),
 
     // ---- Cycle ----
-    SPECIAL_CYCLE_KEY_MISSING(400, "CYCLE_001", "SPECIAL任务缺少specialCycleKey"),
+    SPECIAL_CYCLE_KEY_MISSING(422, "CYCLE_001", "SPECIAL任务缺少specialCycleKey"),
 
     // ---- Prize ----
     PRIZE_NOT_FOUND(404, "PRIZE_001", "奖品不存在"),
     PRIZE_RECORD_NOT_FOUND(404, "PRIZE_002", "中奖记录不存在"),
     PRIZE_CONFIG_MISSING(404, "PRIZE_003", "奖品配置不存在"),
-    PRIZE_HANDLER_VALIDATION(400, "PRIZE_004", "奖品参数校验失败"),
+    PRIZE_HANDLER_VALIDATION(422, "PRIZE_004", "奖品参数校验失败"),
     PRIZE_HANDLER_ERROR(500, "PRIZE_005", "奖品发放失败"),
-    PRIZE_CLAIM_EXPIRED(400, "PRIZE_006", "奖品已过期"),
+    PRIZE_CLAIM_EXPIRED(410, "PRIZE_006", "奖品已过期"),
 
     // ---- Reward ----
     REWARD_HANDLER_NOT_FOUND(500, "REWARD_001", "未找到匹配的发奖处理器"),
 
     // ---- Filter ----
-    FILTER_EXPRESSION_EMPTY(400, "FILTER_001", "过滤表达式不能为空"),
-    FILTER_EXPRESSION_TOO_LONG(400, "FILTER_002", "过滤表达式长度不能超过1024字符"),
-    FILTER_EXPRESSION_DISALLOWED(400, "FILTER_003", "过滤表达式包含禁用关键字"),
+    FILTER_EXPRESSION_EMPTY(422, "FILTER_001", "过滤表达式不能为空"),
+    FILTER_EXPRESSION_TOO_LONG(422, "FILTER_002", "过滤表达式长度不能超过1024字符"),
+    FILTER_EXPRESSION_DISALLOWED(422, "FILTER_003", "过滤表达式包含禁用关键字"),
     FILTER_NOT_IMPLEMENTED(501, "FILTER_004", "过滤功能暂未实现");
 
     private final int code;
