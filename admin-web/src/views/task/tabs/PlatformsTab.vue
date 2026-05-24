@@ -54,12 +54,12 @@
               <span :class="['pf-tag-mini', platformClass(p)]">{{ p }}</span>
               <el-input
                 :model-value="getStepPlatformConfig(step, p).buttonText"
-                @update:model-value="v => setStepPlatformConfig(step, p, 'buttonText', v)"
+                @update:model-value="setStepPlatformConfig(step, p, 'buttonText', $event)"
                 size="small" placeholder="按钮文案" style="width:110px"
               />
               <el-select
                 :model-value="getStepPlatformConfig(step, p).actionType || 'NONE'"
-                @update:model-value="v => setStepPlatformConfig(step, p, 'actionType', v)"
+                @update:model-value="setStepPlatformConfig(step, p, 'actionType', $event)"
                 size="small" style="width:130px"
               >
                 <el-option label="无操作" value="NONE" />
@@ -71,7 +71,7 @@
               </el-select>
               <el-select
                 :model-value="getStepPlatformConfig(step, p).jumpType || 'NONE'"
-                @update:model-value="v => setStepPlatformConfig(step, p, 'jumpType', v as string)"
+                @update:model-value="setStepPlatformConfig(step, p, 'jumpType', $event)"
                 size="small" style="width:110px"
               >
                 <el-option label="无跳转" value="NONE" />
@@ -83,7 +83,7 @@
               <el-input
                 v-if="getStepPlatformConfig(step, p).jumpType && getStepPlatformConfig(step, p).jumpType !== 'NONE'"
                 :model-value="getStepPlatformConfig(step, p).jumpTarget"
-                @update:model-value="v => setStepPlatformConfig(step, p, 'jumpTarget', v)"
+                @update:model-value="setStepPlatformConfig(step, p, 'jumpTarget', $event)"
                 size="small" placeholder="跳转目标" style="width:140px"
               />
             </div>

@@ -23,6 +23,18 @@ export const router = createRouter({
     { path: '/prizes', component: PrizeList, meta: { requiresAuth: true } },
     { path: '/prizes/new', component: PrizeEdit, meta: { requiresAuth: true } },
     { path: '/prizes/:id', component: PrizeEdit, meta: { requiresAuth: true } },
+    {
+      path: '/dashboard',
+      name: 'Dashboard',
+      component: () => import('../views/Dashboard.vue'),
+      meta: { requiresAuth: true, title: '运营仪表盘' }
+    },
+    {
+      path: '/tasks/:id/metrics',
+      name: 'TaskMetrics',
+      component: () => import('../views/TaskMetrics.vue'),
+      meta: { requiresAuth: true, title: '任务指标' }
+    },
   ],
 })
 

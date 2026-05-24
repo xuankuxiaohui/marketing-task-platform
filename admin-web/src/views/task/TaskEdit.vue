@@ -43,6 +43,15 @@
         </template>
         <PlatformsTab ref="platformsTabRef" />
       </el-tab-pane>
+      <el-tab-pane label="模拟测试" name="simulate">
+        <template #label>
+          <span class="tab-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            模拟测试
+          </span>
+        </template>
+        <SimulateTab v-if="taskId" :task-id="taskId" />
+      </el-tab-pane>
     </el-tabs>
     <div class="form-actions">
       <el-button type="primary" @click="submit" :loading="submitting">保存草稿</el-button>
@@ -64,6 +73,7 @@ import BasicTab from './tabs/BasicTab.vue'
 import FiltersTab from './tabs/FiltersTab.vue'
 import PlatformsTab from './tabs/PlatformsTab.vue'
 import StepsTab from './tabs/StepsTab.vue'
+import SimulateTab from './SimulateTab.vue'
 
 const route = useRoute()
 const router = useRouter()
