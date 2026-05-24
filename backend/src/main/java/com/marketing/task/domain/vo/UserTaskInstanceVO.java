@@ -19,6 +19,9 @@ public class UserTaskInstanceVO {
     private LocalDateTime startTime;
     private LocalDateTime completeTime;
     private LocalDateTime rewardTime;
+    private LocalDateTime createdAt;
+    @Schema(description = "任务名称（管理端注入，非实体字段）")
+    private String taskName;
 
     public static UserTaskInstanceVO from(UserTaskInstance entity) {
         if (entity == null) return null;
@@ -33,6 +36,7 @@ public class UserTaskInstanceVO {
         vo.setStartTime(entity.getStartTime());
         vo.setCompleteTime(entity.getCompleteTime());
         vo.setRewardTime(entity.getRewardTime());
+        vo.setCreatedAt(entity.getCreatedAt());
         return vo;
     }
 }
