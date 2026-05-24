@@ -20,7 +20,8 @@ public class TaskAdminVO {
     private LocalDateTime endTime;
     private String status;
     private Integer version;
-    private String mutexGroupKey;
+    private Long mutexGroupId;
+    private String mutexGroupName;
 
     public static TaskAdminVO from(Task task) {
         if (task == null) return null;
@@ -36,7 +37,7 @@ public class TaskAdminVO {
         vo.setEndTime(task.getEndTime());
         vo.setStatus(task.getStatus());
         vo.setVersion(task.getVersion());
-        vo.setMutexGroupKey(task.getMutexGroupKey());
+        vo.setMutexGroupId(task.getMutexGroupId());
         return vo;
     }
 
@@ -53,7 +54,7 @@ public class TaskAdminVO {
         task.setEndTime(this.endTime);
         task.setStatus(this.status);
         task.setVersion(this.version);
-        task.setMutexGroupKey(this.mutexGroupKey);
+        task.setMutexGroupId(this.mutexGroupId);
         return task;
     }
 }

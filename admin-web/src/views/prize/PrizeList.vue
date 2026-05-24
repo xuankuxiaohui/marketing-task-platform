@@ -13,7 +13,12 @@
       </div>
     </template>
     <el-table :data="rows">
-      <el-table-column prop="id" label="ID" width="70" />
+      <el-table-column prop="id" label="奖品ID" width="80" />
+      <el-table-column prop="activityId" label="活动ID" width="80" align="center">
+        <template #default="{ row }">
+          <span class="activity-id-cell">{{ row.activityId ?? '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="name" label="名称" min-width="140">
         <template #default="{ row }">
           <div class="prize-name">
@@ -173,6 +178,11 @@ onMounted(load)
 }
 .status-dot.enabled { color: #16a34a; }
 .status-dot.disabled { color: #94a3b8; }
+
+.activity-id-cell {
+  font-variant-numeric: tabular-nums;
+  color: #475569;
+}
 
 .pager-wrap {
   margin-top: 16px;

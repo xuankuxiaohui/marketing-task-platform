@@ -1,9 +1,6 @@
 package com.marketing.task.domain.dto;
 
-import com.marketing.task.domain.vo.TaskAdminVO;
-import com.marketing.task.domain.vo.TaskFilterVO;
-import com.marketing.task.domain.vo.TaskPlatformVO;
-import com.marketing.task.domain.vo.TaskStepVO;
+import com.marketing.task.domain.vo.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.Data;
@@ -22,4 +19,6 @@ public class TaskAggregateDTO {
     private List<TaskFilterVO> filters;
     @Schema(description = "端配置列表")
     private List<TaskPlatformVO> platforms;
+    @Schema(description = "步骤级端配置列表")
+    private List<TaskStepPlatformVO> stepPlatforms;
 }

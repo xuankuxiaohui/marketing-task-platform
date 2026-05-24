@@ -28,6 +28,8 @@ public class TaskStepVO {
     private String buttonTextOriginal;
     private String jumpType;
     private String jumpTarget;
+    private String actionType;
+    private String actionConfig;
 
     public static TaskStepVO from(TaskStep step) {
         if (step == null) return null;
@@ -57,6 +59,8 @@ public class TaskStepVO {
         }
         this.jumpType = config.getJumpType();
         this.jumpTarget = config.getJumpTarget();
+        this.actionType = config.getActionType();
+        this.actionConfig = config.getActionConfig();
     }
 
     public TaskStep toEntity() {

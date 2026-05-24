@@ -23,7 +23,7 @@
             步骤配置
           </span>
         </template>
-        <StepsTab ref="stepsTabRef" />
+        <StepsTab ref="stepsTabRef" :task-id="taskId" />
       </el-tab-pane>
       <el-tab-pane label="过滤器" name="filters">
         <template #label>
@@ -59,6 +59,7 @@ import { saveTaskAggregate, getTaskById, type Task } from '../../api/task'
 import { listSteps } from '../../api/step'
 import { listFilters } from '../../api/filter'
 import { listPlatforms } from '../../api/platform'
+import { listStepPlatforms } from '../../api/step-platform'
 import BasicTab from './tabs/BasicTab.vue'
 import FiltersTab from './tabs/FiltersTab.vue'
 import PlatformsTab from './tabs/PlatformsTab.vue'
@@ -86,16 +87,20 @@ const platformsTabRef = ref()
 onMounted(async () => {
   if (taskId.value) {
     try {
-      const [{ data: taskResp }, { data: stepsResp }, { data: filtersResp }, { data: platformsResp }] = await Promise.all([
+      const [{ data: taskResp }, { data: stepsResp }, { data: filtersResp }, { data: platformsResp }, { data: spResp }] = await Promise.all([
         getTaskById(taskId.value),
         listSteps(taskId.value),
         listFilters(taskId.value),
         listPlatforms(taskId.value),
+        listStepPlatforms(taskId.value),
       ])
       task.value = taskResp.data
-      stepsTabRef.value?.setSteps(stepsResp.data)
+      const stepsData = stepsResp.data || []
+      stepsTabRef.value?.setSteps(stepsData)
       filtersTabRef.value?.setFilters(filtersResp.data)
       platformsTabRef.value?.setPlatforms(platformsResp.data)
+      platformsTabRef.value?.setSteps(stepsData)
+      platformsTabRef.value?.setStepPlatforms(spResp.data || [])
     } catch (e) {
       console.error('Failed to load task data:', e)
     }
@@ -110,6 +115,7 @@ async function submit() {
       steps: stepsTabRef.value?.getSteps(),
       filters: filtersTabRef.value?.getFilters(),
       platforms: platformsTabRef.value?.getPlatforms(),
+      stepPlatforms: platformsTabRef.value?.getStepPlatforms(),
     }
     await saveTaskAggregate(dto)
     ElMessage.success('保存成功')

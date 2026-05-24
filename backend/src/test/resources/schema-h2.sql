@@ -13,14 +13,14 @@ CREATE TABLE task (
     end_time TIMESTAMP NULL,
     status VARCHAR(16) NOT NULL DEFAULT 'DRAFT',
     version INT NOT NULL DEFAULT 0,
-    mutex_group_key VARCHAR(64) NULL,
+    mutex_group_id BIGINT NULL,
     created_by VARCHAR(64) NULL,
     updated_by VARCHAR(64) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_task_code (code),
     INDEX idx_task_status_time (status, start_time, end_time),
-    INDEX idx_task_mutex_group (mutex_group_key)
+    INDEX idx_task_mutex_group_id (mutex_group_id)
 );
 
 CREATE TABLE task_step (
@@ -53,6 +53,8 @@ CREATE TABLE task_step_platform (
     button_text VARCHAR(64) NULL,
     jump_type VARCHAR(32) NOT NULL DEFAULT 'NONE',
     jump_target VARCHAR(512) NULL,
+    action_type VARCHAR(32) NULL,
+    action_config VARCHAR(512) NULL,
     extra_json TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -249,6 +251,16 @@ CREATE TABLE prize_inventory_record (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_prize_record (prize_id, record_id),
     INDEX idx_prize_created (prize_id, created_at)
+);
+
+-- V8: mutex_group
+CREATE TABLE mutex_group (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(64) NOT NULL,
+    description VARCHAR(256) NULL,
+    scope VARCHAR(32) NOT NULL DEFAULT 'SAME_CYCLE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- V7: list_data

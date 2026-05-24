@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.context.UserContext;
+import com.marketing.task.domain.entity.MutexGroup;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.InstanceStatus;
@@ -12,15 +13,19 @@ import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.TaskFilter;
 import com.marketing.task.domain.entity.TaskPlatform;
 import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.domain.entity.TaskStepPlatform;
 import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.domain.vo.TaskClientVO;
+import com.marketing.task.domain.vo.TaskStepPlatformVO;
 import com.marketing.task.domain.dto.TaskSnapshotDTO;
 import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskFilterMapper;
+import com.marketing.task.mapper.MutexGroupMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.utils.JsonUtil;
 import com.marketing.task.service.cycle.CycleKeyResolver;
@@ -31,10 +36,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -48,24 +54,88 @@ public class TaskService {
     private final TaskStepMapper taskStepMapper;
     private final TaskFilterMapper taskFilterMapper;
     private final TaskPlatformMapper taskPlatformMapper;
+    private final TaskStepPlatformMapper taskStepPlatformMapper;
     private final TaskDefinitionSnapshotMapper snapshotMapper;
     private final TaskDefinitionCacheService cacheService;
+    private final MutexGroupMapper mutexGroupMapper;
 
     public List<TaskClientVO> listPublished(UserContext userContext) {
         LocalDateTime now = LocalDateTime.now();
-        return taskMapper.selectList(new LambdaQueryWrapper<Task>()
+        List<Task> tasks = taskMapper.selectList(new LambdaQueryWrapper<Task>()
                         .eq(Task::getStatus, TaskStatus.PUBLISHED.name())
                         .and(wrapper -> wrapper.isNull(Task::getStartTime).or().le(Task::getStartTime, now))
                         .and(wrapper -> wrapper.isNull(Task::getEndTime).or().ge(Task::getEndTime, now)))
                 .stream()
                 .filter(task -> filterEvaluator.match(task, userContext))
-                .map(TaskClientVO::from)
                 .toList();
+
+        tasks = filterMutexConflicts(tasks, userContext);
+
+        return tasks.stream().map(TaskClientVO::from).toList();
+    }
+
+    private List<Task> filterMutexConflicts(List<Task> tasks, UserContext userContext) {
+        List<Long> mutexGroupIds = tasks.stream()
+                .map(Task::getMutexGroupId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (mutexGroupIds.isEmpty()) return tasks;
+
+        List<UserTaskInstance> activeInstances = instanceMapper.selectList(
+                new LambdaQueryWrapper<UserTaskInstance>()
+                        .eq(UserTaskInstance::getUserId, userContext.getUserId())
+                        .in(UserTaskInstance::getStatus, InstanceStatus.PENDING.name(), InstanceStatus.IN_PROGRESS.name()));
+        if (activeInstances.isEmpty()) return tasks;
+
+        Set<Long> activeTaskIds = activeInstances.stream()
+                .map(UserTaskInstance::getTaskId)
+                .collect(Collectors.toSet());
+        Map<Long, Task> activeTaskMap = taskMapper.selectBatchIds(activeTaskIds).stream()
+                .collect(Collectors.toMap(Task::getId, Function.identity()));
+        Map<Long, MutexGroup> groupMap = mutexGroupMapper.selectBatchIds(mutexGroupIds).stream()
+                .collect(Collectors.toMap(MutexGroup::getId, Function.identity()));
+
+        Set<String> blockedKeys = new HashSet<>();
+        Map<String, Long> keyOwner = new HashMap<>(); // blockedKey -> taskId that "owns" the slot
+
+        for (UserTaskInstance inst : activeInstances) {
+            Task activeTask = activeTaskMap.get(inst.getTaskId());
+            if (activeTask == null || activeTask.getMutexGroupId() == null) continue;
+            MutexGroup group = groupMap.get(activeTask.getMutexGroupId());
+            if (group == null) continue;
+
+            String key;
+            if ("SAME_CYCLE".equals(group.getScope())) {
+                key = activeTask.getMutexGroupId() + ":" + inst.getCycleKey();
+            } else {
+                key = activeTask.getMutexGroupId() + ":*";
+            }
+            blockedKeys.add(key);
+            keyOwner.putIfAbsent(key, activeTask.getId());
+        }
+
+        if (blockedKeys.isEmpty()) return tasks;
+
+        return tasks.stream().filter(task -> {
+            if (task.getMutexGroupId() == null) return true;
+            MutexGroup group = groupMap.get(task.getMutexGroupId());
+            if (group == null) return true;
+
+            String key;
+            if ("SAME_CYCLE".equals(group.getScope())) {
+                key = task.getMutexGroupId() + ":" + cycleKeyResolver.resolve(task);
+            } else {
+                key = task.getMutexGroupId() + ":*";
+            }
+            if (!blockedKeys.contains(key)) return true;
+            Long ownerId = keyOwner.get(key);
+            return task.getId().equals(ownerId);
+        }).toList();
     }
 
     @Transactional
     public UserTaskInstance getOrCreateInstance(Task task, UserContext userContext) {
-        checkMutex(task, userContext);
         String cycleKey = cycleKeyResolver.resolve(task);
         UserTaskInstance instance = instanceMapper.selectOne(new LambdaQueryWrapper<UserTaskInstance>()
                 .eq(UserTaskInstance::getUserId, userContext.getUserId())
@@ -74,6 +144,7 @@ public class TaskService {
         if (instance != null) {
             return instance;
         }
+        checkMutex(task, userContext);
         instance = new UserTaskInstance();
         instance.setUserId(userContext.getUserId());
         instance.setTaskId(task.getId());
@@ -95,21 +166,32 @@ public class TaskService {
     }
 
     private void checkMutex(Task task, UserContext userContext) {
-        if (!StringUtils.hasText(task.getMutexGroupKey())) {
+        if (task.getMutexGroupId() == null) {
+            return;
+        }
+        MutexGroup mutexGroup = mutexGroupMapper.selectById(task.getMutexGroupId());
+        if (mutexGroup == null) {
             return;
         }
         List<Long> mutexTaskIds = taskMapper.selectList(new LambdaQueryWrapper<Task>()
                         .select(Task::getId)
-                        .eq(Task::getMutexGroupKey, task.getMutexGroupKey())
+                        .eq(Task::getMutexGroupId, task.getMutexGroupId())
                         .ne(Task::getId, task.getId()))
                 .stream().map(Task::getId).toList();
         if (mutexTaskIds.isEmpty()) {
             return;
         }
-        Long count = instanceMapper.selectCount(new LambdaQueryWrapper<UserTaskInstance>()
+
+        // SAME_CYCLE: only check current cycle; FULL_LIFECYCLE: check all cycles
+        LambdaQueryWrapper<UserTaskInstance> wrapper = new LambdaQueryWrapper<UserTaskInstance>()
                 .eq(UserTaskInstance::getUserId, userContext.getUserId())
                 .in(UserTaskInstance::getTaskId, mutexTaskIds)
-                .in(UserTaskInstance::getStatus, InstanceStatus.PENDING.name(), InstanceStatus.IN_PROGRESS.name()));
+                .in(UserTaskInstance::getStatus, InstanceStatus.PENDING.name(), InstanceStatus.IN_PROGRESS.name());
+        if ("SAME_CYCLE".equals(mutexGroup.getScope())) {
+            String currentCycleKey = cycleKeyResolver.resolve(task);
+            wrapper.eq(UserTaskInstance::getCycleKey, currentCycleKey);
+        }
+        Long count = instanceMapper.selectCount(wrapper);
         if (count > 0) {
             throw new BusinessException(ErrorCode.MUTEX_CONFLICT);
         }
@@ -133,6 +215,8 @@ public class TaskService {
         }
         Long taskId = task.getId();
 
+        java.util.Map<String, Long> stepCodeToId = new java.util.LinkedHashMap<>();
+
         if (dto.getSteps() != null) {
             taskStepMapper.delete(new LambdaQueryWrapper<TaskStep>().eq(TaskStep::getTaskId, taskId));
             int seq = 1;
@@ -142,6 +226,7 @@ public class TaskService {
                 step.setTaskId(taskId);
                 if (step.getSeq() == null) step.setSeq(seq++);
                 taskStepMapper.insert(step);
+                stepCodeToId.put(step.getCode(), step.getId());
             }
         }
 
@@ -164,6 +249,20 @@ public class TaskService {
                 platform.setId(null);
                 platform.setTaskId(taskId);
                 taskPlatformMapper.insert(platform);
+            }
+        }
+
+        if (dto.getStepPlatforms() != null && !dto.getStepPlatforms().isEmpty()) {
+            taskStepPlatformMapper.delete(new LambdaQueryWrapper<TaskStepPlatform>()
+                    .apply("step_id IN (SELECT id FROM task_step WHERE task_id = {0})", taskId));
+            for (TaskStepPlatformVO vo : dto.getStepPlatforms()) {
+                if (vo.getStepCode() == null) continue;
+                Long stepId = stepCodeToId.get(vo.getStepCode());
+                if (stepId == null) continue;
+                TaskStepPlatform entity = vo.toEntity();
+                entity.setId(null);
+                entity.setStepId(stepId);
+                taskStepPlatformMapper.insert(entity);
             }
         }
 

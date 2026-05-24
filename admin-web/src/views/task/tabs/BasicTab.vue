@@ -10,8 +10,13 @@
       <el-input v-model="model.description" type="textarea" :rows="3" placeholder="描述任务内容和完成条件" />
     </el-form-item>
     <el-form-item label="互斥组">
-      <el-input v-model="model.mutexGroupKey" placeholder="同一互斥组的任务不能同时进行，留空表示不参与互斥" />
-      <span class="form-hint">同一互斥组的任务不能同时进行，留空表示不参与互斥</span>
+      <el-select v-model="model.mutexGroupId" placeholder="选择互斥组（可不选）" clearable style="width:100%">
+        <el-option v-for="g in mutexGroups" :key="g.id" :label="g.name" :value="g.id" />
+      </el-select>
+      <span class="form-hint">
+        同一互斥组的任务不能同时进行，留空表示不参与互斥。
+        <el-link type="primary" @click="$router.push('/mutex-groups')" style="font-size:11px">管理互斥组</el-link>
+      </span>
     </el-form-item>
     <el-form-item label="周期类型">
       <el-select v-model="model.periodType" style="width:200px">
@@ -33,7 +38,19 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { listMutexGroups, type MutexGroup } from '../../../api/mutex-group'
+
 const model = defineModel<any>({ required: true })
+
+const mutexGroups = ref<MutexGroup[]>([])
+
+onMounted(async () => {
+  try {
+    const { data } = await listMutexGroups()
+    mutexGroups.value = data.data
+  } catch {}
+})
 </script>
 
 <style scoped>

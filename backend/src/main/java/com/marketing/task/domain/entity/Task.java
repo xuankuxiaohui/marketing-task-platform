@@ -35,8 +35,8 @@ public class Task {
     private String status;
     @Schema(description = "版本号")
     private Integer version;
-    @Schema(description = "互斥组标识")
-    private String mutexGroupKey;
+    @Schema(description = "互斥组ID")
+    private Long mutexGroupId;
     private String createdBy;
     private String updatedBy;
     private LocalDateTime createdAt;

@@ -35,8 +35,8 @@
           </el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="Handler Bean">
-            <el-input v-model="form.handlerBean" placeholder="自动填充" disabled />
+          <el-form-item label="活动 ID">
+            <el-input-number v-model="form.activityId" :min="0" placeholder="关联活动" controls-position="right" style="width:100%" />
           </el-form-item>
         </el-col>
       </el-row>

@@ -40,6 +40,7 @@ class TaskLifecycleIntegrationTest {
     @Autowired private PrizeMapper prizeMapper;
     @Autowired private PrizeRecordMapper prizeRecordMapper;
     @Autowired private TaskDefinitionSnapshotMapper snapshotMapper;
+    @Autowired private MutexGroupMapper mutexGroupMapper;
 
     @Autowired private TaskService taskService;
     @Autowired private StepAdvanceEngine stepAdvanceEngine;
@@ -158,15 +159,16 @@ class TaskLifecycleIntegrationTest {
 
     @Test
     void mutexGroup_shouldRejectWhenConflictTaskInProgress() {
+        MutexGroup group = createMutexGroup("互斥测试组1");
         // Task1 with PASSIVE→CLICK (stays IN_PROGRESS after enter)
-        Task task1 = createTask("mutex_a", "互斥任务A", "ONCE", "mutex_group_1");
+        Task task1 = createTask("mutex_a", "互斥任务A", "ONCE", group.getId());
         createStep(task1.getId(), 1, "passive_a", "PASSIVE", null);
         createStep(task1.getId(), 2, "click_a", "CLICK", null);
         publishTask(task1);
         task1 = taskMapper.selectById(task1.getId());
 
         // Task2 with PASSIVE only (same mutex group)
-        Task task2 = createTask("mutex_b", "互斥任务B", "ONCE", "mutex_group_1");
+        Task task2 = createTask("mutex_b", "互斥任务B", "ONCE", group.getId());
         createStep(task2.getId(), 1, "passive_b", "PASSIVE", null);
         publishTask(task2);
         final Task refreshedTask2 = taskMapper.selectById(task2.getId());
@@ -181,7 +183,8 @@ class TaskLifecycleIntegrationTest {
 
     @Test
     void mutexGroup_shouldAllowWhenNoConflict() {
-        Task task1 = createTask("mutex_c", "互斥任务C", "ONCE", "mutex_group_2");
+        MutexGroup group2 = createMutexGroup("互斥测试组2");
+        Task task1 = createTask("mutex_c", "互斥任务C", "ONCE", group2.getId());
         createStep(task1.getId(), 1, "passive_c", "PASSIVE", null);
         publishTask(task1);
         task1 = taskMapper.selectById(task1.getId());
@@ -329,18 +332,26 @@ class TaskLifecycleIntegrationTest {
 
     // ============ Helpers ============
 
-    private Task createTask(String code, String name, String periodType, String mutexGroupKey) {
+    private Task createTask(String code, String name, String periodType, Long mutexGroupId) {
         Task task = new Task();
         task.setCode(code);
         task.setName(name);
         task.setPeriodType(periodType);
-        task.setMutexGroupKey(mutexGroupKey);
+        task.setMutexGroupId(mutexGroupId);
         task.setStatus(TaskStatus.DRAFT.name());
         task.setVersion(0);
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
         taskMapper.insert(task);
         return task;
+    }
+
+    private MutexGroup createMutexGroup(String name) {
+        MutexGroup group = new MutexGroup();
+        group.setName(name);
+        group.setScope("SAME_CYCLE");
+        mutexGroupMapper.insert(group);
+        return group;
     }
 
     private TaskStep createStep(Long taskId, int seq, String code, String type, String callbackEventOrRewardConfig) {

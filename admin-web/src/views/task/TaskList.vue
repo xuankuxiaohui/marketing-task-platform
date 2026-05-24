@@ -34,6 +34,16 @@
           <span :class="['status-pill', statusClass(row.status)]">{{ statusLabel(row.status) }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="互斥组" width="140">
+        <template #default="{ row }">
+          <template v-if="row.mutexGroupId && getMutexGroupName(row.mutexGroupId)">
+            <el-link type="primary" @click="$router.push(`/mutex-groups/${row.mutexGroupId}`)" style="font-size:12px">
+              {{ getMutexGroupName(row.mutexGroupId) }}
+            </el-link>
+          </template>
+          <span v-else style="color:#94a3b8;font-size:11px">--</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="version" label="版本" width="70" align="center">
         <template #default="{ row }">
           <span class="version-badge">v{{ row.version }}</span>
@@ -53,8 +63,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { listTasks, offlineTask, publishTask } from '../../api/task'
+import { listMutexGroups, type MutexGroup } from '../../api/mutex-group'
 
 const rows = ref([])
+const mutexGroupMap = ref<Record<number, string>>({})
+
+function getMutexGroupName(id: number) {
+  return mutexGroupMap.value[id]
+}
 
 const periodLabel = (t: string) => ({ ONCE: '一次性', DAILY: '每日', MONTHLY: '每月', CRON: 'Cron', SPECIAL: '特殊' }[t] || t)
 const periodClass = (t: string) => ({ ONCE: 'period-once', DAILY: 'period-daily', MONTHLY: 'period-monthly', CRON: 'period-cron', SPECIAL: 'period-special' }[t] || '')
@@ -64,8 +80,16 @@ const statusClass = (s: string) => ({ DRAFT: 'draft', PUBLISHED: 'published', OF
 
 async function load() {
   try {
-    const { data } = await listTasks()
-    rows.value = data.data.records
+    const [{ data: taskData }, { data: groupData }] = await Promise.all([
+      listTasks(),
+      listMutexGroups(),
+    ])
+    rows.value = taskData.data.records
+    const map: Record<number, string> = {}
+    for (const g of groupData.data) {
+      map[g.id] = g.name
+    }
+    mutexGroupMap.value = map
   } catch (e) {
     console.error('Failed to load tasks:', e)
   }

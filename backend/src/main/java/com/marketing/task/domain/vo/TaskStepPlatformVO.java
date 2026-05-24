@@ -9,10 +9,13 @@ import lombok.Data;
 public class TaskStepPlatformVO {
     private Long id;
     private Long stepId;
+    private String stepCode;
     private String platform;
     private String buttonText;
     private String jumpType;
     private String jumpTarget;
+    private String actionType;
+    private String actionConfig;
 
     public static TaskStepPlatformVO from(TaskStepPlatform entity) {
         if (entity == null) return null;
@@ -23,6 +26,8 @@ public class TaskStepPlatformVO {
         vo.setButtonText(entity.getButtonText());
         vo.setJumpType(entity.getJumpType());
         vo.setJumpTarget(entity.getJumpTarget());
+        vo.setActionType(entity.getActionType());
+        vo.setActionConfig(entity.getActionConfig());
         return vo;
     }
 
@@ -34,6 +39,8 @@ public class TaskStepPlatformVO {
         entity.setButtonText(this.buttonText);
         entity.setJumpType(this.jumpType);
         entity.setJumpTarget(this.jumpTarget);
+        entity.setActionType(this.actionType);
+        entity.setActionConfig(this.actionConfig);
         return entity;
     }
 }

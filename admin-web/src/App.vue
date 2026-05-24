@@ -32,6 +32,16 @@
               <span>任务管理</span>
             </template>
           </el-menu-item>
+          <el-menu-item index="/mutex-groups">
+            <template #title>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
+                <circle cx="8" cy="8" r="5"/>
+                <circle cx="16" cy="16" r="5"/>
+                <line x1="10.5" y1="10.5" x2="13.5" y2="13.5"/>
+              </svg>
+              <span>互斥组管理</span>
+            </template>
+          </el-menu-item>
           <el-menu-item index="/prizes">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">

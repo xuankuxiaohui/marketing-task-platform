@@ -6,6 +6,8 @@ import PrizeEdit from '../views/prize/PrizeEdit.vue'
 import PrizeList from '../views/prize/PrizeList.vue'
 import TaskEdit from '../views/task/TaskEdit.vue'
 import TaskList from '../views/task/TaskList.vue'
+import MutexGroupList from '../views/mutex-group/MutexGroupList.vue'
+import MutexGroupDetail from '../views/mutex-group/MutexGroupDetail.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -16,6 +18,8 @@ export const router = createRouter({
     { path: '/tasks/new', component: TaskEdit, meta: { requiresAuth: true } },
     { path: '/tasks/:id', component: TaskEdit, meta: { requiresAuth: true } },
     { path: '/instances', component: InstanceList, meta: { requiresAuth: true } },
+    { path: '/mutex-groups', component: MutexGroupList, meta: { requiresAuth: true } },
+    { path: '/mutex-groups/:id', component: MutexGroupDetail, meta: { requiresAuth: true } },
     { path: '/prizes', component: PrizeList, meta: { requiresAuth: true } },
     { path: '/prizes/new', component: PrizeEdit, meta: { requiresAuth: true } },
     { path: '/prizes/:id', component: PrizeEdit, meta: { requiresAuth: true } },

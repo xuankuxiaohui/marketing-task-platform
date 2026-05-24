@@ -6,6 +6,7 @@ import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.TaskStepPlatform;
 import com.marketing.task.domain.vo.TaskStepPlatformVO;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
+import com.marketing.task.service.task.TaskDefinitionCacheService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminStepPlatformController {
     private final TaskStepPlatformMapper taskStepPlatformMapper;
+    private final TaskDefinitionCacheService cacheService;
 
     @GetMapping
     public Result<List<TaskStepPlatformVO>> list(@PathVariable Long taskId, @PathVariable Long stepId) {
@@ -55,6 +57,8 @@ public class AdminStepPlatformController {
             return Result.fail(ErrorCode.NOT_FOUND, "步骤端配置不存在");
         }
         taskStepPlatformMapper.deleteById(stepPlatformId);
+        cacheService.evict(taskId);
         return Result.ok(null);
     }
+
 }

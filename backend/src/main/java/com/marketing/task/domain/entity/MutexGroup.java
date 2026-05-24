@@ -8,18 +8,13 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("task_step_platform")
-public class TaskStepPlatform {
+@TableName("mutex_group")
+public class MutexGroup {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private Long stepId;
-    private String platform;
-    private String buttonText;
-    private String jumpType;
-    private String jumpTarget;
-    private String actionType;
-    private String actionConfig;
-    private String extraJson;
+    private String name;
+    private String description;
+    private String scope;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

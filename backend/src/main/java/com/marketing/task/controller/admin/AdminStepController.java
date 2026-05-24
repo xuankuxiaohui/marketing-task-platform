@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/task/{taskId}/steps")
@@ -74,6 +75,36 @@ public class AdminStepController {
             return Result.fail(ErrorCode.NOT_FOUND, "步骤不存在");
         }
         taskStepMapper.deleteById(stepId);
+        cacheService.evict(taskId);
+        return Result.ok(null);
+    }
+
+    @GetMapping("/check-code")
+    public Result<Map<String, Boolean>> checkCode(@PathVariable Long taskId,
+                                                   @RequestParam String code,
+                                                   @RequestParam(required = false) Long excludeStepId) {
+        var query = new LambdaQueryWrapper<TaskStep>()
+                .eq(TaskStep::getTaskId, taskId)
+                .eq(TaskStep::getCode, code);
+        if (excludeStepId != null) {
+            query.ne(TaskStep::getId, excludeStepId);
+        }
+        boolean valid = taskStepMapper.selectCount(query) == 0;
+        return Result.ok(Map.of("valid", valid));
+    }
+
+    @PutMapping("/reorder")
+    public Result<Void> reorder(@PathVariable Long taskId,
+                                @RequestBody List<Map<String, Object>> items) {
+        for (int i = 0; i < items.size(); i++) {
+            Map<String, Object> item = items.get(i);
+            Long stepId = ((Number) item.get("id")).longValue();
+            int seq = ((Number) item.get("seq")).intValue();
+            TaskStep step = new TaskStep();
+            step.setId(stepId);
+            step.setSeq(seq);
+            taskStepMapper.updateById(step);
+        }
         cacheService.evict(taskId);
         return Result.ok(null);
     }
