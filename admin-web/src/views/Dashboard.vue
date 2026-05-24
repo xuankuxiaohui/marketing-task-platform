@@ -30,7 +30,13 @@
     <el-card class="table-card">
       <template #header><span>Top 10 任务指标</span></template>
       <el-table :data="topTasks" stripe>
-        <el-table-column prop="taskId" label="任务 ID" width="100" />
+        <el-table-column prop="taskId" label="任务 ID" width="100">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="router.push(`/tasks/${row.taskId}/metrics`)">
+              #{{ row.taskId }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column prop="views" label="曝光" />
         <el-table-column prop="participants" label="参与" />
         <el-table-column prop="completions" label="完成" />
@@ -43,7 +49,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getDashboard, type TaskMetrics } from '../api/metrics'
+
+const router = useRouter()
 
 const today = ref<TaskMetrics>({
   id: 0,
