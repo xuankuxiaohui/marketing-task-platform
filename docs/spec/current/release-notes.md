@@ -184,3 +184,60 @@ npm --prefix client-web run build
 |---|---|
 | 灰度与实验 (百分比/AB/人群包) | 延至 v0.3.1 |
 | Admin Metrics 可视化趋势图 | 当前用 el-table，后续可加入 echarts |
+
+## v0.3.2 — 任务列表优化 (2026-05-24)
+
+### 目标
+
+优化管理端任务列表页，解决按钮显示问题，增加搜索过滤功能，丰富展示字段。
+
+### 条件操作按钮
+
+- **DRAFT** 状态：显示「编辑」+「发布」按钮（不显示「下线」）
+- **PUBLISHED** 状态：显示「编辑」+「下线」按钮（不显示「发布」）
+- **OFFLINE** 状态：仅显示「编辑」按钮
+- 每个操作按钮有独立的 loading 状态
+
+### 搜索/筛选栏
+
+- 关键词搜索（模糊匹配任务编码和名称）
+- 状态筛选下拉（全部/草稿/已发布/已下线）
+- 周期类型筛选下拉（全部/一次性/每日/每月/Cron/特殊）
+- 查询 + 重置按钮
+
+### 新增展示字段
+
+| 字段 | 说明 |
+|---|---|
+| 描述 | 截取前 30 字，hover 显示全文 tooltip |
+| 步骤数 | 每个任务的步骤数量（stepCount） |
+| 实例数 | 每个任务的用户实例数量（instanceCount） |
+| 创建时间 | 任务创建时间 |
+| 更新时间 | 任务最后更新时间 |
+
+### 状态 Tooltip
+
+每个状态 pill 悬停显示中文说明：
+- 草稿：任务尚未发布，C 端用户不可见
+- 已发布：任务在线，C 端用户可见并可参与
+- 已下线：任务已停止，C 端用户不可见
+
+### 后端 API 变更
+
+- `GET /api/admin/task` 新增可选查询参数：`status`、`keyword`、`periodType`
+- `TaskAdminVO` 新增字段：`createdAt`、`updatedAt`、`stepCount`、`instanceCount`
+- `TaskStepMapper` 新增 `countByTaskIds` 方法
+- `UserTaskInstanceMapper` 新增 `countByTaskIds` 方法
+
+### 修改文件
+
+| 文件 | 说明 |
+|---|---|
+| `backend/.../controller/admin/AdminTaskController.java` | page() 新增 status/keyword/periodType 参数，LambdaQueryWrapper 动态过滤，批量注入 stepCount/instanceCount |
+| `backend/.../domain/vo/TaskAdminVO.java` | 新增 createdAt/updatedAt/stepCount/instanceCount 字段 |
+| `backend/.../mapper/TaskStepMapper.java` | 新增 countByTaskIds 批量统计方法 |
+| `backend/.../mapper/UserTaskInstanceMapper.java` | 新增 countByTaskIds 批量统计方法 |
+| `admin-web/src/api/task.ts` | Task 接口新增 createdAt/updatedAt/stepCount/instanceCount；listTasks 支持 TaskListParams 过滤 |
+| `admin-web/src/views/task/TaskList.vue` | 条件操作按钮 + 搜索筛选栏 + 新列 + 状态 tooltip + 分页 + 按钮 loading |
+| `docs/spec/current/api.md` | 新增 v0.3.2 任务列表 API 文档 |
+| `docs/spec/current/release-notes.md` | 新增 v0.3.2 版本说明 |

@@ -196,3 +196,30 @@ inCrowd(1) || inCrowd(2)                            // 人群包 1 或 2
 inGrayPercent(50) && inABGroup('A')                 // 50% 灰度中的 A 组
 inProvince(['BJ','SH']) && inGrayPercent(10)         // 仅京沪 10% 灰度
 ```
+
+## v0.3.2 — 任务列表优化
+
+### GET /api/admin/task 查询参数
+
+```
+GET /api/admin/task?page=1&size=20&status=DRAFT&keyword=签到&periodType=DAILY
+```
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|---|---|---|---|---|
+| page | long | 否 | 1 | 页码 |
+| size | long | 否 | 20 | 每页条数 |
+| status | String | 否 | -- | 按状态过滤：DRAFT / PUBLISHED / OFFLINE |
+| keyword | String | 否 | -- | 模糊搜索任务编码(code)和名称(name) |
+| periodType | String | 否 | -- | 按周期类型过滤：ONCE / DAILY / MONTHLY / CRON / SPECIAL |
+
+返回：`Result<IPage<TaskAdminVO>>`
+
+### TaskAdminVO 新增字段
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| createdAt | LocalDateTime | 创建时间 |
+| updatedAt | LocalDateTime | 更新时间 |
+| stepCount | Integer | 步骤数量（COUNT from task_step） |
+| instanceCount | Integer | 用户实例数量（COUNT from user_task_instance） |

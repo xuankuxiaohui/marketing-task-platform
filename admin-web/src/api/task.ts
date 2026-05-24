@@ -15,6 +15,18 @@ export interface Task {
   mutexGroupName?: string
   grayType?: string
   grayConfig?: string
+  createdAt?: string
+  updatedAt?: string
+  stepCount?: number
+  instanceCount?: number
+}
+
+export interface TaskListParams {
+  page?: number
+  size?: number
+  status?: string
+  keyword?: string
+  periodType?: string
 }
 
 export interface TaskAggregateDTO {
@@ -24,8 +36,8 @@ export interface TaskAggregateDTO {
   platforms?: TaskPlatform[]
 }
 
-export function listTasks() {
-  return http.get('/admin/task')
+export function listTasks(params?: TaskListParams) {
+  return http.get('/admin/task', { params })
 }
 
 export function saveTask(task: Task) {
