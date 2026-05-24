@@ -2,6 +2,7 @@ package com.marketing.task.prize.service;
 
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
+import com.marketing.task.common.EventType;
 import com.marketing.task.prize.domain.entity.Prize;
 import com.marketing.task.prize.domain.entity.PrizeClaimLock;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
@@ -9,6 +10,7 @@ import com.marketing.task.prize.domain.enums.PrizeRecordStatus;
 import com.marketing.task.prize.mapper.PrizeClaimLockMapper;
 import com.marketing.task.prize.mapper.PrizeMapper;
 import com.marketing.task.prize.mapper.PrizeRecordMapper;
+import com.marketing.task.service.EventTrackingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -26,6 +29,7 @@ public class ClaimService {
     private final PrizeMapper prizeMapper;
     private final PrizeClaimLockMapper lockMapper;
     private final ApplicationContext applicationContext;
+    private final EventTrackingService eventTrackingService;
 
     @Transactional
     public ClaimResult claim(Long recordId) {
@@ -83,6 +87,9 @@ public class ClaimService {
                 record.setGrantedAt(LocalDateTime.now());
                 record.setErrorMessage(null);
                 recordMapper.updateById(record);
+                eventTrackingService.track(EventType.CLAIM_SUCCESS, null, null, null,
+                        record.getUserId(), null,
+                        Map.of("prizeId", record.getPrizeId(), "tradeNo", result.getTradeNo()));
                 log.info("领奖成功: recordId={}, tradeNo={}", recordId, result.getTradeNo());
                 return ClaimResult.granted(result.getTradeNo());
             } else {

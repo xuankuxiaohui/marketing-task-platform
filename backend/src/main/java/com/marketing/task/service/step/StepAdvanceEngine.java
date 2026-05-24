@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
+import com.marketing.task.common.EventType;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.entity.UserTaskStepProgress;
 import com.marketing.task.domain.enums.InstanceStatus;
 import com.marketing.task.domain.enums.StepProgressStatus;
 import com.marketing.task.domain.enums.StepType;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.mapper.UserTaskStepProgressMapper;
@@ -32,6 +34,7 @@ public class StepAdvanceEngine {
     private final UserTaskStepProgressMapper progressMapper;
     private final List<StepHandler> handlers;
     private final TaskDefinitionCacheService cacheService;
+    private final EventTrackingService eventTrackingService;
 
     @Transactional
     public UserTaskInstance enter(UserTaskInstance instance) {
@@ -185,6 +188,8 @@ public class StepAdvanceEngine {
         }
         instance.setCurrentStepSeq(step.getSeq() + 1);
         instanceMapper.updateById(instance);
+        eventTrackingService.track(EventType.STEP_COMPLETED, instance.getTaskId(), instance.getId(),
+                step.getId(), instance.getUserId(), null, Map.of("stepType", step.getType()));
     }
 
     private void markInProgress(UserTaskInstance instance) {

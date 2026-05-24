@@ -3,17 +3,20 @@ package com.marketing.task.service.reward;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
+import com.marketing.task.common.EventType;
 import com.marketing.task.domain.entity.RewardRecord;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.RewardStatus;
 import com.marketing.task.domain.reward.RewardConfig;
 import com.marketing.task.mapper.RewardRecordMapper;
+import com.marketing.task.service.EventTrackingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -21,12 +24,15 @@ public class LogRewardService implements RewardService {
     private final List<RewardHandler> handlers;
     private final RewardConfigParser configParser;
     private final RewardRecordMapper rewardRecordMapper;
+    private final EventTrackingService eventTrackingService;
 
     public LogRewardService(List<RewardHandler> handlers, RewardConfigParser configParser,
-                            RewardRecordMapper rewardRecordMapper) {
+                            RewardRecordMapper rewardRecordMapper,
+                            EventTrackingService eventTrackingService) {
         this.handlers = handlers;
         this.configParser = configParser;
         this.rewardRecordMapper = rewardRecordMapper;
+        this.eventTrackingService = eventTrackingService;
     }
 
     @Override
@@ -67,11 +73,17 @@ public class LogRewardService implements RewardService {
             record.setErrorMessage(null);
             rewardRecordMapper.updateById(record);
             log.info("奖励发放成功: type={}, instanceId={}", config.getType(), instance.getId());
+            eventTrackingService.track(EventType.REWARD_SUCCESS, instance.getTaskId(), instance.getId(),
+                    rewardStep.getId(), instance.getUserId(), null,
+                    Map.of("rewardType", config.getType()));
         } catch (Exception e) {
             record.setStatus(RewardStatus.FAILED.name());
             record.setErrorMessage(e.getMessage());
             rewardRecordMapper.updateById(record);
             log.error("奖励发放失败: type={}, instanceId={}", config.getType(), instance.getId(), e);
+            eventTrackingService.track(EventType.REWARD_FAILURE, instance.getTaskId(), instance.getId(),
+                    rewardStep.getId(), instance.getUserId(), null,
+                    Map.of("error", e.getMessage() != null ? e.getMessage() : "unknown"));
         }
     }
 

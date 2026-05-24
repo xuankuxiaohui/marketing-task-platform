@@ -2,6 +2,8 @@ package com.marketing.task.service.filter;
 
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.context.UserContext;
+import com.marketing.task.service.EventTrackingService;
+import com.marketing.task.service.MetricsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,12 +21,16 @@ class FilterExpressionEngineTest {
 
     @Mock
     private ListDataService listDataService;
+    @Mock
+    private EventTrackingService eventTrackingService;
+    @Mock
+    private MetricsService metricsService;
 
     private FilterExpressionEngine engine;
 
     @BeforeEach
     void setUp() throws Exception {
-        engine = new FilterExpressionEngine(listDataService);
+        engine = new FilterExpressionEngine(listDataService, eventTrackingService, metricsService);
     }
 
     @Test

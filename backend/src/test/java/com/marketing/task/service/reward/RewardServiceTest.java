@@ -9,6 +9,7 @@ import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.RewardStatus;
 import com.marketing.task.domain.reward.RewardConfig;
 import com.marketing.task.mapper.RewardRecordMapper;
+import com.marketing.task.service.EventTrackingService;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.session.Configuration;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,6 +32,8 @@ class RewardServiceTest {
 
     @Mock
     private RewardRecordMapper rewardRecordMapper;
+    @Mock
+    private EventTrackingService eventTrackingService;
 
     @Captor
     private ArgumentCaptor<RewardRecord> recordCaptor;
@@ -52,7 +55,8 @@ class RewardServiceTest {
         service = new LogRewardService(
                 List.of(pointHandler, couponHandler, badgeHandler),
                 new RewardConfigParser(),
-                rewardRecordMapper);
+                rewardRecordMapper,
+                eventTrackingService);
     }
 
     private UserTaskInstance instance() {
@@ -185,7 +189,7 @@ class RewardServiceTest {
             }
         };
         LogRewardService svc = new LogRewardService(
-                List.of(failingHandler), new RewardConfigParser(), rewardRecordMapper);
+                List.of(failingHandler), new RewardConfigParser(), rewardRecordMapper, eventTrackingService);
 
         when(rewardRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
         when(rewardRecordMapper.insert(any(RewardRecord.class))).thenReturn(1);

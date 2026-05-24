@@ -2,7 +2,10 @@ package com.marketing.task.service.filter;
 
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
+import com.marketing.task.common.EventType;
 import com.marketing.task.context.UserContext;
+import com.marketing.task.service.EventTrackingService;
+import com.marketing.task.service.MetricsService;
 import com.ql.util.express.DefaultContext;
 import com.ql.util.express.ExpressRunner;
 import com.ql.util.express.Operator;
@@ -12,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -27,21 +31,38 @@ public class FilterExpressionEngine {
     private final ExpressRunner runner;
 
     private final ListDataService listDataService;
+    private final EventTrackingService eventTrackingService;
+    private final MetricsService metricsService;
 
-    public FilterExpressionEngine(ListDataService listDataService) throws Exception {
+    public FilterExpressionEngine(ListDataService listDataService,
+                                  EventTrackingService eventTrackingService,
+                                  MetricsService metricsService) throws Exception {
         this.runner = new ExpressRunner(false, false);
         this.listDataService = listDataService;
+        this.eventTrackingService = eventTrackingService;
+        this.metricsService = metricsService;
         registerFunctions();
     }
 
     public boolean evaluate(String expression, UserContext userContext) {
         validate(expression);
+        long startTime = System.currentTimeMillis();
         try {
-            return CompletableFuture.supplyAsync(() -> execute(expression, userContext))
+            boolean result = CompletableFuture.supplyAsync(() -> execute(expression, userContext))
                     .get(100, TimeUnit.MILLISECONDS);
+            long elapsed = System.currentTimeMillis() - startTime;
+            metricsService.recordFilterTime(elapsed);
+            eventTrackingService.track(EventType.FILTER_EVALUATED, null, null, null,
+                    userContext.getUserId(), null,
+                    Map.of("expression", expression, "result", result));
+            return result;
         } catch (TimeoutException ex) {
+            long elapsed = System.currentTimeMillis() - startTime;
+            metricsService.recordFilterTime(elapsed);
             return false;
         } catch (Exception ex) {
+            long elapsed = System.currentTimeMillis() - startTime;
+            metricsService.recordFilterTime(elapsed);
             log.warn("Unexpected error evaluating filter expression: {}", expression, ex);
             return false;
         }

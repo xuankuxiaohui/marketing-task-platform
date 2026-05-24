@@ -13,6 +13,8 @@ import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.vo.*;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.service.platform.PlatformAdapterRegistry;
+import com.marketing.task.common.EventType;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import com.marketing.task.service.task.TaskService;
@@ -33,11 +35,17 @@ public class ClientTaskController {
     private final TaskStepPlatformMapper taskStepPlatformMapper;
     private final TaskDefinitionCacheService cacheService;
     private final PlatformAdapterRegistry platformAdapterRegistry;
+    private final EventTrackingService eventTrackingService;
 
     @GetMapping("/list")
     public Result<List<TaskClientVO>> list() {
         UserContext userContext = UserContextHolder.get();
-        return Result.ok(taskService.listPublished(userContext));
+        List<TaskClientVO> tasks = taskService.listPublished(userContext);
+        for (TaskClientVO task : tasks) {
+            eventTrackingService.track(EventType.TASK_VIEWED, task.getId(), null, null,
+                    userContext.getUserId(), userContext.getPlatform().name(), Map.of());
+        }
+        return Result.ok(tasks);
     }
 
     @GetMapping("/{taskId}")

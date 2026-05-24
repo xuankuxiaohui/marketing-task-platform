@@ -5,6 +5,7 @@ import com.marketing.task.common.BusinessException;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.mapper.RewardRecordMapper;
+import com.marketing.task.service.EventTrackingService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,12 +22,14 @@ class LogRewardServiceTest {
 
     @Mock
     private RewardRecordMapper rewardRecordMapper;
+    @Mock
+    private EventTrackingService eventTrackingService;
 
     @Test
     void reward_shouldThrowWhenNoHandlerMatchesConfig() {
         when(rewardRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
 
-        LogRewardService service = new LogRewardService(List.of(), new RewardConfigParser(), rewardRecordMapper);
+        LogRewardService service = new LogRewardService(List.of(), new RewardConfigParser(), rewardRecordMapper, eventTrackingService);
 
         UserTaskInstance instance = new UserTaskInstance();
         instance.setId(100L);

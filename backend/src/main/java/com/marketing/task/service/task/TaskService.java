@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.context.UserContext;
+import com.marketing.task.common.EventType;
 import com.marketing.task.domain.entity.MutexGroup;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;
@@ -27,6 +28,7 @@ import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.utils.JsonUtil;
 import com.marketing.task.service.cycle.CycleKeyResolver;
 import com.marketing.task.service.filter.FilterEvaluator;
@@ -58,6 +60,7 @@ public class TaskService {
     private final TaskDefinitionSnapshotMapper snapshotMapper;
     private final TaskDefinitionCacheService cacheService;
     private final MutexGroupMapper mutexGroupMapper;
+    private final EventTrackingService eventTrackingService;
 
     public List<TaskClientVO> listPublished(UserContext userContext) {
         LocalDateTime now = LocalDateTime.now();
@@ -154,6 +157,10 @@ public class TaskService {
         instance.setCurrentStepSeq(1);
         try {
             instanceMapper.insert(instance);
+            eventTrackingService.track(EventType.INSTANCE_CREATED, task.getId(), instance.getId(), null,
+                    userContext.getUserId(),
+                    userContext.getPlatform() != null ? userContext.getPlatform().name() : null,
+                    Map.of());
         } catch (DuplicateKeyException ex) {
             log.warn("Concurrent instance creation detected, re-querying: userId={}, taskId={}, cycleKey={}",
                     userContext.getUserId(), task.getId(), cycleKey);

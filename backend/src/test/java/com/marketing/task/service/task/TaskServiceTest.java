@@ -18,6 +18,7 @@ import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.cycle.CycleKeyResolver;
 import com.marketing.task.service.filter.FilterEvaluator;
 import com.marketing.task.service.step.StepAdvanceEngine;
@@ -63,6 +64,8 @@ class TaskServiceTest {
     private TaskDefinitionCacheService cacheService;
     @Mock
     private MutexGroupMapper mutexGroupMapper;
+    @Mock
+    private EventTrackingService eventTrackingService;
 
     private TaskService taskService;
 
@@ -78,7 +81,8 @@ class TaskServiceTest {
         return new TaskService(taskMapper, instanceMapper, cycleKeyResolver,
                 filterEvaluator, stepAdvanceEngine, taskStepMapper,
                 taskFilterMapper, taskPlatformMapper, taskStepPlatformMapper,
-                snapshotMapper, cacheService, mutexGroupMapper);
+                snapshotMapper, cacheService, mutexGroupMapper,
+                eventTrackingService);
     }
 
     private Task createTask(Long id, Long mutexGroupId) {

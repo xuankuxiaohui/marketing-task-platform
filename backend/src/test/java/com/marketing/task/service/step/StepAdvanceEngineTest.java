@@ -14,6 +14,7 @@ import com.marketing.task.domain.enums.StepType;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.mapper.UserTaskStepProgressMapper;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,8 @@ class StepAdvanceEngineTest {
     private UserTaskStepProgressMapper progressMapper;
     @Mock
     private TaskDefinitionCacheService cacheService;
+    @Mock
+    private EventTrackingService eventTrackingService;
 
     private StepAdvanceEngine engine;
 
@@ -68,9 +71,9 @@ class StepAdvanceEngineTest {
                 new ClickStepHandler(),
                 new CallbackStepHandler(),
                 new ProgressStepHandler(),
-                new RewardStepHandler(mock(com.marketing.task.prize.service.PrizeService.class), mock(com.marketing.task.service.reward.RewardService.class))
+                new RewardStepHandler(mock(com.marketing.task.prize.service.PrizeService.class), mock(com.marketing.task.service.reward.RewardService.class), eventTrackingService)
         );
-        engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService);
+        engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService, eventTrackingService);
 
         // Setup instance
         instance = new UserTaskInstance();

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.prize.domain.entity.Prize;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.prize.domain.entity.PrizeClaimLock;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
 import com.marketing.task.prize.domain.enums.PrizeRecordStatus;
@@ -35,6 +36,7 @@ class ClaimServiceTest {
     @Mock private PrizeClaimLockMapper lockMapper;
     @Mock private ApplicationContext applicationContext;
     @Mock private PrizeHandler prizeHandler;
+    @Mock private EventTrackingService eventTrackingService;
 
     private ClaimService claimService;
     private PrizeRecord record;
@@ -48,7 +50,7 @@ class ClaimServiceTest {
 
     @BeforeEach
     void setUp() {
-        claimService = new ClaimService(recordMapper, prizeMapper, lockMapper, applicationContext);
+        claimService = new ClaimService(recordMapper, prizeMapper, lockMapper, applicationContext, eventTrackingService);
 
         record = new PrizeRecord();
         record.setId(1L);

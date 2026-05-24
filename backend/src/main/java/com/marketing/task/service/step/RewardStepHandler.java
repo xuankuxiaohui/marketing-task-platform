@@ -1,5 +1,6 @@
 package com.marketing.task.service.step;
 
+import com.marketing.task.common.EventType;
 import com.marketing.task.context.UserContext;
 import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.entity.TaskStep;
@@ -7,10 +8,13 @@ import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.StepType;
 import com.marketing.task.prize.service.GrantContext;
 import com.marketing.task.prize.service.PrizeService;
+import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.reward.RewardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Component;
 public class RewardStepHandler implements StepHandler {
     private final PrizeService prizeService;
     private final RewardService legacyRewardService;
+    private final EventTrackingService eventTrackingService;
 
     @Override
     public StepType supports() {
@@ -28,6 +33,10 @@ public class RewardStepHandler implements StepHandler {
     public void onStepEnter(StepContext context) {
         TaskStep step = context.getStep();
         UserTaskInstance instance = context.getInstance();
+
+        eventTrackingService.track(EventType.REWARD_TRIGGERED, instance.getTaskId(), instance.getId(),
+                step.getId(), instance.getUserId(), null, Map.of("rewardType",
+                        step.getPrizeId() != null ? "prize" : "legacy"));
 
         if (step.getPrizeId() != null) {
             UserContext user = UserContextHolder.get();
