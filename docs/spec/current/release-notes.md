@@ -197,6 +197,25 @@ npm --prefix admin-web run build  # 通过
 npm --prefix client-web run build  # 通过
 ```
 
+## v0.2.6 — CRON/MONTHLY 调度器
+
+发布日期：2026-05-24
+
+- **TaskCycleScheduler**：`@Scheduled(cron = "0 */5 * * * ?")` 每 5 分钟扫描 PUBLISHED + CRON/MONTHLY 任务
+- **新周期检测**：监控 cycleKey 变更（CRON=yyyyMMddHHmm 每分钟变化，MONTHLY=yyyyMM 每月变化），检测到新 key 时激活周期
+- **防重复**：ConcurrentHashMap 跟踪每个任务的上一次 cycleKey，同一周期不重复扫描
+- **实例统计**：新周期激活时查询该 taskId+cycleKey 下已有的实例数量
+- **时间窗口**：仅扫描在 startTime~endTime 范围内的任务
+- **7 个单元测试**：覆盖 CRON/MONTHLY 激活、同周期跳过、周期切换检测、多任务、已存在实例统计
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 125 tests passed (7 new + 118 existing)
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |
