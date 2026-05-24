@@ -324,9 +324,4 @@ npm --prefix client-web run build  # 通过
 
 ## 建议的下一版本 v0.3.0
 
-1. 任务灰度与实验：百分比分流、AB 实验分组、人群包绑定
-2. Admin 任务预览：模拟用户命中测试
-3. 实例详情页：当前步骤/每步进度/发奖状态/错误记录
-4. 步骤平台快照纳入 `task_definition_snapshot`
-5. 审计日志：配置变更 diff + 操作人记录
-6. OpenAPI → 前端类型生成：消除 API 类型手工维护
+已发布。详见 `docs/spec/v0.3.0/release-notes.md`。
