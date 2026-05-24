@@ -1,11 +1,14 @@
 package com.marketing.task.domain.vo;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.domain.entity.TaskStepPlatform;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
 @Schema(description = "步骤 VO")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TaskStepVO {
     private Long id;
     private Long taskId;
@@ -18,6 +21,10 @@ public class TaskStepVO {
     private String callbackEventKey;
     private String rewardConfigJson;
     private String flowDesc;
+    private String buttonText;
+    private String buttonTextOriginal;
+    private String jumpType;
+    private String jumpTarget;
 
     public static TaskStepVO from(TaskStep step) {
         if (step == null) return null;
@@ -34,6 +41,16 @@ public class TaskStepVO {
         vo.setRewardConfigJson(step.getRewardConfigJson());
         vo.setFlowDesc(step.getFlowDesc());
         return vo;
+    }
+
+    public void applyPlatformConfig(TaskStepPlatform config) {
+        if (config == null) return;
+        if (config.getButtonText() != null && !config.getButtonText().isBlank()) {
+            this.buttonTextOriginal = config.getButtonText();
+            this.buttonText = config.getButtonText();
+        }
+        this.jumpType = config.getJumpType();
+        this.jumpTarget = config.getJumpTarget();
     }
 
     public TaskStep toEntity() {

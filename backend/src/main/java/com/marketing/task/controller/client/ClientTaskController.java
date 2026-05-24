@@ -12,6 +12,7 @@ import com.marketing.task.domain.entity.TaskStepPlatform;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.vo.*;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
+import com.marketing.task.service.platform.PlatformAdapterRegistry;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import com.marketing.task.service.task.TaskService;
@@ -19,6 +20,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/client/task")
@@ -28,6 +32,7 @@ public class ClientTaskController {
     private final StepAdvanceEngine stepAdvanceEngine;
     private final TaskStepPlatformMapper taskStepPlatformMapper;
     private final TaskDefinitionCacheService cacheService;
+    private final PlatformAdapterRegistry platformAdapterRegistry;
 
     @GetMapping("/list")
     public Result<List<TaskClientVO>> list() {
@@ -47,9 +52,20 @@ public class ClientTaskController {
                         .eq(TaskStepPlatform::getPlatform, userContext.getPlatform().name()));
 
         UserTaskInstanceVO instanceVO = UserTaskInstanceVO.from(instance);
-        List<TaskStepVO> stepVOs = steps.stream().map(TaskStepVO::from).toList();
-        List<TaskStepPlatformVO> spVOs = stepPlatforms.stream().map(TaskStepPlatformVO::from).toList();
 
+        Map<Long, TaskStepPlatform> platformConfigByStepId = stepPlatforms.stream()
+                .collect(Collectors.toMap(TaskStepPlatform::getStepId, Function.identity(), (a, b) -> a));
+
+        var adapter = platformAdapterRegistry.get(userContext.getPlatform());
+        List<TaskStepVO> stepVOs = steps.stream().map(step -> {
+            TaskStepVO vo = TaskStepVO.from(step);
+            TaskStepPlatform config = platformConfigByStepId.get(step.getId());
+            TaskStepPlatform rendered = adapter.renderStep(step, config, userContext);
+            vo.applyPlatformConfig(rendered);
+            return vo;
+        }).toList();
+
+        List<TaskStepPlatformVO> spVOs = stepPlatforms.stream().map(TaskStepPlatformVO::from).toList();
         return Result.ok(new TaskInstanceDetailDTO(instanceVO, stepVOs, spVOs));
     }
 

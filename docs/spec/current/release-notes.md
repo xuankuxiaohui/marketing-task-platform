@@ -234,6 +234,24 @@ npm --prefix admin-web run build  # 通过
 npm --prefix client-web run build  # 通过
 ```
 
+## v0.2.8 — 平台适配器集成
+
+发布日期：2026-05-24
+
+- **PlatformAdapterRegistry 接入**：ClientTaskController.detail() 注入 PlatformAdapterRegistry
+- **步骤合并**：steps + stepPlatforms 通过 adapter.renderStep() 合并为统一的 step VO
+- **TaskStepVO 扩展**：新增 buttonText/buttonTextOriginal/jumpType/jumpTarget 字段，@JsonInclude(NON_NULL)
+- **PlatformAdapter 通用接口**：renderStep(step, platformConfig, userContext) 支持各平台特化渲染
+- **向后兼容**：TaskInstanceDetailDTO 同时保留 steps（含平台配置）和 stepPlatforms（原始数据）
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 128 tests passed
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |

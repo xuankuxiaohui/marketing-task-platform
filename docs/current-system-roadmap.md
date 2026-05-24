@@ -102,7 +102,7 @@
 | 配置版本快照 | 已实现，发布时创建 `task_definition_snapshot`，C 端按版本读取 | 步骤平台配置尚未纳入快照 |
 | CRON 调度 | `TaskCycleScheduler` 每 5 分钟扫描并激活新周期 | 尚未实现批量预创建用户实例 |
 | allowlist/denylist | ✅ list_data 表 + ListDataService 已实现，inAllowlist/notInDenylist 可查表 | — |
-| 平台适配器 | Adapter 已注册，但 C 端详情仍主要返回原始 stepPlatforms | 端差异渲染还不完整 |
+| 平台适配器 | Adapter 已注册，detail() 已通过 PlatformAdapterRegistry 合并 step + stepPlatform | IOS/Android/Miniapp adapter 均为默认实现 |
 | 集成测试 | 已支持 9 个 @SpringBootTest 端到端场景 (H2) | 仅覆盖服务层，HTTP 层集成待补充 |
 | OpenAPI 类型 | 已加入生成脚本，但前端类型仍有手写部分 | 接口变更可能导致类型漂移 |
 
@@ -144,9 +144,10 @@
    - inAllowlist(listKey) / notInDenylist(listKey) 查 list_data 表。
    - FilterExpressionEngine 构造函数注入 ListDataService。
    - 4 个新增 + 1 个修改测试 (FilterExpressionEngineTest: 17 tests)。
-3. 完善平台适配：
-   - 在 C 端详情按 `X-Platform` 合并 step + stepPlatform。
-   - 使用 `PlatformAdapterRegistry` 输出统一前端渲染模型。
+3. ~~完善平台适配~~ ✅ 已完成 (2026-05-24)：
+   - ClientTaskController.detail() 注入 PlatformAdapterRegistry，合并 step + stepPlatform。
+   - TaskStepVO 新增 platformConfig 字段 (buttonText/jumpType/jumpTarget)，@JsonInclude(NON_NULL)。
+   - adapter.renderStep() 为每个步骤调用，支持平台特化渲染。
 4. 优化互斥组能力：
    - Admin 展示互斥组冲突说明。
    - 支持互斥范围配置，例如同周期互斥或全周期互斥。
