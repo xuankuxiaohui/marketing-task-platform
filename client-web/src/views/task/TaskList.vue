@@ -2,7 +2,7 @@
   <div class="task-list-page">
     <van-nav-bar title="任务中心" @click-right="handleSwitchUser">
       <template #right>
-        <van-icon name="gift-o" size="20" class="nav-prize-icon" @click="$router.push('/prizes')" />
+        <van-icon name="gift-o" size="20" class="nav-prize-icon" @click.stop="$router.push('/prizes')" />
         <span class="nav-logout" @click="handleSwitchUser">退出</span>
       </template>
     </van-nav-bar>

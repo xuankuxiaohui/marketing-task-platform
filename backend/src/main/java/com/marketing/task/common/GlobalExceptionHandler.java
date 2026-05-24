@@ -45,6 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Result<Void>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        log.warn("Failed to deserialize request body: {}", ex.getMessage());
         return ResponseEntity.status(400).body(Result.fail(ErrorCode.BAD_REQUEST, "请求体格式错误"));
     }
 

@@ -20,7 +20,10 @@ public class TaskStepVO {
     private Integer targetValue;
     private String callbackEventKey;
     private String rewardConfigJson;
+    private Long prizeId;
+    private Integer prizeQuantity;
     private String flowDesc;
+    private String extraJson;
     private String buttonText;
     private String buttonTextOriginal;
     private String jumpType;
@@ -39,7 +42,10 @@ public class TaskStepVO {
         vo.setTargetValue(step.getTargetValue());
         vo.setCallbackEventKey(step.getCallbackEventKey());
         vo.setRewardConfigJson(step.getRewardConfigJson());
+        vo.setPrizeId(step.getPrizeId());
+        vo.setPrizeQuantity(step.getPrizeQuantity());
         vo.setFlowDesc(step.getFlowDesc());
+        vo.setExtraJson(step.getExtraJson());
         return vo;
     }
 
@@ -65,7 +71,10 @@ public class TaskStepVO {
         step.setTargetValue(this.targetValue);
         step.setCallbackEventKey(this.callbackEventKey);
         step.setRewardConfigJson(this.rewardConfigJson);
+        step.setPrizeId(this.prizeId);
+        step.setPrizeQuantity(this.prizeQuantity);
         step.setFlowDesc(this.flowDesc);
+        step.setExtraJson(this.extraJson);
         return step;
     }
 }

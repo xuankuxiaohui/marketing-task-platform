@@ -10,3 +10,5 @@ target/
 !.env.example
 .superpowers
 graphify-out/
+/client-web/tsconfig.tsbuildinfo
+/admin-web/tsconfig.tsbuildinfo

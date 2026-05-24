@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { saveTaskAggregate, getTaskById, type Task } from '../../api/task'
 import { listSteps } from '../../api/step'
 import { listFilters } from '../../api/filter'
@@ -111,8 +112,11 @@ async function submit() {
       platforms: platformsTabRef.value?.getPlatforms(),
     }
     await saveTaskAggregate(dto)
+    ElMessage.success('保存成功')
     await router.push('/tasks')
-  } catch (e) {
+  } catch (e: any) {
+    const msg = e.response?.data?.message || '保存失败'
+    ElMessage.error(msg)
     console.error('Failed to save task:', e)
   } finally {
     submitting.value = false
