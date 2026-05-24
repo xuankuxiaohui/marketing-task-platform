@@ -42,6 +42,14 @@
               <span>任务管理</span>
             </template>
           </el-menu-item>
+          <el-menu-item index="/simulate">
+            <template #title>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              <span>模拟测试</span>
+            </template>
+          </el-menu-item>
           <el-menu-item index="/mutex-groups">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">

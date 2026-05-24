@@ -8,6 +8,7 @@ import TaskEdit from '../views/task/TaskEdit.vue'
 import TaskList from '../views/task/TaskList.vue'
 import MutexGroupList from '../views/mutex-group/MutexGroupList.vue'
 import MutexGroupDetail from '../views/mutex-group/MutexGroupDetail.vue'
+import SimulatePage from '../views/simulate/SimulatePage.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -29,6 +30,7 @@ export const router = createRouter({
       component: () => import('../views/Dashboard.vue'),
       meta: { requiresAuth: true, title: '运营仪表盘' }
     },
+    { path: '/simulate', component: SimulatePage, meta: { requiresAuth: true } },
     {
       path: '/tasks/:id/metrics',
       name: 'TaskMetrics',

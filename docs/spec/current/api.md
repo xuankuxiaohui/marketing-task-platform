@@ -113,6 +113,70 @@ POST /api/admin/simulate/full-flow/{taskId}
 GET /api/admin/simulate/status
 ```
 
+### 获取测试用户列表
+
+```
+GET /api/admin/simulate/test-users
+```
+
+返回：`[{ userId: string }]`
+从 `user_task_instance` 表中查询 distinct userId，按最近活跃时间排序，最多 50 条。
+
+### 启动模拟流程
+
+```
+POST /api/admin/simulate/flow
+Content-Type: application/json
+
+{
+  "userId": "sim_user_001",
+  "taskId": 1,
+  "province": "SH",
+  "platform": "IOS"
+}
+```
+
+自动设置模拟上下文 (SimulateContextHolder)，创建或查找已有的用户任务实例，返回实例详情和所有步骤状态。
+
+返回结构：
+```json
+{
+  "instance": { "id": 1, "userId": "...", "taskId": 1, "status": "IN_PROGRESS", "currentStepSeq": 2, ... },
+  "steps": [
+    { "stepId": 1, "seq": 1, "name": "浏览页面", "type": "CLICK", "isCurrentStep": false, "progressStatus": "COMPLETED", "progressValue": 0, ... },
+    { "stepId": 2, "seq": 2, "name": "填写问卷", "type": "CALLBACK", "callbackEventKey": "survey_complete", "isCurrentStep": true, "progressStatus": null, "progressValue": null, ... }
+  ]
+}
+```
+
+### 获取实例详情（含步骤状态）
+
+```
+GET /api/admin/simulate/instance/{instanceId}/detail
+```
+
+返回格式与启动模拟流程相同，包含 `instance` 和 `steps` 两部分。
+
+### 模拟点击 (CLICK 步骤)
+
+```
+POST /api/admin/simulate/click
+Content-Type: application/json
+
+{
+  "instanceId": 123,
+  "stepId": 5
+}
+```
+
+### 获取实例事件日志
+
+```
+GET /api/admin/simulate/instance/{instanceId}/events
+```
+
+返回 event_log 表中该实例的所有事件，按时间倒序，最多 100 条。
+
 ## v0.3.1 — 过滤表达式新增灰度函数
 
 在 FilterExpressionEngine 中新增 3 个过滤函数：
