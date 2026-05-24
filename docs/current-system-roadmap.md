@@ -62,6 +62,7 @@
   - 无匹配奖励处理器测试。
   - 步骤推进测试。
   - 任务互斥测试。
+  - 端到端集成测试（9 个场景，H2 内存库，Spring Boot Test）。
 
 ### Admin 前端
 
@@ -102,7 +103,7 @@
 | CRON 调度 | `CRON` 当前只是按当前分钟生成 cycle_key | 还没有调度触发器 |
 | allowlist/denylist | 函数已注册但暂未接入名单数据源 | 相关过滤表达式不可用 |
 | 平台适配器 | Adapter 已注册，但 C 端详情仍主要返回原始 stepPlatforms | 端差异渲染还不完整 |
-| 集成测试 | 主要是单元测试 | 跨 API 的端到端回归覆盖不足 |
+| 集成测试 | 已支持 9 个 @SpringBootTest 端到端场景 (H2) | 仅覆盖服务层，HTTP 层集成待补充 |
 | OpenAPI 类型 | 已加入生成脚本，但前端类型仍有手写部分 | 接口变更可能导致类型漂移 |
 
 ## 3. 后续计划
@@ -119,10 +120,11 @@
 3. ~~增加任务配置快照~~ ✅ 已完成：
    - 发布时固化 task、steps、filters、platforms JSON 到 `task_definition_snapshot`。
    - 用户实例按 `task_version` 读取对应快照，无快照时 fallback 到实时表。
-4. 增加端到端集成测试：
-   - Admin 创建发布任务。
-   - Client 创建实例并推进 CLICK/CALLBACK/PROGRESS/REWARD。
-   - 缓存失效后的定义更新验证。
+4. ~~增加端到端集成测试~~ ✅ 已完成 (2026-05-24)：
+   - TaskLifecycleIntegrationTest 9 个场景。
+   - H2 内存库 + @SpringBootTest + @ActiveProfiles("test")。
+   - 覆盖：每日签到/问卷回调/阅读进度全链路、互斥组、省份过滤、配置快照、奖品集成。
+   - 修复 cascade 双步进 bug（completeStep + cascade 重复递增 currentStepSeq）。
 5. 完善异常码和错误文案，区分用户可见错误与系统错误。
 
 ### P1：任务能力增强

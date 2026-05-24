@@ -135,17 +135,60 @@ mvn -f backend/pom.xml test  # 60 tests passed (22 new + 38 existing)
 mvn -f backend/pom.xml test  # 70 tests passed (10 new + 60 existing)
 ```
 
+## v0.2.3 — 独立奖品模块 (prize package)
+
+发布日期：2026-05-24
+
+- **4 张新表 (Flyway V6)**：`prize` — 奖品配置（库存/限制/有效期）、`prize_record` — 中奖记录（快照字段/状态流转）、`prize_claim_lock` — 防重领取锁、`prize_inventory_record` — 库存扣减流水
+- **PrizeHandler 策略模式**：PointPrizeHandler（内部积分）/ CouponPrizeHandler（优惠券 API）/ BadgePrizeHandler（徽章 API）/ InternalPrizeHandler（内部通用），通过 handler_bean 字段分发
+- **7 个 PrizeLimiter 校验链**：PrizeStatusLimiter（启用/时间窗口）、InventoryLimiter（总/月/日库存）、MutexLimiter（互斥奖品）、ProvinceLimiter（省份允许/拒绝）、LevelLimiter（等级限制）、TagLimiter（标签允许/拒绝）、UserRateLimiter（用户频率限制）
+- **ClaimService 领奖**：prize_claim_lock 基于 UNIQUE(record_id) 防重 + DuplicateKeyException 检测并发 + 状态机 WON→CLAIMING→GRANTED/FAILED/FAILED_PERMANENTLY/EXPIRED
+- **三机制过期处理**：用户进领奖专区主动标记 + PrizeExpiryScheduler 每小时扫描 + 领奖时过期校验
+- **自动/手动领奖**：auto_grant 控制是否发奖后自动触发领奖
+- **有效期类型**：DAYS（相对天数）、CALENDAR_MONTH（自然月月末）、FIXED_DATE（固定日期）
+- **领奖专区/管理 API**：ClientPrizeController + AdminPrizeController
+- **task_step 扩展**：新增 prize_id / prize_quantity 字段，RewardStepHandler 双路径兼容（prize_id 非空→PrizeService，空→legacy RewardService）
+- **39 个单元测试**：PrizeServiceTest 13 + ClaimServiceTest 9 + PrizeLimiterTest 17
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 109 tests passed (39 new + 70 existing)
+```
+
+## v0.2.4 — 端到端集成测试
+
+发布日期：2026-05-24
+
+- **H2 测试基础设施**：`application-test.yml` + `schema-h2.sql`（H2 MySQL 兼容模式），Flyway 在测试中禁用
+- **TaskLifecycleIntegrationTest 9 个场景**：
+  - 每日签到全链路（PASSIVE→CLICK 级联推进）
+  - 问卷回调全链路（CALLBACK 事件匹配 + 级联）
+  - 阅读进度全链路（PROGRESS 累计达标触发级联）
+  - 互斥组校验（同组冲突拒绝 + 不同组放行）
+  - 省份过滤器（SH-only 过滤 BJ 用户）
+  - 发布→旧实例读旧快照→再发布版本递增
+  - 奖品模块集成（REWARD 步骤发奖生成 prize_record）
+  - 实例创建幂等（重复调用 getOrCreateInstance 返回同一实例）
+- **cascade 双步进 bug 修复**：completeStep 已递增 currentStepSeq，cascade 循环末尾不再重复递增
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 118 tests passed (9 new + 109 existing)
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |
 |---|---|---|
-| 真实发奖 | ✅ 已实现 (v0.2.2)，reward_record 表 + 幂等 + 失败重试 | 外部奖励 API 对接后替换 handler 实现 |
+| 真实发奖 | ✅ 已实现 (v0.2.3)，独立 prize 模块 + 7 limiter + 领奖锁 | 外部奖励 API 对接后替换 handler 实现 |
 | 配置版本快照 | ✅ 已实现 (v0.2.1)，发布时固化快照，C 端按版本读取 | — |
 | MONTHLY/CRON 周期 | 数据模型和种子数据就绪 | v0.3.0 补充调度触发 |
 | 任务互斥 | `mutex_group_key` 字段预留 | v0.3.0 |
 | 真实鉴权 | JWT 自签（无网关/用户中心） | 接入外部鉴权中心 |
 | 名单过滤 | allowlist/denylist 函数返回 true | 接入名单数据源 |
-| 端到端测试 | 手动验证 | 集成测试 |
+| 端到端测试 | ✅ 已实现 (v0.2.4)，9 个 @SpringBootTest 场景 (H2) | HTTP 层集成待补充 |
 
 ## 从 v0.1.0 的变更
 

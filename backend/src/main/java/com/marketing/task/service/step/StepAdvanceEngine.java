@@ -144,13 +144,17 @@ public class StepAdvanceEngine {
             if (handler != null) {
                 handler.onStepEnter(StepContext.builder().instance(instance).step(current).build());
             }
+            int seqBefore = instance.getCurrentStepSeq();
             completeStep(instance, current);
             if (stepType == StepType.REWARD) {
                 markRewarded(instance);
                 return;
             }
-            instance.setCurrentStepSeq(instance.getCurrentStepSeq() + 1);
-            instanceMapper.updateById(instance);
+            // Only advance if completeStep was a no-op (step already completed)
+            if (instance.getCurrentStepSeq() == seqBefore) {
+                instance.setCurrentStepSeq(instance.getCurrentStepSeq() + 1);
+                instanceMapper.updateById(instance);
+            }
         }
     }
 
