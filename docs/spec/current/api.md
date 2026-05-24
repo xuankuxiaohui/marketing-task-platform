@@ -113,6 +113,58 @@ POST /api/admin/simulate/full-flow/{taskId}
 GET /api/admin/simulate/status
 ```
 
+## v0.3.1 — Admin Instance API (实例查询优化)
+
+### 实例列表（带筛选）
+
+```
+GET /api/admin/instance?page=1&size=20&userId=xxx&taskId=123&status=IN_PROGRESS&startDate=2026-05-01&endDate=2026-05-24
+```
+
+**查询参数**（全部可选）：
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| page | long | 页码，默认 1 |
+| size | long | 每页条数，默认 20 |
+| userId | String | 用户 ID（模糊匹配） |
+| taskId | Long | 任务 ID（精确匹配） |
+| status | String | 实例状态：PENDING / IN_PROGRESS / COMPLETED / REWARDED / EXPIRED |
+| startDate | LocalDate | 创建时间起始 (yyyy-MM-dd) |
+| endDate | LocalDate | 创建时间结束 (yyyy-MM-dd) |
+
+**返回**：分页结果 `IPage<UserTaskInstanceVO>`，每条记录额外包含 `taskName`（任务名称）和 `createdAt`（创建时间）字段。
+
+### 实例详情
+
+```
+GET /api/admin/instance/{id}
+```
+
+**返回**：
+
+```json
+{
+  "instance": { ... UserTaskInstanceVO },
+  "steps": [
+    {
+      "stepId": 1,
+      "stepSeq": 1,
+      "stepName": "分享任务",
+      "stepType": "CLICK",
+      "stepDescription": "分享到社交媒体",
+      "targetValue": null,
+      "status": "COMPLETED",
+      "progressValue": null,
+      "completeTime": "2026-05-24T10:30:00"
+    }
+  ],
+  "totalSteps": 5
+}
+```
+
+步骤列表将任务定义（task_step）与步骤进度（user_task_step_progress）合并，即使某步骤尚未产生进度记录，也会显示为 PENDING 状态。PROGRESS 类型步骤包含 `targetValue`（任务定义的目标值）和 `progressValue`（当前进度值）。
+
 ## v0.3.1 — 过滤表达式新增灰度函数
 
 在 FilterExpressionEngine 中新增 3 个过滤函数：
