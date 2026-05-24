@@ -66,6 +66,22 @@
   - 任务互斥测试。
   - 端到端集成测试（9 个场景，H2 内存库，Spring Boot Test）。
 
+	- 监控指标与埋点 (v0.3.0)：
+	  - `event_log` 表 + EventType 枚举（8 种事件类型）。
+	  - EventTrackingService 在 10 个调用点注入。
+	  - MetricsService 封装 Micrometer（6 个 Counter + 1 个 Timer）。
+	  - task_metrics 聚合表 + TaskMetricsScheduler 每 5 分钟聚合。
+	  - AdminMetricsController：dashboard / task summary / daily 趋势 API。
+	- 管理端模拟测试 (v0.3.0)：
+	  - SimulateContextHolder ThreadLocal 模拟用户上下文。
+	  - AdminSimulateController：impersonate / callback / progress / full-flow API。
+	  - 复用现有 StepAdvanceEngine + TaskService 完成全流程。
+	- 测试：
+	  - EventTrackingServiceTest 4 tests。
+	  - MetricsServiceTest 3 tests。
+	  - TaskMetricsSchedulerTest 3 tests。
+	  - AdminMetricsControllerTest 3 tests。
+
 ### Admin 前端
 
 - 任务列表、发布、下线、跳转编辑。
@@ -79,6 +95,9 @@
 - Mock 用户上下文配置，用于联调请求头。
 - 管理端主题样式优化。
 - 奖品配置管理：PrizeList（分页/启用禁用）、PrizeEdit（类型/库存/限制/领取设置/时间窗口/奖品组）。
+- 运营仪表盘 (v0.3.0)：Dashboard 概览卡片（今日曝光/参与/完成/发奖成功率）+ 任务排行 Top 10。
+- 任务指标页 (v0.3.0)：TaskMetrics 累计指标 + 按日趋势表格 + 日期范围选择。
+- 模拟测试 Tab (v0.3.0)：SimulateTab 用户身份模拟 + CALLBACK/PROGRESS 手动触发 + 一键全流程测试。
 
 ### Client 前端
 
@@ -164,7 +183,10 @@
 
 ### P2：运营效率与可观测性
 
-1. Admin 增加任务预览和模拟用户命中测试。
+1. ~~Admin 增加任务预览和模拟用户命中测试。~~ ✅ 已完成 (2026-05-24, v0.3.0)：
+   - SimulateContextHolder 模拟用户上下文。
+   - AdminSimulateController：impersonate / callback / progress / full-flow API。
+   - admin-web SimulateTab：用户身份模拟 + CALLBACK/PROGRESS 手动触发 + 一键全流程测试。
 2. ~~Admin 增加步骤拖拽排序、复制任务、版本对比~~ ✅ 部分完成 (2026-05-24, v0.2.10)：
    - 步骤拖拽排序 (HTML5 drag-drop) + Modal 编辑 + code 唯一性校验 + extraJson 编辑器已实现。
    - 复制任务、版本对比待完成。
@@ -173,12 +195,11 @@
    - 每步进度。
    - 发奖状态。
    - 错误记录。
-4. 增加监控指标：
-   - 任务曝光数。
-   - 参与数。
-   - 完成数。
-   - 发奖成功/失败数。
-   - 过滤表达式耗时。
+4. ~~增加监控指标~~ ✅ 已完成 (2026-05-24, v0.3.0)：
+   - 任务曝光数 / 参与数 / 完成数 / 发奖成功/失败数 / 过滤表达式耗时。
+   - event_log 表 + EventTrackingService + Micrometer MetricsService。
+   - task_metrics 日聚合表 + TaskMetricsScheduler 每 5 分钟聚合。
+   - AdminMetricsController API + admin-web Dashboard + TaskMetrics 页面。
 5. 增加审计日志：
    - 谁创建/修改/发布/下线任务。
    - 每次配置变更 diff。
@@ -203,7 +224,7 @@
 
 ```mermaid
 flowchart TD
-    A[当前代码基线 133 tests] --> B[P0-1 鉴权和用户上下文 ✅]
+    A[当前代码基线 146 tests] --> B[P0-1 鉴权和用户上下文 ✅]
     B --> C[P0-2 真实发奖和发奖流水 ✅]
     C --> D[P0-3 配置版本快照 ✅]
     D --> E[P0-4 端到端集成测试 ✅]
@@ -212,7 +233,10 @@ flowchart TD
     G --> H[P1-2 平台适配 ✅]
     H --> I[P1-3 互斥组 + 步骤拖拽 ✅]
     I --> J[P1-4 灰度与实验]
-    J --> K[P2 可观测性和审计]
-    K --> L[P3 CI/CD 和部署文档]
+    J --> K[P2-4 监控指标与埋点 ✅]
+    K --> L[P2-1 管理端模拟测试 ✅]
+    L --> M[P2-3 实例详情页]
+    M --> N[P2-5 审计日志]
+    N --> O[P3 CI/CD 和部署文档]
 ```
 ```

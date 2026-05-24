@@ -322,11 +322,75 @@ npm --prefix client-web run build  # 通过
 | 3 个 Platform 适配器占位 | iOS/Android/小程序适配器已注册 |
 | 无种子数据 | V3 seed 3 个演示任务 |
 
-## 建议的下一版本 v0.3.0
+## v0.3.0 — 监控指标、埋点事件、管理端模拟测试
 
-1. 任务灰度与实验：百分比分流、AB 实验分组、人群包绑定
-2. Admin 任务预览：模拟用户命中测试
-3. 实例详情页：当前步骤/每步进度/发奖状态/错误记录
-4. 步骤平台快照纳入 `task_definition_snapshot`
-5. 审计日志：配置变更 diff + 操作人记录
-6. OpenAPI → 前端类型生成：消除 API 类型手工维护
+发布日期：2026-05-24
+
+### 目标
+
+建立事件埋点基础设施（event_log），接入 Micrometer 实时指标，构建 task_metrics 日聚合表，增加管理端模拟测试能力（用户模拟 + 全流程测试），在前端展示运营仪表盘。
+
+### 新增内容
+
+#### 事件埋点 (Event Tracking)
+
+- **event_log 表 (Flyway V10)**：id / event_type / task_id / instance_id / step_id / user_id / platform / event_data(JSON) / created_at，4 个索引
+- **EventType 枚举**：TASK_VIEWED, INSTANCE_CREATED, STEP_COMPLETED, REWARD_TRIGGERED, REWARD_SUCCESS, REWARD_FAILURE, CLAIM_SUCCESS, FILTER_EVALUATED
+- **EventTrackingService**：`track()` 同步写入 event_log，内部 try-catch 保证不传播异常
+- **10 个调用点注入**：ClientTaskController.list() / TaskService.getOrCreateInstance() / StepAdvanceEngine.completeStep() / RewardStepHandler.onStepEnter() / LogRewardService.reward() ×2 / ClaimService.claim() / FilterExpressionEngine.evaluate()
+
+#### Micrometer 指标 (Metrics)
+
+- **MetricsService**：封装 MeterRegistry，6 个 Counter（task.views / task.instances.created / task.steps.completed / task.rewards.success / task.rewards.failure / prize.claims.success）+ 1 个 Timer（task.filter.evaluation）
+- **Prometheus 预留**：通过 `/actuator/prometheus` 暴露（spring-boot-starter-actuator）
+- **task_metrics 聚合表 (Flyway V10)**：task_id / metric_date / views / participants / completions / reward_success / reward_failure / avg_filter_ms，UNIQUE(task_id, metric_date)
+- **TaskMetricsScheduler**：`@Scheduled(cron = "31 */5 * * * ?")` 每 5 分钟从 event_log 聚合写入 task_metrics（upsert）
+
+#### Admin Metrics API
+
+- `GET /api/admin/metrics/dashboard` — 今日全局指标 + Top 10 任务排行
+- `GET /api/admin/metrics/task/{taskId}/summary` — 单任务累计指标
+- `GET /api/admin/metrics/task/{taskId}/daily?from=&to=` — 单任务按日趋势
+
+#### 管理端模拟测试 (Admin Simulation)
+
+- **SimulateContextHolder**：ThreadLocal<UserContext>，独立于真实用户上下文
+- **AdminSimulateController**：
+  - `POST /api/admin/simulate/impersonate` — 设置模拟用户
+  - `DELETE /api/admin/simulate/impersonate` — 退出模拟
+  - `POST /api/admin/simulate/callback` — 模拟 CALLBACK
+  - `POST /api/admin/simulate/progress` — 模拟 PROGRESS
+  - `POST /api/admin/simulate/full-flow/{taskId}` — 一键全流程（创建实例→CLICK→CALLBACK→PROGRESS→REWARD 自动级联）
+  - `GET /api/admin/simulate/status` — 查看当前模拟状态
+- **TaskService.requireInstance()**：按 ID 查询实例，不存在时抛 INSTANCE_NOT_FOUND
+
+#### Admin 前端
+
+- **Dashboard.vue**：4 张概览卡片（今日曝光/参与/完成/发奖成功率）+ 任务参与排行 Top 10 表格
+- **TaskMetrics.vue**：累计指标卡片 + 日粒度指标表格 + 日期范围选择器
+- **SimulateTab.vue**：用户身份模拟面板 + CALLBACK/PROGRESS 手动触发表单 + 一键全流程测试按钮 + 步骤执行结果展示
+- **路由**：`/dashboard`（运营仪表盘）、`/tasks/:id/metrics`（任务指标）
+- **API 模块**：metrics.ts（getDashboard / getTaskSummary / getTaskDaily）、simulate.ts（6 个模拟 API 函数）
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 146 tests passed (13 new + 133 existing)
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
+### 新增测试
+
+- EventTrackingServiceTest 4 tests
+- MetricsServiceTest 3 tests
+- TaskMetricsSchedulerTest 3 tests
+- AdminMetricsControllerTest 3 tests
+
+## 建议的下一版本 v0.3.1
+
+1. 任务灰度与实验：百分比分流、AB 实验分组、人群包绑定（GrayService + 过滤函数）
+2. 实例详情页：当前步骤/每步进度/发奖状态/错误记录
+3. 步骤平台快照纳入 `task_definition_snapshot`
+4. 审计日志：配置变更 diff + 操作人记录
+5. OpenAPI → 前端类型生成：消除 API 类型手工维护
