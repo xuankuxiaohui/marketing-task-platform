@@ -1,195 +1,134 @@
 ---
 name: continuous-workflow
-description: "Use when the user asks to continue development, push the project forward, or work autonomously across multiple sessions/days. This skill defines the prioritized task queue, quality gates, and session startup checklist for multi-day continuous progress."
+description: "Pure process engine for multi-session development. Zero project content — reads state from docs/, conventions from conventions/, executes, syncs back. Use when the user asks to continue, push forward, or work autonomously."
 ---
 
-# Continuous Workflow — marketing-task-platform 持续推进工作流
+# Continuous Workflow
 
-当用户要求持续开发（多天/多任务/自主推进），按本文档执行。
+纯进程引擎。不包含任何项目内容（任务卡片、版本号、文件路径、测试数），所有数据从 `docs/` 和代码库实时读取。
 
-## 1. 会话启动自检
+## 1. 会话启动
 
-每个新会话开始时，先执行以下检查（不依赖记忆）：
+### 1.1 环境快照
 
 ```bash
-# 1. 确认分支和目录
-git branch --show-current
-
-# 2. 读取最新提交
-git log --oneline -3
-
-# 3. 后端测试基线
-mvn -f backend/pom.xml test 2>&1 | grep -E "Tests run:|BUILD"
-
-# 4. 检查未提交变更
-git status --short
+git branch --show-current && git log --oneline -3 && git status --short
 ```
 
-如果有未提交变更，先处理（提交或询问用户）再继续新任务。
+### 1.2 状态同步
 
-## 2. 当前基线
+| 读什么 | 从哪读 | 取什么 |
+|---|---|---|
+| 进度全貌 | `docs/current-system-roadmap.md` | 已完成/限制/计划、P0-P3 优先级、下一个未完成任务 |
+| 规格文档 | `docs/spec/current/` | API 契约、SQL 表结构、版本发布记录 |
+| 项目规范 | `docs/conventions/` | 分层、编码、命名、数据库、API、步骤推进、过滤安全、前端规则 |
+| 设计文档 | `docs/superpowers/specs/` | 复杂功能的前置设计 spec（如有） |
+| 上次会话 | `memory_search` (Ruflo) | 最近完成的任务、遗留的阻塞上下文 |
 
-| 维度 | 状态 |
+### 1.3 测试基线
+
+```bash
+mvn -f backend/pom.xml test -q 2>&1 | grep -E "Tests run:|BUILD"
+```
+
+## 2. 执行循环
+
+```
+读 roadmap → 取下一个未完成任务
+              │
+              ▼
+         复杂度判断
+         ╱         ╲
+      简单          复杂
+   （单文件/       （多文件/
+    CRUD 模式）     新模块/跨层）
+      │              │
+      ▼              ▼
+   直接实现     进入 brainstorming
+                → 写 spec → 用户确认
+      │              │
+      ▼              ▼
+         实现 → 验证 → 提交 → 更新文档 → memory_store 记录进度
+                                            │
+                            ┌───────────────┘
+                            ▼
+                    取下一个任务（循环）
+```
+
+### 2.1 复杂度判断
+
+用以下启发式规则判断是否需要先写 spec：
+
+**直接实现**（跳过 brainstorming）：
+- 单文件改动，遵循现有模式（如新增一个 Limiter、一个 Controller endpoint）
+- 表结构参考现有同类型（如新增配置表，参考 prize 表模式）
+- 前端组件参考现有同类（如新增列表页，参考 PrizeList.vue）
+
+**先 brainstorming 写 spec**：
+- 新模块/新包（跨 3+ 文件，涉及新的服务边界）
+- 新步骤类型或新的推进行为
+- 影响现有幂等/事务/缓存逻辑
+- 用户明确要求"先设计"
+
+### 2.2 Ruflo 分流
+
+| 复杂度 | 执行方式 | 工具 |
+|---|---|---|
+| 简单（≤2 文件） | 当前会话直接写 | — |
+| 中等（3-5 文件，前后端分离） | 并行 spawn 两个 agent | `agent_spawn`: backend-agent + frontend-agent |
+| 复杂（新模块/跨 5+ 文件） | brainstorming → spec → swarm | `swarm_init` → 多 agent 并行 |
+
+**中/复杂任务 spawn 示例**：
+```
+agent_spawn(backend-agent): 读 conventions → 实现 Controller/Service/Mapper/Test/Flyway
+agent_spawn(frontend-agent): 读 conventions → 实现 API 层/页面组件/路由
+共享约束：API 契约（从 spec 或约定推导）
+```
+
+### 2.3 质量门禁
+
+全部通过才可提交：
+- [ ] `mvn -f backend/pom.xml compile`
+- [ ] `mvn -f backend/pom.xml test`（全过，新增代码有测试）
+- [ ] `npm --prefix admin-web run build`
+- [ ] `npm --prefix client-web run build`
+
+### 2.4 提交
+
+一个任务一个提交，不混合。格式遵循 `docs/conventions/git.md`。
+
+### 2.5 文档同步
+
+每完成任务后更新：
+
+| 文件 | 更新 |
 |---|---|
-| 后端测试 | 60 tests passed |
-| Admin 前端构建 | `npm --prefix admin-web run build` 通过 |
-| Client 前端构建 | `npm --prefix client-web run build` 通过 |
-| 数据库迁移 | V1 (core) → V2 (seed) → V3 (auth) → V4 (snapshot) |
-| Auth 鉴权 | JWT + Mock 双模式, admin_user / client_user, 22 单测 |
-| 配置快照 | publish 时序列化 task+steps+filters+platforms, C 端按版本读取 |
+| `docs/current-system-roadmap.md` | 标记完成、更新限制表、更新 test count |
+| `docs/spec/current/release-notes.md` | 新增版本条目 |
+| `docs/spec/current/api.md` | 新端点 |
+| `docs/spec/current/sql.md` | 新表/迁移 |
 
-## 3. 任务队列（严格顺序执行）
+每个文档顶部维护 `最后更新：YYYY-MM-DD`。
 
-### P0-2：真实奖励系统对接
+### 2.6 记录进度 (Ruflo)
 
-**文件范围**：`backend/src/main/java/com/marketing/task/service/reward/`
+```text
+memory_store(key="last-task", value="{taskId, summary, testCount, timestamp}")
+```
 
-**步骤**：
+## 3. 阻塞处理
 
-1. **新建 `reward_record` 表 (Flyway V5)**
-   - 字段：id, instance_id, step_id, reward_type, reward_config_json, status (PENDING/SUCCESS/FAILED), idempotent_key, error_message, created_at
-   - 唯一约束：`(instance_id, step_id)` 作为幂等键
-
-2. **完善 `RewardService` — 幂等发奖**
-   - 发奖前查 `reward_record`，已有 SUCCESS 则跳过
-   - 失败时记录 FAILED + error_message，不阻塞任务实例（可重试）
-   - 替换 `PointRewardHandler` / `CouponRewardHandler` / `BadgeRewardHandler` 中的占位逻辑
-
-3. **单元测试 `RewardServiceTest`**
-   - 幂等：重复发奖只执行一次
-   - 失败重试
-   - 多奖励类型路由
-
-**完成标准**：`mvn test` 全过，重复触发 REWARD 不重复发奖
-
----
-
-### P0-4：端到端集成测试
-
-**文件范围**：`backend/src/test/java/com/marketing/task/`
-
-**步骤**：
-
-1. 创建 `TaskLifecycleIntegrationTest`，使用 `@SpringBootTest` + H2 内存库
-2. 覆盖场景：
-   - 每日签到全链路（PASSIVE → CLICK → REWARD）
-   - 问卷回调全链路（CALLBACK → REWARD）
-   - 阅读进度全链路（PROGRESS → REWARD）
-   - 互斥组校验
-   - 过滤器：省份/等级过滤
-   - 快照：发布后重新编辑，旧实例读旧快照
-
-**完成标准**：至少 3 个集成测试场景通过，`mvn verify` 全过
-
----
-
-### P0-5：异常码与错误文案标准化
-
-**文件范围**：`backend/src/main/java/com/marketing/task/common/`
-
-**步骤**：
-
-1. 扩展 `ErrorCode` 枚举，增加业务子码（如 `TASK_NOT_FOUND(404, "TASK_001", "任务不存在")`）
-2. 遍历所有 `throw new BusinessException("...")`，替换为对应 ErrorCode
-3. 增强 `GlobalExceptionHandler`：覆盖 `MethodArgumentNotValidException`, `BindException`, `NoResourceFoundException`, `AccessDeniedException`
-
-**完成标准**：所有异常使用 ErrorCode，Handler 覆盖 5+ 异常类型
-
----
-
-### P1-1：CRON/MONTHLY 调度
-
-**步骤**：
-
-1. 新建 `TaskScheduler` 组件，`@Scheduled(cron="0 */5 * * * ?")` 每 5 分钟扫描
-2. 为 PUBLISHED 且 period_type IN (CRON, MONTHLY) 的任务预创建实例
-3. 不重复创建已有实例
-
----
-
-### P1-2：名单过滤
-
-**步骤**：
-
-1. 新建 `list_data` 表（list_type, list_key, user_id）
-2. 修改 `FilterExpressionEngine` 中 `inAllowlist()` / `inDenylist()` 实现，查表
-
----
-
-### P1-3：平台适配器完善
-
-**步骤**：在 `ClientTaskController.detail()` 中调用 `PlatformAdapterRegistry`，合并 step + stepPlatform → 前端渲染模型
-
----
-
-### P2 ~ P3
-
-| 任务 | 关键产出 |
-|---|---|
-| Admin 任务预览 | `POST /api/admin/task/{id}/preview` |
-| 实例详情页 | `GET /api/admin/instance/{id}` + admin-web 详情页 |
-| Admin 拖拽排序 | 步骤拖拽排序、复制任务、版本对比 |
-| 监控指标 | 曝光/参与/完成/发奖指标 |
-| 审计日志 | 配置变更 diff |
-| OpenAPI 类型生成 | 脚本生成前端 TS 类型 |
-| CI 配置 | `.github/workflows/ci.yml` |
-
-## 4. 执行规则
-
-### 4.1 质量门禁（每项任务必须全部通过）
-
-- [ ] `mvn -f backend/pom.xml compile` 通过
-- [ ] `mvn -f backend/pom.xml test` 全部通过（60+ tests）
-- [ ] 新增代码有对应单元测试
-- [ ] `npm --prefix admin-web run build` 通过
-- [ ] `npm --prefix client-web run build` 通过
-- [ ] 相关文档已更新（至少 roadmap + release-notes）
-
-### 4.2 提交节奏
-
-- 每完成一个 P0/P1 子任务所有步骤后提交
-- 提交格式遵循 `docs/conventions/git.md`
-- 提交前确认全部质量门禁通过
-- 一次提交不混合多个不相关任务
-
-### 4.3 文档维护
-
-每完成一个 P0/P1 大项后更新：
-- `docs/current-system-roadmap.md` — 标记完成，更新限制表
-- `docs/spec/current/release-notes.md` — 新增版本说明
-- `docs/spec/current/api.md` — 如有新端点
-- `docs/spec/current/sql.md` — 如有新表/迁移
-
-### 4.4 阻塞处理
-
-任务无法继续时（缺少外部依赖、需要用户决策）：
-- 在 `docs/current-system-roadmap.md` 限制表记录阻塞原因
+- 在 roadmap 限制表记录阻塞原因
 - 跳到下一个非阻塞任务
-- 不要反复重试同一个阻塞任务
+- 不反复重试同一阻塞任务
 
-## 5. 关键文件速查
+## 4. 禁止事项
 
-| 类别 | 路径 |
-|---|---|
-| 任务服务 | `backend/src/main/java/com/marketing/task/service/task/TaskService.java` |
-| 步骤推进引擎 | `backend/src/main/java/com/marketing/task/service/step/StepAdvanceEngine.java` |
-| 奖励服务 | `backend/src/main/java/com/marketing/task/service/reward/RewardService.java` |
-| 缓存服务 | `backend/src/main/java/com/marketing/task/service/task/TaskDefinitionCacheService.java` |
-| 过滤引擎 | `backend/src/main/java/com/marketing/task/service/filter/FilterEvaluator.java` |
-| 鉴权拦截器 | `backend/src/main/java/com/marketing/task/interceptor/AdminAuthInterceptor.java` |
-| Client Controller | `backend/src/main/java/com/marketing/task/controller/client/ClientTaskController.java` |
-| Admin Controller | `backend/src/main/java/com/marketing/task/controller/admin/AdminTaskController.java` |
-| Internal Controller | `backend/src/main/java/com/marketing/task/controller/internal/InternalCallbackController.java` |
-| Flyway 迁移 | `backend/src/main/resources/db/migration/` |
-| Admin 路由 | `admin-web/src/router/index.ts` |
-| Client 路由 | `client-web/src/router/index.ts` |
-
-## 6. 禁止事项
-
-- 跳过质量门禁直接提交
-- force push 或修改 git config
+- 跳过质量门禁
+- force push / 修改 git config
 - 删除或修改 `.claude/settings.local.json`
-- 提交 `tsconfig.tsbuildinfo` 等构建产物
-- 在设计未确认时开始大规模重构
-- 缺少外部依赖时继续阻塞任务
+- 提交构建产物
+- 在设计未确认时大规模重构
 - 引入未经项目使用的第三方库
+- 修改已执行的 Flyway 迁移（只新增）
+- **在本文档内记录任何项目状态**（测试数、版本号、文件路径、任务卡片）——这些属于 `docs/`

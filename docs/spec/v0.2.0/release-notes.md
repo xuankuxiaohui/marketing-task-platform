@@ -1,6 +1,7 @@
 # v0.2.0 版本说明
 
 发布日期：2026-05-18
+最后更新：2026-05-24
 
 ## 目标
 
@@ -274,17 +275,41 @@ npm --prefix admin-web run build  # 通过
 npm --prefix client-web run build  # 通过
 ```
 
+## v0.2.10 — P2 运营效率增强
+
+发布日期：2026-05-24
+
+- **互斥组独立管理 (Flyway V8)**：`mutex_group` 表（name/description/scope），废弃 task 表 `mutex_group_key` 字段，改为 `mutex_group_id` 外键 + 自动迁移旧数据
+- **互斥组管理界面**：MutexGroupList（CRUD 列表页）、MutexGroupDetail（详情 + 关联任务列表），任务编辑 BasicTab 中互斥组改为下拉选择器
+- **互斥死锁修复**：`getOrCreateInstance` 中先检查已有实例再校验互斥；`filterMutexConflicts` 通过 keyOwner 模式解决多实例候选死锁；冲突任务从可见列表隐去而非报错
+- **步骤拖拽排序**：StepsTab 卡片列表支持 HTML5 drag-drop 重新排序，seq 自动重新分配
+- **步骤编辑完善**：Modal 表单编辑、code 唯一性校验、extraJson 键值对编辑器
+- **步骤平台操作配置 (Flyway V9)**：`task_step_platform` 新增 `action_type`（NONE/CLAIM_REWARD/OPEN_URL/NATIVE_SCHEME/MINIAPP_PATH/SHARE）+ `action_config` JSON 参数
+- **PlatformsTab 重构**：端配置管理 + 步骤级平台操作实时预览
+- **奖品管理增强**：PrizeList/PrizeEdit 新增 `activityId` 字段；REWARD 步骤弹窗中奖品下拉显示 `[#ID] name (活动:activityId)` 格式化
+- **Admin 菜单新增**：「互斥组管理」侧边栏入口，路由 `/mutex-groups`
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 133 tests passed (5 new TaskServiceTest)
+npm --prefix admin-web run build  # 通过
+npm --prefix client-web run build  # 通过
+```
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |
 |---|---|---|
 | 真实发奖 | ✅ 已实现 (v0.2.3)，独立 prize 模块 + 7 limiter + 领奖锁 | 外部奖励 API 对接后替换 handler 实现 |
 | 配置版本快照 | ✅ 已实现 (v0.2.1)，发布时固化快照，C 端按版本读取 | — |
-| MONTHLY/CRON 周期 | 数据模型和种子数据就绪 | v0.3.0 补充调度触发 |
-| 任务互斥 | `mutex_group_key` 字段预留 | v0.3.0 |
-| 真实鉴权 | JWT 自签（无网关/用户中心） | 接入外部鉴权中心 |
-| 名单过滤 | allowlist/denylist 函数返回 true | 接入名单数据源 |
+| MONTHLY/CRON 调度 | ✅ 已实现 (v0.2.6)，TaskCycleScheduler 每 5 分钟扫描激活 | 批量预创建用户实例 |
+| 名单过滤 (allowlist/denylist) | ✅ 已实现 (v0.2.7)，list_data 表 + ListDataService | — |
+| 平台适配器 | ✅ 已实现 (v0.2.8)，PlatformAdapterRegistry 合并 step + stepPlatform | IOS/Android/Miniapp adapter 为默认实现 |
+| 互斥组管理 | ✅ 已实现 (v0.2.10)，mutex_group 表 + Admin CRUD + 死锁修复 | 互斥范围配置待扩展 |
+| 真实鉴权 | JWT 自签 + Mock 双模式（无外部网关/用户中心） | 接入外部鉴权中心 |
 | 端到端测试 | ✅ 已实现 (v0.2.4)，9 个 @SpringBootTest 场景 (H2) | HTTP 层集成待补充 |
+| 步骤平台快照 | 步骤平台配置尚未纳入 `task_definition_snapshot` | v0.3.0 |
 
 ## 从 v0.1.0 的变更
 
@@ -299,8 +324,9 @@ npm --prefix client-web run build  # 通过
 
 ## 建议的下一版本 v0.3.0
 
-1. 任务互斥组：同 `mutex_group_key` 任务互斥展示
-2. 真实发奖对接：替换 LogRewardService，对接奖励中心
-3. Caffeine 缓存：任务定义本地缓存 + 发布时刷新
-4. OpenAPI → 前端类型生成：消除 API 类型手工维护
-5. MONTHLY/CRON 周期调度触发
+1. 任务灰度与实验：百分比分流、AB 实验分组、人群包绑定
+2. Admin 任务预览：模拟用户命中测试
+3. 实例详情页：当前步骤/每步进度/发奖状态/错误记录
+4. 步骤平台快照纳入 `task_definition_snapshot`
+5. 审计日志：配置变更 diff + 操作人记录
+6. OpenAPI → 前端类型生成：消除 API 类型手工维护

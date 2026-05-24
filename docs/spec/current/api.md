@@ -1,5 +1,7 @@
 # v0.2.0 API 文档
 
+最后更新：2026-05-24
+
 ## 变更概述
 
 v0.2.0 新增 Internal API 两个端点、Admin 子表 CRUD 四个 Controller、Client 任务详情返回结构变更。v0.2.x 补充 Auth 鉴权模块（JWT + 验证码 + 登录/注册）。
@@ -387,6 +389,151 @@ Client JWT payload: `{ sub: userId, province, role, tags, orgId, level, platform
 {"code": 401, "message": "Token无效或已过期", "data": null}
 ```
 
+## Admin 奖品管理 API
+
+### 奖品 CRUD
+
+```http
+GET    /api/admin/prize?page=1&size=20        # 分页列表
+GET    /api/admin/prize/{id}                  # 详情
+POST   /api/admin/prize                       # 创建
+PUT    /api/admin/prize/{id}                  # 更新
+POST   /api/admin/prize/{id}/toggle           # 启用/禁用切换
+GET    /api/admin/prize/{id}/records          # 该奖品的所有中奖记录
+```
+
+### 请求/响应体（创建/更新）
+
+```json
+{
+  "type": "POINT",
+  "name": "100积分",
+  "handlerBean": "pointPrizeHandler",
+  "paramsJson": "{\"amount\":100}",
+  "totalStock": 10000,
+  "dailyStock": 1000,
+  "userDailyLimit": 1,
+  "claimExpireType": "DAYS",
+  "claimExpireValue": "30",
+  "autoGrant": true,
+  "enabled": true,
+  "activityId": 1,
+  "groupKey": "daily_reward_group",
+  "startTime": "2026-05-01 00:00:00",
+  "endTime": "2026-12-31 23:59:59"
+}
+```
+
+## Client 领奖专区 API
+
+### 中奖记录与领奖
+
+```http
+GET    /api/client/prize/records?status=WON     # 用户中奖记录列表（含状态计数 badge），入专区时自动标记过期
+GET    /api/client/prize/{recordId}             # 中奖记录详情
+POST   /api/client/prize/{recordId}/claim       # 领取奖品
+```
+
+#### `/api/client/prize/records` 响应
+
+```json
+{
+  "code": 0,
+  "data": {
+    "records": [
+      {
+        "id": 200,
+        "prizeName": "100积分",
+        "prizeType": "POINT",
+        "prizeIcon": "https://...",
+        "status": "WON",
+        "expireTime": "2026-06-24T14:48:53",
+        "wonAt": "2026-05-24T14:48:53"
+      }
+    ],
+    "counts": {
+      "WON": 5,
+      "GRANTED": 12,
+      "EXPIRED": 3
+    }
+  }
+}
+```
+
+#### `/api/client/prize/{recordId}/claim` 响应
+
+```json
+{
+  "code": 0,
+  "data": {
+    "status": "GRANTED",
+    "externalTradeNo": "EXT-20260524-001"
+  }
+}
+```
+
+领奖流程：prize_claim_lock 防重锁（DuplicateKeyException 检测并发）→ 状态机 WON→CLAIMING→GRANTED/FAILED → 扣减库存 → 写入 prize_inventory_record。
+
+## Admin 互斥组管理 API
+
+```http
+GET    /api/admin/mutex-groups              # 列表（含 taskCount）
+GET    /api/admin/mutex-groups/{id}         # 详情
+GET    /api/admin/mutex-groups/{id}/tasks   # 该互斥组关联的任务列表
+POST   /api/admin/mutex-groups              # 创建
+PUT    /api/admin/mutex-groups/{id}         # 更新
+DELETE /api/admin/mutex-groups/{id}         # 删除
+```
+
+### 实体字段
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| name | VARCHAR(64) | 互斥组名称 |
+| description | VARCHAR(256) | 描述 |
+| scope | VARCHAR(32) | SAME_CYCLE（同周期互斥） |
+
+Task 表中 `mutex_group_id` 外键关联。同互斥组内任务：同一用户只能参与其中一个，冲突任务从可见列表隐去。
+
+## Admin 步骤平台操作批量保存
+
+```http
+GET    /api/admin/task/{taskId}/step-platforms      # 获取任务下所有步骤的平台配置
+PUT    /api/admin/task/{taskId}/step-platforms      # 批量 upsert
+```
+
+### PUT 请求体
+
+```json
+[
+  {
+    "stepId": 11,
+    "platform": "WEB",
+    "buttonText": "去签到",
+    "actionType": "CLAIM_REWARD",
+    "actionConfig": "{\"prizeId\":1}"
+  },
+  {
+    "stepId": 11,
+    "platform": "MINIAPP",
+    "buttonText": "打开小程序",
+    "actionType": "MINIAPP_PATH",
+    "actionConfig": "{\"path\":\"/pages/reward/index\"}"
+  }
+]
+```
+
+### actionType 枚举
+
+| 值 | 说明 |
+|---|---|
+| NONE | 无操作 |
+| CLAIM_REWARD | 领取奖品 |
+| OPEN_URL | 打开 URL |
+| NATIVE_SCHEME | 原生 Scheme |
+| MINIAPP_PATH | 小程序路径 |
+| SHARE | 分享 |
+
 ## 实现文件
 
 | 端点 | 实现 |
@@ -404,3 +551,7 @@ Client JWT payload: `{ sub: userId, province, role, tags, orgId, level, platform
 | `POST /api/client/auth/*` | `ClientAuthController.java` |
 | JWT 签发/验证 | `AdminJwtProvider.java`, `ClientJwtProvider.java` |
 | 鉴权拦截 | `AdminAuthInterceptor.java`, `ClientAuthInterceptor.java` |
+| Admin 奖品 CRUD | `prize/controller/AdminPrizeController.java` |
+| Client 领奖专区 | `prize/controller/ClientPrizeController.java` |
+| Admin 互斥组管理 | `AdminMutexGroupController.java` |
+| Admin 步骤平台批量 | `AdminTaskStepPlatformController.java` |

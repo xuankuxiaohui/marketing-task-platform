@@ -1,3 +1,5 @@
+最后更新：2026-05-24
+
 ## 1.已经完成的内容
 
 ### 后端
@@ -150,9 +152,11 @@
    - ClientTaskController.detail() 注入 PlatformAdapterRegistry，合并 step + stepPlatform。
    - TaskStepVO 新增 platformConfig 字段 (buttonText/jumpType/jumpTarget)，@JsonInclude(NON_NULL)。
    - adapter.renderStep() 为每个步骤调用，支持平台特化渲染。
-4. 优化互斥组能力：
-   - Admin 展示互斥组冲突说明。
-   - 支持互斥范围配置，例如同周期互斥或全周期互斥。
+4. ~~优化互斥组能力~~ ✅ 部分完成 (2026-05-24, v0.2.10)：
+   - mutex_group 独立表 + Admin CRUD（MutexGroupList/MutexGroupDetail）。
+   - Task 表 mutex_group_key 迁移为 mutex_group_id 外键。
+   - 任务编辑中互斥组改为下拉选择器；死锁修复（keyOwner 模式）。
+   - 待完成：互斥范围扩展配置（跨周期互斥）。
 5. 增加任务灰度与实验能力：
    - 百分比分流。
    - AB 实验分组。
@@ -161,7 +165,9 @@
 ### P2：运营效率与可观测性
 
 1. Admin 增加任务预览和模拟用户命中测试。
-2. Admin 增加步骤拖拽排序、复制任务、版本对比。
+2. ~~Admin 增加步骤拖拽排序、复制任务、版本对比~~ ✅ 部分完成 (2026-05-24, v0.2.10)：
+   - 步骤拖拽排序 (HTML5 drag-drop) + Modal 编辑 + code 唯一性校验 + extraJson 编辑器已实现。
+   - 复制任务、版本对比待完成。
 3. 增加实例详情页：
    - 当前步骤。
    - 每步进度。
@@ -197,12 +203,16 @@
 
 ```mermaid
 flowchart TD
-    A[当前代码基线] --> B[P0-1 鉴权和用户上下文]
-    B --> C[P0-2 真实发奖和发奖流水]
-    C --> D[P0-3 配置版本快照]
-    D --> E[P0-4 端到端集成测试]
-    E --> F[P1-1 调度和名单能力]
-    F --> G[P1-2 平台适配和运营体验]
-    G --> H[P2 可观测性和审计]
-    H --> I[P3 CI/CD 和部署文档]
+    A[当前代码基线 133 tests] --> B[P0-1 鉴权和用户上下文 ✅]
+    B --> C[P0-2 真实发奖和发奖流水 ✅]
+    C --> D[P0-3 配置版本快照 ✅]
+    D --> E[P0-4 端到端集成测试 ✅]
+    E --> F[P0-5 异常码标准化 ✅]
+    F --> G[P1-1 调度和名单能力 ✅]
+    G --> H[P1-2 平台适配 ✅]
+    H --> I[P1-3 互斥组 + 步骤拖拽 ✅]
+    I --> J[P1-4 灰度与实验]
+    J --> K[P2 可观测性和审计]
+    K --> L[P3 CI/CD 和部署文档]
+```
 ```
