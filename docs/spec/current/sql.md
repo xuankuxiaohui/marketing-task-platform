@@ -6,11 +6,68 @@
 |---|---|---|
 | V1 | `V1__init_task_core.sql` | v0.1.0 任务配置核心表 |
 | V2 | `V2__init_task_instance.sql` | v0.1.0 用户任务实例表 |
-| V3 | `V3__seed_demo_data.sql` | v0.2.0 种子数据：3 个演示任务 |
+| V2 | `V2__seed_demo_data.sql` | v0.2.0 种子数据：3 个演示任务 |
+| V3 | `V3__auth_tables.sql` | v0.2.x 鉴权用户表：admin_user + client_user |
+| V4 | `V4__task_snapshot.sql` | v0.2.1 任务配置快照表：task_definition_snapshot |
 
-## V3 种子数据
+## V3 鉴权用户表
 
-`backend/src/main/resources/db/migration/V3__seed_demo_data.sql`
+`backend/src/main/resources/db/migration/V3__auth_tables.sql`
+
+### admin_user
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | BIGINT PK AUTO_INCREMENT | 主键 |
+| username | VARCHAR(64) NOT NULL | 用户名，UNIQUE |
+| password_hash | VARCHAR(256) NOT NULL | BCrypt 密码哈希 |
+| nickname | VARCHAR(64) | 昵称 |
+| enabled | TINYINT(1) DEFAULT 1 | 是否启用 |
+| created_at | DATETIME DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+| updated_at | DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE | 更新时间 |
+
+默认账号: `admin` / `admin123`（BCrypt）
+
+### client_user
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | BIGINT PK AUTO_INCREMENT | 主键 |
+| username | VARCHAR(64) NOT NULL | 用户名，UNIQUE |
+| password_hash | VARCHAR(256) NOT NULL | BCrypt 密码哈希 |
+| nickname | VARCHAR(64) | 昵称 |
+| province | VARCHAR(32) | 省份 |
+| role | VARCHAR(32) | 角色 |
+| tags | VARCHAR(512) | 逗号分隔标签 |
+| org_id | VARCHAR(64) | 组织 ID |
+| level | INT DEFAULT 0 | 等级 |
+| enabled | TINYINT(1) DEFAULT 1 | 是否启用 |
+| created_at | DATETIME DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+| updated_at | DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE | 更新时间 |
+
+默认测试账号: `demo` / `demo123`（BCrypt），预设用户画像（BJ, vip, level=5）
+
+## V4 任务配置快照表
+
+`backend/src/main/resources/db/migration/V4__task_snapshot.sql`
+
+### task_definition_snapshot
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | BIGINT PK AUTO_INCREMENT | 主键 |
+| task_id | BIGINT NOT NULL | 任务 ID |
+| version | INT NOT NULL | 任务版本号 |
+| snapshot_json | MEDIUMTEXT NOT NULL | 完整配置 JSON (TaskSnapshotDTO) |
+| created_at | DATETIME DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+唯一约束: `(task_id, version)`，索引: `idx_task_id`。
+
+`snapshot_json` 内容为 `TaskSnapshotDTO` 的 JSON 序列化：`{ task, steps[], filters[], platforms[] }`。
+
+## V2 种子数据
+
+`backend/src/main/resources/db/migration/V2__seed_demo_data.sql`
 
 Flyway 在启动时自动执行（仅一次）。所有硬编码 ID < 100，不与 Snowflake 生成的生产 ID 冲突。
 

@@ -2,7 +2,7 @@
 
 ## 变更概述
 
-v0.2.0 新增 Internal API 两个端点、Admin 子表 CRUD 四个 Controller、Client 任务详情返回结构变更。
+v0.2.0 新增 Internal API 两个端点、Admin 子表 CRUD 四个 Controller、Client 任务详情返回结构变更。v0.2.x 补充 Auth 鉴权模块（JWT + 验证码 + 登录/注册）。
 
 ## Internal API
 
@@ -239,6 +239,154 @@ v0.1.0 返回 `UserTaskInstance` 对象。v0.2.0 改为返回 `TaskInstanceDetai
 
 这让 C 端可以直接渲染步骤列表和端特化 UI，无需额外请求。
 
+#### v0.2.1 快照读取
+
+当实例 `taskVersion` 不为 null 时，`steps` 优先从 `task_definition_snapshot` 按版本号读取。无快照时 fallback 到实时 `task_step` 表（向后兼容旧实例）。
+
+## Auth 鉴权模块
+
+两种模式通过 `app.auth.mock-enabled` 配置切换。
+
+### Mock 模式（开发/联调，`mock-enabled: true`）
+
+通过 HTTP Header 透传用户上下文（与旧版 UserContextInterceptor 兼容）：
+
+| Header | UserContext 字段 |
+|---|---|
+| `X-User-Id` | userId |
+| `X-User-Province` | province |
+| `X-User-Role` | role |
+| `X-User-Tags` | tags (逗号分隔) |
+| `X-User-Org-Id` | orgId |
+| `X-User-Level` | level |
+| `X-Platform` | platform |
+
+### JWT 模式（生产，`mock-enabled: false`）
+
+管理端和 C 端各自维护用户表（`admin_user` / `client_user`），通过 JWT 鉴权。
+
+### 获取验证码
+
+```http
+GET /api/captcha
+```
+
+#### 响应
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "captchaKey": "uuid-string",
+    "captchaImage": "data:image/png;base64,..."
+  }
+}
+```
+
+验证码有效期 60 秒，单次使用后清除。
+
+### 管理端登录
+
+```http
+POST /api/admin/auth/login
+Content-Type: application/json
+```
+
+#### 请求体
+
+```json
+{
+  "username": "admin",
+  "password": "admin123",
+  "captchaKey": "uuid-string",
+  "captchaCode": "abcd"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `username` | String | 是 | 用户名 |
+| `password` | String | 是 | 密码 |
+| `captchaKey` | String | 是 | 验证码 Key |
+| `captchaCode` | String | 是 | 验证码 |
+
+#### 成功响应
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "userId": "1",
+    "username": "admin",
+    "nickname": "系统管理员",
+    "expiresIn": 7200
+  }
+}
+```
+
+Admin JWT payload: `{ sub: userId, platform: "ADMIN", iat, exp }`
+
+### C 端注册
+
+```http
+POST /api/client/auth/register
+Content-Type: application/json
+```
+
+#### 请求体
+
+```json
+{
+  "username": "newuser",
+  "password": "password123",
+  "captchaKey": "uuid-string",
+  "captchaCode": "abcd",
+  "nickname": "小明",
+  "province": "BJ",
+  "role": "vip",
+  "tags": "vip,active",
+  "orgId": "org_001",
+  "level": 5
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `username` | String | 是 | 用户名 |
+| `password` | String | 是 | 密码（≥6位） |
+| `captchaKey` | String | 是 | 验证码 Key |
+| `captchaCode` | String | 是 | 验证码 |
+| `nickname` | String | 否 | 昵称 |
+| `province` | String | 否 | 省份 |
+| `role` | String | 否 | 角色 |
+| `tags` | String | 否 | 逗号分隔标签 |
+| `orgId` | String | 否 | 组织 ID |
+| `level` | Integer | 否 | 等级 |
+
+### C 端登录
+
+```http
+POST /api/client/auth/login
+Content-Type: application/json
+```
+
+请求体与注册的必填字段相同（username, password, captchaKey, captchaCode）。响应中包含 `expiresIn`（秒）。
+
+Client JWT payload: `{ sub: userId, province, role, tags, orgId, level, platform, iat, exp }`
+
+### 错误响应
+
+```json
+{"code": 400, "message": "用户名或密码错误", "data": null}
+{"code": 400, "message": "账号已停用", "data": null}
+{"code": 400, "message": "用户名已存在", "data": null}
+{"code": 400, "message": "验证码已过期，请刷新后重试", "data": null}
+{"code": 401, "message": "Token无效或已过期", "data": null}
+```
+
 ## 实现文件
 
 | 端点 | 实现 |
@@ -251,3 +399,8 @@ v0.1.0 返回 `UserTaskInstance` 对象。v0.2.0 改为返回 `TaskInstanceDetai
 | Admin Step Platforms CRUD | `AdminStepPlatformController.java` |
 | Admin 聚合保存 | `AdminTaskController.java` + `TaskService.saveAggregate()` |
 | Client 详情变更 | `ClientTaskController.java` → `TaskInstanceDetailDTO` |
+| `GET /api/captcha` | `CaptchaController.java` |
+| `POST /api/admin/auth/login` | `AdminAuthController.java` |
+| `POST /api/client/auth/*` | `ClientAuthController.java` |
+| JWT 签发/验证 | `AdminJwtProvider.java`, `ClientJwtProvider.java` |
+| 鉴权拦截 | `AdminAuthInterceptor.java`, `ClientAuthInterceptor.java` |

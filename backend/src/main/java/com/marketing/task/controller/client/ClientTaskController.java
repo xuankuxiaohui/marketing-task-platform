@@ -5,6 +5,7 @@ import com.marketing.task.common.Result;
 import com.marketing.task.context.UserContext;
 import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.dto.TaskInstanceDetailDTO;
+import com.marketing.task.domain.dto.TaskSnapshotDTO;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.TaskStepPlatform;
@@ -39,7 +40,7 @@ public class ClientTaskController {
         UserContext userContext = UserContextHolder.get();
         Task task = taskService.requireTask(taskId);
         UserTaskInstance instance = taskService.getOrCreateInstance(task, userContext);
-        List<TaskStep> steps = cacheService.getSteps(taskId);
+        List<TaskStep> steps = getStepsForInstance(taskId, instance);
         List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
                 new LambdaQueryWrapper<TaskStepPlatform>()
                         .apply("step_id IN (SELECT id FROM task_step WHERE task_id = {0})", taskId)
@@ -57,6 +58,16 @@ public class ClientTaskController {
         UserContext userContext = UserContextHolder.get();
         Task task = taskService.requireTask(taskId);
         return Result.ok(UserTaskInstanceVO.from(taskService.getOrCreateInstance(task, userContext)));
+    }
+
+    private List<TaskStep> getStepsForInstance(Long taskId, UserTaskInstance instance) {
+        if (instance.getTaskVersion() != null) {
+            TaskSnapshotDTO snapshot = cacheService.getSnapshot(taskId, instance.getTaskVersion());
+            if (snapshot != null) {
+                return snapshot.steps();
+            }
+        }
+        return cacheService.getSteps(taskId);
     }
 
     @PostMapping("/{taskId}/step/{stepId}/click")

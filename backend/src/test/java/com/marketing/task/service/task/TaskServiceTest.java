@@ -9,6 +9,7 @@ import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.InstanceStatus;
 import com.marketing.task.domain.enums.Platform;
 import com.marketing.task.domain.enums.TaskStatus;
+import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskFilterMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
@@ -52,6 +53,8 @@ class TaskServiceTest {
     @Mock
     private TaskPlatformMapper taskPlatformMapper;
     @Mock
+    private TaskDefinitionSnapshotMapper snapshotMapper;
+    @Mock
     private TaskDefinitionCacheService cacheService;
 
     private TaskService taskService;
@@ -66,7 +69,7 @@ class TaskServiceTest {
     private TaskService createService() {
         return new TaskService(taskMapper, instanceMapper, cycleKeyResolver,
                 filterEvaluator, stepAdvanceEngine, taskStepMapper,
-                taskFilterMapper, taskPlatformMapper, cacheService);
+                taskFilterMapper, taskPlatformMapper, snapshotMapper, cacheService);
     }
 
     private Task createTask(Long id, String mutexGroupKey) {

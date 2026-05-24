@@ -49,3 +49,15 @@ scripts/        工程脚本
 - 修改任务定义写路径 → 检查缓存失效（见 `docs/conventions/backend/layering.md`）
 - 修改步骤推进 → 保持幂等和事务完整性（见 `docs/conventions/backend/step-advancement.md`）
 - 修改过滤表达式 → 保持白名单和沙箱限制（见 `docs/conventions/backend/filter-safety.md`）
+
+
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

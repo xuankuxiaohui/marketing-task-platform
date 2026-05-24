@@ -16,6 +16,16 @@ mybatis-plus:
     db-config:
       id-type: assign_id
 
+app:
+  auth:
+    mock-enabled: ${APP_AUTH_MOCK:false}
+    admin:
+      secret: ${ADMIN_JWT_SECRET:}
+      expiry-minutes: 120
+    client:
+      secret: ${CLIENT_JWT_SECRET:}
+      expiry-minutes: 120
+
 springdoc:
   api-docs:
     path: /v3/api-docs

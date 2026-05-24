@@ -1,14 +1,18 @@
 package com.marketing.task.service.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.domain.dto.TaskSnapshotDTO;
 import com.marketing.task.domain.entity.Task;
+import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.domain.entity.TaskFilter;
 import com.marketing.task.domain.entity.TaskPlatform;
 import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskFilterMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -23,6 +27,7 @@ public class TaskDefinitionCacheService {
     private final TaskStepMapper taskStepMapper;
     private final TaskFilterMapper taskFilterMapper;
     private final TaskPlatformMapper taskPlatformMapper;
+    private final TaskDefinitionSnapshotMapper snapshotMapper;
 
     @Cacheable(value = "taskDefinitions", key = "#id")
     public Task getTask(Long id) {
@@ -48,6 +53,18 @@ public class TaskDefinitionCacheService {
     public List<TaskPlatform> getPlatforms(Long taskId) {
         return taskPlatformMapper.selectList(new LambdaQueryWrapper<TaskPlatform>()
                 .eq(TaskPlatform::getTaskId, taskId));
+    }
+
+    @Cacheable(value = "taskSnapshots", key = "#taskId + ':' + #version")
+    public TaskSnapshotDTO getSnapshot(Long taskId, Integer version) {
+        TaskDefinitionSnapshot entity = snapshotMapper.selectOne(
+                new LambdaQueryWrapper<TaskDefinitionSnapshot>()
+                        .eq(TaskDefinitionSnapshot::getTaskId, taskId)
+                        .eq(TaskDefinitionSnapshot::getVersion, version));
+        if (entity == null) {
+            return null;
+        }
+        return JsonUtil.jsonToObj(entity.getSnapshotJson(), TaskSnapshotDTO.class);
     }
 
     @CacheEvict(value = {"taskDefinitions", "taskSteps", "taskFilters", "taskPlatforms"}, key = "#taskId")

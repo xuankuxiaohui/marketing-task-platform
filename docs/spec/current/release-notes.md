@@ -81,17 +81,55 @@ npm --prefix client-web run build
 
 结果：通过。
 
+## v0.2.x — Auth 鉴权模块
+
+发布日期：2026-05-24
+
+### 新增内容
+
+- **JWT 鉴权**：`AdminJwtProvider` / `ClientJwtProvider` 基于 jjwt 0.12.6，HS256 签名
+- **用户系统**：`admin_user` / `client_user` 表 + `AdminUserMapper` / `ClientUserMapper`
+- **登录/注册**：`POST /api/admin/auth/login`, `POST /api/client/auth/login`, `POST /api/client/auth/register`
+- **验证码**：`CaptchaService` 基于 easy-captcha，内存存储 60s TTL，daemon 线程定时清理
+- **鉴权拦截器**：`AdminAuthInterceptor` / `ClientAuthInterceptor` 替换旧 `UserContextInterceptor`，支持 JWT / Mock 双模式
+- **ErrorCode 枚举**：BAD_REQUEST(400), UNAUTHORIZED(401), FORBIDDEN(403), NOT_FOUND(404), INTERNAL_ERROR(500)
+- **AuthProperties**：`@ConfigurationProperties(prefix="app.auth")` 配置 JWT 密钥、过期时间、mock 开关
+- **BCrypt 密码编码**：`PasswordEncoderConfig` + Spring Security Crypto
+- **MetaObjectHandler**：`MyMetaObjectHandler` 自动填充 `createdAt` / `updatedAt`
+- **22 个单元测试**：AdminAuthService(5) + ClientAuthService(7) + CaptchaService(6) + AdminAuthInterceptor(4)
+
+### 前端
+
+- **admin-web**：Login.vue 渐变背景 + 品牌 Logo + 输入框图标 + 过渡动画
+- **client-web**：Login.vue / Register.vue 品牌化 + 卡片式表单 + 自定义步骤指示器（TaskDetail）
+- http.ts 请求拦截器：优先发送 `Authorization: Bearer <token>`，无 token 时 fallback mock headers
+- user.ts Pinia store：`setAuth()` 支持 JWT payload 解码还原用户上下文
+
+### 验证
+
+```bash
+mvn -f backend/pom.xml test  # 60 tests passed (22 new + 38 existing)
+```
+
+## v0.2.1 — 配置版本快照
+
+发布日期：2026-05-24
+
+- **`task_definition_snapshot` 表**：发布任务时将 task + steps + filters + platforms 序列化为 JSON 快照
+- **版本化读取**：`ClientTaskController.detail()` 优先按实例 `taskVersion` 读取快照；无快照时 fallback 到实时表
+- **Caffeine 缓存**：快照按 `taskId:version` 缓存，创建后不可变
+
 ## 已知限制
 
 | 项 | 状态 | 后续版本 |
 |---|---|---|
 | 真实发奖 | LogRewardService（仅日志） | v0.3.0 对接真实发奖系统 |
+| 配置版本快照 | ✅ 已实现 (v0.2.1)，发布时固化快照，C 端按版本读取 | — |
 | MONTHLY/CRON 周期 | 数据模型和种子数据就绪 | v0.3.0 补充调度触发 |
 | 任务互斥 | `mutex_group_key` 字段预留 | v0.3.0 |
-| 任务缓存 | 每次查询 DB | v0.3.0 Caffeine 缓存 |
-| 真实鉴权 | Header Mock | 接入网关/JWT/用户中心 |
+| 真实鉴权 | JWT 自签（无网关/用户中心） | 接入外部鉴权中心 |
 | 名单过滤 | allowlist/denylist 函数返回 true | 接入名单数据源 |
-| 端到端测试 | 手动验证 | v0.3.0 考虑集成测试 |
+| 端到端测试 | 手动验证 | 集成测试 |
 
 ## 从 v0.1.0 的变更
 

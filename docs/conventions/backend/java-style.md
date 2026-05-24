@@ -184,10 +184,10 @@ static void initMybatisPlus() {
 |---|---|---|---|
 | §1.1 类命名 | UpperCamelCase，DTO/Request 后缀 | 合规 | — |
 | §1.2 方法命名 | lowerCamelCase，动词前缀 | 合规 | — |
-| §1.3 常量命名 | UPPER_CASE + 下划线，无魔法值 | 部分合规 | 提取 ErrorCode 枚举 |
-| §1.5 代码格式 | 4 空格、120 字符行宽、括号风格 | 合规 | 整理 FilterExpressionEngine import 顺序 |
-| §1.6 注释 | public 类和方法要有 Javadoc | **严重不符合** | 逐步为 public API 补充 Javadoc |
-| §4.1 POJO | Entity 用 @Getter/@Setter 非 @Data | 部分合规 | 逐步替换 |
+| §1.3 常量命名 | UPPER_CASE + 下划线，无魔法值 | 合规 | ErrorCode 枚举已引入（2026-05-24） |
+| §1.5 代码格式 | 4 空格、120 字符行宽、括号风格 | 合规 | — |
+| §1.6 注释 | public 类和方法要有 Javadoc | **部分合规** | 补齐 auth 模块 public 方法 Javadoc |
+| §4.1 POJO | Entity 用 @Getter/@Setter 非 @Data | 合规 | AdminUser、ClientUser 已改为 @Getter/@Setter（2026-05-24） |
 | §4.1 POJO | DTO 不直接持有 Entity | **已修复** | — |
 | §4.1 POJO | Controller 不返回/接收 Entity | **已修复** | — |
 | §4.1 POJO | 数据类不混入业务逻辑 | **违反** | 拆分 RewardConfig |
@@ -195,19 +195,21 @@ static void initMybatisPlus() {
 | §4.3 DI | 构造器注入 | **完全合规** | — |
 | §5.1 异常 | 禁止 catch Exception，禁止吞异常 | **违反** | FilterExpressionEngine、RewardConfig |
 | §5.3 日志 | SLF4J + {}，不打印敏感数据 | 部分合规 | 移除 reward config JSON 日志 |
-| §6 数据库 | snake_case，idx_/uk_，禁止 SQL 拼接 | 合规 | 补充 @TableId |
+| §6 数据库 | snake_case，idx_/uk_，禁止 SQL 拼接 | 合规 | 新 Entity 已有 @TableId |
 
 ## 已知待改进
 
-| 项目 | 建议 |
-|---|---|
-| 错误码 | 引入 `ErrorCode` 枚举，划分 4xx/5xx 段 |
-| Javadoc | 至少为 Controller 和 public Service 方法补齐 |
-| RewardConfig | 将解析逻辑抽到独立工具类 |
-| Entity @Data | 逐步替换为 @Getter + @Setter |
-| 异常吞没 | FilterExpressionEngine、RewardConfig 补日志 + 缩小 catch 范围 |
-| 敏感日志 | 4 个 handler 移除或脱敏 rewardConfigJson |
-| 集成测试 | 增加 `@SpringBootTest` 端到端测试 |
+| 项目 | 建议 | 状态 |
+|---|---|---|
+| 错误码 | 引入 `ErrorCode` 枚举，划分 4xx/5xx 段 | 已完成（2026-05-24） |
+| Auth 服务包结构 | AdminAuthService / ClientAuthService 移至 `service/auth/` | 已完成（2026-05-24） |
+| Javadoc | 至少为 Controller 和 public Service 方法补齐 | 进行中 |
+| RewardConfig | 将解析逻辑抽到独立工具类 | 待处理 |
+| Entity @Data | 新 Entity（AdminUser、ClientUser）已用 @Getter/@Setter | 已完成 |
+| 异常吞没 | FilterExpressionEngine、RewardConfig 补日志 + 缩小 catch 范围 | 待处理 |
+| 敏感日志 | 4 个 handler 移除或脱敏 rewardConfigJson | 待处理 |
+| 集成测试 | 增加 `@SpringBootTest` 端到端测试 | 待处理 |
+| Auth 模块测试 | AdminAuthService / ClientAuthService / CaptchaService 单测 | 待补充 |
 
 ## 相关文档
 

@@ -35,8 +35,12 @@
   - `point`、`coupon`、`badge` 三类 handler 占位实现。
   - 无匹配奖励处理器时抛异常，避免错误标记为已奖励。
 - 性能与一致性：
-  - Caffeine 本地缓存任务定义、步骤、过滤器、端配置。
+  - Caffeine 本地缓存任务定义、步骤、过滤器、端配置、版本快照。
   - 聚合保存、发布、下线、子表独立 CRUD 后都会失效缓存。
+- 配置版本快照：
+  - `task_definition_snapshot` 表，发布时固化 task + steps + filters + platforms JSON。
+  - `ClientTaskController.detail()` 在实例有 `taskVersion` 时优先读快照。
+  - 快照查不到时 fallback 到实时表（向后兼容旧实例）。
 - 业务约束：
   - `mutex_group_key` 互斥组校验。
   - 空白互斥组按不参与互斥处理。
@@ -82,7 +86,7 @@
 |---|---|---|
 | 真实鉴权 | 仍使用 Header Mock UserContext | 不能直接用于生产 |
 | 真实发奖 | handler 仍是日志/TODO 占位 | 不能真实发积分、券、徽章 |
-| 配置版本快照 | 实例记录了 `task_version`，但步骤/过滤器未按版本快照读取 | 已创建实例可能受后续配置修改影响 |
+| 配置版本快照 | 已实现，发布时创建 `task_definition_snapshot`，C 端按版本读取 | 步骤平台配置尚未纳入快照 |
 | CRON 调度 | `CRON` 当前只是按当前分钟生成 cycle_key | 还没有调度触发器 |
 | allowlist/denylist | 函数已注册但暂未接入名单数据源 | 相关过滤表达式不可用 |
 | 平台适配器 | Adapter 已注册，但 C 端详情仍主要返回原始 stepPlatforms | 端差异渲染还不完整 |
@@ -98,9 +102,9 @@
    - 积分、优惠券、徽章分别定义幂等键。
    - 发奖失败保持任务实例可重试。
    - 记录发奖流水和失败原因。
-3. 增加任务配置快照：
-   - 发布时固化 task、steps、filters、platforms。
-   - 用户实例按 `task_version` 读取对应快照。
+3. ~~增加任务配置快照~~ ✅ 已完成：
+   - 发布时固化 task、steps、filters、platforms JSON 到 `task_definition_snapshot`。
+   - 用户实例按 `task_version` 读取对应快照，无快照时 fallback 到实时表。
 4. 增加端到端集成测试：
    - Admin 创建发布任务。
    - Client 创建实例并推进 CLICK/CALLBACK/PROGRESS/REWARD。

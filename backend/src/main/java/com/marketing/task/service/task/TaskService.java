@@ -13,11 +13,15 @@ import com.marketing.task.domain.entity.TaskPlatform;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.domain.vo.TaskClientVO;
+import com.marketing.task.domain.dto.TaskSnapshotDTO;
+import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
+import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskFilterMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
+import com.marketing.task.utils.JsonUtil;
 import com.marketing.task.service.cycle.CycleKeyResolver;
 import com.marketing.task.service.filter.FilterEvaluator;
 import com.marketing.task.service.step.StepAdvanceEngine;
@@ -43,6 +47,7 @@ public class TaskService {
     private final TaskStepMapper taskStepMapper;
     private final TaskFilterMapper taskFilterMapper;
     private final TaskPlatformMapper taskPlatformMapper;
+    private final TaskDefinitionSnapshotMapper snapshotMapper;
     private final TaskDefinitionCacheService cacheService;
 
     public List<TaskClientVO> listPublished(UserContext userContext) {
@@ -171,6 +176,26 @@ public class TaskService {
         task.setStatus(TaskStatus.PUBLISHED.name());
         task.setVersion(task.getVersion() == null ? 1 : task.getVersion() + 1);
         taskMapper.updateById(task);
+
+        List<TaskStep> steps = taskStepMapper.selectList(
+                new LambdaQueryWrapper<TaskStep>()
+                        .eq(TaskStep::getTaskId, taskId)
+                        .orderByAsc(TaskStep::getSeq));
+        List<TaskFilter> filters = taskFilterMapper.selectList(
+                new LambdaQueryWrapper<TaskFilter>()
+                        .eq(TaskFilter::getTaskId, taskId)
+                        .orderByAsc(TaskFilter::getSeq));
+        List<TaskPlatform> platforms = taskPlatformMapper.selectList(
+                new LambdaQueryWrapper<TaskPlatform>()
+                        .eq(TaskPlatform::getTaskId, taskId));
+
+        TaskSnapshotDTO snapshot = new TaskSnapshotDTO(task, steps, filters, platforms);
+        TaskDefinitionSnapshot entity = new TaskDefinitionSnapshot();
+        entity.setTaskId(taskId);
+        entity.setVersion(task.getVersion());
+        entity.setSnapshotJson(JsonUtil.objToJson(snapshot));
+        snapshotMapper.insert(entity);
+
         cacheService.evict(taskId);
     }
 
