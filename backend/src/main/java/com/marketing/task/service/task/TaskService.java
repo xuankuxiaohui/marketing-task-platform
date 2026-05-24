@@ -212,6 +212,12 @@ public class TaskService {
         return task;
     }
 
+    public UserTaskInstance requireInstance(Long instanceId) {
+        UserTaskInstance instance = instanceMapper.selectById(instanceId);
+        if (instance == null) throw new BusinessException(ErrorCode.INSTANCE_NOT_FOUND);
+        return instance;
+    }
+
     @Transactional
     public TaskAdminVO saveAggregate(TaskAggregateDTO dto) {
         Task task = dto.getTask().toEntity();
