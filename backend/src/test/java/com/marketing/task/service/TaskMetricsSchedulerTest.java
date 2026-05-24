@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +70,9 @@ class TaskMetricsSchedulerTest {
 
     @Test
     void shouldSkipEventsWithNullTaskId() {
-        Map<String, Object> event = Map.of("event_type", "TASK_VIEWED", "task_id", (Object) null);
+        Map<String, Object> event = new HashMap<>();
+        event.put("event_type", "TASK_VIEWED");
+        event.put("task_id", null);
         when(eventLogMapper.selectMaps(any())).thenReturn(List.of(event));
 
         scheduler.aggregateMetrics();
