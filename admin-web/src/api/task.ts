@@ -13,6 +13,8 @@ export interface Task {
   version?: number
   mutexGroupId?: number
   mutexGroupName?: string
+  grayType?: string
+  grayConfig?: string
 }
 
 export interface TaskAggregateDTO {

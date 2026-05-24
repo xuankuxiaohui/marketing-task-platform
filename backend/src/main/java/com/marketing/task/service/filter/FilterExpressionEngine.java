@@ -28,27 +28,49 @@ public class FilterExpressionEngine {
     private static final int MAX_LENGTH = 1024;
     private static final Pattern FORBIDDEN = Pattern.compile("System|Runtime|Process|Thread|Class\\.forName|import\\s|new\\s|exec|eval", Pattern.CASE_INSENSITIVE);
     private static final ThreadLocal<UserContext> CURRENT = new ThreadLocal<>();
+    private static final ThreadLocal<Long> TASK_ID = new ThreadLocal<>();
+    private static final ThreadLocal<String> CURRENT_GRAY_TYPE = new ThreadLocal<>();
+    private static final ThreadLocal<String> CURRENT_GRAY_CONFIG = new ThreadLocal<>();
     private final ExpressRunner runner;
 
     private final ListDataService listDataService;
     private final EventTrackingService eventTrackingService;
     private final MetricsService metricsService;
+    private final GrayService grayService;
 
     public FilterExpressionEngine(ListDataService listDataService,
                                   EventTrackingService eventTrackingService,
-                                  MetricsService metricsService) throws Exception {
+                                  MetricsService metricsService,
+                                  GrayService grayService) throws Exception {
         this.runner = new ExpressRunner(false, false);
         this.listDataService = listDataService;
         this.eventTrackingService = eventTrackingService;
         this.metricsService = metricsService;
+        this.grayService = grayService;
         registerFunctions();
     }
 
+    public void setTaskGrayConfig(Long taskId, String grayType, String grayConfig) {
+        TASK_ID.set(taskId);
+        CURRENT_GRAY_TYPE.set(grayType);
+        CURRENT_GRAY_CONFIG.set(grayConfig);
+    }
+
+    public void clearTaskGrayConfig() {
+        TASK_ID.remove();
+        CURRENT_GRAY_TYPE.remove();
+        CURRENT_GRAY_CONFIG.remove();
+    }
+
     public boolean evaluate(String expression, UserContext userContext) {
+        return evaluate(expression, userContext, TASK_ID.get(), CURRENT_GRAY_CONFIG.get());
+    }
+
+    public boolean evaluate(String expression, UserContext userContext, Long taskId, String grayConfig) {
         validate(expression);
         long startTime = System.currentTimeMillis();
         try {
-            boolean result = CompletableFuture.supplyAsync(() -> execute(expression, userContext))
+            boolean result = CompletableFuture.supplyAsync(() -> execute(expression, userContext, taskId, grayConfig))
                     .get(100, TimeUnit.MILLISECONDS);
             long elapsed = System.currentTimeMillis() - startTime;
             metricsService.recordFilterTime(elapsed);
@@ -80,9 +102,11 @@ public class FilterExpressionEngine {
         }
     }
 
-    private boolean execute(String expression, UserContext userContext) {
+    private boolean execute(String expression, UserContext userContext, Long taskId, String grayConfig) {
         try {
             CURRENT.set(userContext);
+            TASK_ID.set(taskId);
+            CURRENT_GRAY_CONFIG.set(grayConfig);
             Object result = runner.execute(expression, new DefaultContext<>(), null, false, false);
             return Boolean.TRUE.equals(result);
         } catch (Exception ex) {
@@ -90,6 +114,8 @@ public class FilterExpressionEngine {
             return false;
         } finally {
             CURRENT.remove();
+            TASK_ID.remove();
+            CURRENT_GRAY_CONFIG.remove();
         }
     }
 
@@ -161,6 +187,35 @@ public class FilterExpressionEngine {
             public Object executeInner(Object[] list) {
                 Object target = arg(list, 0);
                 return target instanceof Number number && Objects.equals(current().getLevel(), number.intValue());
+            }
+        });
+        runner.addFunction("inGrayPercent", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                Object pct = arg(list, 0);
+                int percent = pct instanceof Number n ? n.intValue() : 0;
+                Long taskId = TASK_ID.get();
+                return grayService.isInGray(current().getUserId(), taskId, "PERCENTAGE",
+                        "{\"percent\":" + percent + "}");
+            }
+        });
+        runner.addFunction("inABGroup", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                String groupName = arg(list, 0) != null ? String.valueOf(arg(list, 0)) : null;
+                Long taskId = TASK_ID.get();
+                String grayConfig = CURRENT_GRAY_CONFIG.get();
+                String abGroup = grayService.getABGroup(current().getUserId(), taskId, grayConfig);
+                return groupName != null && groupName.equals(abGroup);
+            }
+        });
+        runner.addFunction("inCrowd", new Operator() {
+            @Override
+            public Object executeInner(Object[] list) {
+                Object crowdId = arg(list, 0);
+                String crowdIdStr = crowdId != null ? String.valueOf(crowdId) : null;
+                return grayService.isInGray(current().getUserId(), null, "CROWD",
+                        crowdIdStr != null ? "{\"crowdIds\":[" + crowdIdStr + "]}" : null);
             }
         });
     }

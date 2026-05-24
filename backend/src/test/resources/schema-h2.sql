@@ -14,6 +14,8 @@ CREATE TABLE task (
     status VARCHAR(16) NOT NULL DEFAULT 'DRAFT',
     version INT NOT NULL DEFAULT 0,
     mutex_group_id BIGINT NULL,
+    gray_type VARCHAR(16) DEFAULT 'NONE',
+    gray_config JSON NULL,
     created_by VARCHAR(64) NULL,
     updated_by VARCHAR(64) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

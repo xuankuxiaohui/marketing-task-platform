@@ -13,8 +13,13 @@ public class FilterEvaluator {
     private final FilterExpressionEngine expressionEngine;
 
     public boolean match(Task task, UserContext userContext) {
-        return cacheService.getFilters(task.getId())
-                .stream()
-                .allMatch(filter -> expressionEngine.evaluate(filter.getExpression(), userContext));
+        try {
+            expressionEngine.setTaskGrayConfig(task.getId(), task.getGrayType(), task.getGrayConfig());
+            return cacheService.getFilters(task.getId())
+                    .stream()
+                    .allMatch(filter -> expressionEngine.evaluate(filter.getExpression(), userContext));
+        } finally {
+            expressionEngine.clearTaskGrayConfig();
+        }
     }
 }

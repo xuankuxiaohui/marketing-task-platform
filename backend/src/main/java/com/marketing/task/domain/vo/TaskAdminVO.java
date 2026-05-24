@@ -22,6 +22,8 @@ public class TaskAdminVO {
     private Integer version;
     private Long mutexGroupId;
     private String mutexGroupName;
+    private String grayType;
+    private String grayConfig;
 
     public static TaskAdminVO from(Task task) {
         if (task == null) return null;
@@ -38,6 +40,8 @@ public class TaskAdminVO {
         vo.setStatus(task.getStatus());
         vo.setVersion(task.getVersion());
         vo.setMutexGroupId(task.getMutexGroupId());
+        vo.setGrayType(task.getGrayType());
+        vo.setGrayConfig(task.getGrayConfig());
         return vo;
     }
 
@@ -55,6 +59,8 @@ public class TaskAdminVO {
         task.setStatus(this.status);
         task.setVersion(this.version);
         task.setMutexGroupId(this.mutexGroupId);
+        task.setGrayType(this.grayType);
+        task.setGrayConfig(this.grayConfig);
         return task;
     }
 }

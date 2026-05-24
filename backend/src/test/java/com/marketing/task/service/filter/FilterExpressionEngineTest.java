@@ -25,12 +25,14 @@ class FilterExpressionEngineTest {
     private EventTrackingService eventTrackingService;
     @Mock
     private MetricsService metricsService;
+    @Mock
+    private GrayService grayService;
 
     private FilterExpressionEngine engine;
 
     @BeforeEach
     void setUp() throws Exception {
-        engine = new FilterExpressionEngine(listDataService, eventTrackingService, metricsService);
+        engine = new FilterExpressionEngine(listDataService, eventTrackingService, metricsService, grayService);
     }
 
     @Test
@@ -149,5 +151,31 @@ class FilterExpressionEngineTest {
                 .tags(Set.of("vip"))
                 .build();
         assertFalse(engine.evaluate("inProvince(['BJ','SH']) && levelGte(5) && hasTag('vip')", ctx));
+    }
+
+    @Test
+    void evaluate_inGrayPercent_shouldReturnTrueWhenInGray() {
+        UserContext ctx = UserContext.builder().userId("u1").build();
+        engine.setTaskGrayConfig(1L, "PERCENTAGE", "{\"percent\":10}");
+        when(grayService.isInGray("u1", 1L, "PERCENTAGE", "{\"percent\":10}")).thenReturn(true);
+        assertTrue(engine.evaluate("inGrayPercent(10)", ctx));
+        engine.clearTaskGrayConfig();
+    }
+
+    @Test
+    void evaluate_inABGroup_shouldReturnTrueWhenInGroup() {
+        UserContext ctx = UserContext.builder().userId("u1").build();
+        String grayConfig = "{\"groups\":[{\"name\":\"A\",\"percent\":50},{\"name\":\"B\",\"percent\":50}]}";
+        engine.setTaskGrayConfig(1L, "AB", grayConfig);
+        when(grayService.getABGroup("u1", 1L, grayConfig)).thenReturn("A");
+        assertTrue(engine.evaluate("inABGroup('A')", ctx));
+        engine.clearTaskGrayConfig();
+    }
+
+    @Test
+    void evaluate_inCrowd_shouldReturnTrueWhenInCrowd() {
+        UserContext ctx = UserContext.builder().userId("u1").build();
+        when(grayService.isInGray("u1", null, "CROWD", "{\"crowdIds\":[1]}")).thenReturn(true);
+        assertTrue(engine.evaluate("inCrowd(1)", ctx));
     }
 }

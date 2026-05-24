@@ -37,6 +37,10 @@ public class Task {
     private Integer version;
     @Schema(description = "互斥组ID")
     private Long mutexGroupId;
+    @Schema(description = "灰度类型: NONE/PERCENTAGE/AB/CROWD")
+    private String grayType;
+    @Schema(description = "灰度配置 JSON")
+    private String grayConfig;
     private String createdBy;
     private String updatedBy;
     private LocalDateTime createdAt;
