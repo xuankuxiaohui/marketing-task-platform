@@ -118,7 +118,7 @@
           <span class="time-cell">{{ formatTime(row.updatedAt) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" :width="actionWidth(row.status)" fixed="right">
+      <el-table-column label="操作" width="170" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="primary" @click="$router.push(`/tasks/${row.id}`)">编辑</el-button>
           <el-button
@@ -200,11 +200,6 @@ function formatTime(t: string | undefined) {
   if (!t) return '--'
   // ISO format like "2026-05-24T10:30:00" -> "2026-05-24 10:30"
   return t.replace('T', ' ').substring(0, 16)
-}
-
-function actionWidth(status: string) {
-  if (status === 'DRAFT' || status === 'PUBLISHED') return 170
-  return 110
 }
 
 async function load() {
