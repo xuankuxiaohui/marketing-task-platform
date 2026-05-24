@@ -24,6 +24,10 @@ public class TaskAdminVO {
     private String mutexGroupName;
     private String grayType;
     private String grayConfig;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private Integer stepCount;
+    private Integer instanceCount;
 
     public static TaskAdminVO from(Task task) {
         if (task == null) return null;
@@ -42,6 +46,8 @@ public class TaskAdminVO {
         vo.setMutexGroupId(task.getMutexGroupId());
         vo.setGrayType(task.getGrayType());
         vo.setGrayConfig(task.getGrayConfig());
+        vo.setCreatedAt(task.getCreatedAt());
+        vo.setUpdatedAt(task.getUpdatedAt());
         return vo;
     }
 
