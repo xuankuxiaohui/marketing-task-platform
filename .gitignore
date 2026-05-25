@@ -13,3 +13,5 @@ graphify-out/
 /client-web/tsconfig.tsbuildinfo
 /admin-web/tsconfig.tsbuildinfo
 .claude-flow/
+/client-web/src/api/generated/schema.d.ts
+/admin-web/src/api/generated/schema.d.ts

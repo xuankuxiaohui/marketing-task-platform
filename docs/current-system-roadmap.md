@@ -1,4 +1,4 @@
-最后更新：2026-05-24
+最后更新：2026-05-25
 
 ## 1.已经完成的内容
 
@@ -205,21 +205,27 @@
    - 谁创建/修改/发布/下线任务。
    - 每次配置变更 diff。
 
-### P3：工程化
+### P3：工程化 ✅ 全部完成 (2026-05-25)
 
-1. 启用 OpenAPI 类型生成并接入 admin-web/client-web。
-2. 固定前端依赖版本，减少 `latest` 带来的不可重复构建风险。
-3. 将 `tsconfig.tsbuildinfo` 等构建产物从版本管理中移除。
-4. 增加 CI：
-   - 后端 `mvn test`。
+1. ✅ 启用 OpenAPI 类型生成并接入 admin-web/client-web。
+   - `scripts/generate-api-types.sh` / `.cmd` 一键生成脚本。
+   - admin-web 和 client-web 均添加 `generate-api` npm script。
+   - `admin-web/src/api/generated/client.ts` 提供类型安全的 API 客户端包装。
+   - `src/api/generated/` 已加入 `.gitignore`，生成文件不入库。
+2. ✅ 固定前端依赖版本，减少 `latest` 带来的不可重复构建风险。
+   - admin-web 和 client-web 的 `package.json` 全部替换为精确版本。
+   - 新增 `.npmrc` 配置 `save-exact=true`。
+3. ✅ 将 `tsconfig.tsbuildinfo` 等构建产物从版本管理中移除。
+4. ✅ 增加 CI（`.github/workflows/ci.yml`）：
+   - 后端 `mvn test`（H2 内存库，无需 MySQL service）。
    - admin-web build。
    - client-web build。
-   - 文档 Mermaid lint 可选。
-5. 增加部署文档：
+5. ✅ 增加部署文档（`docs/deployment.md`）：
    - 本地开发。
    - 测试环境。
-   - 生产配置。
-   - 数据库迁移流程。
+   - 生产配置 & 检查清单。
+   - 数据库迁移流程（Flyway）。
+   - 常见问题。
 
 ## 4. 建议的下一步落地顺序
 
@@ -238,6 +244,6 @@ flowchart TD
     K --> L[P2-1 管理端模拟测试 ✅]
     L --> M[P2-3 实例详情页]
     M --> N[P2-5 审计日志]
-    N --> O[P3 CI/CD 和部署文档]
+    N --> O[P3 CI/CD 和部署文档 ✅]
 ```
 ```
