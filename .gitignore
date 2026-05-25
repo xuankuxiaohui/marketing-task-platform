@@ -12,3 +12,4 @@ target/
 graphify-out/
 /client-web/tsconfig.tsbuildinfo
 /admin-web/tsconfig.tsbuildinfo
+.claude-flow/

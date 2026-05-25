@@ -178,7 +178,8 @@ public class AdminSimulateController {
         List<EventLog> events = eventLogMapper.selectList(
                 new LambdaQueryWrapper<EventLog>()
                         .eq(EventLog::getInstanceId, instanceId)
-                        .orderByDesc(EventLog::getCreatedAt)
+                        .orderByAsc(EventLog::getCreatedAt)
+                        .orderByAsc(EventLog::getId)
                         .last("LIMIT 100"));
         return Result.ok(events);
     }

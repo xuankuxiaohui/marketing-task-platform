@@ -77,7 +77,6 @@ cd client-web && npm install && npm dev
 | `docs/conventions/frontend/shared.md` | 两个 Vue 项目共享的规则 |
 | `docs/conventions/frontend/admin.md` | 管理后台 (Element Plus) 特有规则 |
 | `docs/conventions/frontend/web.md` | C 端 (Vant 4) 特有规则 |
-| `docs/conventions/git.md` | Git 提交规范、分支命名 |
 | `docs/spec/current/` | 当前版本规格 (API、SQL、发布说明) |
 
 ## 开发注意事项
