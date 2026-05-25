@@ -118,9 +118,17 @@
           <span class="time-cell">{{ formatTime(row.updatedAt) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="170" fixed="right">
+      <el-table-column label="操作" width="240" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="primary" @click="$router.push(`/tasks/${row.id}`)">编辑</el-button>
+          <el-button
+            size="small"
+            type="default"
+            :loading="copyingId === row.id"
+            @click="copy(row.id)"
+          >
+            复制
+          </el-button>
           <el-button
             v-if="row.status === 'DRAFT'"
             size="small"
@@ -169,16 +177,19 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { listTasks, offlineTask, publishTask } from '../../api/task'
+import { listTasks, offlineTask, publishTask, copyTask } from '../../api/task'
 import { listMutexGroups, type MutexGroup } from '../../api/mutex-group'
 
+const router = useRouter()
 const rows = ref<any[]>([])
 const loading = ref(false)
 const total = ref(0)
 const mutexGroupMap = ref<Record<number, string>>({})
 const publishingId = ref<number | null>(null)
 const offliningId = ref<number | null>(null)
+const copyingId = ref<number | null>(null)
 
 const pagination = reactive({ page: 1, size: 20 })
 const filters = reactive({ keyword: '', status: '', periodType: '' })
@@ -281,6 +292,20 @@ async function offline(id: number) {
     ElMessage.error(e.response?.data?.message || '下线任务失败')
   } finally {
     offliningId.value = null
+  }
+}
+
+async function copy(id: number) {
+  copyingId.value = id
+  try {
+    const { data } = await copyTask(id)
+    const newTaskId = data.data
+    ElMessage.success('复制成功')
+    router.push(`/tasks/${newTaskId}`)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '复制任务失败')
+  } finally {
+    copyingId.value = null
   }
 }
 

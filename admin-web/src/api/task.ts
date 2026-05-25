@@ -59,3 +59,30 @@ export function publishTask(id: number) {
 export function offlineTask(id: number) {
   return http.post(`/admin/task/${id}/offline`)
 }
+
+export function copyTask(id: number) {
+  return http.post(`/admin/task/${id}/copy`)
+}
+
+export interface TaskVersion {
+  id: number
+  taskId: number
+  version: number
+  createdAt: string
+}
+
+export interface TaskVersionDetail {
+  id: number
+  taskId: number
+  version: number
+  snapshotJson: string
+  createdAt: string
+}
+
+export function getTaskVersions(id: number) {
+  return http.get(`/admin/task/${id}/versions`)
+}
+
+export function getTaskVersionDetail(id: number, versionId: number) {
+  return http.get(`/admin/task/${id}/versions/${versionId}`)
+}

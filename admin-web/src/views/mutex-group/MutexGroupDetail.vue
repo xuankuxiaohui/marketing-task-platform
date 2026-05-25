@@ -11,6 +11,7 @@
           <span :class="['scope-pill', group?.scope === 'FULL_LIFECYCLE' ? 'scope-full' : 'scope-cycle']">
             {{ group?.scope === 'FULL_LIFECYCLE' ? '全生命周期' : '同周期' }}
           </span>
+          <span v-if="group?.crossCycle" class="cross-cycle-badge">跨周期</span>
         </div>
         <p class="page-sub" v-if="group?.description">{{ group?.description }}</p>
       </div>
@@ -132,6 +133,16 @@ onMounted(load)
 }
 .scope-cycle { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
 .scope-full { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+
+.cross-cycle-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--color-emerald-subtle);
+  color: var(--color-emerald-text);
+}
 
 .code-cell {
   font-family: var(--font-mono);

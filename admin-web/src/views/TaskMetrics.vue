@@ -78,6 +78,7 @@ async function onDateChange() {
   if (!dateRange.value) return
   dailyLoading.value = true
   try {
+    const [from, to] = dateRange.value
     const { data: res } = await getTaskDaily(taskId, from, to)
     if (res?.data) {
       dailyMetrics.value = res.data

@@ -15,6 +15,7 @@ public class MutexGroup {
     private String name;
     private String description;
     private String scope;
+    private Boolean crossCycle;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

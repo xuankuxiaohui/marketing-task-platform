@@ -28,6 +28,13 @@
           </span>
         </template>
       </el-table-column>
+      <el-table-column label="跨周期" width="90" align="center">
+        <template #default="{ row }">
+          <span :class="['cross-cycle-pill', row.crossCycle ? 'cross-yes' : 'cross-no']">
+            {{ row.crossCycle ? '是' : '否' }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column prop="taskCount" label="任务数" width="90" align="center">
         <template #default="{ row }">
           <el-tag size="small" type="info" round>{{ row.taskCount ?? 0 }}</el-tag>
@@ -64,6 +71,10 @@
             <template v-else>用户完成组内任一任务后，永久不可参与组内其他任务</template>
           </span>
         </el-form-item>
+        <el-form-item label="跨周期互斥">
+          <el-switch v-model="form.crossCycle" />
+          <span class="form-hint">开启后，用户在任何历史周期内完成过组内任务，都无法再次创建实例</span>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -89,6 +100,7 @@ const form = reactive<MutexGroup>({
   name: '',
   description: '',
   scope: 'SAME_CYCLE',
+  crossCycle: false,
 })
 
 function load() {
@@ -105,6 +117,7 @@ function openCreate() {
   form.name = ''
   form.description = ''
   form.scope = 'SAME_CYCLE'
+  form.crossCycle = false
   dialogVisible.value = true
 }
 
@@ -114,6 +127,7 @@ function openEdit(row: MutexGroup) {
   form.name = row.name
   form.description = row.description || ''
   form.scope = row.scope
+  form.crossCycle = row.crossCycle ?? false
   dialogVisible.value = true
 }
 
@@ -179,6 +193,17 @@ onMounted(load)
 }
 .scope-cycle { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
 .scope-full { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+
+.cross-cycle-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.cross-yes { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.cross-no { background: var(--color-border-light); color: var(--color-text-muted); }
 
 .form-hint {
   display: block;

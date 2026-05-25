@@ -13,6 +13,7 @@ public class MutexGroupVO {
     private String name;
     private String description;
     private String scope;
+    private Boolean crossCycle;
     private Integer taskCount;
     private LocalDateTime createdAt;
 
@@ -23,6 +24,7 @@ public class MutexGroupVO {
         vo.setName(entity.getName());
         vo.setDescription(entity.getDescription());
         vo.setScope(entity.getScope());
+        vo.setCrossCycle(entity.getCrossCycle());
         vo.setCreatedAt(entity.getCreatedAt());
         return vo;
     }

@@ -89,7 +89,6 @@ public class TaskService {
                 new LambdaQueryWrapper<UserTaskInstance>()
                         .eq(UserTaskInstance::getUserId, userContext.getUserId())
                         .in(UserTaskInstance::getStatus, InstanceStatus.PENDING.name(), InstanceStatus.IN_PROGRESS.name()));
-        if (activeInstances.isEmpty()) return tasks;
 
         Set<Long> activeTaskIds = activeInstances.stream()
                 .map(UserTaskInstance::getTaskId)
@@ -100,7 +99,7 @@ public class TaskService {
                 .collect(Collectors.toMap(MutexGroup::getId, Function.identity()));
 
         Set<String> blockedKeys = new HashSet<>();
-        Map<String, Long> keyOwner = new HashMap<>(); // blockedKey -> taskId that "owns" the slot
+        Map<String, Long> keyOwner = new HashMap<>();
 
         for (UserTaskInstance inst : activeInstances) {
             Task activeTask = activeTaskMap.get(inst.getTaskId());
@@ -118,7 +117,45 @@ public class TaskService {
             keyOwner.putIfAbsent(key, activeTask.getId());
         }
 
-        if (blockedKeys.isEmpty()) return tasks;
+        // Cross-cycle mutex: also collect COMPLETED/REWARDED instances for mutex groups with crossCycle=true
+        Set<Long> crossCycleGroupIds = groupMap.values().stream()
+                .filter(g -> Boolean.TRUE.equals(g.getCrossCycle()))
+                .map(MutexGroup::getId)
+                .collect(Collectors.toSet());
+        if (!crossCycleGroupIds.isEmpty()) {
+            Set<Long> crossCycleTaskIds = activeTaskMap.keySet().stream()
+                    .filter(tid -> {
+                        Task t = activeTaskMap.get(tid);
+                        return t != null && t.getMutexGroupId() != null
+                                && crossCycleGroupIds.contains(t.getMutexGroupId());
+                    })
+                    .collect(Collectors.toSet());
+            // extend to include all tasks in those mutex groups
+            List<Long> allCrossMutexTaskIds = taskMapper.selectList(new LambdaQueryWrapper<Task>()
+                            .select(Task::getId)
+                            .in(Task::getMutexGroupId, crossCycleGroupIds))
+                    .stream().map(Task::getId).toList();
+
+            if (!allCrossMutexTaskIds.isEmpty()) {
+                List<UserTaskInstance> completedInstances = instanceMapper.selectList(
+                        new LambdaQueryWrapper<UserTaskInstance>()
+                                .eq(UserTaskInstance::getUserId, userContext.getUserId())
+                                .in(UserTaskInstance::getTaskId, allCrossMutexTaskIds)
+                                .in(UserTaskInstance::getStatus, InstanceStatus.COMPLETED.name(),
+                                        InstanceStatus.REWARDED.name()));
+                for (UserTaskInstance inst : completedInstances) {
+                    Task completedTask = taskMapper.selectById(inst.getTaskId());
+                    if (completedTask == null || completedTask.getMutexGroupId() == null) continue;
+                    MutexGroup group = groupMap.get(completedTask.getMutexGroupId());
+                    if (group == null || !Boolean.TRUE.equals(group.getCrossCycle())) continue;
+                    String key = completedTask.getMutexGroupId() + ":*";
+                    blockedKeys.add(key);
+                    keyOwner.putIfAbsent(key, completedTask.getId());
+                }
+            }
+        }
+
+        if (activeInstances.isEmpty() && blockedKeys.isEmpty()) return tasks;
 
         return tasks.stream().filter(task -> {
             if (task.getMutexGroupId() == null) return true;
@@ -201,6 +238,18 @@ public class TaskService {
         Long count = instanceMapper.selectCount(wrapper);
         if (count > 0) {
             throw new BusinessException(ErrorCode.MUTEX_CONFLICT);
+        }
+
+        // Cross-cycle mutex: block if user has COMPLETED/REWARDED instance in ANY cycle
+        if (Boolean.TRUE.equals(mutexGroup.getCrossCycle())) {
+            LambdaQueryWrapper<UserTaskInstance> crossWrapper = new LambdaQueryWrapper<UserTaskInstance>()
+                    .eq(UserTaskInstance::getUserId, userContext.getUserId())
+                    .in(UserTaskInstance::getTaskId, mutexTaskIds)
+                    .in(UserTaskInstance::getStatus, InstanceStatus.COMPLETED.name(), InstanceStatus.REWARDED.name());
+            Long crossCount = instanceMapper.selectCount(crossWrapper);
+            if (crossCount > 0) {
+                throw new BusinessException(ErrorCode.MUTEX_CONFLICT);
+            }
         }
     }
 
@@ -318,5 +367,61 @@ public class TaskService {
         task.setStatus(TaskStatus.OFFLINE.name());
         taskMapper.updateById(task);
         cacheService.evict(taskId);
+    }
+
+    @Transactional
+    public Long copyTask(Long sourceTaskId) {
+        Task source = requireTask(sourceTaskId);
+
+        Task copy = new Task();
+        copy.setCode(source.getCode() + "_copy_" + System.currentTimeMillis() / 1000);
+        copy.setName(source.getName() + " (副本)");
+        copy.setDescription(source.getDescription());
+        copy.setPeriodType(source.getPeriodType());
+        copy.setCronExpr(source.getCronExpr());
+        copy.setSpecialCycleKey(source.getSpecialCycleKey());
+        copy.setStartTime(source.getStartTime());
+        copy.setEndTime(source.getEndTime());
+        copy.setStatus(TaskStatus.DRAFT.name());
+        copy.setVersion(0);
+        copy.setMutexGroupId(source.getMutexGroupId());
+        copy.setGrayType(source.getGrayType());
+        copy.setGrayConfig(source.getGrayConfig());
+        copy.setCreatedBy(source.getCreatedBy());
+        copy.setUpdatedBy(source.getUpdatedBy());
+        taskMapper.insert(copy);
+        Long newTaskId = copy.getId();
+
+        List<TaskStep> steps = taskStepMapper.selectList(
+                new LambdaQueryWrapper<TaskStep>()
+                        .eq(TaskStep::getTaskId, sourceTaskId)
+                        .orderByAsc(TaskStep::getSeq));
+        for (TaskStep step : steps) {
+            step.setId(null);
+            step.setTaskId(newTaskId);
+            taskStepMapper.insert(step);
+        }
+
+        List<TaskFilter> filters = taskFilterMapper.selectList(
+                new LambdaQueryWrapper<TaskFilter>()
+                        .eq(TaskFilter::getTaskId, sourceTaskId)
+                        .orderByAsc(TaskFilter::getSeq));
+        for (TaskFilter filter : filters) {
+            filter.setId(null);
+            filter.setTaskId(newTaskId);
+            taskFilterMapper.insert(filter);
+        }
+
+        List<TaskPlatform> platforms = taskPlatformMapper.selectList(
+                new LambdaQueryWrapper<TaskPlatform>()
+                        .eq(TaskPlatform::getTaskId, sourceTaskId));
+        for (TaskPlatform platform : platforms) {
+            platform.setId(null);
+            platform.setTaskId(newTaskId);
+            taskPlatformMapper.insert(platform);
+        }
+
+        cacheService.evict(newTaskId);
+        return newTaskId;
     }
 }

@@ -6,7 +6,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.Task;
+import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.domain.vo.TaskAdminVO;
+import com.marketing.task.domain.vo.TaskVersionVO;
+import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
@@ -25,6 +28,7 @@ public class AdminTaskController {
     private final TaskMapper taskMapper;
     private final TaskStepMapper taskStepMapper;
     private final UserTaskInstanceMapper instanceMapper;
+    private final TaskDefinitionSnapshotMapper snapshotMapper;
     private final TaskService taskService;
 
     @GetMapping
@@ -96,5 +100,32 @@ public class AdminTaskController {
     public Result<Void> offline(@PathVariable Long id) {
         taskService.offline(id);
         return Result.ok(null);
+    }
+
+    @PostMapping("/{id}/copy")
+    public Result<Long> copy(@PathVariable Long id) {
+        Long newTaskId = taskService.copyTask(id);
+        return Result.ok(newTaskId);
+    }
+
+    @GetMapping("/{id}/versions")
+    public Result<List<TaskVersionVO>> versions(@PathVariable Long id) {
+        List<TaskDefinitionSnapshot> snapshots = snapshotMapper.selectList(
+                new LambdaQueryWrapper<TaskDefinitionSnapshot>()
+                        .eq(TaskDefinitionSnapshot::getTaskId, id)
+                        .orderByDesc(TaskDefinitionSnapshot::getVersion));
+        List<TaskVersionVO> vos = snapshots.stream()
+                .map(TaskVersionVO::from)
+                .collect(Collectors.toList());
+        return Result.ok(vos);
+    }
+
+    @GetMapping("/{id}/versions/{versionId}")
+    public Result<TaskDefinitionSnapshot> versionDetail(@PathVariable Long id, @PathVariable Long versionId) {
+        TaskDefinitionSnapshot snapshot = snapshotMapper.selectById(versionId);
+        if (snapshot == null || !snapshot.getTaskId().equals(id)) {
+            return Result.fail(404, "版本快照不存在");
+        }
+        return Result.ok(snapshot);
     }
 }

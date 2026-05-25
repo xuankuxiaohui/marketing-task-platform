@@ -5,6 +5,7 @@ export interface MutexGroup {
   name: string
   description?: string
   scope: string
+  crossCycle?: boolean
   taskCount?: number
   createdAt?: string
 }
