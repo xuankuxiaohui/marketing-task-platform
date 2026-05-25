@@ -1,90 +1,114 @@
-# Coding Style
+---
+paths:
+  - "**/*.java"
+---
+# Java Coding Style
 
-## Immutability (CRITICAL)
+> This file extends [common/coding-style.md](../common/coding-style.md) with Java-specific content.
 
-ALWAYS create new objects, NEVER mutate existing ones:
+## Formatting
 
+- **google-java-format** or **Checkstyle** (Google or Sun style) for enforcement
+- One public top-level type per file
+- Consistent indent: 2 or 4 spaces (match project standard)
+- Member order: constants, fields, constructors, public methods, protected, private
+
+## Immutability
+
+- Prefer `record` for value types (Java 16+)
+- Mark fields `final` by default — use mutable state only when required
+- Return defensive copies from public APIs: `List.copyOf()`, `Map.copyOf()`, `Set.copyOf()`
+- Copy-on-write: return new instances rather than mutating existing ones
+
+```java
+// GOOD — immutable value type
+public record OrderSummary(Long id, String customerName, BigDecimal total) {}
+
+// GOOD — final fields, no setters
+public class Order {
+    private final Long id;
+    private final List<LineItem> items;
+
+    public List<LineItem> getItems() {
+        return List.copyOf(items);
+    }
+}
 ```
-// Pseudocode
-WRONG:  modify(original, field, value) → changes original in-place
-CORRECT: update(original, field, value) → returns new copy with change
+
+## Naming
+
+Follow standard Java conventions:
+- `PascalCase` for classes, interfaces, records, enums
+- `camelCase` for methods, fields, parameters, local variables
+- `SCREAMING_SNAKE_CASE` for `static final` constants
+- Packages: all lowercase, reverse domain (`com.example.app.service`)
+
+## Modern Java Features
+
+Use modern language features where they improve clarity:
+- **Records** for DTOs and value types (Java 16+)
+- **Sealed classes** for closed type hierarchies (Java 17+)
+- **Pattern matching** with `instanceof` — no explicit cast (Java 16+)
+- **Text blocks** for multi-line strings — SQL, JSON templates (Java 15+)
+- **Switch expressions** with arrow syntax (Java 14+)
+- **Pattern matching in switch** — exhaustive sealed type handling (Java 21+)
+
+```java
+// Pattern matching instanceof
+if (shape instanceof Circle c) {
+    return Math.PI * c.radius() * c.radius();
+}
+
+// Sealed type hierarchy
+public sealed interface PaymentMethod permits CreditCard, BankTransfer, Wallet {}
+
+// Switch expression
+String label = switch (status) {
+    case ACTIVE -> "Active";
+    case SUSPENDED -> "Suspended";
+    case CLOSED -> "Closed";
+};
 ```
 
-Rationale: Immutable data prevents hidden side effects, makes debugging easier, and enables safe concurrency.
+## Optional Usage
 
-## Core Principles
+- Return `Optional<T>` from finder methods that may have no result
+- Use `map()`, `flatMap()`, `orElseThrow()` — never call `get()` without `isPresent()`
+- Never use `Optional` as a field type or method parameter
 
-### KISS (Keep It Simple)
+```java
+// GOOD
+return repository.findById(id)
+    .map(ResponseDto::from)
+    .orElseThrow(() -> new OrderNotFoundException(id));
 
-- Prefer the simplest solution that actually works
-- Avoid premature optimization
-- Optimize for clarity over cleverness
-
-### DRY (Don't Repeat Yourself)
-
-- Extract repeated logic into shared functions or utilities
-- Avoid copy-paste implementation drift
-- Introduce abstractions when repetition is real, not speculative
-
-### YAGNI (You Aren't Gonna Need It)
-
-- Do not build features or abstractions before they are needed
-- Avoid speculative generality
-- Start simple, then refactor when the pressure is real
-
-## File Organization
-
-MANY SMALL FILES > FEW LARGE FILES:
-- High cohesion, low coupling
-- 200-400 lines typical, 800 max
-- Extract utilities from large modules
-- Organize by feature/domain, not by type
+// BAD — Optional as parameter
+public void process(Optional<String> name) {}
+```
 
 ## Error Handling
 
-ALWAYS handle errors comprehensively:
-- Handle errors explicitly at every level
-- Provide user-friendly error messages in UI-facing code
-- Log detailed error context on the server side
-- Never silently swallow errors
+- Prefer unchecked exceptions for domain errors
+- Create domain-specific exceptions extending `RuntimeException`
+- Avoid broad `catch (Exception e)` unless at top-level handlers
+- Include context in exception messages
 
-## Input Validation
+```java
+public class OrderNotFoundException extends RuntimeException {
+    public OrderNotFoundException(Long id) {
+        super("Order not found: id=" + id);
+    }
+}
+```
 
-ALWAYS validate at system boundaries:
-- Validate all user input before processing
-- Use schema-based validation where available
-- Fail fast with clear error messages
-- Never trust external data (API responses, user input, file content)
+## Streams
 
-## Naming Conventions
+- Use streams for transformations; keep pipelines short (3-4 operations max)
+- Prefer method references when readable: `.map(Order::getTotal)`
+- Avoid side effects in stream operations
+- For complex logic, prefer a loop over a convoluted stream pipeline
 
-- Variables and functions: `camelCase` with descriptive names
-- Booleans: prefer `is`, `has`, `should`, or `can` prefixes
-- Interfaces, types, and components: `PascalCase`
-- Constants: `UPPER_SNAKE_CASE`
-- Custom hooks: `camelCase` with a `use` prefix
+## References
 
-## Code Smells to Avoid
-
-### Deep Nesting
-
-Prefer early returns over nested conditionals once the logic starts stacking.
-
-### Magic Numbers
-
-Use named constants for meaningful thresholds, delays, and limits.
-
-### Long Functions
-
-Split large functions into focused pieces with clear responsibilities.
-
-## Code Quality Checklist
-
-Before marking work complete:
-- [ ] Code is readable and well-named
-- [ ] Functions are small (<50 lines)
-- [ ] Files are focused (<800 lines)
-- [ ] No deep nesting (>4 levels)
-- [ ] Proper error handling
-- [ ] No hardcoded values (use constants or config)
-- [ ] No mutation (immutable patterns used)
+See skill: `java-coding-standards` for full coding standards with examples.
+See skill: `jpa-patterns` for JPA/Hibernate entity design patterns.
