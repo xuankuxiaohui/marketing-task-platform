@@ -4,6 +4,7 @@ import Login from '../views/login/Login.vue'
 import InstanceList from '../views/instance/InstanceList.vue'
 import PrizeEdit from '../views/prize/PrizeEdit.vue'
 import PrizeList from '../views/prize/PrizeList.vue'
+import PrizeRecordList from '../views/prize/PrizeRecordList.vue'
 import TaskEdit from '../views/task/TaskEdit.vue'
 import TaskList from '../views/task/TaskList.vue'
 import MutexGroupList from '../views/mutex-group/MutexGroupList.vue'
@@ -24,6 +25,7 @@ export const router = createRouter({
     { path: '/prizes', component: PrizeList, meta: { requiresAuth: true } },
     { path: '/prizes/new', component: PrizeEdit, meta: { requiresAuth: true } },
     { path: '/prizes/:id', component: PrizeEdit, meta: { requiresAuth: true } },
+    { path: '/prize-records', component: PrizeRecordList, meta: { requiresAuth: true } },
     {
       path: '/dashboard',
       name: 'Dashboard',

@@ -19,6 +19,7 @@
         <el-menu
           router
           :default-active="$route.path"
+          :default-openeds="openGroups"
           class="sidebar-menu"
         >
           <el-menu-item index="/dashboard">
@@ -31,7 +32,7 @@
               <span>运营仪表盘</span>
             </template>
           </el-menu-item>
-          <el-menu-item index="/tasks">
+          <el-sub-menu index="/tasks-group">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
                 <rect x="3" y="3" width="7" height="7" rx="1"/>
@@ -41,7 +42,8 @@
               </svg>
               <span>任务管理</span>
             </template>
-          </el-menu-item>
+            <el-menu-item index="/tasks">任务列表</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/simulate">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
@@ -60,7 +62,7 @@
               <span>互斥组管理</span>
             </template>
           </el-menu-item>
-          <el-menu-item index="/prizes">
+          <el-sub-menu index="/prizes-group">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
                 <circle cx="12" cy="8" r="5"/>
@@ -69,7 +71,9 @@
               </svg>
               <span>奖品管理</span>
             </template>
-          </el-menu-item>
+            <el-menu-item index="/prizes">奖品配置</el-menu-item>
+            <el-menu-item index="/prize-records">奖品记录</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/instances">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
@@ -130,13 +134,21 @@ const route = useRoute()
 
 const titleMap: Record<string, string> = {
   '/dashboard': '运营仪表盘',
-  '/tasks': '任务管理',
+  '/tasks': '任务列表',
   '/tasks/new': '新建任务',
   '/instances': '实例查询',
   '/mutex-groups': '互斥组管理',
-  '/prizes': '奖品管理',
+  '/prizes': '奖品配置',
+  '/prize-records': '奖品记录',
   '/simulate': '模拟测试',
 }
+
+const openGroups = computed(() => {
+  const groups: string[] = []
+  if (route.path.startsWith('/tasks')) groups.push('/tasks-group')
+  if (route.path.startsWith('/prizes') || route.path.startsWith('/prize-records')) groups.push('/prizes-group')
+  return groups
+})
 
 const breadcrumbs = computed(() => {
   const path = route.path
@@ -147,8 +159,10 @@ const breadcrumbs = computed(() => {
     parts.push('任务管理', '编辑任务')
   } else if (path.startsWith('/mutex-groups/') && path !== '/mutex-groups') {
     parts.push('互斥组管理', '互斥组详情')
+  } else if (path.startsWith('/prize-records')) {
+    parts.push('奖品记录')
   } else if (path.startsWith('/prizes/') && path !== '/prizes') {
-    parts.push('奖品管理', path === '/prizes/new' ? '新建奖品' : '编辑奖品')
+    parts.push('奖品配置', path === '/prizes/new' ? '新建奖品' : '编辑奖品')
   } else {
     parts.push(titleMap[path] || '营销任务平台')
   }
@@ -211,6 +225,20 @@ const handleLogout = () => {
   padding: 8px 10px;
   background: transparent;
 }
+.sidebar-menu :deep(.el-sub-menu .el-sub-menu__title) {
+  border-radius: 6px;
+  margin-bottom: 2px;
+  height: 38px;
+  line-height: 38px;
+  font-size: 13px;
+  color: #94a3b8;
+  padding-left: 12px !important;
+  transition: all 0.15s;
+}
+.sidebar-menu :deep(.el-sub-menu .el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #e2e8f0 !important;
+}
 .sidebar-menu :deep(.el-menu-item) {
   border-radius: 6px;
   margin-bottom: 2px;
@@ -235,8 +263,34 @@ const handleLogout = () => {
   flex-shrink: 0;
   opacity: 0.55;
 }
-.sidebar-menu :deep(.el-menu-item.is-active) .nav-icon {
+.sidebar-menu :deep(.el-menu-item.is-active) .nav-icon,
+.sidebar-menu :deep(.el-sub-menu.is-opened .el-sub-menu__title) .nav-icon {
   opacity: 1;
+}
+.sidebar-menu :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
+  color: #e2e8f0 !important;
+  font-weight: 500;
+}
+.sidebar-menu :deep(.el-sub-menu .el-menu) {
+  background: transparent !important;
+}
+.sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item) {
+  padding-left: 40px !important;
+  font-size: 12px;
+  color: #64748b;
+  height: 34px;
+  line-height: 34px;
+  border-radius: 6px;
+  margin-bottom: 1px;
+}
+.sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item:hover) {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #cbd5e1 !important;
+}
+.sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item.is-active) {
+  background: #2563eb !important;
+  color: #fff !important;
+  font-weight: 500;
 }
 
 .sidebar-footer {

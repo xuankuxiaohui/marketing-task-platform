@@ -241,3 +241,70 @@ npm --prefix client-web run build
 | `admin-web/src/views/task/TaskList.vue` | 条件操作按钮 + 搜索筛选栏 + 新列 + 状态 tooltip + 分页 + 按钮 loading |
 | `docs/spec/current/api.md` | 新增 v0.3.2 任务列表 API 文档 |
 | `docs/spec/current/release-notes.md` | 新增 v0.3.2 版本说明 |
+
+## v0.3.3 — 模拟测试事件日志排序修复 (2026-05-25)
+
+### 问题
+
+管理端模拟测试页面的数据流日志展示顺序不正确。原实现按 `created_at DESC` 倒序排列，导致最新事件在上方，不符合"按执行顺序从上到下查看"的使用习惯。
+
+此外，仅按 `created_at` 排序在秒级时间精度下存在不确定性——当多个事件在同一秒内产生时，它们的相对顺序可能每次查询都不同，造成展示混乱。
+
+### 修复
+
+`AdminSimulateController.getEvents()` 查询改为：
+
+```java
+.orderByAsc(EventLog::getCreatedAt)
+.orderByAsc(EventLog::getId)
+```
+
+- `created_at ASC` 保证事件按时间正序（先发生在上，后发生在下）
+- `id ASC` 作为 tiebreaker，保证同一秒内的事件按插入顺序稳定排列
+
+### 修改文件
+
+| 文件 | 说明 |
+|---|---|
+| `backend/.../controller/admin/AdminSimulateController.java` | getEvents() 排序从 DESC 改为 ASC + id tiebreaker |
+
+## v0.3.4 — 奖品记录管理 & 菜单优化 (2026-05-25)
+
+### 奖品记录查询
+
+新增管理端奖品记录查询页面 `/prize-records`，支持按用户ID、奖品ID、状态、日期范围筛选，分页展示所有奖品发放记录。
+
+**新增 API**：
+
+```
+GET /api/admin/prize/records?page=1&size=20&userId=xxx&prizeId=1&status=FAILED&startDate=2026-05-01&endDate=2026-05-25
+```
+
+### 奖品补发
+
+新增补发功能，将失败/过期/永久失败的记录重置为待领取状态并重新触发发放。
+
+```
+POST /api/admin/prize/records/{id}/reissue
+```
+
+- 允许补发的状态：FAILED / FAILED_PERMANENTLY / EXPIRED
+- 不可补发的状态：GRANTED（已成功）/ CLAIMING（领取中）
+- 补发时重置 retryCount=0，延长过期时间 7 天
+
+### 菜单层级优化
+
+管理后台侧边栏改为二级层级：
+- **任务管理** → 任务列表
+- **奖品管理** → 奖品配置 / 奖品记录
+
+### 修改文件
+
+| 文件 | 说明 |
+|---|---|
+| `backend/.../controller/admin/AdminPrizeController.java` | 新增 listRecords() + reissue() 端点 |
+| `admin-web/src/api/prize.ts` | 新增 listPrizeRecords() / reissuePrizeRecord() |
+| `admin-web/src/views/prize/PrizeRecordList.vue` | 新建奖品记录查询页面 |
+| `admin-web/src/router/index.ts` | 新增 /prize-records 路由 |
+| `admin-web/src/App.vue` | 菜单改为 el-sub-menu 二级层级 |
+| `docs/spec/current/api.md` | 新增奖品记录 API 文档 |

@@ -76,3 +76,21 @@ export function togglePrize(id: number) {
 export function getPrizeRecords(id: number) {
   return http.get(`/admin/prize/${id}/records`)
 }
+
+export interface PrizeRecordQuery {
+  page?: number
+  size?: number
+  userId?: string
+  prizeId?: number
+  status?: string
+  startDate?: string
+  endDate?: string
+}
+
+export function listPrizeRecords(params: PrizeRecordQuery) {
+  return http.get('/admin/prize/records', { params })
+}
+
+export function reissuePrizeRecord(id: number) {
+  return http.post(`/admin/prize/records/${id}/reissue`)
+}

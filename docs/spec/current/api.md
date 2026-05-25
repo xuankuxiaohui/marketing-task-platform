@@ -175,7 +175,7 @@ Content-Type: application/json
 GET /api/admin/simulate/instance/{instanceId}/events
 ```
 
-返回 event_log 表中该实例的所有事件，按时间倒序，最多 100 条。
+返回 event_log 表中该实例的所有事件，按时间正序（created_at ASC），时间相同时按 id 正序作为 tiebreaker，最多 100 条。
 ## v0.3.1 — Admin Instance API (实例查询优化)
 
 ### 实例列表（带筛选）
@@ -274,3 +274,39 @@ GET /api/admin/task?page=1&size=20&status=DRAFT&keyword=签到&periodType=DAILY
 | updatedAt | LocalDateTime | 更新时间 |
 | stepCount | Integer | 步骤数量（COUNT from task_step） |
 | instanceCount | Integer | 用户实例数量（COUNT from user_task_instance） |
+
+## v0.3.3 — 奖品记录管理
+
+### 奖品记录列表（分页+筛选）
+
+```
+GET /api/admin/prize/records?page=1&size=20&userId=xxx&prizeId=1&status=FAILED&startDate=2026-05-01&endDate=2026-05-25
+```
+
+**查询参数**（全部可选）：
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| page | int | 页码，默认 1 |
+| size | int | 每页条数，默认 20 |
+| userId | String | 用户 ID（精确匹配） |
+| prizeId | Long | 奖品 ID（精确匹配） |
+| status | String | 记录状态：WON / CLAIMING / GRANTED / FAILED / FAILED_PERMANENTLY / EXPIRED |
+| startDate | LocalDate | 获得时间起始 (yyyy-MM-dd) |
+| endDate | LocalDate | 获得时间结束 (yyyy-MM-dd) |
+
+返回：分页结果 `Result<Page<PrizeRecord>>`，按 wonAt 降序。
+
+### 补发奖品
+
+```
+POST /api/admin/prize/records/{id}/reissue
+```
+
+将 FAILED / FAILED_PERMANENTLY / EXPIRED 状态的记录重置为 WON，延长过期时间 7 天，并触发领取。返回操作结果消息。GRANTED / CLAIMING 状态不可补发。
+
+### 菜单优化
+
+管理后台侧边栏菜单改为二级层级：
+- **任务管理** → 任务列表
+- **奖品管理** → 奖品配置 / 奖品记录
