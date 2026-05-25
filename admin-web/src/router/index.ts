@@ -10,6 +10,8 @@ import TaskList from '../views/task/TaskList.vue'
 import MutexGroupList from '../views/mutex-group/MutexGroupList.vue'
 import MutexGroupDetail from '../views/mutex-group/MutexGroupDetail.vue'
 import SimulatePage from '../views/simulate/SimulatePage.vue'
+import InstanceDetail from '../views/instance/InstanceDetail.vue'
+import OperationLogs from '../views/OperationLogs.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -20,12 +22,14 @@ export const router = createRouter({
     { path: '/tasks/new', component: TaskEdit, meta: { requiresAuth: true } },
     { path: '/tasks/:id', component: TaskEdit, meta: { requiresAuth: true } },
     { path: '/instances', component: InstanceList, meta: { requiresAuth: true } },
+    { path: '/instances/:id', component: InstanceDetail, meta: { requiresAuth: true } },
     { path: '/mutex-groups', component: MutexGroupList, meta: { requiresAuth: true } },
     { path: '/mutex-groups/:id', component: MutexGroupDetail, meta: { requiresAuth: true } },
     { path: '/prizes', component: PrizeList, meta: { requiresAuth: true } },
     { path: '/prizes/new', component: PrizeEdit, meta: { requiresAuth: true } },
     { path: '/prizes/:id', component: PrizeEdit, meta: { requiresAuth: true } },
     { path: '/prize-records', component: PrizeRecordList, meta: { requiresAuth: true } },
+    { path: '/operation-logs', component: OperationLogs, meta: { requiresAuth: true } },
     {
       path: '/dashboard',
       name: 'Dashboard',

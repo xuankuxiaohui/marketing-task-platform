@@ -40,7 +40,7 @@
     </el-form>
 
     <!-- Table -->
-    <el-table :data="rows" highlight-current-row @row-click="showDetail"
+    <el-table :data="rows" highlight-current-row
       v-loading="loading" element-loading-text="加载中...">
       <el-table-column prop="id" label="ID" width="80" sortable />
       <el-table-column prop="userId" label="用户 ID" min-width="130" show-overflow-tooltip />
@@ -87,7 +87,7 @@
       </el-table-column>
       <el-table-column label="操作" width="90" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button size="small" type="primary" plain @click.stop="showDetail(row)">详情</el-button>
+          <el-button size="small" type="primary" plain @click.stop="router.push(`/instances/${row.id}`)">详情</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -199,9 +199,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { listInstances, getInstanceDetail, type InstanceVO, type InstanceDetail, type InstanceQueryParams } from '../../api/instance'
 import { listTasks } from '../../api/task'
+
+const router = useRouter()
 
 // --- State ---
 const rows = ref<InstanceVO[]>([])
@@ -334,7 +337,11 @@ function onSizeChange() {
   load()
 }
 
-async function showDetail(row: InstanceVO) {
+function showDetail(row: InstanceVO) {
+  router.push(`/instances/${row.id}`)
+}
+
+async function loadDrawerDetail(row: InstanceVO) {
   drawerVisible.value = true
   detailLoading.value = true
   detail.value = null

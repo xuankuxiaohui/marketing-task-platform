@@ -171,11 +171,11 @@
    - ClientTaskController.detail() 注入 PlatformAdapterRegistry，合并 step + stepPlatform。
    - TaskStepVO 新增 platformConfig 字段 (buttonText/jumpType/jumpTarget)，@JsonInclude(NON_NULL)。
    - adapter.renderStep() 为每个步骤调用，支持平台特化渲染。
-4. ~~优化互斥组能力~~ ✅ 部分完成 (2026-05-24, v0.2.10)：
+4. ~~优化互斥组能力~~ ✅ 已完成 (2026-05-25)：
    - mutex_group 独立表 + Admin CRUD（MutexGroupList/MutexGroupDetail）。
    - Task 表 mutex_group_key 迁移为 mutex_group_id 外键。
    - 任务编辑中互斥组改为下拉选择器；死锁修复（keyOwner 模式）。
-   - 待完成：互斥范围扩展配置（跨周期互斥）。
+   - 跨周期互斥 (cross_cycle 列 + Flyway V12 + 前端切换 UI)。
 5. ~~增加任务灰度与实验能力~~ ✅ 已完成 (2026-05-24, v0.3.1)：
    - 百分比分流 (inGrayPercent)。
    - AB 实验分组 (inABGroup)。
@@ -188,22 +188,16 @@
    - SimulateContextHolder 模拟用户上下文。
    - AdminSimulateController：impersonate / callback / progress / full-flow API。
    - admin-web SimulateTab：用户身份模拟 + CALLBACK/PROGRESS 手动触发 + 一键全流程测试。
-2. ~~Admin 增加步骤拖拽排序、复制任务、版本对比~~ ✅ 部分完成 (2026-05-24, v0.2.10)：
+2. ~~Admin 增加步骤拖拽排序、复制任务、版本对比~~ ✅ 已完成 (2026-05-25)：
    - 步骤拖拽排序 (HTML5 drag-drop) + Modal 编辑 + code 唯一性校验 + extraJson 编辑器已实现。
-   - 复制任务、版本对比待完成。
-3. 增加实例详情页：
-   - 当前步骤。
-   - 每步进度。
-   - 发奖状态。
-   - 错误记录。
+   - 复制任务 (POST /{id}/copy) + 版本对比 (GET /{id}/versions + 版本历史弹窗)。
+3. ~~增加实例详情页~~ ✅ 已完成 (2026-05-25)：InstanceDetail.vue + 事件日志 API
 4. ~~增加监控指标~~ ✅ 已完成 (2026-05-24, v0.3.0)：
    - 任务曝光数 / 参与数 / 完成数 / 发奖成功/失败数 / 过滤表达式耗时。
    - event_log 表 + EventTrackingService + Micrometer MetricsService。
    - task_metrics 日聚合表 + TaskMetricsScheduler 每 5 分钟聚合。
    - AdminMetricsController API + admin-web Dashboard + TaskMetrics 页面。
-5. 增加审计日志：
-   - 谁创建/修改/发布/下线任务。
-   - 每次配置变更 diff。
+5. ~~增加审计日志~~ ✅ 已完成 (2026-05-25)：operation_log 表 + OperationLogService (@Async) + 前端审计日志页面，已接入任务/奖品/互斥组操作追踪。
 
 ### P3：工程化 ✅ 全部完成 (2026-05-25)
 
@@ -231,7 +225,7 @@
 
 ```mermaid
 flowchart TD
-    A[当前代码基线 146 tests] --> B[P0-1 鉴权和用户上下文 ✅]
+    A[当前代码基线 162 tests] --> B[P0-1 鉴权和用户上下文 ✅]
     B --> C[P0-2 真实发奖和发奖流水 ✅]
     C --> D[P0-3 配置版本快照 ✅]
     D --> E[P0-4 端到端集成测试 ✅]
@@ -239,11 +233,13 @@ flowchart TD
     F --> G[P1-1 调度和名单能力 ✅]
     G --> H[P1-2 平台适配 ✅]
     H --> I[P1-3 互斥组 + 步骤拖拽 ✅]
-    I --> J[P1-4 灰度与实验]
-    J --> K[P2-4 监控指标与埋点 ✅]
-    K --> L[P2-1 管理端模拟测试 ✅]
-    L --> M[P2-3 实例详情页]
-    M --> N[P2-5 审计日志]
-    N --> O[P3 CI/CD 和部署文档 ✅]
+    I --> J[P1-4 跨周期互斥 ✅]
+    J --> K[P1-5 灰度与实验 ✅]
+    K --> L[P2-1 模拟测试 ✅]
+    L --> M[P2-2 复制任务+版本对比 ✅]
+    M --> N[P2-3 实例详情页 ✅]
+    N --> O[P2-4 监控指标与埋点 ✅]
+    O --> P[P2-5 审计日志 ✅]
+    P --> Q[P3 CI/CD 和部署文档 ✅]
 ```
 ```

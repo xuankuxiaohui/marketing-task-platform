@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
+import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.prize.domain.entity.Prize;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
 import com.marketing.task.prize.domain.enums.PrizeRecordStatus;
 import com.marketing.task.prize.mapper.PrizeMapper;
 import com.marketing.task.prize.mapper.PrizeRecordMapper;
 import com.marketing.task.prize.service.ClaimService;
+import com.marketing.task.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +27,7 @@ public class AdminPrizeController {
     private final PrizeMapper prizeMapper;
     private final PrizeRecordMapper recordMapper;
     private final ClaimService claimService;
+    private final OperationLogService operationLogService;
 
     @GetMapping
     public Result<Page<Prize>> list(
@@ -39,6 +42,8 @@ public class AdminPrizeController {
     @PostMapping
     public Result<Prize> create(@RequestBody Prize prize) {
         prizeMapper.insert(prize);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "CREATE", "PRIZE", prize.getId(), prize.getName(), null);
         return Result.ok(prize);
     }
 
@@ -46,6 +51,8 @@ public class AdminPrizeController {
     public Result<Prize> update(@PathVariable Long id, @RequestBody Prize prize) {
         prize.setId(id);
         prizeMapper.updateById(prize);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "UPDATE", "PRIZE", id, prize.getName(), null);
         return Result.ok(prize);
     }
 

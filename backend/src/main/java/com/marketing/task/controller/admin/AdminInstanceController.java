@@ -7,11 +7,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
+import com.marketing.task.domain.entity.EventLog;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.entity.UserTaskStepProgress;
 import com.marketing.task.domain.vo.UserTaskInstanceVO;
+import com.marketing.task.mapper.EventLogMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
@@ -33,6 +35,7 @@ public class AdminInstanceController {
     private final UserTaskStepProgressMapper stepProgressMapper;
     private final TaskMapper taskMapper;
     private final TaskStepMapper taskStepMapper;
+    private final EventLogMapper eventLogMapper;
 
     @GetMapping
     public Result<IPage<UserTaskInstanceVO>> page(@RequestParam(defaultValue = "1") long page,
@@ -127,6 +130,17 @@ public class AdminInstanceController {
         data.put("steps", stepDetails);
         data.put("totalSteps", steps.size());
         return Result.ok(data);
+    }
+
+    @GetMapping("/{id}/events")
+    public Result<List<EventLog>> events(@PathVariable Long id) {
+        List<EventLog> events = eventLogMapper.selectList(
+                new LambdaQueryWrapper<EventLog>()
+                        .eq(EventLog::getInstanceId, id)
+                        .orderByAsc(EventLog::getCreatedAt)
+                        .orderByAsc(EventLog::getId)
+                        .last("LIMIT 100"));
+        return Result.ok(events);
     }
 
     /**

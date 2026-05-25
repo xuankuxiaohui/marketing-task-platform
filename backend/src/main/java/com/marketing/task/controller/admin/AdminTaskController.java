@@ -8,11 +8,13 @@ import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.domain.vo.TaskAdminVO;
+import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.vo.TaskVersionVO;
 import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
+import com.marketing.task.service.OperationLogService;
 import com.marketing.task.service.task.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class AdminTaskController {
     private final UserTaskInstanceMapper instanceMapper;
     private final TaskDefinitionSnapshotMapper snapshotMapper;
     private final TaskService taskService;
+    private final OperationLogService operationLogService;
 
     @GetMapping
     public Result<IPage<TaskAdminVO>> page(@RequestParam(defaultValue = "1") long page,
@@ -82,7 +85,11 @@ public class AdminTaskController {
 
     @PostMapping
     public Result<TaskAdminVO> save(@Valid @RequestBody TaskAggregateDTO dto) {
-        return Result.ok(taskService.saveAggregate(dto));
+        TaskAdminVO vo = taskService.saveAggregate(dto);
+        String operatorId = UserContextHolder.get().getUserId();
+        String opType = dto.getTask().getId() != null ? "UPDATE" : "CREATE";
+        operationLogService.record(operatorId, opType, "TASK", vo.getId(), vo.getName(), null);
+        return Result.ok(vo);
     }
 
     @GetMapping("/{id}")
@@ -93,18 +100,27 @@ public class AdminTaskController {
     @PostMapping("/{id}/publish")
     public Result<Void> publish(@PathVariable Long id) {
         taskService.publish(id);
+        Task task = taskMapper.selectById(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "PUBLISH", "TASK", id, task != null ? task.getName() : "任务#" + id, null);
         return Result.ok(null);
     }
 
     @PostMapping("/{id}/offline")
     public Result<Void> offline(@PathVariable Long id) {
         taskService.offline(id);
+        Task task = taskMapper.selectById(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "OFFLINE", "TASK", id, task != null ? task.getName() : "任务#" + id, null);
         return Result.ok(null);
     }
 
     @PostMapping("/{id}/copy")
     public Result<Long> copy(@PathVariable Long id) {
         Long newTaskId = taskService.copyTask(id);
+        Task newTask = taskMapper.selectById(newTaskId);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "CREATE", "TASK", newTaskId, newTask != null ? newTask.getName() : "任务#" + newTaskId, "从任务#" + id + "复制");
         return Result.ok(newTaskId);
     }
 

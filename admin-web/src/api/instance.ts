@@ -50,3 +50,7 @@ export function listInstances(params: InstanceQueryParams = {}) {
 export function getInstanceDetail(id: number) {
   return http.get(`/admin/instance/${id}`)
 }
+
+export function getInstanceEvents(id: number) {
+  return http.get(`/admin/instance/${id}/events`)
+}

@@ -2,11 +2,13 @@ package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.common.Result;
+import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.entity.MutexGroup;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.vo.MutexGroupVO;
 import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.mapper.TaskMapper;
+import com.marketing.task.service.OperationLogService;
 import com.marketing.task.service.task.MutexGroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ import java.util.List;
 public class AdminMutexGroupController {
     private final MutexGroupService mutexGroupService;
     private final TaskMapper taskMapper;
+    private final OperationLogService operationLogService;
 
     @GetMapping
     public Result<List<MutexGroupVO>> list() {
@@ -51,18 +54,25 @@ public class AdminMutexGroupController {
     @PostMapping
     public Result<MutexGroupVO> create(@RequestBody MutexGroup group) {
         MutexGroup created = mutexGroupService.create(group);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "CREATE", "MUTEX_GROUP", created.getId(), created.getName(), null);
         return Result.ok(MutexGroupVO.from(created));
     }
 
     @PutMapping("/{id}")
     public Result<MutexGroupVO> update(@PathVariable Long id, @RequestBody MutexGroup group) {
         MutexGroup updated = mutexGroupService.update(id, group);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "UPDATE", "MUTEX_GROUP", updated.getId(), updated.getName(), null);
         return Result.ok(MutexGroupVO.from(updated));
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
+        MutexGroup group = mutexGroupService.requireGroup(id);
         mutexGroupService.delete(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "DELETE", "MUTEX_GROUP", id, group.getName(), null);
         return Result.ok(null);
     }
 }
