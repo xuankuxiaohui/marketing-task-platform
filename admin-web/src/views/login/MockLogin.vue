@@ -63,15 +63,15 @@ const user = useUserStore()
 .card-header span:first-child {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .card-sub {
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 .accent-bar {
   height: 3px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: linear-gradient(90deg, var(--color-brand-primary), var(--color-brand-secondary));
   margin: -1px 20px 16px;
   border-radius: 2px;
 }

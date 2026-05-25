@@ -3,6 +3,8 @@ import { useUserStore } from '../stores/user'
 import Login from '../views/login/Login.vue'
 import Register from '../views/login/Register.vue'
 
+const AppLayout = () => import('../components/AppLayout.vue')
+
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -10,9 +12,15 @@ export const router = createRouter({
     { path: '/login', component: Login },
     { path: '/register', component: Register },
     { path: '/mock-login', component: () => import('../views/login/MockLogin.vue') },
-    { path: '/tasks', component: () => import('../views/task/TaskList.vue'), meta: { requiresAuth: true } },
-    { path: '/task/:id', component: () => import('../views/task/TaskDetail.vue'), meta: { requiresAuth: true } },
-    { path: '/prizes', component: () => import('../views/prize/PrizeRecords.vue'), meta: { requiresAuth: true } },
+    {
+      path: '/',
+      component: AppLayout,
+      children: [
+        { path: 'tasks', component: () => import('../views/task/TaskList.vue'), meta: { requiresAuth: true } },
+        { path: 'task/:id', component: () => import('../views/task/TaskDetail.vue'), meta: { requiresAuth: true, hideTabbar: true } },
+        { path: 'prizes', component: () => import('../views/prize/PrizeRecords.vue'), meta: { requiresAuth: true } },
+      ],
+    },
   ],
 })
 

@@ -36,7 +36,7 @@
           />
         </div>
       </template>
-      <el-table :data="dailyMetrics" stripe>
+      <el-table :data="dailyMetrics" stripe v-loading="dailyLoading">
         <el-table-column prop="metricDate" label="日期" width="120" />
         <el-table-column prop="views" label="曝光" />
         <el-table-column prop="participants" label="参与" />
@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { getTaskSummary, getTaskDaily, type TaskMetrics } from '../api/metrics'
 
 const route = useRoute()
@@ -59,6 +60,7 @@ const taskId = Number(route.params.id)
 
 const summary = ref<Record<string, any>>({})
 const dailyMetrics = ref<TaskMetrics[]>([])
+const dailyLoading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
 
 onMounted(async () => {
@@ -67,21 +69,23 @@ onMounted(async () => {
     if (res?.data) {
       summary.value = res.data
     }
-  } catch (e) {
-    console.error('Failed to load task summary:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载任务指标失败')
   }
 })
 
 async function onDateChange() {
   if (!dateRange.value) return
-  const [from, to] = dateRange.value
+  dailyLoading.value = true
   try {
     const { data: res } = await getTaskDaily(taskId, from, to)
     if (res?.data) {
       dailyMetrics.value = res.data
     }
-  } catch (e) {
-    console.error('Failed to load daily metrics:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载每日指标失败')
+  } finally {
+    dailyLoading.value = false
   }
 }
 </script>
@@ -96,11 +100,11 @@ async function onDateChange() {
 .metric-value {
   font-size: 32px;
   font-weight: bold;
-  color: #409eff;
+  color: var(--color-brand-primary);
 }
 .metric-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 .table-card {

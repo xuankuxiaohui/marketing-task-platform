@@ -54,7 +54,7 @@
         <div v-for="(g, i) in abGroups" :key="i" style="display:flex;gap:8px;margin-bottom:6px;align-items:center">
           <el-input v-model="g.name" placeholder="组名" style="width:120px" size="small" />
           <el-input-number v-model="g.percent" :min="0" :max="100" size="small" style="width:100px" />
-          <span style="font-size:12px;color:#909399">%</span>
+          <span style="font-size:12px;color:var(--color-text-muted)">%</span>
           <el-button size="small" text type="danger" @click="abGroups.splice(i,1)" :disabled="abGroups.length<=2">×</el-button>
         </div>
         <el-button size="small" text type="primary" @click="abGroups.push({name:'',percent:0})">+ 添加分组</el-button>
@@ -137,7 +137,7 @@ onMounted(async () => {
 .form-hint {
   display: block;
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   margin-top: 4px;
   line-height: 1.4;
 }

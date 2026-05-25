@@ -135,15 +135,15 @@ function toggleMode() {
 
 <style scoped>
 .filter-card {
-  border: 1px solid #ede9fe;
+  border: 1px solid var(--color-brand-primary-subtle);
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 12px;
-  background: #fff;
+  background: var(--color-surface);
   transition: box-shadow 0.2s;
 }
 .filter-card:hover {
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.06);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
 }
 
 .filter-header {
@@ -162,15 +162,15 @@ function toggleMode() {
 .filter-label {
   font-weight: 600;
   font-size: 13px;
-  color: #4c1d95;
+  color: var(--color-text-secondary);
 }
 
 .empty-conditions {
   text-align: center;
   padding: 16px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   font-size: 13px;
-  background: #faf5ff;
+  background: var(--color-brand-primary-subtle);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -187,37 +187,37 @@ function toggleMode() {
 .filter-summary {
   margin-top: 10px;
   padding: 8px 12px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--color-success-subtle);
+  border: 1px solid var(--color-emerald-subtle);
   border-radius: 8px;
   font-size: 13px;
 }
 
 .summary-label {
-  color: #15803d;
+  color: var(--color-published-text);
   font-weight: 600;
 }
 
 .summary-text {
-  color: #166534;
+  color: var(--color-emerald-text);
 }
 
 .generated-expr {
   margin-top: 6px;
   padding: 6px 12px;
-  background: #f5f5f5;
+  background: var(--color-border-light);
   border-radius: 6px;
   font-size: 12px;
 }
 
 .expr-label {
-  color: #737373;
+  color: var(--color-text-muted);
   margin-right: 4px;
 }
 
 .generated-expr code {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #404040;
+  color: var(--color-text-secondary);
   font-size: 12px;
   word-break: break-all;
 }
@@ -228,7 +228,7 @@ function toggleMode() {
 
 .raw-hint {
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   margin: 4px 0 0 0;
 }
 
@@ -238,7 +238,7 @@ function toggleMode() {
   gap: 10px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f3e8ff;
+  border-top: 1px solid var(--color-brand-primary-subtle);
 }
 
 .filter-desc {

@@ -95,7 +95,7 @@ function load() {
   loading.value = true
   listMutexGroups()
     .then(({ data }) => { rows.value = data.data })
-    .catch(() => {})
+    .catch((e: any) => { ElMessage.error(e.response?.data?.message || '加载互斥组列表失败') })
     .finally(() => { loading.value = false })
 }
 
@@ -161,12 +161,12 @@ onMounted(load)
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 .scope-pill {
@@ -177,13 +177,13 @@ onMounted(load)
   font-weight: 600;
   line-height: 1.6;
 }
-.scope-cycle { background: #dbeafe; color: #1d4ed8; }
-.scope-full { background: #fce7f3; color: #be185d; }
+.scope-cycle { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.scope-full { background: var(--color-pink-subtle); color: var(--color-pink-text); }
 
 .form-hint {
   display: block;
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   margin-top: 4px;
   line-height: 1.4;
 }

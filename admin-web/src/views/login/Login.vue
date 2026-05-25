@@ -22,7 +22,7 @@
             size="large"
           >
             <template #prefix>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color: var(--color-text-muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </template>
           </el-input>
         </el-form-item>
@@ -35,7 +35,7 @@
             show-password
           >
             <template #prefix>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color: var(--color-text-muted)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </template>
           </el-input>
         </el-form-item>
@@ -157,20 +157,20 @@ onMounted(() => {
   background: rgba(37, 99, 235, 0.15);
   border: 1px solid rgba(37, 99, 235, 0.3);
   border-radius: 14px;
-  color: #60a5fa;
+  color: var(--color-brand-secondary);
   margin-bottom: 14px;
 }
 .brand-name {
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--color-text-inverse);
   letter-spacing: 0.5px;
 }
 .brand-sub {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .login-card {
@@ -188,7 +188,7 @@ onMounted(() => {
   text-align: center;
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text-primary);
   margin-bottom: 24px;
 }
 
@@ -204,18 +204,18 @@ onMounted(() => {
   flex-shrink: 0;
   width: 120px;
   height: 40px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: var(--color-surface-raised);
   transition: border-color 0.2s;
 }
 .captcha-img-wrap:hover {
-  border-color: #2563eb;
+  border-color: var(--color-brand-primary);
 }
 .captcha-img {
   width: 100%;
@@ -223,7 +223,7 @@ onMounted(() => {
   object-fit: cover;
 }
 .captcha-loading-text {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -236,11 +236,11 @@ onMounted(() => {
 }
 
 .error-msg {
-  color: #ef4444;
+  color: var(--color-danger);
   font-size: 13px;
   text-align: center;
   padding: 8px 12px;
-  background: #fef2f2;
+  background: var(--color-danger-subtle);
   border-radius: 6px;
   margin-top: -8px;
   margin-bottom: 8px;
@@ -254,7 +254,7 @@ onMounted(() => {
 }
 .env-tag {
   background: rgba(37, 99, 235, 0.2);
-  color: #93c5fd;
+  color: var(--color-brand-secondary);
   font-size: 10px;
   font-weight: 700;
   padding: 2px 8px;
@@ -264,7 +264,7 @@ onMounted(() => {
 }
 .hint-text {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .fade-enter-active,

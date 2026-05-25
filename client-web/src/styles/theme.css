@@ -1,0 +1,125 @@
+/* Design tokens for client-web (Vant 4 + Vue 3) */
+
+:root {
+  /* Brand */
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-active: #1e40af;
+  --color-brand-subtle: #eff6ff;
+  --color-brand-gradient: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+
+  /* Surface */
+  --color-bg: #f7f8fa;
+  --color-bg-gradient: linear-gradient(180deg, #f0f5ff 0%, #f7f8fa 40%);
+  --color-surface: #ffffff;
+
+  /* Text */
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  /* Border */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+
+  /* Status — instance */
+  --color-status-pending: #f59e0b;
+  --color-status-pending-bg: #fef3c7;
+  --color-status-pending-text: #92400e;
+  --color-status-progress: #2563eb;
+  --color-status-progress-bg: #dbeafe;
+  --color-status-progress-text: #1d4ed8;
+  --color-status-success: #10b981;
+  --color-status-success-bg: #d1fae5;
+  --color-status-success-text: #065f46;
+  --color-status-expired: #94a3b8;
+  --color-status-expired-bg: #f1f5f9;
+  --color-status-expired-text: #64748b;
+
+  /* Status — prize */
+  --color-won: #f59e0b;
+  --color-won-bg: #fef3c7;
+  --color-won-text: #92400e;
+  --color-granted: #16a34a;
+  --color-granted-bg: #dcfce7;
+  --color-granted-text: #16a34a;
+  --color-claiming-bg: #dbeafe;
+  --color-claiming-text: #2563eb;
+  --color-failed: #dc2626;
+  --color-failed-bg: #fee2e2;
+  --color-failed-text: #dc2626;
+
+  /* Period type colors */
+  --color-once: #f59e0b;
+  --color-once-bg: #fef3c7;
+  --color-once-text: #92400e;
+  --color-once-icon-bg: #fef3c7;
+  --color-once-icon: #d97706;
+  --color-daily: #3b82f6;
+  --color-daily-bg: #dbeafe;
+  --color-daily-text: #1d4ed8;
+  --color-daily-icon-bg: #dbeafe;
+  --color-daily-icon: #2563eb;
+  --color-monthly: #8b5cf6;
+  --color-monthly-bg: #ede9fe;
+  --color-monthly-text: #6d28d9;
+  --color-monthly-icon-bg: #ede9fe;
+  --color-monthly-icon: #7c3aed;
+  --color-cron: #ec4899;
+  --color-cron-bg: #fce7f3;
+  --color-cron-text: #be185d;
+  --color-cron-icon-bg: #fce7f3;
+  --color-cron-icon: #db2777;
+  --color-special: #10b981;
+  --color-special-bg: #d1fae5;
+  --color-special-text: #047857;
+  --color-special-icon-bg: #d1fae5;
+  --color-special-icon: #059669;
+
+  /* Step colors */
+  --color-step-done: #2563eb;
+  --color-step-active-ring: #2563eb;
+  --color-step-pending-bg: #f1f5f9;
+  --color-step-line: #e2e8f0;
+
+  /* Nav */
+  --color-nav-prize: #f59e0b;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-round: 9999px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-up: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  --shadow-brand: 0 8px 24px rgba(37, 99, 235, 0.25);
+
+  /* Transition */
+  --transition-fast: 0.15s ease;
+
+  /* Font */
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+
+  /* Vant 4 theme overrides */
+  --van-primary-color: #2563eb;
+  --van-blue: #2563eb;
+  --van-background: #f7f8fa;
+  --van-background-2: #ffffff;
+  --van-text-color: #1e293b;
+  --van-text-color-2: #475569;
+  --van-text-color-3: #94a3b8;
+  --van-border-color: #e2e8f0;
+  --van-border-radius-lg: 10px;
+  --van-border-radius-md: 8px;
+}

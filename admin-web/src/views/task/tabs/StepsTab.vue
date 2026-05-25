@@ -332,7 +332,7 @@ defineExpose({ getSteps: () => steps.value, setSteps })
 }
 .steps-hint {
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 .step-card {
@@ -341,8 +341,8 @@ defineExpose({ getSteps: () => steps.value, setSteps })
   justify-content: space-between;
   padding: 10px 14px;
   margin-bottom: 6px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   transition: box-shadow 0.15s, opacity 0.15s;
   user-select: none;
@@ -370,10 +370,10 @@ defineExpose({ getSteps: () => steps.value, setSteps })
 
 .drag-handle {
   cursor: grab;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   padding: 4px;
 }
-.drag-handle:hover { color: #6d28d9; }
+.drag-handle:hover { color: var(--color-brand-primary); }
 .drag-handle:active { cursor: grabbing; }
 
 .step-seq {
@@ -382,8 +382,8 @@ defineExpose({ getSteps: () => steps.value, setSteps })
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary));
+  color: var(--color-text-inverse);
   border-radius: 50%;
   font-size: 11px;
   font-weight: 700;
@@ -396,10 +396,10 @@ defineExpose({ getSteps: () => steps.value, setSteps })
   gap: 1px;
 }
 .step-code {
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
-  background: #f5f3ff;
-  color: #6d28d9;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
   padding: 1px 6px;
   border-radius: 3px;
   width: fit-content;
@@ -407,12 +407,12 @@ defineExpose({ getSteps: () => steps.value, setSteps })
 .step-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 
 .step-desc {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -428,19 +428,19 @@ defineExpose({ getSteps: () => steps.value, setSteps })
   text-transform: uppercase;
   flex-shrink: 0;
 }
-.type-click { background: #dbeafe; color: #1d4ed8; }
-.type-callback { background: #fef3c7; color: #b45309; }
-.type-progress { background: #ede9fe; color: #6d28d9; }
-.type-reward { background: #d1fae5; color: #047857; }
-.type-passive { background: #f1f5f9; color: #64748b; }
+.type-click { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.type-callback { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.type-progress { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.type-reward { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.type-passive { background: var(--color-border-light); color: var(--color-text-muted); }
 
 .form-feedback {
   display: block;
   font-size: 11px;
   margin-top: 2px;
 }
-.form-feedback.valid { color: #16a34a; }
-.form-feedback.invalid { color: #dc2626; }
+.form-feedback.valid { color: var(--color-published-text); }
+.form-feedback.invalid { color: var(--color-danger); }
 
 .extra-json-editor {
   width: 100%;

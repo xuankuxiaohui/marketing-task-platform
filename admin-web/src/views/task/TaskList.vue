@@ -24,7 +24,7 @@
         @keyup.enter="search"
       >
         <template #prefix>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color: var(--color-text-muted)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </template>
       </el-input>
       <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 140px" @change="search">
@@ -100,7 +100,7 @@
               {{ getMutexGroupName(row.mutexGroupId) }}
             </el-link>
           </template>
-          <span v-else style="color:#94a3b8;font-size:11px">--</span>
+          <span v-else style="color:var(--color-text-muted);font-size:11px">--</span>
         </template>
       </el-table-column>
       <el-table-column prop="version" label="版本" width="65" align="center">
@@ -159,7 +159,7 @@
         :page-size="pagination.size"
         :total="total"
         :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
+        layout="total, sizes, prev, pager, next, jumper"
         @size-change="onSizeChange"
         @current-change="onPageChange"
       />
@@ -169,6 +169,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { listTasks, offlineTask, publishTask } from '../../api/task'
 import { listMutexGroups, type MutexGroup } from '../../api/mutex-group'
 
@@ -230,8 +231,8 @@ async function load() {
       map[g.id] = g.name
     }
     mutexGroupMap.value = map
-  } catch (e) {
-    console.error('Failed to load tasks:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载任务列表失败')
   } finally {
     loading.value = false
   }
@@ -264,8 +265,8 @@ async function publish(id: number) {
   try {
     await publishTask(id)
     await load()
-  } catch (e) {
-    console.error('Failed to publish task:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '发布任务失败')
   } finally {
     publishingId.value = null
   }
@@ -276,8 +277,8 @@ async function offline(id: number) {
   try {
     await offlineTask(id)
     await load()
-  } catch (e) {
-    console.error('Failed to offline task:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '下线任务失败')
   } finally {
     offliningId.value = null
   }
@@ -295,12 +296,12 @@ onMounted(load)
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 /* filter bar */
@@ -314,28 +315,28 @@ onMounted(load)
 
 /* cells */
 .code-cell {
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  background: #f5f3ff;
-  color: #6d28d9;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
   padding: 2px 6px;
   border-radius: 4px;
 }
 .name-cell {
   font-weight: 600;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .desc-cell {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 12px;
   cursor: default;
 }
 .desc-empty {
-  color: #cbd5e1;
+  color: var(--color-text-disabled);
   font-size: 11px;
 }
 .time-cell {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -346,13 +347,13 @@ onMounted(load)
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #6d28d9;
-  background: #ede9fe;
+  color: var(--color-brand-primary);
+  background: var(--color-brand-primary-subtle);
   text-align: center;
 }
 .count-badge.count-instance {
-  color: #047857;
-  background: #d1fae5;
+  color: var(--color-emerald-text);
+  background: var(--color-emerald-subtle);
 }
 
 /* Period pills */
@@ -364,11 +365,11 @@ onMounted(load)
   font-weight: 600;
   line-height: 1.6;
 }
-.period-daily { background: #dbeafe; color: #1d4ed8; }
-.period-once { background: #fef3c7; color: #b45309; }
-.period-monthly { background: #ede9fe; color: #6d28d9; }
-.period-cron { background: #fce7f3; color: #be185d; }
-.period-special { background: #d1fae5; color: #047857; }
+.period-daily { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.period-once { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.period-monthly { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.period-cron { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+.period-special { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
 
 /* Status pills */
 .status-pill {
@@ -388,15 +389,15 @@ onMounted(load)
   height: 6px;
   border-radius: 50%;
 }
-.status-pill.published { background: #dcfce7; color: #16a34a; }
-.status-pill.published::before { background: #16a34a; }
-.status-pill.draft { background: #fef3c7; color: #b45309; }
-.status-pill.draft::before { background: #f59e0b; }
-.status-pill.offline { background: #f1f5f9; color: #64748b; }
-.status-pill.offline::before { background: #94a3b8; }
+.status-pill.published { background: var(--color-published-subtle); color: var(--color-published-text); }
+.status-pill.published::before { background: var(--color-published-text); }
+.status-pill.draft { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.status-pill.draft::before { background: var(--color-warning); }
+.status-pill.offline { background: var(--color-border-light); color: var(--color-text-muted); }
+.status-pill.offline::before { background: var(--color-text-disabled); }
 
 .version-badge {
-  color: #a78bfa;
+  color: var(--color-text-muted);
   font-weight: 600;
   font-size: 12px;
 }

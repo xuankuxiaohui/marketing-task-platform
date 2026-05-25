@@ -142,7 +142,7 @@ onMounted(loadDetail)
 <style scoped>
 .task-detail-page {
   min-height: 100vh;
-  background: #f7f8fa;
+  background: var(--color-bg);
 }
 
 .loading-wrap {
@@ -151,40 +151,40 @@ onMounted(loadDetail)
 
 /* Header */
 .detail-header {
-  background: #fff;
-  padding: 16px;
+  background: var(--color-surface);
+  padding: var(--space-4);
   margin-bottom: 10px;
 }
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .task-name {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text-primary);
   flex: 1;
 }
 .header-meta {
   margin-top: 6px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 /* Steps */
 .steps-section {
-  background: #fff;
-  padding: 16px;
+  background: var(--color-surface);
+  padding: var(--space-4);
   margin-bottom: 80px;
 }
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #475569;
-  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
 }
 .steps-wrapper {
   position: relative;
@@ -200,14 +200,14 @@ onMounted(loadDetail)
   top: 28px;
   width: 2px;
   height: calc(100% - 8px);
-  background: #e2e8f0;
+  background: var(--color-step-line);
 }
 .step-item.done + .step-line,
 .step-item.active + .step-item .step-line {
-  background: #e2e8f0;
+  background: var(--color-step-line);
 }
 .step-item.done .step-line {
-  background: #2563eb;
+  background: var(--color-step-done);
 }
 
 /* Step dots */
@@ -219,23 +219,23 @@ onMounted(loadDetail)
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-right: 12px;
+  margin-right: var(--space-3);
   margin-top: 2px;
   z-index: 1;
 }
 .dot-done {
-  background: #2563eb;
+  background: var(--color-step-done);
   color: #fff;
 }
 .dot-active {
-  background: #fff;
-  border: 2px solid #2563eb;
-  color: #2563eb;
+  background: var(--color-surface);
+  border: 2px solid var(--color-step-active-ring);
+  color: var(--color-step-active-ring);
 }
 .dot-pending {
-  background: #f1f5f9;
-  border: 2px solid #e2e8f0;
-  color: #94a3b8;
+  background: var(--color-step-pending-bg);
+  border: 2px solid var(--color-step-line);
+  color: var(--color-text-muted);
 }
 .step-num {
   font-size: 12px;
@@ -243,17 +243,17 @@ onMounted(loadDetail)
 }
 
 .step-content {
-  padding-bottom: 16px;
+  padding-bottom: var(--space-4);
 }
 .step-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--color-text-primary);
   line-height: 28px;
 }
 .step-desc {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin-top: 2px;
 }
 .step-item.done .step-content {
@@ -266,14 +266,14 @@ onMounted(loadDetail)
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   padding-bottom: max(12px, env(safe-area-inset-bottom));
-  background: #fff;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-up);
 }
 .action-bar :deep(.van-button--large) {
   height: 46px;
   font-size: 15px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 </style>

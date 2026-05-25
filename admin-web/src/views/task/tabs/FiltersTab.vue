@@ -91,13 +91,13 @@ defineExpose({
 </script>
 
 <style scoped>
-.valid-msg { color: #10b981; font-size: 12px; font-weight: 500; }
-.invalid-msg { color: #ef4444; font-size: 12px; }
+.valid-msg { color: var(--color-success); font-size: 12px; font-weight: 500; }
+.invalid-msg { color: var(--color-danger); font-size: 12px; }
 
 .empty-hint {
   text-align: center;
   padding: 32px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 </style>

@@ -144,38 +144,38 @@ onMounted(refreshCaptcha)
 <style scoped>
 .register-page {
   min-height: 100vh;
-  background: #f7f8fa;
+  background: var(--color-bg);
 }
 
 .register-header {
   text-align: center;
-  padding: 20px 24px 16px;
+  padding: var(--space-5) var(--space-6) var(--space-4);
 }
 .register-welcome {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 .register-hint {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .form-section {
-  padding: 0 8px;
+  padding: 0 var(--space-2);
 }
 .section-label {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
-  padding: 0 16px 8px;
+  color: var(--color-text-secondary);
+  padding: 0 var(--space-4) var(--space-2);
   letter-spacing: 0.3px;
 }
 .label-optional {
   font-weight: 400;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 .profile-label {
   margin-top: 18px;
@@ -184,8 +184,8 @@ onMounted(refreshCaptcha)
 .captcha-box {
   height: 38px;
   width: 100px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
   display: flex;
@@ -195,7 +195,7 @@ onMounted(refreshCaptcha)
   transition: border-color 0.2s;
 }
 .captcha-box:active {
-  border-color: #2563eb;
+  border-color: var(--color-brand);
 }
 .captcha-img {
   width: 100%;
@@ -204,11 +204,11 @@ onMounted(refreshCaptcha)
 }
 .captcha-loading {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .submit-wrap {
-  margin: 24px 16px 0;
+  margin: var(--space-6) var(--space-4) 0;
 }
 .submit-wrap :deep(.van-button--large) {
   height: 44px;
@@ -220,12 +220,12 @@ onMounted(refreshCaptcha)
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: 18px;
-  padding-bottom: 24px;
+  padding-bottom: var(--space-6);
 }
 .switch-text {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 </style>

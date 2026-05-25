@@ -39,6 +39,6 @@ function save() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: #f7f8fa;
+  background: var(--color-bg);
 }
 </style>

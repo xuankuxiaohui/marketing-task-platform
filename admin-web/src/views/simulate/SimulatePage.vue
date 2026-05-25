@@ -643,7 +643,7 @@ function formatTime(t: string): string {
 .selection-label {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 .start-btn {
@@ -663,9 +663,9 @@ function formatTime(t: string): string {
 .flowchart-panel {
   flex: 1;
   min-width: 0;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   overflow-y: auto;
   padding: 20px;
 }
@@ -678,7 +678,7 @@ function formatTime(t: string): string {
 .panel-title {
   font-size: 15px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 
 /* Flowchart */
@@ -692,11 +692,11 @@ function formatTime(t: string): string {
 .step-connector {
   width: 2px;
   height: 24px;
-  background: #e2e8f0;
+  background: var(--color-border);
   margin-left: 19px;
 }
 .step-connector.completed {
-  background: #10b981;
+  background: var(--color-success);
 }
 
 /* Step card */
@@ -705,26 +705,26 @@ function formatTime(t: string): string {
   gap: 14px;
   padding: 14px 16px;
   border-radius: 8px;
-  border: 1.5px solid #e2e8f0;
-  background: #fff;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
   transition: all 0.15s;
 }
 .step-card:hover {
-  border-color: #cbd5e1;
+  border-color: var(--color-text-disabled);
 }
 .step-card.current-step {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  border-color: var(--color-brand-secondary);
+  background: var(--color-brand-primary-subtle);
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 .step-card.completed-step {
-  border-color: #d1fae5;
-  background: #f0fdf4;
+  border-color: var(--color-emerald-subtle);
+  background: var(--color-success-subtle);
 }
 .step-card.clickable-step {
   cursor: pointer;
   border-style: dashed;
-  border-color: #3b82f6;
+  border-color: var(--color-brand-secondary);
 }
 
 .step-left {
@@ -740,23 +740,23 @@ function formatTime(t: string): string {
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
-  background: #94a3b8;
+  color: var(--color-text-inverse);
+  background: var(--color-text-disabled);
 }
 .step-card.current-step .step-badge {
-  background: #3b82f6;
+  background: var(--color-brand-secondary);
 }
 .step-card.completed-step .step-badge {
-  background: #10b981;
+  background: var(--color-success);
 }
-.step-badge.type-click { background: #3b82f6; }
-.step-badge.type-callback { background: #f59e0b; }
-.step-badge.type-progress { background: #6366f1; }
-.step-badge.type-reward { background: #10b981; }
-.step-badge.type-passive { background: #64748b; }
+.step-badge.type-click { background: var(--color-brand-secondary); }
+.step-badge.type-callback { background: var(--color-warning); }
+.step-badge.type-progress { background: var(--color-brand-secondary); }
+.step-badge.type-reward { background: var(--color-success); }
+.step-badge.type-passive { background: var(--color-text-muted); }
 
 /* Completed step overrides all type colors to green */
-.step-card.completed-step .step-badge { background: #10b981; }
+.step-card.completed-step .step-badge { background: var(--color-success); }
 
 .step-body {
   flex: 1;
@@ -771,11 +771,11 @@ function formatTime(t: string): string {
 .step-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 .step-desc {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin-top: 4px;
   line-height: 1.5;
 }
@@ -787,7 +787,7 @@ function formatTime(t: string): string {
 }
 .progress-text {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 .step-callback-info {
@@ -796,8 +796,8 @@ function formatTime(t: string): string {
 .event-key-code {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px;
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--color-amber-subtle);
+  color: var(--color-amber-text);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -820,12 +820,12 @@ function formatTime(t: string): string {
 }
 .progress-target {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 .step-auto-text {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-style: italic;
 }
 
@@ -842,16 +842,16 @@ function formatTime(t: string): string {
   border-radius: 10px;
 }
 .step-status.done {
-  color: #047857;
-  background: #d1fae5;
+  color: var(--color-emerald-text);
+  background: var(--color-emerald-subtle);
 }
 .step-status.current {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--color-brand-primary-hover);
+  background: var(--el-color-primary-light-8);
 }
 .step-status.pending {
-  color: #94a3b8;
-  background: #f1f5f9;
+  color: var(--color-text-disabled);
+  background: var(--color-border-light);
 }
 
 /* Side panel */
@@ -883,7 +883,7 @@ function formatTime(t: string): string {
 
 .event-empty {
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 13px;
   padding: 24px 0;
 }
@@ -893,7 +893,7 @@ function formatTime(t: string): string {
   align-items: flex-start;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border-light);
 }
 .event-item:last-child {
   border-bottom: none;
@@ -901,7 +901,7 @@ function formatTime(t: string): string {
 .event-time {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
   min-width: 70px;
@@ -916,7 +916,7 @@ function formatTime(t: string): string {
 }
 .event-data-code {
   font-size: 11px;
-  color: #64748b;
+  color: var(--color-text-muted);
   word-break: break-all;
 }
 
@@ -935,20 +935,20 @@ function formatTime(t: string): string {
 }
 .info-label {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
 .info-value {
   font-size: 13px;
-  color: #1e293b;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 .info-value code {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 11px;
-  background: #f1f5f9;
+  background: var(--color-border-light);
   padding: 1px 5px;
   border-radius: 3px;
 }
@@ -961,22 +961,22 @@ function formatTime(t: string): string {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 .empty-icon {
-  color: #cbd5e1;
+  color: var(--color-text-disabled);
   margin-bottom: 16px;
   opacity: 0.5;
 }
 .empty-state h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin: 0 0 8px;
 }
 .empty-state p {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin: 0;
   text-align: center;
   max-width: 400px;

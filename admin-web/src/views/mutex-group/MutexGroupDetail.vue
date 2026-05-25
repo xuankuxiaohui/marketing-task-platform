@@ -95,7 +95,7 @@ onMounted(load)
 }
 .back-btn {
   align-self: flex-start;
-  color: #6d28d9;
+  color: var(--color-brand-primary);
   padding: 0;
   font-size: 12px;
   margin-bottom: 4px;
@@ -108,17 +108,17 @@ onMounted(load)
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 .section-label {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--color-text-secondary);
   margin-bottom: 10px;
 }
 
@@ -130,20 +130,20 @@ onMounted(load)
   font-weight: 600;
   line-height: 1.6;
 }
-.scope-cycle { background: #dbeafe; color: #1d4ed8; }
-.scope-full { background: #fce7f3; color: #be185d; }
+.scope-cycle { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.scope-full { background: var(--color-pink-subtle); color: var(--color-pink-text); }
 
 .code-cell {
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  background: #f5f3ff;
-  color: #6d28d9;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
   padding: 2px 6px;
   border-radius: 4px;
 }
 .name-cell {
   font-weight: 600;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 
 .status-pill {
@@ -162,12 +162,12 @@ onMounted(load)
   height: 6px;
   border-radius: 50%;
 }
-.status-pill.published { background: #dcfce7; color: #16a34a; }
-.status-pill.published::before { background: #16a34a; }
-.status-pill.draft { background: #fef3c7; color: #b45309; }
-.status-pill.draft::before { background: #f59e0b; }
-.status-pill.offline { background: #f1f5f9; color: #64748b; }
-.status-pill.offline::before { background: #94a3b8; }
+.status-pill.published { background: var(--color-published-subtle); color: var(--color-published-text); }
+.status-pill.published::before { background: var(--color-published-text); }
+.status-pill.draft { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.status-pill.draft::before { background: var(--color-warning); }
+.status-pill.offline { background: var(--color-border-light); color: var(--color-text-muted); }
+.status-pill.offline::before { background: var(--color-text-disabled); }
 
 .period-pill {
   display: inline-block;
@@ -177,9 +177,9 @@ onMounted(load)
   font-weight: 600;
   line-height: 1.6;
 }
-.period-daily { background: #dbeafe; color: #1d4ed8; }
-.period-once { background: #fef3c7; color: #b45309; }
-.period-monthly { background: #ede9fe; color: #6d28d9; }
-.period-cron { background: #fce7f3; color: #be185d; }
-.period-special { background: #d1fae5; color: #047857; }
+.period-daily { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.period-once { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.period-monthly { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.period-cron { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+.period-special { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
 </style>

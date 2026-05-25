@@ -12,7 +12,7 @@
         </el-button>
       </div>
     </template>
-    <el-table :data="rows">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="奖品ID" width="80" />
       <el-table-column prop="activityId" label="活动ID" width="80" align="center">
         <template #default="{ row }">
@@ -67,9 +67,11 @@
     <div class="pager-wrap">
       <el-pagination
         v-model:current-page="page"
-        :page-size="size"
+        v-model:page-size="size"
+        :page-sizes="[10, 20, 50]"
         :total="total"
-        layout="prev, pager, next, total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="load"
         @current-change="load"
       />
     </div>
@@ -78,11 +80,13 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { listPrizes, togglePrize } from '../../api/prize'
 
 const rows = ref([])
+const loading = ref(false)
 const page = ref(1)
-const size = 20
+const size = ref(20)
 const total = ref(0)
 
 const typeLabel = (t: string) => ({
@@ -96,12 +100,15 @@ const typeClass = (t: string) => ({
 }[t] || '')
 
 async function load() {
+  loading.value = true
   try {
-    const { data } = await listPrizes(page.value, size)
+    const { data } = await listPrizes(page.value, size.value)
     rows.value = data.data.records || []
     total.value = data.data.total || 0
-  } catch (e) {
-    console.error('Failed to load prizes:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载奖品列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -109,8 +116,8 @@ async function toggle(id: number) {
   try {
     await togglePrize(id)
     await load()
-  } catch (e) {
-    console.error('Failed to toggle prize:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '操作失败')
   }
 }
 
@@ -126,12 +133,12 @@ onMounted(load)
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 .prize-name {
@@ -144,15 +151,15 @@ onMounted(load)
   height: 24px;
   border-radius: 4px;
   object-fit: cover;
-  background: #f1f5f9;
+  background: var(--color-border-light);
 }
 .name-cell {
   font-weight: 600;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .stock-cell, .limit-cell {
   font-variant-numeric: tabular-nums;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .type-pill {
@@ -162,26 +169,26 @@ onMounted(load)
   font-size: 11px;
   font-weight: 600;
 }
-.t-point { background: #dbeafe; color: #1d4ed8; }
-.t-coupon { background: #fef3c7; color: #b45309; }
-.t-badge { background: #ede9fe; color: #6d28d9; }
-.t-physical { background: #d1fae5; color: #047857; }
-.t-membership { background: #fce7f3; color: #be185d; }
-.t-internal { background: #f1f5f9; color: #64748b; }
+.t-point { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.t-coupon { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.t-badge { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.t-physical { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.t-membership { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+.t-internal { background: var(--color-border-light); color: var(--color-text-muted); }
 
-.bool-on { color: #16a34a; font-weight: 600; font-size: 12px; }
-.bool-off { color: #94a3b8; font-size: 12px; }
+.bool-on { color: var(--color-published-text); font-weight: 600; font-size: 12px; }
+.bool-off { color: var(--color-text-disabled); font-size: 12px; }
 
 .status-dot {
   font-size: 12px;
   font-weight: 600;
 }
-.status-dot.enabled { color: #16a34a; }
-.status-dot.disabled { color: #94a3b8; }
+.status-dot.enabled { color: var(--color-published-text); }
+.status-dot.disabled { color: var(--color-text-disabled); }
 
 .activity-id-cell {
   font-variant-numeric: tabular-nums;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .pager-wrap {

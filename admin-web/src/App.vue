@@ -182,7 +182,7 @@ const handleLogout = () => {
 
 /* Sidebar */
 .sidebar {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(180deg, var(--color-sidebar-bg) 0%, var(--color-text-primary) 100%);
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
@@ -204,17 +204,17 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #60a5fa;
+  color: var(--el-color-primary-light-3);
   flex-shrink: 0;
 }
 .brand-name {
-  color: #f1f5f9;
+  color: var(--color-border-light);
   font-weight: 700;
   font-size: 13px;
   line-height: 1.3;
 }
 .brand-sub {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 11px;
   line-height: 1.3;
 }
@@ -231,13 +231,13 @@ const handleLogout = () => {
   height: 38px;
   line-height: 38px;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-disabled);
   padding-left: 12px !important;
   transition: all 0.15s;
 }
 .sidebar-menu :deep(.el-sub-menu .el-sub-menu__title:hover) {
   background: rgba(255, 255, 255, 0.05) !important;
-  color: #e2e8f0 !important;
+  color: var(--color-border) !important;
 }
 .sidebar-menu :deep(.el-menu-item) {
   border-radius: 6px;
@@ -245,17 +245,17 @@ const handleLogout = () => {
   height: 38px;
   line-height: 38px;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-disabled);
   padding-left: 12px !important;
   transition: all 0.15s;
 }
 .sidebar-menu :deep(.el-menu-item:hover) {
   background: rgba(255, 255, 255, 0.05) !important;
-  color: #e2e8f0 !important;
+  color: var(--color-border) !important;
 }
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  background: #2563eb !important;
-  color: #fff !important;
+  background: var(--color-brand-primary) !important;
+  color: var(--color-text-inverse) !important;
   font-weight: 500;
 }
 .nav-icon {
@@ -268,7 +268,7 @@ const handleLogout = () => {
   opacity: 1;
 }
 .sidebar-menu :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
-  color: #e2e8f0 !important;
+  color: var(--color-border) !important;
   font-weight: 500;
 }
 .sidebar-menu :deep(.el-sub-menu .el-menu) {
@@ -277,7 +277,7 @@ const handleLogout = () => {
 .sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item) {
   padding-left: 40px !important;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   height: 34px;
   line-height: 34px;
   border-radius: 6px;
@@ -285,11 +285,11 @@ const handleLogout = () => {
 }
 .sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item:hover) {
   background: rgba(255, 255, 255, 0.04) !important;
-  color: #cbd5e1 !important;
+  color: var(--color-sidebar-text-light) !important;
 }
 .sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item.is-active) {
-  background: #2563eb !important;
-  color: #fff !important;
+  background: var(--color-brand-primary) !important;
+  color: var(--color-text-inverse) !important;
   font-weight: 500;
 }
 
@@ -299,7 +299,7 @@ const handleLogout = () => {
 }
 .env-badge {
   background: rgba(37, 99, 235, 0.15);
-  color: #60a5fa;
+  color: var(--el-color-primary-light-3);
   font-size: 10px;
   font-weight: 700;
   padding: 2px 8px;
@@ -313,8 +313,8 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   padding: 0 24px;
   height: 50px;
 }
@@ -330,15 +330,15 @@ const handleLogout = () => {
   font-size: 13px;
 }
 .bc-sep {
-  color: #cbd5e1;
+  color: var(--color-sidebar-text-light);
   font-size: 11px;
 }
 .bc-item {
-  color: #94a3b8;
+  color: var(--color-text-disabled);
   font-weight: 500;
 }
 .bc-last {
-  color: #1e293b;
+  color: var(--color-text-primary);
   font-weight: 700;
   font-size: 14px;
 }
@@ -351,8 +351,8 @@ const handleLogout = () => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #2563eb;
-  color: #fff;
+  background: var(--color-brand-primary);
+  color: var(--color-text-inverse);
   font-size: 12px;
   font-weight: 600;
   display: flex;
@@ -362,20 +362,20 @@ const handleLogout = () => {
 }
 .user-name {
   font-size: 13px;
-  color: #475569;
+  color: var(--color-text-muted);
 }
 .logout-btn {
-  color: #94a3b8;
+  color: var(--color-text-disabled);
   font-size: 12px;
   margin-left: 4px;
 }
 .logout-btn:hover {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 /* Main Content */
 .main-content {
-  background: #f8fafc;
+  background: var(--color-surface-raised);
   min-height: calc(100vh - 50px);
   padding: 20px 24px;
 }

@@ -127,12 +127,12 @@ onMounted(() => {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f0f5ff 0%, #f7f8fa 40%);
+  background: var(--color-bg-gradient);
 }
 
 .login-header {
   text-align: center;
-  padding: 40px 24px 24px;
+  padding: 40px var(--space-6) var(--space-6);
 }
 .logo-icon {
   display: inline-flex;
@@ -140,38 +140,38 @@ onMounted(() => {
   justify-content: center;
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-  border-radius: 16px;
+  background: var(--color-brand-gradient);
+  border-radius: var(--space-4);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+  box-shadow: var(--shadow-brand);
 }
 .app-name {
-  margin: 14px 0 4px;
+  margin: 14px 0 var(--space-1);
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 .app-desc {
   margin: 0;
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .form-section {
-  padding: 0 8px;
+  padding: 0 var(--space-2);
 }
 .form-title {
   font-size: 15px;
   font-weight: 600;
   color: #334155;
-  padding: 0 16px 12px;
+  padding: 0 var(--space-4) var(--space-3);
 }
 
 .captcha-box {
   height: 38px;
   width: 100px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
   display: flex;
@@ -181,7 +181,7 @@ onMounted(() => {
   transition: border-color 0.2s;
 }
 .captcha-box:active {
-  border-color: #2563eb;
+  border-color: var(--color-brand);
 }
 .captcha-img {
   width: 100%;
@@ -190,11 +190,11 @@ onMounted(() => {
 }
 .captcha-loading {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .submit-wrap {
-  margin: 20px 16px 0;
+  margin: var(--space-5) var(--space-4) 0;
 }
 .submit-wrap :deep(.van-button--large) {
   height: 44px;
@@ -206,11 +206,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: 18px;
 }
 .switch-text {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 </style>

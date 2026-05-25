@@ -39,7 +39,7 @@
             </div>
             <div class="card-right">
               <span :class="['period-tag', periodTagBg(task.periodType)]">{{ periodLabel(task.periodType) }}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
         </div>
@@ -105,18 +105,18 @@ onMounted(loadTasks)
 <style scoped>
 .nav-prize-icon {
   margin-right: 14px;
-  color: #f59e0b;
+  color: var(--color-nav-prize);
   cursor: pointer;
 }
 .nav-logout {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 
 .task-list-page {
   min-height: 100vh;
-  background: #f7f8fa;
+  background: var(--color-bg);
 }
 
 .pull-area {
@@ -128,32 +128,32 @@ onMounted(loadTasks)
 }
 
 .task-cards {
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
 }
 
 .task-card {
-  background: #fff;
-  border-radius: 10px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
   margin-bottom: 10px;
-  border-left: 4px solid #2563eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: transform 0.15s;
+  border-left: 4px solid var(--color-brand);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
 }
 .task-card:active {
   transform: scale(0.985);
 }
 
-.border-once { border-left-color: #f59e0b; }
-.border-daily { border-left-color: #3b82f6; }
-.border-monthly { border-left-color: #8b5cf6; }
-.border-cron { border-left-color: #ec4899; }
-.border-special { border-left-color: #10b981; }
+.border-once { border-left-color: var(--color-once); }
+.border-daily { border-left-color: var(--color-daily); }
+.border-monthly { border-left-color: var(--color-monthly); }
+.border-cron { border-left-color: var(--color-cron); }
+.border-special { border-left-color: var(--color-special); }
 
 .card-body {
   display: flex;
   align-items: center;
-  padding: 14px 14px 14px 12px;
-  gap: 12px;
+  padding: 14px 14px 14px var(--space-3);
+  gap: var(--space-3);
 }
 
 .card-left {
@@ -162,16 +162,16 @@ onMounted(loadTasks)
 .period-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.icon-once { background: #fef3c7; color: #d97706; }
-.icon-daily { background: #dbeafe; color: #2563eb; }
-.icon-monthly { background: #ede9fe; color: #7c3aed; }
-.icon-cron { background: #fce7f3; color: #db2777; }
-.icon-special { background: #d1fae5; color: #059669; }
+.icon-once { background: var(--color-once-icon-bg); color: var(--color-once-icon); }
+.icon-daily { background: var(--color-daily-icon-bg); color: var(--color-daily-icon); }
+.icon-monthly { background: var(--color-monthly-icon-bg); color: var(--color-monthly-icon); }
+.icon-cron { background: var(--color-cron-icon-bg); color: var(--color-cron-icon); }
+.icon-special { background: var(--color-special-icon-bg); color: var(--color-special-icon); }
 
 .card-center {
   flex: 1;
@@ -180,14 +180,14 @@ onMounted(loadTasks)
 .card-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .card-desc {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin-top: 3px;
   white-space: nowrap;
   overflow: hidden;
@@ -203,12 +203,12 @@ onMounted(loadTasks)
 .period-tag {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-lg);
 }
-.tag-once { background: #fef3c7; color: #92400e; }
-.tag-daily { background: #dbeafe; color: #1d4ed8; }
-.tag-monthly { background: #ede9fe; color: #6d28d9; }
-.tag-cron { background: #fce7f3; color: #be185d; }
-.tag-special { background: #d1fae5; color: #047857; }
+.tag-once { background: var(--color-once-bg); color: var(--color-once-text); }
+.tag-daily { background: var(--color-daily-bg); color: var(--color-daily-text); }
+.tag-monthly { background: var(--color-monthly-bg); color: var(--color-monthly-text); }
+.tag-cron { background: var(--color-cron-bg); color: var(--color-cron-text); }
+.tag-special { background: var(--color-special-bg); color: var(--color-special-text); }
 </style>

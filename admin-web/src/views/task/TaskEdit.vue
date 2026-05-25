@@ -149,11 +149,11 @@ async function submit() {
 .edit-header span:first-child {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .edit-sub {
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 .tab-label {
@@ -170,7 +170,7 @@ async function submit() {
 .form-actions {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #f5f3ff;
+  border-top: 1px solid var(--color-border-light);
   display: flex;
   gap: 12px;
 }

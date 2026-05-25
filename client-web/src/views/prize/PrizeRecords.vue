@@ -40,7 +40,7 @@
             <div class="record-type">{{ typeLabel(record.prizeType) }} · x{{ record.quantity || 1 }}</div>
           </div>
           <div class="record-arrow">
-            <van-icon name="arrow" size="14" color="#cbd5e1" />
+            <van-icon name="arrow" size="14" color="var(--color-border)" />
           </div>
         </div>
 
@@ -228,7 +228,7 @@ onMounted(loadRecords)
 <style scoped>
 .prize-page {
   min-height: 100vh;
-  background: #f7f8fa;
+  background: var(--color-bg);
 }
 
 .tab-active {
@@ -240,28 +240,28 @@ onMounted(loadRecords)
 }
 
 .records-list {
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
 }
 
 .record-card {
-  background: #fff;
-  border-radius: 10px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
   margin-bottom: 10px;
   padding: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: transform 0.15s;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
 }
 .record-card:active {
   transform: scale(0.985);
 }
 .record-card.card-won {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid var(--color-won);
 }
 .record-card.card-granted {
-  border-left: 4px solid #16a34a;
+  border-left: 4px solid var(--color-granted);
 }
 .record-card.card-expired {
-  border-left: 4px solid #94a3b8;
+  border-left: 4px solid var(--color-status-expired);
   opacity: 0.7;
 }
 
@@ -275,18 +275,18 @@ onMounted(loadRecords)
 .status-tag {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-lg);
 }
-.s-won { background: #fef3c7; color: #92400e; }
-.s-granted { background: #dcfce7; color: #16a34a; }
-.s-claiming { background: #dbeafe; color: #2563eb; }
-.s-failed { background: #fee2e2; color: #dc2626; }
-.s-expired { background: #f1f5f9; color: #64748b; }
+.s-won { background: var(--color-won-bg); color: var(--color-won-text); }
+.s-granted { background: var(--color-granted-bg); color: var(--color-granted-text); }
+.s-claiming { background: var(--color-claiming-bg); color: var(--color-claiming-text); }
+.s-failed { background: var(--color-failed-bg); color: var(--color-failed-text); }
+.s-expired { background: var(--color-status-expired-bg); color: var(--color-status-expired-text); }
 
 .record-time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .record-body {
@@ -298,7 +298,7 @@ onMounted(loadRecords)
 .record-icon-box {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -306,8 +306,8 @@ onMounted(loadRecords)
   overflow: hidden;
 }
 .record-icon-box.icon-fallback {
-  background: #f1f5f9;
-  color: #94a3b8;
+  background: var(--color-border-light);
+  color: var(--color-text-muted);
 }
 .record-icon {
   width: 100%;
@@ -322,11 +322,11 @@ onMounted(loadRecords)
 .record-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 .record-type {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin-top: 2px;
 }
 
@@ -335,29 +335,29 @@ onMounted(loadRecords)
 }
 
 .record-footer {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f1f5f9;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-light);
 }
 .expire-hint {
   font-size: 11px;
-  color: #d97706;
+  color: var(--color-once-icon);
 }
 .error-hint {
   font-size: 11px;
-  color: #dc2626;
+  color: var(--color-failed);
 }
 
 /* Detail popup */
 .detail-content {
-  padding: 0 16px 20px;
+  padding: 0 var(--space-4) var(--space-5);
 }
 .detail-image {
   width: 100%;
   max-height: 180px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .detail-image img {
   width: 100%;
@@ -365,37 +365,37 @@ onMounted(loadRecords)
   object-fit: cover;
 }
 .detail-info {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 .detail-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-light);
   font-size: 13px;
 }
 .detail-label {
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 .detail-value {
-  color: #1e293b;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 .detail-status {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-lg);
 }
 .detail-actions {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 .no-action-text {
   display: block;
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 13px;
-  padding: 12px 0;
+  padding: var(--space-3) 0;
 }
 </style>

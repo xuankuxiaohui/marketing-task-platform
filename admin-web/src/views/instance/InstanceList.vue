@@ -199,6 +199,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { listInstances, getInstanceDetail, type InstanceVO, type InstanceDetail, type InstanceQueryParams } from '../../api/instance'
 import { listTasks } from '../../api/task'
 
@@ -273,8 +274,8 @@ async function loadTasks() {
   try {
     const { data } = await listTasks()
     taskOptions.value = (data.data.records || []).map((t: any) => ({ id: t.id, name: t.name }))
-  } catch (e) {
-    console.error('Failed to load tasks:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载任务列表失败')
   }
 }
 
@@ -301,8 +302,8 @@ async function load() {
     const { data } = await listInstances(params)
     rows.value = data.data.records || []
     total.value = data.data.total || 0
-  } catch (e) {
-    console.error('Failed to load instances:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载实例列表失败')
   } finally {
     loading.value = false
   }
@@ -340,8 +341,8 @@ async function showDetail(row: InstanceVO) {
   try {
     const { data } = await getInstanceDetail(row.id)
     detail.value = data.data
-  } catch (e) {
-    console.error('Failed to load instance detail:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载实例详情失败')
   } finally {
     detailLoading.value = false
   }
@@ -364,21 +365,21 @@ onMounted(() => {
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 /* Filter Bar */
 .filter-bar {
   margin-bottom: 16px;
   padding: 16px;
-  background: #faf9ff;
+  background: var(--color-surface-raised);
   border-radius: 8px;
-  border: 1px solid #ede9fe;
+  border: 1px solid var(--color-border);
 }
 .filter-bar :deep(.el-form-item) {
   margin-bottom: 8px;
@@ -387,35 +388,35 @@ onMounted(() => {
 /* Table cells */
 .task-name-cell {
   font-weight: 600;
-  color: #2d1b69;
+  color: var(--color-text-primary);
   margin-right: 6px;
 }
 .task-id-sub {
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 .task-id-only {
-  color: #6d28d9;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--color-brand-primary);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 .time-cell {
   font-size: 12px;
-  color: #374151;
+  color: var(--color-text-secondary);
 }
 .reward-time {
-  color: #7c3aed;
+  color: var(--color-brand-secondary);
   font-weight: 500;
 }
 .empty-cell {
-  color: #d4d4d8;
+  color: var(--color-text-disabled);
   font-size: 12px;
 }
 .cycle-code {
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  background: #f5f3ff;
-  color: #6d28d9;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -437,16 +438,16 @@ onMounted(() => {
   height: 6px;
   border-radius: 50%;
 }
-.status-pill.pending     { background: #fef3c7; color: #b45309; }
-.status-pill.pending::before     { background: #f59e0b; }
-.status-pill.in-progress { background: #dbeafe; color: #1d4ed8; }
-.status-pill.in-progress::before { background: #3b82f6; }
-.status-pill.completed   { background: #d1fae5; color: #047857; }
-.status-pill.completed::before   { background: #10b981; }
-.status-pill.rewarded    { background: #ede9fe; color: #6d28d9; }
-.status-pill.rewarded::before    { background: #7c3aed; }
-.status-pill.expired     { background: #f1f5f9; color: #64748b; }
-.status-pill.expired::before     { background: #94a3b8; }
+.status-pill.pending     { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.status-pill.pending::before     { background: var(--color-warning); }
+.status-pill.in-progress { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.status-pill.in-progress::before { background: var(--color-brand-secondary); }
+.status-pill.completed   { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.status-pill.completed::before   { background: var(--color-success); }
+.status-pill.rewarded    { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.status-pill.rewarded::before    { background: var(--color-brand-secondary); }
+.status-pill.expired     { background: var(--color-border-light); color: var(--color-text-muted); }
+.status-pill.expired::before     { background: var(--color-text-disabled); }
 
 .step-badge {
   display: inline-flex;
@@ -454,8 +455,8 @@ onMounted(() => {
   justify-content: center;
   width: 26px;
   height: 26px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary));
+  color: var(--color-text-inverse);
   border-radius: 50%;
   font-size: 12px;
   font-weight: 700;
@@ -475,7 +476,7 @@ onMounted(() => {
 .detail-section-title {
   font-size: 14px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -485,8 +486,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
-  background: #ede9fe;
-  color: #6d28d9;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
   border-radius: 10px;
   font-size: 11px;
   font-weight: 600;
@@ -524,19 +525,19 @@ onMounted(() => {
   transition: all 0.2s;
 }
 .step-dot.step-pending {
-  background: #f1f5f9;
-  color: #94a3b8;
-  border: 2px solid #e2e8f0;
+  background: var(--color-border-light);
+  color: var(--color-text-disabled);
+  border: 2px solid var(--color-border);
 }
 .step-dot.step-in-progress {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 2px solid #3b82f6;
+  background: var(--el-color-primary-light-8);
+  color: var(--color-brand-primary-hover);
+  border: 2px solid var(--color-brand-secondary);
 }
 .step-dot.step-completed {
-  background: #d1fae5;
-  color: #047857;
-  border: 2px solid #10b981;
+  background: var(--color-emerald-subtle);
+  color: var(--color-emerald-text);
+  border: 2px solid var(--color-success);
 }
 .step-num {
   line-height: 1;
@@ -548,9 +549,9 @@ onMounted(() => {
   margin: 4px 0;
   transition: background 0.2s;
 }
-.step-line.step-pending { background: #e2e8f0; }
-.step-line.step-in-progress { background: #93c5fd; }
-.step-line.step-completed { background: #6ee7b7; }
+.step-line.step-pending { background: var(--color-border); }
+.step-line.step-in-progress { background: var(--el-color-primary-light-5); }
+.step-line.step-completed { background: var(--color-emerald-light); }
 
 .step-content {
   flex: 1;
@@ -567,7 +568,7 @@ onMounted(() => {
 .step-name {
   font-weight: 600;
   font-size: 13px;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 .step-type-tag {
   font-size: 10px;
@@ -575,11 +576,11 @@ onMounted(() => {
   border-radius: 4px;
   font-weight: 600;
 }
-.type-click    { background: #dbeafe; color: #1d4ed8; }
-.type-callback { background: #fef3c7; color: #b45309; }
-.type-progress { background: #ede9fe; color: #6d28d9; }
-.type-reward   { background: #d1fae5; color: #047857; }
-.type-passive  { background: #fce7f3; color: #be185d; }
+.type-click    { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.type-callback { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.type-progress { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.type-reward   { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.type-passive  { background: var(--color-pink-subtle); color: var(--color-pink-text); }
 
 .step-status-tag {
   font-size: 10px;
@@ -587,13 +588,13 @@ onMounted(() => {
   border-radius: 4px;
   font-weight: 600;
 }
-.step-status-tag.step-pending { background: #f1f5f9; color: #64748b; }
-.step-status-tag.step-in-progress { background: #dbeafe; color: #1d4ed8; }
-.step-status-tag.step-completed { background: #d1fae5; color: #047857; }
+.step-status-tag.step-pending { background: var(--color-border-light); color: var(--color-text-muted); }
+.step-status-tag.step-in-progress { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.step-status-tag.step-completed { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
 
 .step-desc {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin: 4px 0;
   line-height: 1.5;
 }
@@ -606,19 +607,19 @@ onMounted(() => {
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: #e2e8f0;
+  background: var(--color-border);
   border-radius: 3px;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: linear-gradient(90deg, var(--color-brand-primary), var(--color-brand-secondary));
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 .progress-text {
   font-size: 11px;
-  color: #6d28d9;
+  color: var(--color-brand-primary);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -626,19 +627,19 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 
 .drawer-task-link {
-  color: #6d28d9;
+  color: var(--color-brand-primary);
   font-weight: 600;
   cursor: pointer;
   font-size: 13px;
   transition: all 0.15s;
 }
 .drawer-task-link:hover {
-  color: #4c1d95;
+  color: var(--color-brand-primary-hover);
   text-decoration: underline;
 }
 
@@ -646,6 +647,6 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   padding-top: 16px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--color-border-light);
 }
 </style>

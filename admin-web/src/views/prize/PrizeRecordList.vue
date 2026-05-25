@@ -79,9 +79,11 @@
     <div class="pager-wrap">
       <el-pagination
         v-model:current-page="filters.page"
-        :page-size="filters.size"
+        v-model:page-size="filters.size"
+        :page-sizes="[10, 20, 50]"
         :total="total"
-        layout="prev, pager, next, total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="load"
         @current-change="load"
       />
     </div>
@@ -198,12 +200,12 @@ onMounted(load)
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 
 .filter-bar {
@@ -224,7 +226,7 @@ onMounted(load)
   height: 24px;
   border-radius: 4px;
   object-fit: cover;
-  background: #f1f5f9;
+  background: var(--color-border-light);
 }
 
 .type-pill {
@@ -234,12 +236,12 @@ onMounted(load)
   font-size: 11px;
   font-weight: 600;
 }
-.t-point { background: #dbeafe; color: #1d4ed8; }
-.t-coupon { background: #fef3c7; color: #b45309; }
-.t-badge { background: #ede9fe; color: #6d28d9; }
-.t-physical { background: #d1fae5; color: #047857; }
-.t-membership { background: #fce7f3; color: #be185d; }
-.t-internal { background: #f1f5f9; color: #64748b; }
+.t-point { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.t-coupon { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.t-badge { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.t-physical { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.t-membership { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+.t-internal { background: var(--color-border-light); color: var(--color-text-muted); }
 
 .status-pill {
   display: inline-block;
@@ -248,23 +250,23 @@ onMounted(load)
   font-size: 11px;
   font-weight: 600;
 }
-.s-won { background: #dbeafe; color: #1d4ed8; }
-.s-claiming { background: #fef3c7; color: #b45309; }
-.s-granted { background: #d1fae5; color: #047857; }
-.s-failed { background: #fee2e2; color: #dc2626; }
-.s-permfail { background: #fce7f3; color: #be185d; }
-.s-expired { background: #f1f5f9; color: #94a3b8; }
+.s-won { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.s-claiming { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.s-granted { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.s-failed { background: var(--color-danger-subtle); color: var(--color-danger); }
+.s-permfail { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+.s-expired { background: var(--color-border-light); color: var(--color-text-disabled); }
 
 .error-msg {
-  color: #dc2626;
+  color: var(--color-danger);
   font-size: 12px;
 }
 .na-text {
-  color: #94a3b8;
+  color: var(--color-text-disabled);
 }
 .time-cell {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 

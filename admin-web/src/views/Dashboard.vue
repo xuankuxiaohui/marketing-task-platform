@@ -29,7 +29,7 @@
     </el-row>
     <el-card class="table-card">
       <template #header><span>Top 10 任务指标</span></template>
-      <el-table :data="topTasks" stripe>
+      <el-table :data="topTasks" stripe v-loading="loading">
         <el-table-column prop="taskId" label="任务 ID" width="100" align="center">
           <template #default="{ row }">
             <span class="task-link" @click="router.push(`/tasks/${row.taskId}/metrics`)">
@@ -50,6 +50,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { getDashboard, type TaskMetrics } from '../api/metrics'
 
 const router = useRouter()
@@ -66,6 +67,7 @@ const today = ref<TaskMetrics>({
   avgFilterMs: 0,
 })
 const topTasks = ref<TaskMetrics[]>([])
+const loading = ref(false)
 
 const rewardRate = computed(() => {
   const total = today.value.rewardSuccess + today.value.rewardFailure
@@ -74,14 +76,17 @@ const rewardRate = computed(() => {
 })
 
 onMounted(async () => {
+  loading.value = true
   try {
     const { data: res } = await getDashboard()
     if (res?.data) {
       today.value = res.data.today || today.value
       topTasks.value = res.data.topTasks || []
     }
-  } catch (e) {
-    console.error('Failed to load dashboard:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载仪表盘数据失败')
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -96,18 +101,18 @@ onMounted(async () => {
 .metric-value {
   font-size: 32px;
   font-weight: bold;
-  color: #409eff;
+  color: var(--color-brand-primary);
 }
 .metric-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 .table-card {
   margin-top: 16px;
 }
 .task-link {
-  color: #6d28d9;
+  color: var(--color-brand-primary);
   font-weight: 600;
   cursor: pointer;
   font-size: 13px;
@@ -116,8 +121,8 @@ onMounted(async () => {
   transition: all 0.15s;
 }
 .task-link:hover {
-  background: #f5f3ff;
-  color: #4c1d95;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary-hover);
   text-decoration: underline;
 }
 </style>

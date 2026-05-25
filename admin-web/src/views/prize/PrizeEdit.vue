@@ -199,6 +199,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { createPrize, getPrize, updatePrize, type Prize } from '../../api/prize'
 
 const route = useRoute()
@@ -250,8 +251,8 @@ onMounted(async () => {
       if (!form.handlerBean) {
         form.handlerBean = handlerBeanMap[form.type] || 'internalPrizeHandler'
       }
-    } catch (e) {
-      console.error('Failed to load prize:', e)
+    } catch (e: any) {
+      ElMessage.error(e.response?.data?.message || '加载奖品信息失败')
     }
   } else {
     form.handlerBean = handlerBeanMap[form.type]
@@ -270,8 +271,8 @@ async function save() {
       await updatePrize(id.value!, { ...form })
     }
     router.push('/prizes')
-  } catch (e) {
-    console.error('Failed to save prize:', e)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '保存奖品失败')
   } finally {
     saving.value = false
   }
@@ -287,12 +288,12 @@ async function save() {
 .page-title {
   font-size: 16px;
   font-weight: 700;
-  color: #2d1b69;
+  color: var(--color-text-primary);
 }
 .page-sub {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
 }
 .header-actions {
   display: flex;
@@ -305,12 +306,12 @@ async function save() {
 
 .field-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 .field-hint span {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  background: #f8fafc;
+  background: var(--color-surface-raised);
   padding: 2px 6px;
   border-radius: 3px;
 }

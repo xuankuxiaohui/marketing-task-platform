@@ -175,12 +175,12 @@ defineExpose({
 .section-label {
   font-size: 13px;
   font-weight: 600;
-  color: #4c1d95;
+  color: var(--color-text-secondary);
   margin: 0 0 8px;
 }
 .section-hint {
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   margin: -4px 0 10px;
 }
 
@@ -199,7 +199,7 @@ defineExpose({
 }
 .platform-badge {
   font-size: 10px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   font-weight: 400;
 }
 
@@ -210,10 +210,10 @@ defineExpose({
   font-size: 11px;
   font-weight: 600;
 }
-.pf-web { background: #dbeafe; color: #1d4ed8; }
-.pf-ios { background: #f1f5f9; color: #374151; }
-.pf-android { background: #dcfce7; color: #16a34a; }
-.pf-miniapp { background: #fef3c7; color: #b45309; }
+.pf-web { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.pf-ios { background: var(--color-border-light); color: var(--color-text-secondary); }
+.pf-android { background: var(--color-published-subtle); color: var(--color-published-text); }
+.pf-miniapp { background: var(--color-amber-subtle); color: var(--color-amber-text); }
 
 .platform-table {
   border-radius: 8px;
@@ -222,8 +222,8 @@ defineExpose({
 
 /* Step-level config */
 .step-platform-card {
-  background: #fafbff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 8px;
@@ -240,25 +240,25 @@ defineExpose({
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary));
+  color: var(--color-text-inverse);
   border-radius: 50%;
   font-size: 10px;
   font-weight: 700;
   flex-shrink: 0;
 }
 .sp-step-code {
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
-  background: #f5f3ff;
-  color: #6d28d9;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
   padding: 1px 6px;
   border-radius: 3px;
 }
 .sp-step-name {
   font-size: 12px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text-primary);
 }
 .type-tag-mini {
   display: inline-block;
@@ -268,11 +268,11 @@ defineExpose({
   font-weight: 700;
   text-transform: uppercase;
 }
-.tg-click { background: #dbeafe; color: #1d4ed8; }
-.tg-callback { background: #fef3c7; color: #b45309; }
-.tg-progress { background: #ede9fe; color: #6d28d9; }
-.tg-reward { background: #d1fae5; color: #047857; }
-.tg-passive { background: #f1f5f9; color: #64748b; }
+.tg-click { background: var(--el-color-primary-light-8); color: var(--color-brand-primary-hover); }
+.tg-callback { background: var(--color-amber-subtle); color: var(--color-amber-text); }
+.tg-progress { background: var(--color-brand-primary-subtle); color: var(--color-brand-primary); }
+.tg-reward { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
+.tg-passive { background: var(--color-border-light); color: var(--color-text-muted); }
 
 .sp-platforms-row {
   display: flex;
