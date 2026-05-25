@@ -122,4 +122,33 @@
   --van-border-color: #e2e8f0;
   --van-border-radius-lg: 10px;
   --van-border-radius-md: 8px;
+
+}
+
+.van-toast {
+  --van-toast-background: #ffffff;
+  --van-toast-text-color: #1e293b;
+  --van-toast-max-width: 80%;
+  --van-toast-font-size: 14px;
+  --van-toast-radius: 10px;
+  --van-toast-text-padding: 10px 16px;
+  --van-toast-text-min-width: 0;
+  --van-toast-default-width: auto;
+  --van-toast-default-min-height: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+}
+
+.van-toast.toast-success {
+  --van-toast-background: #ecfdf5;
+  --van-toast-text-color: #065f46;
+}
+
+.van-toast.toast-fail {
+  --van-toast-background: #fef2f2;
+  --van-toast-text-color: #991b1b;
+}
+
+.van-toast.toast-info {
+  --van-toast-background: #ffffff;
+  --van-toast-text-color: #1e293b;
 }

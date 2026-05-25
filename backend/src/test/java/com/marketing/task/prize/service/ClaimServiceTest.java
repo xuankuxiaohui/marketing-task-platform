@@ -154,7 +154,7 @@ class ClaimServiceTest {
         ClaimResult result = claimService.claim(1L);
 
         assertEquals("FAILED", result.getStatus());
-        assertEquals("网络异常", result.getErrorMessage());
+        assertEquals("奖品发放失败，请联系客服", result.getErrorMessage());
     }
 
     // ---- Max retry → permanent failure ----

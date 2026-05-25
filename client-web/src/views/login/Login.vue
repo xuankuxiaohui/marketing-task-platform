@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast } from '../../utils/toast'
 import { authApi } from '../../api/auth'
 import { useUserStore } from '../../stores/user'
 
@@ -96,7 +96,7 @@ const refreshCaptcha = async () => {
     captchaKey.value = res.data.data.captchaKey
     captchaImage.value = res.data.data.captchaImage
   } catch {
-    showToast('获取验证码失败')
+    showToast.fail('获取验证码失败')
   }
 }
 
@@ -108,7 +108,7 @@ const handleLogin = async () => {
     userStore.setAuth(token, userId, username, nickname)
     router.push('/tasks')
   } catch (e: any) {
-    showToast(e.response?.data?.message || '登录失败')
+    showToast.fail(e.response?.data?.message || '登录失败')
     refreshCaptcha()
   } finally {
     loading.value = false

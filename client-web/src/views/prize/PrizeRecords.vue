@@ -109,7 +109,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { showToast } from 'vant'
+import { showToast } from '../../utils/toast'
 import { claimPrize, getPrizeRecords, type PrizeRecord } from '../../api/prize'
 
 const records = ref<PrizeRecord[]>([])
@@ -186,7 +186,7 @@ async function loadRecords() {
     records.value = data.data?.records || []
     counts.value = data.data?.counts || {}
   } catch (e: any) {
-    showToast(e.response?.data?.message || '加载失败')
+    showToast.fail(e.response?.data?.message || '加载失败')
   } finally {
     loading.value = false
   }
@@ -207,16 +207,16 @@ async function doClaim(recordId: number) {
     const { data } = await claimPrize(recordId)
     const result = data.data
     if (result.status === 'GRANTED') {
-      showToast('领取成功')
+      showToast.success('领取成功')
       detailVisible.value = false
       loadRecords()
     } else if (result.status === 'FAILED') {
-      showToast(result.errorMessage || '领取失败')
+      showToast.fail(result.errorMessage || '领取失败')
     } else {
-      showToast('正在处理中')
+      showToast.info('正在处理中')
     }
   } catch (e: any) {
-    showToast(e.response?.data?.message || '领取失败')
+    showToast.fail(e.response?.data?.message || '领取失败')
   } finally {
     claiming.value = false
   }

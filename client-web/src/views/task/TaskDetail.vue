@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast } from '../../utils/toast'
 import { getTaskDetail, clickStep, type TaskInstanceDetail } from '../../api/task'
 import { useUserStore } from '../../stores/user'
 
@@ -111,7 +111,7 @@ async function loadDetail() {
     const { data } = await getTaskDetail(taskId)
     detail.value = data.data
   } catch (e: any) {
-    showToast(e.response?.data?.message || '加载失败')
+    showToast.fail(e.response?.data?.message || '加载失败')
   } finally {
     loading.value = false
   }
@@ -122,10 +122,10 @@ async function handleClick() {
   clicking.value = true
   try {
     await clickStep(taskId, currentClickStep.value.id)
-    showToast('操作成功')
+    showToast.success('操作成功')
     await loadDetail()
   } catch (e: any) {
-    showToast(e.response?.data?.message || '操作失败')
+    showToast.fail(e.response?.data?.message || '操作失败')
   } finally {
     clicking.value = false
   }

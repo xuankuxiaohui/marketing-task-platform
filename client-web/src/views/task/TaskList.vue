@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast } from '../../utils/toast'
 import { listTasks, type Task } from '../../api/task'
 import { useUserStore } from '../../stores/user'
 
@@ -92,7 +92,7 @@ async function loadTasks() {
     const { data } = await listTasks()
     tasks.value = data.data || []
   } catch (e: any) {
-    showToast(e.response?.data?.message || '加载失败')
+    showToast.fail(e.response?.data?.message || '加载失败')
   } finally {
     loading.value = false
     refreshing.value = false

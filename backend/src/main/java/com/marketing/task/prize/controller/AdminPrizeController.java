@@ -1,10 +1,12 @@
 package com.marketing.task.prize.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
 import com.marketing.task.prize.domain.entity.Prize;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
+import com.marketing.task.prize.domain.enums.PrizeRecordStatus;
 import com.marketing.task.prize.mapper.PrizeMapper;
 import com.marketing.task.prize.mapper.PrizeRecordMapper;
 import com.marketing.task.prize.service.ClaimService;
@@ -80,6 +82,7 @@ public class AdminPrizeController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
+        expireOverdueRecords();
         LambdaQueryWrapper<PrizeRecord> qw = new LambdaQueryWrapper<>();
         if (userId != null && !userId.isBlank()) qw.eq(PrizeRecord::getUserId, userId);
         if (prizeId != null) qw.eq(PrizeRecord::getPrizeId, prizeId);
@@ -90,6 +93,14 @@ public class AdminPrizeController {
             qw.le(PrizeRecord::getWonAt, LocalDate.parse(endDate).atTime(LocalTime.MAX));
         qw.orderByDesc(PrizeRecord::getWonAt);
         return Result.ok(recordMapper.selectPage(new Page<>(page, size), qw));
+    }
+
+    private void expireOverdueRecords() {
+        recordMapper.update(null, new LambdaUpdateWrapper<PrizeRecord>()
+                .eq(PrizeRecord::getStatus, PrizeRecordStatus.WON.name())
+                .lt(PrizeRecord::getExpireTime, LocalDateTime.now())
+                .set(PrizeRecord::getStatus, PrizeRecordStatus.EXPIRED.name())
+                .last("LIMIT 500"));
     }
 
     @PostMapping("/records/{id}/reissue")

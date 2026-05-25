@@ -44,7 +44,8 @@ public class PointPrizeHandler implements PrizeHandler {
             // TODO: 对接真实积分账户系统后替换
             return GrantResult.success("PNT-" + UUID.randomUUID().toString().substring(0, 8));
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "积分发放失败: " + e.getMessage());
+            log.error("积分发放失败, recordId={}", record.getId(), e);
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "积分发放失败，请联系客服");
         }
     }
 }

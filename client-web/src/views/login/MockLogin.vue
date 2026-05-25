@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast } from '../../utils/toast'
 import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
@@ -31,7 +31,7 @@ const user = reactive({ ...userStore.$state })
 
 function save() {
   userStore.$patch(user)
-  showToast('已切换用户')
+  showToast.success('已切换用户')
   router.back()
 }
 </script>

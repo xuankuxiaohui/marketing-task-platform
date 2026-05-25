@@ -106,16 +106,17 @@ public class ClaimService {
             }
         } catch (Exception e) {
             record.setStatus(PrizeRecordStatus.FAILED.name());
-            record.setErrorMessage(e.getMessage());
             record.setRetryCount(record.getRetryCount() + 1);
             Prize prize = prizeMapper.selectById(record.getPrizeId());
             int maxRetry = prize != null && prize.getMaxRetry() != null ? prize.getMaxRetry() : 3;
             if (record.getRetryCount() >= maxRetry) {
                 record.setStatus(PrizeRecordStatus.FAILED_PERMANENTLY.name());
             }
+            String userMsg = e instanceof BusinessException ? e.getMessage() : "奖品发放失败，请联系客服";
+            record.setErrorMessage(userMsg);
             recordMapper.updateById(record);
             log.error("领奖异常: recordId={}", recordId, e);
-            return ClaimResult.failed(e.getMessage());
+            return ClaimResult.failed(userMsg);
         } finally {
             lockMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PrizeClaimLock>()
                     .eq(PrizeClaimLock::getRecordId, recordId));

@@ -45,7 +45,8 @@ public class CouponPrizeHandler implements PrizeHandler {
             String tradeNo = "CPN-" + UUID.randomUUID().toString().substring(0, 8);
             return GrantResult.success(tradeNo);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "优惠券发放失败: " + e.getMessage());
+            log.error("优惠券发放失败, recordId={}", record.getId(), e);
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "优惠券发放失败，请联系客服");
         }
     }
 }
