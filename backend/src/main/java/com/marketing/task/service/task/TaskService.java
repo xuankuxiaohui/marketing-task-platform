@@ -350,8 +350,11 @@ public class TaskService {
         List<TaskPlatform> platforms = taskPlatformMapper.selectList(
                 new LambdaQueryWrapper<TaskPlatform>()
                         .eq(TaskPlatform::getTaskId, taskId));
+        List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
+                new LambdaQueryWrapper<TaskStepPlatform>()
+                        .apply("step_id IN (SELECT id FROM task_step WHERE task_id = {0})", taskId));
 
-        TaskSnapshotDTO snapshot = new TaskSnapshotDTO(task, steps, filters, platforms);
+        TaskSnapshotDTO snapshot = new TaskSnapshotDTO(task, steps, filters, platforms, stepPlatforms);
         TaskDefinitionSnapshot entity = new TaskDefinitionSnapshot();
         entity.setTaskId(taskId);
         entity.setVersion(task.getVersion());

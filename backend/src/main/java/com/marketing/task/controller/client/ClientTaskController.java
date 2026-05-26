@@ -54,10 +54,7 @@ public class ClientTaskController {
         Task task = taskService.requireTask(taskId);
         UserTaskInstance instance = taskService.getOrCreateInstance(task, userContext);
         List<TaskStep> steps = getStepsForInstance(taskId, instance);
-        List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
-                new LambdaQueryWrapper<TaskStepPlatform>()
-                        .apply("step_id IN (SELECT id FROM task_step WHERE task_id = {0})", taskId)
-                        .eq(TaskStepPlatform::getPlatform, userContext.getPlatform().name()));
+        List<TaskStepPlatform> stepPlatforms = getStepPlatformsForInstance(taskId, instance, userContext);
 
         UserTaskInstanceVO instanceVO = UserTaskInstanceVO.from(instance);
 
@@ -92,6 +89,24 @@ public class ClientTaskController {
             }
         }
         return cacheService.getSteps(taskId);
+    }
+
+    private List<TaskStepPlatform> getStepPlatformsForInstance(Long taskId, UserTaskInstance instance,
+                                                                UserContext userContext) {
+        // Use snapshot's stepPlatforms when available (consistent with getStepsForInstance)
+        if (instance.getTaskVersion() != null) {
+            TaskSnapshotDTO snapshot = cacheService.getSnapshot(taskId, instance.getTaskVersion());
+            if (snapshot != null && !snapshot.stepPlatforms().isEmpty()) {
+                return snapshot.stepPlatforms().stream()
+                        .filter(sp -> userContext.getPlatform().name().equals(sp.getPlatform()))
+                        .toList();
+            }
+        }
+        // Fallback for old snapshots without stepPlatforms: query live table
+        return taskStepPlatformMapper.selectList(
+                new LambdaQueryWrapper<TaskStepPlatform>()
+                        .apply("step_id IN (SELECT id FROM task_step WHERE task_id = {0})", taskId)
+                        .eq(TaskStepPlatform::getPlatform, userContext.getPlatform().name()));
     }
 
     @PostMapping("/{taskId}/step/{stepId}/click")

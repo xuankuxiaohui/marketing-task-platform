@@ -1,7 +1,7 @@
 -- H2-compatible schema for integration tests
 -- Covers V1-V6 migrations
 
-CREATE TABLE task (
+CREATE TABLE IF NOT EXISTS task (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(64) NOT NULL,
     name VARCHAR(128) NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE task (
     INDEX idx_task_mutex_group_id (mutex_group_id)
 );
 
-CREATE TABLE task_step (
+CREATE TABLE IF NOT EXISTS task_step (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     seq INT NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE task_step (
     INDEX idx_task_step_event (callback_event_key)
 );
 
-CREATE TABLE task_step_platform (
+CREATE TABLE IF NOT EXISTS task_step_platform (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     step_id BIGINT NOT NULL,
     platform VARCHAR(16) NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE task_step_platform (
     INDEX idx_task_step_platform_step (step_id)
 );
 
-CREATE TABLE task_filter (
+CREATE TABLE IF NOT EXISTS task_filter (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     seq INT NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE task_filter (
     INDEX idx_task_filter_task (task_id)
 );
 
-CREATE TABLE task_platform (
+CREATE TABLE IF NOT EXISTS task_platform (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     platform VARCHAR(16) NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE task_platform (
     INDEX idx_task_platform_task (task_id)
 );
 
-CREATE TABLE user_task_instance (
+CREATE TABLE IF NOT EXISTS user_task_instance (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(64) NOT NULL,
     task_id BIGINT NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE user_task_instance (
     INDEX idx_instance_task_cycle (task_id, cycle_key)
 );
 
-CREATE TABLE user_task_step_progress (
+CREATE TABLE IF NOT EXISTS user_task_step_progress (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     instance_id BIGINT NOT NULL,
     step_id BIGINT NOT NULL,
@@ -125,7 +125,7 @@ CREATE TABLE user_task_step_progress (
     INDEX idx_step_progress_step (step_id)
 );
 
-CREATE TABLE task_definition_snapshot (
+CREATE TABLE IF NOT EXISTS task_definition_snapshot (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     version INT NOT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE task_definition_snapshot (
     INDEX idx_task_id (task_id)
 );
 
-CREATE TABLE admin_user (
+CREATE TABLE IF NOT EXISTS admin_user (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(64) NOT NULL,
     password_hash VARCHAR(256) NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE admin_user (
     UNIQUE KEY uk_admin_user_username (username)
 );
 
-CREATE TABLE client_user (
+CREATE TABLE IF NOT EXISTS client_user (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(64) NOT NULL,
     password_hash VARCHAR(256) NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE client_user (
     UNIQUE KEY uk_client_user_username (username)
 );
 
-CREATE TABLE reward_record (
+CREATE TABLE IF NOT EXISTS reward_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     instance_id BIGINT NOT NULL,
     step_id BIGINT NOT NULL,
@@ -175,7 +175,7 @@ CREATE TABLE reward_record (
     UNIQUE KEY uk_reward_record (instance_id, step_id)
 );
 
-CREATE TABLE prize (
+CREATE TABLE IF NOT EXISTS prize (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(32) NOT NULL,
     name VARCHAR(128) NOT NULL,
@@ -208,7 +208,7 @@ CREATE TABLE prize (
     INDEX idx_type (type)
 );
 
-CREATE TABLE prize_record (
+CREATE TABLE IF NOT EXISTS prize_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(64) NOT NULL,
     instance_id BIGINT NOT NULL,
@@ -239,13 +239,13 @@ CREATE TABLE prize_record (
     INDEX idx_prize_id (prize_id)
 );
 
-CREATE TABLE prize_claim_lock (
+CREATE TABLE IF NOT EXISTS prize_claim_lock (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     record_id BIGINT UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE prize_inventory_record (
+CREATE TABLE IF NOT EXISTS prize_inventory_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     prize_id BIGINT NOT NULL,
     record_id BIGINT NOT NULL,
@@ -256,7 +256,7 @@ CREATE TABLE prize_inventory_record (
 );
 
 -- V8: mutex_group
-CREATE TABLE mutex_group (
+CREATE TABLE IF NOT EXISTS mutex_group (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
     description VARCHAR(256) NULL,
@@ -266,8 +266,54 @@ CREATE TABLE mutex_group (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- V10: event_log and task_metrics
+CREATE TABLE IF NOT EXISTS event_log (
+    id            BIGINT       AUTO_INCREMENT PRIMARY KEY,
+    event_type    VARCHAR(32)  NOT NULL,
+    task_id       BIGINT       DEFAULT NULL,
+    instance_id   BIGINT       DEFAULT NULL,
+    step_id       BIGINT       DEFAULT NULL,
+    user_id       VARCHAR(64)  DEFAULT NULL,
+    platform      VARCHAR(16)  DEFAULT NULL,
+    event_data    JSON         DEFAULT NULL,
+    created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_el_event_type  (event_type),
+    INDEX idx_el_task_id     (task_id),
+    INDEX idx_el_instance_id (instance_id),
+    INDEX idx_el_created_at  (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS task_metrics (
+    id              BIGINT   AUTO_INCREMENT PRIMARY KEY,
+    task_id         BIGINT   NOT NULL,
+    metric_date     DATE     NOT NULL,
+    views           BIGINT   DEFAULT 0,
+    participants    BIGINT   DEFAULT 0,
+    completions     BIGINT   DEFAULT 0,
+    reward_success  BIGINT   DEFAULT 0,
+    reward_failure  BIGINT   DEFAULT 0,
+    avg_filter_ms   DOUBLE   DEFAULT 0,
+    UNIQUE KEY uk_task_date (task_id, metric_date)
+);
+
+-- V13: operation_log
+CREATE TABLE IF NOT EXISTS operation_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    operator_id VARCHAR(64) NOT NULL,
+    operator_name VARCHAR(128),
+    operation_type VARCHAR(32) NOT NULL,
+    target_type VARCHAR(32) NOT NULL,
+    target_id BIGINT,
+    target_name VARCHAR(256),
+    detail JSON,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ol_target (target_type, target_id),
+    INDEX idx_ol_operator (operator_id),
+    INDEX idx_ol_created_at (created_at)
+);
+
 -- V7: list_data
-CREATE TABLE list_data (
+CREATE TABLE IF NOT EXISTS list_data (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     list_type VARCHAR(16) NOT NULL,
     list_key VARCHAR(64) NOT NULL,
