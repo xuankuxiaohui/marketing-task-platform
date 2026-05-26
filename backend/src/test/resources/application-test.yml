@@ -30,7 +30,3 @@ sa-token:
 logging:
   level:
     com.marketing.task: DEBUG
-
-app:
-  auth:
-    mock-enabled: true
