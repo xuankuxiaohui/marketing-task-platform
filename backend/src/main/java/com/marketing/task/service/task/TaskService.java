@@ -97,6 +97,8 @@ public class TaskService {
         Set<Long> activeTaskIds = activeInstances.stream()
                 .map(UserTaskInstance::getTaskId)
                 .collect(Collectors.toSet());
+        if (activeTaskIds.isEmpty()) return tasks;
+
         Map<Long, Task> activeTaskMap = taskMapper.selectBatchIds(activeTaskIds).stream()
                 .collect(Collectors.toMap(Task::getId, Function.identity()));
         Map<Long, MutexGroup> groupMap = mutexGroupMapper.selectBatchIds(mutexGroupIds).stream()

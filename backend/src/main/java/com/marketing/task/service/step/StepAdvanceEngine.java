@@ -22,6 +22,7 @@ import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.filter.FilterExpressionEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StepAdvanceEngine {
@@ -236,12 +238,16 @@ public class StepAdvanceEngine {
                     return target.getSeq();
                 }
             } else {
-                boolean matched = filterExpressionEngine.evaluate(transition.getConditionExpr(), userContext);
-                if (matched) {
-                    TaskStep target = stepMap.get(transition.getTargetStepId());
-                    if (target != null) {
-                        return target.getSeq();
+                try {
+                    boolean matched = filterExpressionEngine.evaluate(transition.getConditionExpr(), userContext);
+                    if (matched) {
+                        TaskStep target = stepMap.get(transition.getTargetStepId());
+                        if (target != null) {
+                            return target.getSeq();
+                        }
                     }
+                } catch (Exception ex) {
+                    log.warn("Transition evaluation error for step {}: {}", currentStep.getId(), ex.getMessage());
                 }
             }
         }
