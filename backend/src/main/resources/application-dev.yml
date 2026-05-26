@@ -1,12 +1,14 @@
 app:
   auth:
     mock-enabled: true
-    admin:
-      secret: dev-admin-secret-not-for-production-use
-      expiry-minutes: 120
-    client:
-      secret: dev-client-secret-not-for-production-use
-      expiry-minutes: 120
+    admin-secret: dev-admin-secret-not-for-production-use
+    client-secret: dev-client-secret-not-for-production-use
+
+sa-token:
+  token-name: Authorization
+  timeout: 7200
+  active-timeout: -1
+  jwt-secret-key: dev-shared-secret-for-development
 
 spring:
   datasource:

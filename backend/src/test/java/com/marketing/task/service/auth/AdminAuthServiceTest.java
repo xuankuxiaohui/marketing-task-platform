@@ -1,17 +1,20 @@
 package com.marketing.task.service.auth;
 
+import cn.dev33.satoken.stp.SaLoginModel;
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.marketing.task.domain.entity.AdminUser;
 import com.marketing.task.mapper.AdminUserMapper;
-import com.marketing.task.security.AdminJwtProvider;
 import com.marketing.task.security.AuthenticationException;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.session.Configuration;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -25,11 +28,9 @@ class AdminAuthServiceTest {
     @Mock
     private AdminUserMapper adminUserMapper;
     @Mock
-    private AdminJwtProvider adminJwtProvider;
-    @Mock
     private PasswordEncoder passwordEncoder;
 
-    private AdminAuthService service;
+    private MockedStatic<StpUtil> stpUtilMock;
 
     @BeforeAll
     static void initMybatisPlus() {
@@ -37,8 +38,15 @@ class AdminAuthServiceTest {
         TableInfoHelper.initTableInfo(assistant, AdminUser.class);
     }
 
+    @AfterEach
+    void closeStaticMock() {
+        if (stpUtilMock != null) {
+            stpUtilMock.close();
+        }
+    }
+
     private AdminAuthService createService() {
-        return new AdminAuthService(adminUserMapper, adminJwtProvider, passwordEncoder);
+        return new AdminAuthService(adminUserMapper, passwordEncoder);
     }
 
     private AdminUser createUser(Long id, String username, String passwordHash, Boolean enabled) {
@@ -53,31 +61,36 @@ class AdminAuthServiceTest {
 
     @Test
     void login_shouldReturnTokenAndUserInfo_whenCredentialsValid() {
-        service = createService();
+        AdminAuthService service = createService();
         AdminUser user = createUser(1L, "admin", "$2a$hash", true);
         when(adminUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.matches("admin123", "$2a$hash")).thenReturn(true);
-        when(adminJwtProvider.issue("1")).thenReturn("jwt-token-xxx");
+
+        stpUtilMock = mockStatic(StpUtil.class);
+        stpUtilMock.when(() -> StpUtil.login(eq("1"), any(SaLoginModel.class))).then(invocation -> null);
+        stpUtilMock.when(StpUtil::getTokenValue).thenReturn("sa-token-xxx");
 
         AdminAuthService.LoginResult result = service.login("admin", "admin123");
 
-        assertEquals("jwt-token-xxx", result.token());
+        assertEquals("sa-token-xxx", result.token());
         assertEquals("1", result.userId());
         assertEquals("admin", result.username());
         assertEquals("Nick1", result.nickname());
         verify(adminUserMapper).selectOne(any(LambdaQueryWrapper.class));
         verify(passwordEncoder).matches("admin123", "$2a$hash");
-        verify(adminJwtProvider).issue("1");
     }
 
     @Test
     void login_shouldUseUsernameAsNickname_whenNicknameIsNull() {
-        service = createService();
+        AdminAuthService service = createService();
         AdminUser user = createUser(2L, "admin2", "$2a$hash", true);
         user.setNickname(null);
         when(adminUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.matches(any(), any())).thenReturn(true);
-        when(adminJwtProvider.issue(any())).thenReturn("token");
+
+        stpUtilMock = mockStatic(StpUtil.class);
+        stpUtilMock.when(() -> StpUtil.login(eq("2"), any(SaLoginModel.class))).then(invocation -> null);
+        stpUtilMock.when(StpUtil::getTokenValue).thenReturn("token");
 
         AdminAuthService.LoginResult result = service.login("admin2", "pass");
 
@@ -86,7 +99,7 @@ class AdminAuthServiceTest {
 
     @Test
     void login_shouldThrowAuthenticationException_whenUserNotFound() {
-        service = createService();
+        AdminAuthService service = createService();
         when(adminUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
 
         assertThrows(AuthenticationException.class, () -> service.login("nobody", "pass"));
@@ -94,7 +107,7 @@ class AdminAuthServiceTest {
 
     @Test
     void login_shouldThrowAuthenticationException_whenPasswordWrong() {
-        service = createService();
+        AdminAuthService service = createService();
         AdminUser user = createUser(1L, "admin", "$2a$hash", true);
         when(adminUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.matches("wrong", "$2a$hash")).thenReturn(false);
@@ -104,7 +117,7 @@ class AdminAuthServiceTest {
 
     @Test
     void login_shouldThrowAuthenticationException_whenAccountDisabled() {
-        service = createService();
+        AdminAuthService service = createService();
         AdminUser user = createUser(1L, "admin", "$2a$hash", false);
         when(adminUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
 

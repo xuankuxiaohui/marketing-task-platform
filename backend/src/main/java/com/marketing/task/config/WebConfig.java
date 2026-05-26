@@ -1,7 +1,6 @@
 package com.marketing.task.config;
 
-import com.marketing.task.interceptor.AdminAuthInterceptor;
-import com.marketing.task.interceptor.ClientAuthInterceptor;
+import com.marketing.task.interceptor.UserContextInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -11,17 +10,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
-    private final AdminAuthInterceptor adminAuthInterceptor;
-    private final ClientAuthInterceptor clientAuthInterceptor;
+    private final UserContextInterceptor userContextInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(adminAuthInterceptor)
-                .addPathPatterns("/api/admin/**")
-                .excludePathPatterns("/api/admin/auth/login");
-        registry.addInterceptor(clientAuthInterceptor)
-                .addPathPatterns("/api/client/**")
-                .excludePathPatterns("/api/client/auth/login", "/api/client/auth/register");
+        registry.addInterceptor(userContextInterceptor)
+                .addPathPatterns("/api/admin/**", "/api/client/**");
     }
 
     @Override

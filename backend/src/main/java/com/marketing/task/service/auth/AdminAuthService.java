@@ -1,9 +1,10 @@
 package com.marketing.task.service.auth;
 
+import cn.dev33.satoken.stp.SaLoginModel;
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.domain.entity.AdminUser;
 import com.marketing.task.mapper.AdminUserMapper;
-import com.marketing.task.security.AdminJwtProvider;
 import com.marketing.task.security.AuthenticationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AdminAuthService {
     private final AdminUserMapper adminUserMapper;
-    private final AdminJwtProvider adminJwtProvider;
     private final PasswordEncoder passwordEncoder;
 
     public LoginResult login(String username, String password) {
@@ -30,7 +30,13 @@ public class AdminAuthService {
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new AuthenticationException("用户名或密码错误");
         }
-        String token = adminJwtProvider.issue(String.valueOf(user.getId()));
+
+        SaLoginModel loginModel = new SaLoginModel();
+        loginModel.setExtra("username", user.getUsername());
+        loginModel.setExtra("nickname", user.getNickname() != null ? user.getNickname() : user.getUsername());
+        StpUtil.login(String.valueOf(user.getId()), loginModel);
+        String token = StpUtil.getTokenValue();
+
         return new LoginResult(token, String.valueOf(user.getId()), user.getUsername(),
                 user.getNickname() != null ? user.getNickname() : user.getUsername());
     }

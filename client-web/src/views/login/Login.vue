@@ -104,8 +104,9 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const res = await authApi.login(form.username, form.password, captchaKey.value, form.captchaCode)
-    const { token, userId, username, nickname } = res.data.data
-    userStore.setAuth(token, userId, username, nickname)
+    const { token, userId, username, nickname, province, role, tags, orgId, level, platform } = res.data.data
+    userStore.setAuth(token, userId, username, nickname,
+      { province, role, tags, orgId, level, platform })
     router.push('/tasks')
   } catch (e: any) {
     showToast.fail(e.response?.data?.message || '登录失败')

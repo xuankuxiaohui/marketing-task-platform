@@ -19,12 +19,17 @@ mybatis-plus:
 app:
   auth:
     mock-enabled: ${APP_AUTH_MOCK:false}
-    admin:
-      secret: ${ADMIN_JWT_SECRET:}
-      expiry-minutes: 120
-    client:
-      secret: ${CLIENT_JWT_SECRET:}
-      expiry-minutes: 120
+    admin-secret: ${ADMIN_JWT_SECRET:}
+    client-secret: ${CLIENT_JWT_SECRET:}
+
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 7200
+  active-timeout: 1800
+  is-concurrent: true
+  is-share: false
+  is-log: true
 
 springdoc:
   api-docs:

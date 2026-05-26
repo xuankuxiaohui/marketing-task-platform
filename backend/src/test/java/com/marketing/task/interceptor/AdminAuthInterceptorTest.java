@@ -1,19 +1,19 @@
 package com.marketing.task.interceptor;
 
+import cn.dev33.satoken.stp.StpLogic;
+import cn.dev33.satoken.stp.StpUtil;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.config.AuthProperties;
 import com.marketing.task.context.UserContext;
 import com.marketing.task.context.UserContextHolder;
-import com.marketing.task.security.AdminJwtProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.PrintWriter;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -22,57 +22,29 @@ import static org.mockito.Mockito.*;
 class AdminAuthInterceptorTest {
 
     @Mock
-    private AdminJwtProvider adminJwtProvider;
-    @Mock
     private HttpServletRequest request;
     @Mock
     private HttpServletResponse response;
+    @Mock
+    private StpLogic clientStpLogic;
 
-    private AuthProperties authProperties;
+    private MockedStatic<StpUtil> stpUtilMock;
 
     @AfterEach
     void cleanup() {
         UserContextHolder.clear();
+        if (stpUtilMock != null) {
+            stpUtilMock.close();
+        }
     }
 
     @Test
-    void preHandle_shouldSetUserContextAndReturnTrue_whenValidBearerToken() throws Exception {
-        authProperties = mockAuthProperties(false);
-        when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        when(adminJwtProvider.verifyAndGetUserId("valid-token")).thenReturn("admin-1");
-
-        AdminAuthInterceptor interceptor = new AdminAuthInterceptor(adminJwtProvider, authProperties);
-        boolean result = interceptor.preHandle(request, response, null);
-
-        assertTrue(result);
-        UserContext ctx = UserContextHolder.get();
-        assertNotNull(ctx);
-        assertEquals("admin-1", ctx.getUserId());
-    }
-
-    @Test
-    void preHandle_shouldReturn401_whenNoTokenAndMockDisabled() throws Exception {
-        authProperties = mockAuthProperties(false);
-        when(request.getHeader("Authorization")).thenReturn(null);
-        PrintWriter writer = mock(PrintWriter.class);
-        when(response.getWriter()).thenReturn(writer);
-
-        AdminAuthInterceptor interceptor = new AdminAuthInterceptor(adminJwtProvider, authProperties);
-        boolean result = interceptor.preHandle(request, response, null);
-
-        assertFalse(result);
-        verify(response).setStatus(401);
-        verify(response).setContentType("application/json;charset=UTF-8");
-        verify(writer).write(contains("401"));
-    }
-
-    @Test
-    void preHandle_shouldSetMockContextAndReturnTrue_whenNoTokenAndMockEnabled() {
-        authProperties = mockAuthProperties(true);
-        when(request.getHeader("Authorization")).thenReturn(null);
+    void preHandle_shouldSetAdminMockContext_whenMockEnabledAndAdminPath() {
+        AuthProperties authProperties = mockAuthProperties(true);
+        when(request.getRequestURI()).thenReturn("/api/admin/tasks");
         when(request.getHeader("X-User-Id")).thenReturn("mock-admin");
 
-        AdminAuthInterceptor interceptor = new AdminAuthInterceptor(adminJwtProvider, authProperties);
+        UserContextInterceptor interceptor = new UserContextInterceptor(authProperties, clientStpLogic);
         boolean result = interceptor.preHandle(request, response, null);
 
         assertTrue(result);
@@ -82,19 +54,57 @@ class AdminAuthInterceptorTest {
     }
 
     @Test
+    void preHandle_shouldSetClientMockContext_whenMockEnabledAndClientPath() {
+        AuthProperties authProperties = mockAuthProperties(true);
+        when(request.getRequestURI()).thenReturn("/api/client/tasks");
+        when(request.getHeader("X-User-Id")).thenReturn("mock-user");
+        when(request.getHeader("X-User-Province")).thenReturn("BJ");
+        when(request.getHeader("X-User-Role")).thenReturn("vip");
+        when(request.getHeader("X-User-Tags")).thenReturn("vip,active");
+        when(request.getHeader("X-User-Org-Id")).thenReturn("org_001");
+        when(request.getHeader("X-User-Level")).thenReturn("5");
+        when(request.getHeader("X-Platform")).thenReturn("WEB");
+
+        UserContextInterceptor interceptor = new UserContextInterceptor(authProperties, clientStpLogic);
+        boolean result = interceptor.preHandle(request, response, null);
+
+        assertTrue(result);
+        UserContext ctx = UserContextHolder.get();
+        assertNotNull(ctx);
+        assertEquals("mock-user", ctx.getUserId());
+        assertEquals("BJ", ctx.getProvince());
+        assertEquals("vip", ctx.getRole());
+        assertEquals(5, ctx.getLevel());
+    }
+
+    @Test
+    void preHandle_shouldReturnTrue_whenNoMockAndNoSaTokenLogin() {
+        AuthProperties authProperties = mockAuthProperties(false);
+        when(clientStpLogic.isLogin()).thenReturn(false);
+
+        stpUtilMock = mockStatic(StpUtil.class);
+        stpUtilMock.when(StpUtil::isLogin).thenReturn(false);
+
+        UserContextInterceptor interceptor = new UserContextInterceptor(authProperties, clientStpLogic);
+        boolean result = interceptor.preHandle(request, response, null);
+
+        assertTrue(result);
+        // UserContext is NOT set when no auth is present in non-mock mode
+        assertThrows(BusinessException.class, UserContextHolder::get);
+    }
+
+    @Test
     void afterCompletion_shouldClearUserContext() {
         UserContextHolder.set(UserContext.builder().userId("test").build());
-        authProperties = mockAuthProperties(false);
+        AuthProperties authProperties = mockAuthProperties(false);
 
-        AdminAuthInterceptor interceptor = new AdminAuthInterceptor(adminJwtProvider, authProperties);
+        UserContextInterceptor interceptor = new UserContextInterceptor(authProperties, clientStpLogic);
         interceptor.afterCompletion(request, response, null, null);
 
         assertThrows(BusinessException.class, UserContextHolder::get);
     }
 
     private AuthProperties mockAuthProperties(boolean mockEnabled) {
-        AuthProperties.JwtConfig admin = new AuthProperties.JwtConfig("secret", 120);
-        AuthProperties.JwtConfig client = new AuthProperties.JwtConfig("secret", 120);
-        return new AuthProperties(mockEnabled, admin, client);
+        return new AuthProperties(mockEnabled, "admin-secret", "client-secret");
     }
 }

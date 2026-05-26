@@ -17,6 +17,16 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+app:
+  auth:
+    mock-enabled: true
+    admin-secret: test-admin-secret
+    client-secret: test-client-secret
+
+sa-token:
+  jwt-secret-key: test-shared-secret-for-unit-tests
+  is-log: false
+
 logging:
   level:
     com.marketing.task: DEBUG

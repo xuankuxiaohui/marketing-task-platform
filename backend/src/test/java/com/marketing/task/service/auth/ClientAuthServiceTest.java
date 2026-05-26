@@ -1,12 +1,13 @@
 package com.marketing.task.service.auth;
 
+import cn.dev33.satoken.stp.SaLoginModel;
+import cn.dev33.satoken.stp.StpLogic;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.domain.entity.ClientUser;
 import com.marketing.task.mapper.ClientUserMapper;
 import com.marketing.task.security.AuthenticationException;
-import com.marketing.task.security.ClientJwtProvider;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.session.Configuration;
 import org.junit.jupiter.api.BeforeAll;
@@ -26,11 +27,9 @@ class ClientAuthServiceTest {
     @Mock
     private ClientUserMapper clientUserMapper;
     @Mock
-    private ClientJwtProvider clientJwtProvider;
-    @Mock
     private PasswordEncoder passwordEncoder;
-
-    private ClientAuthService service;
+    @Mock
+    private StpLogic clientStpLogic;
 
     @BeforeAll
     static void initMybatisPlus() {
@@ -39,7 +38,7 @@ class ClientAuthServiceTest {
     }
 
     private ClientAuthService createService() {
-        return new ClientAuthService(clientUserMapper, clientJwtProvider, passwordEncoder);
+        return new ClientAuthService(clientUserMapper, passwordEncoder, clientStpLogic);
     }
 
     private ClientUser createUser(Long id, String username, String passwordHash, Boolean enabled) {
@@ -59,22 +58,26 @@ class ClientAuthServiceTest {
 
     @Test
     void login_shouldReturnTokenAndUserInfo_whenCredentialsValid() {
-        service = createService();
+        ClientAuthService service = createService();
         ClientUser user = createUser(1L, "demo", "$2a$hash", true);
         when(clientUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.matches("demo123", "$2a$hash")).thenReturn(true);
-        when(clientJwtProvider.issue(any())).thenReturn("jwt-token-xxx");
+        when(clientStpLogic.getTokenValue()).thenReturn("sa-token-xxx");
 
         ClientAuthService.LoginResult result = service.login("demo", "demo123");
 
-        assertEquals("jwt-token-xxx", result.token());
+        assertEquals("sa-token-xxx", result.token());
         assertEquals("1", result.userId());
         assertEquals("demo", result.username());
+        assertEquals("BJ", result.province());
+        assertEquals("vip", result.role());
+        verify(clientStpLogic).login(eq("1"), any(SaLoginModel.class));
+        verify(clientStpLogic).getTokenValue();
     }
 
     @Test
     void login_shouldThrowAuthenticationException_whenUserNotFound() {
-        service = createService();
+        ClientAuthService service = createService();
         when(clientUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
 
         assertThrows(AuthenticationException.class, () -> service.login("nobody", "pass"));
@@ -82,7 +85,7 @@ class ClientAuthServiceTest {
 
     @Test
     void login_shouldThrowAuthenticationException_whenPasswordWrong() {
-        service = createService();
+        ClientAuthService service = createService();
         ClientUser user = createUser(1L, "demo", "$2a$hash", true);
         when(clientUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.matches("wrong", "$2a$hash")).thenReturn(false);
@@ -92,7 +95,7 @@ class ClientAuthServiceTest {
 
     @Test
     void login_shouldThrowAuthenticationException_whenAccountDisabled() {
-        service = createService();
+        ClientAuthService service = createService();
         ClientUser user = createUser(1L, "demo", "$2a$hash", false);
         when(clientUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
 
@@ -101,7 +104,7 @@ class ClientAuthServiceTest {
 
     @Test
     void register_shouldCreateUserAndReturnLoginResult() {
-        service = createService();
+        ClientAuthService service = createService();
         ClientUser user = createUser(3L, "newuser", "$2a$newhash", true);
         user.setNickname(null);
 
@@ -110,19 +113,19 @@ class ClientAuthServiceTest {
         when(clientUserMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(user);
         when(passwordEncoder.encode("password")).thenReturn("$2a$newhash");
         when(passwordEncoder.matches("password", "$2a$newhash")).thenReturn(true);
-        when(clientJwtProvider.issue(any())).thenReturn("jwt-newuser-token");
+        when(clientStpLogic.getTokenValue()).thenReturn("sa-newuser-token");
 
         ClientAuthService.LoginResult result = service.register(
                 new ClientAuthService.RegisterRequest("newuser", "password", null,
                         "BJ", "vip", "vip,active", "org_001", 5));
 
-        assertEquals("jwt-newuser-token", result.token());
+        assertEquals("sa-newuser-token", result.token());
         verify(clientUserMapper).insert(any(ClientUser.class));
     }
 
     @Test
     void register_shouldThrowBusinessException_whenUsernameExists() {
-        service = createService();
+        ClientAuthService service = createService();
         when(clientUserMapper.exists(any(LambdaQueryWrapper.class))).thenReturn(true);
 
         assertThrows(BusinessException.class, () -> service.register(
@@ -132,7 +135,7 @@ class ClientAuthServiceTest {
 
     @Test
     void getById_shouldReturnUser() {
-        service = createService();
+        ClientAuthService service = createService();
         ClientUser user = createUser(1L, "demo", "hash", true);
         when(clientUserMapper.selectById(1L)).thenReturn(user);
 
