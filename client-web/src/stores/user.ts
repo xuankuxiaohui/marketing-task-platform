@@ -1,18 +1,15 @@
 import { defineStore } from 'pinia'
 
-function decodeJwtPayload(token: string): Record<string, any> | null {
-  try {
-    const parts = token.split('.')
-    if (parts.length !== 3) return null
-    const payload = parts[1]
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-    return JSON.parse(decoded)
-  } catch {
-    return null
-  }
-}
-
 const LS_PREFIX = 'client_'
+
+export interface ProfileData {
+  province?: string
+  role?: string
+  tags?: string
+  orgId?: string
+  level?: number
+  platform?: string
+}
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -31,7 +28,7 @@ export const useUserStore = defineStore('user', {
     isAuthenticated: (state): boolean => !!state.token,
   },
   actions: {
-    setAuth(token: string, userId: string, username: string, nickname: string) {
+    setAuth(token: string, userId: string, username: string, nickname: string, profile?: ProfileData) {
       this.token = token
       this.userId = userId
       this.username = username
@@ -41,14 +38,14 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem(LS_PREFIX + 'username', username)
       localStorage.setItem(LS_PREFIX + 'nickname', nickname)
 
-      const claims = decodeJwtPayload(token)
-      if (claims) {
-        this.province = claims.province || ''
-        this.role = claims.role || ''
-        this.tags = claims.tags || ''
-        this.orgId = claims.orgId || ''
-        this.level = claims.level || 0
-        this.platform = claims.platform || 'WEB'
+      // Profile data comes from the login response (no longer decoded from JWT)
+      if (profile) {
+        this.province = profile.province || ''
+        this.role = profile.role || ''
+        this.tags = profile.tags || ''
+        this.orgId = profile.orgId || ''
+        this.level = profile.level ?? 0
+        this.platform = profile.platform || 'WEB'
         localStorage.setItem(LS_PREFIX + 'province', this.province)
         localStorage.setItem(LS_PREFIX + 'role', this.role)
         localStorage.setItem(LS_PREFIX + 'tags', this.tags)

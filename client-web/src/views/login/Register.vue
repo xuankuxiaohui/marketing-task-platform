@@ -126,8 +126,9 @@ const handleRegister = async () => {
       orgId: form.orgId || undefined,
       level: form.level ? Number(form.level) : undefined,
     })
-    const { token, userId, username, nickname } = res.data.data
-    userStore.setAuth(token, userId, username, nickname)
+    const { token, userId, username, nickname, province, role, tags, orgId, level, platform } = res.data.data
+    userStore.setAuth(token, userId, username, nickname,
+      { province, role, tags, orgId, level, platform })
     showToast.success('注册成功')
     router.push('/tasks')
   } catch (e: any) {
