@@ -6,13 +6,6 @@
 
 | 版本 | 文件 | 内容 |
 |---|---|---|
-| V1-V6 | Initial migration | 核心表结构 (task, task_step, task_step_platform, task_filter, task_platform, user_task_instance, user_task_step_progress, task_definition_snapshot, admin_user, client_user, reward_record, prize_*) |
-| V7 | `V7__list_data.sql` | allowlist/denylist 数据表 |
-| V8 | `V8__mutex_group.sql` | 互斥组独立表 |
-| V10 | `V10__event_log_and_metrics.sql` | 事件日志 + 指标聚合表 |
-| V11 | `V11__task_gray_config.sql` | 任务灰度配置字段 |
-| V12 | `V12__mutex_cross_cycle.sql` | 跨周期互斥 |
-| V13 | `V13__operation_log.sql` | 操作审计日志 |
 | V14 | `V14__step_branching.sql` | 步骤条件分支表 |
 
 ## V14 — task_step_transition 表
