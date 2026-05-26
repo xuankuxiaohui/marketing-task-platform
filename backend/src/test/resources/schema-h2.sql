@@ -312,6 +312,21 @@ CREATE TABLE IF NOT EXISTS operation_log (
     INDEX idx_ol_created_at (created_at)
 );
 
+-- V14: step branching
+CREATE TABLE IF NOT EXISTS task_step_transition (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    step_id BIGINT NOT NULL,
+    target_step_id BIGINT NOT NULL,
+    condition_expr VARCHAR(1024) NULL,
+    priority INT NOT NULL DEFAULT 0,
+    description VARCHAR(256) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_step_priority (step_id, priority),
+    INDEX idx_transition_step (step_id),
+    INDEX idx_transition_target (target_step_id)
+);
+
 -- V7: list_data
 CREATE TABLE IF NOT EXISTS list_data (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

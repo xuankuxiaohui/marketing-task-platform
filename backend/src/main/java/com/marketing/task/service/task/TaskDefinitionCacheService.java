@@ -7,17 +7,20 @@ import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.domain.entity.TaskFilter;
 import com.marketing.task.domain.entity.TaskPlatform;
 import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.domain.entity.TaskStepTransition;
 import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskFilterMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.mapper.TaskStepTransitionMapper;
 import com.marketing.task.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -28,6 +31,7 @@ public class TaskDefinitionCacheService {
     private final TaskFilterMapper taskFilterMapper;
     private final TaskPlatformMapper taskPlatformMapper;
     private final TaskDefinitionSnapshotMapper snapshotMapper;
+    private final TaskStepTransitionMapper transitionMapper;
 
     @Cacheable(value = "taskDefinitions", key = "#id")
     public Task getTask(Long id) {
@@ -55,6 +59,11 @@ public class TaskDefinitionCacheService {
                 .eq(TaskPlatform::getTaskId, taskId));
     }
 
+    @Cacheable(value = "taskTransitions", key = "#taskId")
+    public List<TaskStepTransition> getTransitions(Long taskId) {
+        return transitionMapper.selectByTaskId(taskId);
+    }
+
     @Cacheable(value = "taskSnapshots", key = "#taskId + ':' + #version")
     public TaskSnapshotDTO getSnapshot(Long taskId, Integer version) {
         TaskDefinitionSnapshot entity = snapshotMapper.selectOne(
@@ -67,7 +76,7 @@ public class TaskDefinitionCacheService {
         return JsonUtil.jsonToObj(entity.getSnapshotJson(), TaskSnapshotDTO.class);
     }
 
-    @CacheEvict(value = {"taskDefinitions", "taskSteps", "taskFilters", "taskPlatforms"}, key = "#taskId")
+    @CacheEvict(value = {"taskDefinitions", "taskSteps", "taskFilters", "taskPlatforms", "taskTransitions"}, key = "#taskId")
     public void evict(Long taskId) {
         // eviction only
     }

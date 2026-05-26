@@ -5,22 +5,28 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.EventType;
+import com.marketing.task.context.UserContext;
+import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.entity.TaskStep;
+import com.marketing.task.domain.entity.TaskStepTransition;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.entity.UserTaskStepProgress;
 import com.marketing.task.domain.enums.InstanceStatus;
 import com.marketing.task.domain.enums.StepProgressStatus;
 import com.marketing.task.domain.enums.StepType;
-import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.mapper.TaskStepTransitionMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.mapper.UserTaskStepProgressMapper;
+import com.marketing.task.service.EventTrackingService;
+import com.marketing.task.service.filter.FilterExpressionEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -35,6 +41,8 @@ public class StepAdvanceEngine {
     private final List<StepHandler> handlers;
     private final TaskDefinitionCacheService cacheService;
     private final EventTrackingService eventTrackingService;
+    private final TaskStepTransitionMapper transitionMapper;
+    private final FilterExpressionEngine filterExpressionEngine;
 
     @Transactional
     public UserTaskInstance enter(UserTaskInstance instance) {
@@ -110,7 +118,8 @@ public class StepAdvanceEngine {
             } else {
                 progressMapper.updateById(progress);
             }
-            instance.setCurrentStepSeq(step.getSeq() + 1);
+            Integer nextSeq = resolveNextSeq(step, instance);
+            instance.setCurrentStepSeq(nextSeq);
             instanceMapper.updateById(instance);
             cascade(instance);
         } else {
@@ -156,7 +165,8 @@ public class StepAdvanceEngine {
             }
             // Only advance if completeStep was a no-op (step already completed)
             if (instance.getCurrentStepSeq() == seqBefore) {
-                instance.setCurrentStepSeq(instance.getCurrentStepSeq() + 1);
+                Integer nextSeq = resolveNextSeq(current, instance);
+                instance.setCurrentStepSeq(nextSeq);
                 instanceMapper.updateById(instance);
             }
         }
@@ -186,10 +196,58 @@ public class StepAdvanceEngine {
         } else {
             progressMapper.updateById(progress);
         }
-        instance.setCurrentStepSeq(step.getSeq() + 1);
+        Integer nextSeq = resolveNextSeq(step, instance);
+        instance.setCurrentStepSeq(nextSeq);
         instanceMapper.updateById(instance);
         eventTrackingService.track(EventType.STEP_COMPLETED, instance.getTaskId(), instance.getId(),
                 step.getId(), instance.getUserId(), null, Map.of("stepType", step.getType()));
+    }
+
+    /**
+     * Resolve the next step sequence number based on conditional branching transitions.
+     * If no transitions are defined for the step, falls back to linear seq+1 (backward compatible).
+     * Transitions are evaluated in priority order (ASC). The first matching transition's target
+     * step seq is returned. A transition with a null/blank conditionExpr is treated as the default
+     * (always matches). If no transition matches, falls back to linear seq+1.
+     */
+    private Integer resolveNextSeq(TaskStep currentStep, UserTaskInstance instance) {
+        List<TaskStepTransition> transitions = cacheService.getTransitions(instance.getTaskId());
+
+        List<TaskStepTransition> stepTransitions = transitions.stream()
+                .filter(t -> t.getStepId().equals(currentStep.getId()))
+                .sorted(Comparator.comparingInt(TaskStepTransition::getPriority))
+                .toList();
+
+        if (stepTransitions.isEmpty()) {
+            return currentStep.getSeq() + 1;
+        }
+
+        List<TaskStep> steps = cacheService.getSteps(instance.getTaskId());
+        Map<Long, TaskStep> stepMap = steps.stream()
+                .collect(Collectors.toMap(TaskStep::getId, Function.identity()));
+
+        UserContext userContext = UserContextHolder.get();
+
+        for (TaskStepTransition transition : stepTransitions) {
+            if (transition.getConditionExpr() == null || transition.getConditionExpr().isBlank()) {
+                // Default transition: no condition, always matches
+                TaskStep target = stepMap.get(transition.getTargetStepId());
+                if (target != null) {
+                    return target.getSeq();
+                }
+            } else {
+                boolean matched = filterExpressionEngine.evaluate(transition.getConditionExpr(), userContext);
+                if (matched) {
+                    TaskStep target = stepMap.get(transition.getTargetStepId());
+                    if (target != null) {
+                        return target.getSeq();
+                    }
+                }
+            }
+        }
+
+        // Fallback: linear advance
+        return currentStep.getSeq() + 1;
     }
 
     private void markInProgress(UserTaskInstance instance) {

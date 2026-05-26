@@ -45,6 +45,10 @@ class StepAdvanceEngineTest {
     private TaskDefinitionCacheService cacheService;
     @Mock
     private EventTrackingService eventTrackingService;
+    @Mock
+    private com.marketing.task.mapper.TaskStepTransitionMapper transitionMapper;
+    @Mock
+    private com.marketing.task.service.filter.FilterExpressionEngine filterExpressionEngine;
 
     private StepAdvanceEngine engine;
 
@@ -73,7 +77,11 @@ class StepAdvanceEngineTest {
                 new ProgressStepHandler(),
                 new RewardStepHandler(mock(com.marketing.task.prize.service.PrizeService.class), mock(com.marketing.task.service.reward.RewardService.class), eventTrackingService)
         );
-        engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService, eventTrackingService);
+        engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService, eventTrackingService, transitionMapper, filterExpressionEngine);
+
+        // Stub transitions to return empty list (backward-compatible linear mode)
+        // Lenient: not all tests trigger resolveNextSeq, so this stub may be unused
+        lenient().when(cacheService.getTransitions(any())).thenReturn(java.util.Collections.emptyList());
 
         // Setup instance
         instance = new UserTaskInstance();

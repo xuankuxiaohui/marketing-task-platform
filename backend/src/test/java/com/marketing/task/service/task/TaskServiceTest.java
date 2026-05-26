@@ -65,6 +65,8 @@ class TaskServiceTest {
     @Mock
     private MutexGroupMapper mutexGroupMapper;
     @Mock
+    private com.marketing.task.mapper.TaskStepTransitionMapper transitionMapper;
+    @Mock
     private EventTrackingService eventTrackingService;
 
     private TaskService taskService;
@@ -82,7 +84,7 @@ class TaskServiceTest {
                 filterEvaluator, stepAdvanceEngine, taskStepMapper,
                 taskFilterMapper, taskPlatformMapper, taskStepPlatformMapper,
                 snapshotMapper, cacheService, mutexGroupMapper,
-                eventTrackingService);
+                transitionMapper, eventTrackingService);
     }
 
     private Task createTask(Long id, Long mutexGroupId) {

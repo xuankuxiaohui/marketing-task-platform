@@ -51,3 +51,17 @@ export function checkStepCode(taskId: number, code: string, excludeStepId?: numb
 export function reorderSteps(taskId: number, items: { id: number; seq: number }[]) {
   return http.put(`/admin/task/${taskId}/steps/reorder`, items)
 }
+
+export interface StepTransition {
+  id?: number
+  stepCode?: string
+  targetStepCode: string
+  conditionExpr?: string
+  priority: number
+  description?: string
+}
+
+export function listTransitions(taskId: number) {
+  return http.get(`/admin/task/${taskId}/transitions`)
+}
+

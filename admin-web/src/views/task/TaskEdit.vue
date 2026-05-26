@@ -114,7 +114,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { saveTaskAggregate, getTaskById, getTaskVersions, getTaskVersionDetail, type Task, type TaskVersion, type TaskVersionDetail } from '../../api/task'
-import { listSteps } from '../../api/step'
+import { listSteps, listTransitions } from '../../api/step'
 import { listFilters } from '../../api/filter'
 import { listPlatforms } from '../../api/platform'
 import { listStepPlatforms } from '../../api/step-platform'
@@ -153,16 +153,18 @@ const platformsTabRef = ref()
 onMounted(async () => {
   if (taskId.value) {
     try {
-      const [{ data: taskResp }, { data: stepsResp }, { data: filtersResp }, { data: platformsResp }, { data: spResp }] = await Promise.all([
+      const [{ data: taskResp }, { data: stepsResp }, { data: filtersResp }, { data: platformsResp }, { data: spResp }, { data: trResp }] = await Promise.all([
         getTaskById(taskId.value),
         listSteps(taskId.value),
         listFilters(taskId.value),
         listPlatforms(taskId.value),
         listStepPlatforms(taskId.value),
+        listTransitions(taskId.value),
       ])
       task.value = taskResp.data
       const stepsData = stepsResp.data || []
       stepsTabRef.value?.setSteps(stepsData)
+      stepsTabRef.value?.setTransitions(trResp.data || [])
       filtersTabRef.value?.setFilters(filtersResp.data)
       platformsTabRef.value?.setPlatforms(platformsResp.data)
       platformsTabRef.value?.setSteps(stepsData)
@@ -182,6 +184,7 @@ async function submit() {
       filters: filtersTabRef.value?.getFilters(),
       platforms: platformsTabRef.value?.getPlatforms(),
       stepPlatforms: platformsTabRef.value?.getStepPlatforms(),
+      transitions: stepsTabRef.value?.getTransitions(),
     }
     await saveTaskAggregate(dto)
     ElMessage.success('保存成功')

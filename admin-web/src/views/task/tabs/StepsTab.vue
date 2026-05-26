@@ -31,6 +31,10 @@
       </div>
       <div class="step-card-right">
         <span :class="['type-tag', typeClass(row.type)]">{{ row.type }}</span>
+        <span v-if="getTransitionCount(row.code) > 0" class="branch-badge" :title="`${getTransitionCount(row.code)} 个分支`">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+          {{ getTransitionCount(row.code) }} 分支
+        </span>
         <span class="step-desc">{{ row.flowDesc || row.description || '' }}</span>
         <el-button size="small" type="primary" plain @click="openEdit(row, ri)">编辑</el-button>
         <el-button size="small" type="danger" plain @click="removeStep(ri)">删除</el-button>
@@ -40,7 +44,7 @@
     <el-empty v-if="!steps.length" description="暂无步骤，点击上方按钮添加" />
 
     <!-- Edit / Create Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑步骤' : '添加步骤'" width="560px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑步骤' : '添加步骤'" width="640px" destroy-on-close>
       <el-form :model="form" label-width="90px">
         <el-form-item label="编码" required>
           <el-input v-model="form.code" placeholder="step_code" maxlength="64" @change="validateCode" />
@@ -91,6 +95,53 @@
             <el-button size="small" @click="extraItems.push({ key: '', value: '' })">+ 添加配置项</el-button>
           </div>
         </el-form-item>
+
+        <!-- Branching configuration (only for existing non-REWARD steps) -->
+        <el-divider v-if="isEdit && form.type !== 'REWARD'" content-position="left">
+          <span class="branch-divider-title">分支配置</span>
+        </el-divider>
+        <div v-if="isEdit && form.type !== 'REWARD'" class="branch-section">
+          <div v-for="(tr, ti) in editTransitions" :key="ti" class="branch-row">
+            <div class="branch-row-inner">
+              <div class="branch-field branch-priority">
+                <label>优先级</label>
+                <el-input-number v-model="tr.priority" :min="0" size="small" controls-position="right" style="width:80px" />
+              </div>
+              <div class="branch-field branch-target">
+                <label>目标步骤</label>
+                <el-select v-model="tr.targetStepCode" placeholder="选择目标步骤" size="small" style="width:160px">
+                  <el-option
+                    v-for="s in otherSteps(editIndex)"
+                    :key="s.code"
+                    :label="`[${s.seq}] ${s.code}: ${s.name}`"
+                    :value="s.code"
+                  />
+                </el-select>
+              </div>
+              <div class="branch-field branch-condition">
+                <label>
+                  条件表达式
+                  <span v-if="!tr.conditionExpr" class="default-tag">(默认)</span>
+                </label>
+                <div class="condition-input-wrap">
+                  <el-input v-model="tr.conditionExpr" placeholder="e.g. hasTag('vip')" size="small" style="width:160px" />
+                  <el-button size="small" @click="validateBranchExpr(tr)" :loading="tr._validating">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  </el-button>
+                </div>
+                <span v-if="tr._validResult" :class="['validate-feedback', tr._validOk ? 'valid' : 'invalid']">{{ tr._validResult }}</span>
+              </div>
+              <div class="branch-field branch-desc">
+                <label>描述</label>
+                <el-input v-model="tr.description" placeholder="分支说明" size="small" style="width:120px" />
+              </div>
+              <el-button size="small" type="danger" plain class="branch-del-btn" @click="editTransitions.splice(ti, 1)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </el-button>
+            </div>
+          </div>
+          <el-button size="small" type="primary" plain @click="addTransition">+ 添加分支</el-button>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -103,9 +154,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { Step } from '../../../api/step'
+import type { Step, StepTransition } from '../../../api/step'
 import { checkStepCode, reorderSteps } from '../../../api/step'
 import { listPrizes } from '../../../api/prize'
+import { http } from '../../../api/http'
 
 const steps = ref<Step[]>([])
 const dialogVisible = ref(false)
@@ -113,6 +165,12 @@ const isEdit = ref(false)
 const editIndex = ref(-1)
 const saving = ref(false)
 const prizes = ref<any[]>([])
+
+// All transitions collected across steps (keyed by stepCode)
+const allTransitions = ref<Map<string, StepTransition[]>>(new Map())
+
+// Transitions for the step currently being edited
+const editTransitions = ref<(StepTransition & { _validating?: boolean; _validResult?: string; _validOk?: boolean })[]>([])
 
 const form = reactive<Step>({
   seq: 1, code: '', name: '', type: 'CLICK', description: '',
@@ -179,8 +237,51 @@ function resetForm() {
   form.extraJson = ''
   form.rewardConfigJson = ''
   extraItems.value = []
+  editTransitions.value = []
   codeFeedback.value = ''
   codeValidClass.value = ''
+}
+
+function otherSteps(excludeIndex: number): Step[] {
+  return steps.value.filter((_, i) => i !== excludeIndex)
+}
+
+function addTransition() {
+  const maxPrio = editTransitions.value.length > 0
+    ? Math.max(...editTransitions.value.map(t => t.priority)) + 1
+    : 0
+  editTransitions.value.push({
+    stepCode: '',
+    targetStepCode: '',
+    conditionExpr: '',
+    priority: maxPrio,
+    description: '',
+  })
+}
+
+async function validateBranchExpr(tr: StepTransition & { _validating?: boolean; _validResult?: string; _validOk?: boolean }) {
+  if (!tr.conditionExpr || !tr.conditionExpr.trim()) {
+    tr._validResult = ''
+    tr._validOk = undefined
+    return
+  }
+  tr._validating = true
+  try {
+    await http.post('/admin/utils/validate-filter', { expression: tr.conditionExpr.trim() })
+    tr._validResult = '表达式格式有效'
+    tr._validOk = true
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || '校验失败'
+    tr._validResult = msg
+    tr._validOk = false
+  } finally {
+    tr._validating = false
+  }
+}
+
+function getTransitionCount(stepCode: string): number {
+  const arr = allTransitions.value.get(stepCode)
+  return arr ? arr.length : 0
 }
 
 function openCreate() {
@@ -207,6 +308,17 @@ function openEdit(row: Step, index: number) {
   syncExtraItems()
   codeFeedback.value = ''
   codeValidClass.value = ''
+
+  // Load existing transitions for this step
+  const existing = allTransitions.value.get(row.code) || []
+  editTransitions.value = existing.map(t => ({
+    ...t,
+    stepCode: row.code,
+    _validating: false,
+    _validResult: undefined,
+    _validOk: undefined,
+  }))
+
   dialogVisible.value = true
 }
 
@@ -259,12 +371,30 @@ function handleSave() {
   } else {
     steps.value.push(stepData)
   }
+
+  // Update transitions map for this step
+  const stepCode = form.code.trim()
+  const newTransitions: StepTransition[] = editTransitions.value.map(t => ({
+    stepCode,
+    targetStepCode: t.targetStepCode,
+    conditionExpr: t.conditionExpr || undefined,
+    priority: t.priority,
+    description: t.description || undefined,
+  }))
+  allTransitions.value = new Map(allTransitions.value)
+  allTransitions.value.set(stepCode, newTransitions)
+
   dialogVisible.value = false
 }
 
 function removeStep(index: number) {
+  const code = steps.value[index]?.code
   steps.value.splice(index, 1)
   steps.value.forEach((s, i) => s.seq = i + 1)
+  if (code) {
+    allTransitions.value = new Map(allTransitions.value)
+    allTransitions.value.delete(code)
+  }
 }
 
 // Native HTML5 drag-and-drop
@@ -313,6 +443,30 @@ function setSteps(data: Step[]) {
   steps.value = data || []
 }
 
+function getTransitions(): StepTransition[] {
+  const result: StepTransition[] = []
+  for (const [, trs] of allTransitions.value) {
+    for (const t of trs) {
+      if (t.targetStepCode) {
+        result.push({ ...t })
+      }
+    }
+  }
+  return result
+}
+
+function setTransitions(data: StepTransition[]) {
+  allTransitions.value = new Map()
+  if (data && data.length > 0) {
+    for (const t of data) {
+      if (!t.stepCode) continue
+      const arr = allTransitions.value.get(t.stepCode) || []
+      arr.push(t)
+      allTransitions.value.set(t.stepCode, arr)
+    }
+  }
+}
+
 onMounted(async () => {
   try {
     const { data } = await listPrizes(1, 200)
@@ -320,7 +474,7 @@ onMounted(async () => {
   } catch {}
 })
 
-defineExpose({ getSteps: () => steps.value, setSteps })
+defineExpose({ getSteps: () => steps.value, setSteps, getTransitions, setTransitions })
 </script>
 
 <style scoped>
@@ -434,6 +588,20 @@ defineExpose({ getSteps: () => steps.value, setSteps })
 .type-reward { background: var(--color-emerald-subtle); color: var(--color-emerald-text); }
 .type-passive { background: var(--color-border-light); color: var(--color-text-muted); }
 
+.branch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--color-amber-subtle, #fef3c7);
+  color: var(--color-amber-text, #92400e);
+  flex-shrink: 0;
+  cursor: default;
+}
+
 .form-feedback {
   display: block;
   font-size: 11px;
@@ -450,5 +618,70 @@ defineExpose({ getSteps: () => steps.value, setSteps })
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
+}
+
+/* Branching section */
+.branch-divider-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.branch-section {
+  margin-bottom: 12px;
+}
+
+.branch-row {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: 6px;
+}
+
+.branch-row-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.branch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.branch-field label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.default-tag {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--color-emerald-subtle, #d1fae5);
+  color: var(--color-emerald-text, #065f46);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.condition-input-wrap {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.validate-feedback {
+  font-size: 10px;
+  margin-top: 1px;
+}
+.validate-feedback.valid { color: var(--color-emerald-text, #065f46); }
+.validate-feedback.invalid { color: var(--color-danger); }
+
+.branch-del-btn {
+  margin-top: 16px;
 }
 </style>
