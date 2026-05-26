@@ -15,9 +15,11 @@ import com.marketing.task.domain.entity.TaskFilter;
 import com.marketing.task.domain.entity.TaskPlatform;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.TaskStepPlatform;
+import com.marketing.task.domain.entity.TaskStepTransition;
 import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.domain.vo.TaskClientVO;
 import com.marketing.task.domain.vo.TaskStepPlatformVO;
+import com.marketing.task.domain.vo.TaskStepTransitionVO;
 import com.marketing.task.domain.dto.TaskSnapshotDTO;
 import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
@@ -27,6 +29,7 @@ import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
+import com.marketing.task.mapper.TaskStepTransitionMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.utils.JsonUtil;
@@ -60,6 +63,7 @@ public class TaskService {
     private final TaskDefinitionSnapshotMapper snapshotMapper;
     private final TaskDefinitionCacheService cacheService;
     private final MutexGroupMapper mutexGroupMapper;
+    private final TaskStepTransitionMapper transitionMapper;
     private final EventTrackingService eventTrackingService;
 
     public List<TaskClientVO> listPublished(UserContext userContext) {
@@ -328,6 +332,42 @@ public class TaskService {
             }
         }
 
+        // Process step transitions
+        if (dto.getTransitions() != null) {
+            transitionMapper.deleteByTaskId(taskId);
+            // Build code-to-entity map for target resolution and validation
+            java.util.Map<String, TaskStep> codeToStep = new java.util.LinkedHashMap<>();
+            for (TaskStep step : taskStepMapper.selectList(
+                    new LambdaQueryWrapper<TaskStep>().eq(TaskStep::getTaskId, taskId))) {
+                codeToStep.put(step.getCode(), step);
+            }
+            for (TaskStepTransitionVO vo : dto.getTransitions()) {
+                if (vo.getStepCode() == null || vo.getTargetStepCode() == null) continue;
+                TaskStep sourceStep = codeToStep.get(vo.getStepCode());
+                TaskStep targetStep = codeToStep.get(vo.getTargetStepCode());
+                if (sourceStep == null || targetStep == null) {
+                    log.warn("Skipping transition: source or target step not found: {} -> {}",
+                            vo.getStepCode(), vo.getTargetStepCode());
+                    continue;
+                }
+                // Validate: no self-referencing
+                if (sourceStep.getId().equals(targetStep.getId())) {
+                    throw new BusinessException(ErrorCode.BAD_REQUEST,
+                            "分支不能指向自身: " + vo.getStepCode());
+                }
+                // Validate: target seq > source seq (no backward jumps)
+                if (targetStep.getSeq() <= sourceStep.getSeq()) {
+                    throw new BusinessException(ErrorCode.BAD_REQUEST,
+                            "分支目标步骤序号必须大于源步骤: " + vo.getStepCode() + " -> " + vo.getTargetStepCode());
+                }
+                TaskStepTransition entity = vo.toEntity();
+                entity.setId(null);
+                entity.setStepId(sourceStep.getId());
+                entity.setTargetStepId(targetStep.getId());
+                transitionMapper.insert(entity);
+            }
+        }
+
         cacheService.evict(taskId);
         return TaskAdminVO.from(task);
     }
@@ -350,8 +390,9 @@ public class TaskService {
         List<TaskPlatform> platforms = taskPlatformMapper.selectList(
                 new LambdaQueryWrapper<TaskPlatform>()
                         .eq(TaskPlatform::getTaskId, taskId));
+        List<TaskStepTransition> transitions = transitionMapper.selectByTaskId(taskId);
 
-        TaskSnapshotDTO snapshot = new TaskSnapshotDTO(task, steps, filters, platforms);
+        TaskSnapshotDTO snapshot = new TaskSnapshotDTO(task, steps, filters, platforms, transitions);
         TaskDefinitionSnapshot entity = new TaskDefinitionSnapshot();
         entity.setTaskId(taskId);
         entity.setVersion(task.getVersion());
@@ -419,6 +460,37 @@ public class TaskService {
             platform.setId(null);
             platform.setTaskId(newTaskId);
             taskPlatformMapper.insert(platform);
+        }
+
+        // Copy transitions: map old step IDs to new step IDs
+        List<TaskStep> newSteps = taskStepMapper.selectList(
+                new LambdaQueryWrapper<TaskStep>()
+                        .eq(TaskStep::getTaskId, newTaskId));
+        java.util.Map<String, Long> newStepCodeToId = new java.util.LinkedHashMap<>();
+        for (TaskStep ns : newSteps) {
+            newStepCodeToId.put(ns.getCode(), ns.getId());
+        }
+        // Build old code→new id map from the copied steps
+        java.util.Map<String, Long> oldCodeToNewId = new java.util.LinkedHashMap<>();
+        java.util.Map<Long, String> oldIdToCode = new java.util.LinkedHashMap<>();
+        for (TaskStep oldStep : steps) {
+            oldIdToCode.put(oldStep.getId(), oldStep.getCode());
+        }
+        for (TaskStep ns : newSteps) {
+            oldCodeToNewId.put(ns.getCode(), ns.getId());
+        }
+        List<TaskStepTransition> transitions = transitionMapper.selectByTaskId(sourceTaskId);
+        for (TaskStepTransition t : transitions) {
+            String sourceCode = oldIdToCode.get(t.getStepId());
+            String targetCode = oldIdToCode.get(t.getTargetStepId());
+            if (sourceCode == null || targetCode == null) continue;
+            Long newStepId = oldCodeToNewId.get(sourceCode);
+            Long newTargetStepId = oldCodeToNewId.get(targetCode);
+            if (newStepId == null || newTargetStepId == null) continue;
+            t.setId(null);
+            t.setStepId(newStepId);
+            t.setTargetStepId(newTargetStepId);
+            transitionMapper.insert(t);
         }
 
         cacheService.evict(newTaskId);

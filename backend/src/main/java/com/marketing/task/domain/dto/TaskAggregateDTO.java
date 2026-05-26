@@ -21,4 +21,6 @@ public class TaskAggregateDTO {
     private List<TaskPlatformVO> platforms;
     @Schema(description = "步骤级端配置列表")
     private List<TaskStepPlatformVO> stepPlatforms;
+    @Schema(description = "步骤分支转换列表")
+    private List<TaskStepTransitionVO> transitions;
 }

@@ -7,12 +7,15 @@ import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
+import com.marketing.task.domain.entity.TaskStepTransition;
 import com.marketing.task.domain.vo.TaskAdminVO;
+import com.marketing.task.domain.vo.TaskStepTransitionVO;
 import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.domain.vo.TaskVersionVO;
 import com.marketing.task.mapper.TaskDefinitionSnapshotMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskStepMapper;
+import com.marketing.task.mapper.TaskStepTransitionMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.service.OperationLogService;
 import com.marketing.task.service.task.TaskService;
@@ -31,6 +34,7 @@ public class AdminTaskController {
     private final TaskStepMapper taskStepMapper;
     private final UserTaskInstanceMapper instanceMapper;
     private final TaskDefinitionSnapshotMapper snapshotMapper;
+    private final TaskStepTransitionMapper transitionMapper;
     private final TaskService taskService;
     private final OperationLogService operationLogService;
 
@@ -143,5 +147,14 @@ public class AdminTaskController {
             return Result.fail(404, "版本快照不存在");
         }
         return Result.ok(snapshot);
+    }
+
+    @GetMapping("/{taskId}/transitions")
+    public Result<List<TaskStepTransitionVO>> transitions(@PathVariable Long taskId) {
+        List<TaskStepTransition> transitions = transitionMapper.selectByTaskId(taskId);
+        List<TaskStepTransitionVO> vos = transitions.stream()
+                .map(TaskStepTransitionVO::from)
+                .collect(Collectors.toList());
+        return Result.ok(vos);
     }
 }

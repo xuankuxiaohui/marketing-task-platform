@@ -1,5 +1,5 @@
 import { http } from './http'
-import type { Step } from './step'
+import type { Step, StepTransition } from './step'
 import type { TaskFilter } from './filter'
 import type { TaskPlatform } from './platform'
 
@@ -34,6 +34,8 @@ export interface TaskAggregateDTO {
   steps?: Step[]
   filters?: TaskFilter[]
   platforms?: TaskPlatform[]
+  stepPlatforms?: any[]
+  transitions?: StepTransition[]
 }
 
 export function listTasks(params?: TaskListParams) {
