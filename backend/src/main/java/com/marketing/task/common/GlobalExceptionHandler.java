@@ -1,5 +1,7 @@
 package com.marketing.task.common;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -75,6 +77,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleAccessDenied(AccessDeniedException ex) {
         log.warn("Access denied: {}", ex.getMessage());
         return ResponseEntity.status(403).body(Result.fail(ErrorCode.FORBIDDEN, "无权限访问"));
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    public ResponseEntity<Result<Void>> handleNotLogin(NotLoginException ex) {
+        log.warn("Auth required — token missing, expired, or invalid: {}", ex.getMessage());
+        return ResponseEntity.status(401).body(Result.fail(ErrorCode.UNAUTHORIZED, "登录已过期，请重新登录"));
+    }
+
+    @ExceptionHandler(NotPermissionException.class)
+    public ResponseEntity<Result<Void>> handleNotPermission(NotPermissionException ex) {
+        log.warn("Permission denied: {}", ex.getMessage());
+        return ResponseEntity.status(403).body(Result.fail(ErrorCode.FORBIDDEN, "无权限"));
     }
 
     @ExceptionHandler(Exception.class)

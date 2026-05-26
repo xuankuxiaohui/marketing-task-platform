@@ -12,7 +12,7 @@ http.interceptors.request.use((config) => {
     config.headers.set('Authorization', `Bearer ${user.token}`)
   } else {
     // Fallback: mock headers (dev mode)
-    config.headers.set('X-User-Id', user.userId || 'admin_mock')
+    config.headers.set('X-User-Id', user.userId || '')
     config.headers.set('X-User-Province', user.province)
     config.headers.set('X-User-Role', user.role)
     config.headers.set('X-User-Tags', user.tags)
@@ -35,8 +35,6 @@ http.interceptors.response.use(
           window.location.href = '/login'
         }
       }
-    } else if (error.response?.status >= 500) {
-      console.error('Server error:', message)
     }
     return Promise.reject(error)
   }

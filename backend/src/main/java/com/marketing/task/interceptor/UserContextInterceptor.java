@@ -40,14 +40,18 @@ public class UserContextInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // Real mode: read from Sa-Token session
-        if (StpUtil.isLogin()) {
-            UserContextHolder.set(SaTokenUserContextBridge.buildAdminUserContext());
-            return true;
-        }
-        if (clientStpLogic.isLogin()) {
-            UserContextHolder.set(SaTokenUserContextBridge.buildClientUserContext(clientStpLogic));
-            return true;
+        // Real mode: read from Sa-Token session, route-scoped to avoid cross-account confusion
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/admin/")) {
+            if (StpUtil.isLogin()) {
+                UserContextHolder.set(SaTokenUserContextBridge.buildAdminUserContext());
+                return true;
+            }
+        } else if (path.startsWith("/api/client/")) {
+            if (clientStpLogic.isLogin()) {
+                UserContextHolder.set(SaTokenUserContextBridge.buildClientUserContext(clientStpLogic));
+                return true;
+            }
         }
 
         return true; // Let SaInterceptor handle 401 if needed

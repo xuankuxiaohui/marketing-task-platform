@@ -1,6 +1,6 @@
 app:
   auth:
-    mock-enabled: true
+    mock-enabled: false
     admin-secret: dev-admin-secret-not-for-production-use
     client-secret: dev-client-secret-not-for-production-use
 

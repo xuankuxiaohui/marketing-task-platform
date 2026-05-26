@@ -12,18 +12,15 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class SaTokenConfig {
 
-    public static final String ADMIN_TYPE = "admin";
-    public static final String CLIENT_TYPE = "client";
-
     @PostConstruct
     public void setAdminStpLogic() {
-        StpUtil.setStpLogic(new StpLogicJwtForSimple(ADMIN_TYPE));
+        StpUtil.setStpLogic(new StpLogicJwtForSimple(SaTokenType.ADMIN));
         log.info("Sa-Token Admin StpLogic configured on StpUtil");
     }
 
     @Bean
     public StpLogic clientStpLogic() {
         log.info("Sa-Token Client StpLogic bean created");
-        return new StpLogicJwtForSimple(CLIENT_TYPE);
+        return new StpLogicJwtForSimple(SaTokenType.CLIENT);
     }
 }
