@@ -115,9 +115,3 @@ System|Runtime|Process|Thread|Class\.forName|import\s|new\s|exec|eval
 - 超时测试（构造一个死循环或极长计算来验证 100ms 超时）
 - 安全回归测试：每新增一个禁用关键字时，补对应测试
 - 测试类：`FilterExpressionEngineTest`
-
-## 相关文档
-
-- `backend/layering.md` — 缓存配置、Configuration 类
-- `backend/java-style.md` — 异常处理（禁止吞异常）、日志规范
-- `api-rules.md` — API 响应格式、错误码

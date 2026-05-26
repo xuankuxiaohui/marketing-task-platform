@@ -49,8 +49,3 @@ MockLogin.vue 提供表单编辑 user store 字段，用于联调切换用户身
 - proxy `/api` → `localhost:8080`
 - 路径别名 `@` → `./src`
 - Vant 按需自动导入（unplugin-vue-components）
-
-## 相关文档
-
-- `frontend/shared.md` — Vue 3 / TypeScript / Pinia 共享规则
-- `api-rules.md` — API 响应格式、拦截器契约

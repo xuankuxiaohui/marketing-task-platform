@@ -146,10 +146,3 @@
   - **Idempotency Key**：每次发奖请求带唯一幂等键（`instanceId + stepId`），奖励服务侧保证不重复发
 
 这些方案留待 P1 阶段细化设计。
-
-## 相关文档
-
-- `backend/layering.md` — Service 层、缓存、事务、cycle_key 规则
-- `backend/database.md` — 迁移策略（新增步骤类型需 DB 变更时）
-- `backend/filter-safety.md` — 过滤器评估（任务列表可见性筛选中使用）
-- `api-rules.md` — CALLBACK / PROGRESS API 格式

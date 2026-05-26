@@ -42,8 +42,3 @@ defineExpose({ getSteps: () => steps.value, setSteps })
 - dev server 端口 5173
 - proxy `/api` → `localhost:8080`
 - 路径别名 `@` → `./src`
-
-## 相关文档
-
-- `frontend/shared.md` — Vue 3 / TypeScript / Pinia 共享规则
-- `api-rules.md` — API 响应格式、拦截器契约
