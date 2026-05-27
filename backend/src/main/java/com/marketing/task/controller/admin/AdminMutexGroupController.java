@@ -75,4 +75,15 @@ public class AdminMutexGroupController {
         operationLogService.record(operatorId, "DELETE", "MUTEX_GROUP", id, group.getName(), null);
         return Result.ok(null);
     }
+
+    @DeleteMapping("/{groupId}/tasks/{taskId}")
+    public Result<Void> unlinkTask(@PathVariable Long groupId, @PathVariable Long taskId) {
+        mutexGroupService.unlinkTask(groupId, taskId);
+        String operatorId = UserContextHolder.get().getUserId();
+        Task task = taskMapper.selectById(taskId);
+        String taskName = task != null ? task.getName() : String.valueOf(taskId);
+        operationLogService.record(operatorId, "UNLINK", "MUTEX_GROUP", groupId,
+                "移除任务[" + taskName + "]从互斥组", null);
+        return Result.ok(null);
+    }
 }
