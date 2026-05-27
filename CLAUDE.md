@@ -6,7 +6,7 @@
 
 | 层级 | 技术 |
 |---|---|
-| 后端 | Java 17 + Spring Boot 3.5 + MyBatis-Plus 3.5 + MySQL 8 + Flyway |
+| 后端 | Java 21 + Spring Boot 3.5 + MyBatis-Plus 3.5 + MySQL 8 + Flyway |
 | 鉴权 | Sa-Token 1.44（admin / client 多账号 JWT） |
 | 表达式引擎 | QLExpress 3.3（任务过滤器，沙箱 + 白名单） |
 | API 文档 | springdoc-openapi 2.x |
