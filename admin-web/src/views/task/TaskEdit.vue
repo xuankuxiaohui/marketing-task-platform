@@ -110,6 +110,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'TaskEdit' })
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'

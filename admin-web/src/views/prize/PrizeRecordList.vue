@@ -91,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'PrizeRecordList' })
 import { onMounted, reactive, ref } from 'vue'
 import { listPrizeRecords, reissuePrizeRecord } from '../../api/prize'
 import { ElMessage, ElMessageBox } from 'element-plus'

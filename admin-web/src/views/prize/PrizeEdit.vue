@@ -197,6 +197,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'PrizeEdit' })
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'

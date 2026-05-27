@@ -315,6 +315,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SimulatePage' })
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {

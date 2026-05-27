@@ -126,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'InstanceDetail' })
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'

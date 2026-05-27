@@ -120,11 +120,14 @@
             <el-button text size="small" class="logout-btn" @click="handleLogout">退出</el-button>
           </div>
         </el-header>
+        <TabBar />
         <el-main class="main-content">
           <router-view v-slot="{ Component }">
-            <transition name="page-fade" mode="out-in">
-              <component :is="Component" />
-            </transition>
+            <keep-alive :include="cachedViews">
+              <transition name="page-fade" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </keep-alive>
           </router-view>
         </el-main>
       </el-container>
@@ -136,23 +139,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useUserStore } from './stores/user'
+import { useTabStore } from './stores/tab'
+import { useTabKeepAlive } from './composables/useTabKeepAlive'
 import { useRouter, useRoute } from 'vue-router'
+import TabBar from './components/TabBar.vue'
 
 const userStore = useUserStore()
+const tabStore = useTabStore()
 const router = useRouter()
 const route = useRoute()
 
-const titleMap: Record<string, string> = {
-  '/dashboard': '运营仪表盘',
-  '/tasks': '任务列表',
-  '/tasks/new': '新建任务',
-  '/instances': '实例查询',
-  '/mutex-groups': '互斥组管理',
-  '/prizes': '奖品配置',
-  '/prize-records': '奖品记录',
-  '/simulate': '模拟测试',
-  '/operation-logs': '操作日志',
-}
+const { include: cachedViews } = useTabKeepAlive()
+
+tabStore.restore()
 
 const openGroups = computed(() => {
   const groups: string[] = []
@@ -176,12 +175,14 @@ const breadcrumbs = computed(() => {
   } else if (path.startsWith('/prizes/') && path !== '/prizes') {
     parts.push('奖品配置', path === '/prizes/new' ? '新建奖品' : '编辑奖品')
   } else {
-    parts.push(titleMap[path] || '营销任务平台')
+    const metaTitle = typeof route.meta.title === 'string' ? route.meta.title : null
+    parts.push(metaTitle || '营销任务平台')
   }
   return parts
 })
 
 const handleLogout = () => {
+  tabStore.clearAll()
   userStore.logout()
   router.push('/login')
 }
@@ -388,7 +389,7 @@ const handleLogout = () => {
 /* Main Content */
 .main-content {
   background: var(--color-surface-raised);
-  min-height: calc(100vh - 50px);
+  min-height: calc(100vh - 50px - 36px);
   padding: 20px 24px;
 }
 

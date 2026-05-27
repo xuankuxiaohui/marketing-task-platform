@@ -1,5 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import { useTabStore } from '../stores/tab'
 import Login from '../views/login/Login.vue'
 import InstanceList from '../views/instance/InstanceList.vue'
 import PrizeEdit from '../views/prize/PrizeEdit.vue'
@@ -13,35 +14,43 @@ import SimulatePage from '../views/simulate/SimulatePage.vue'
 import InstanceDetail from '../views/instance/InstanceDetail.vue'
 import OperationLogs from '../views/OperationLogs.vue'
 
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    title?: string | ((route: RouteLocationNormalized) => string)
+    noTab?: boolean
+  }
+}
+
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/tasks' },
-    { path: '/login', component: Login },
-    { path: '/tasks', component: TaskList, meta: { requiresAuth: true } },
-    { path: '/tasks/new', component: TaskEdit, meta: { requiresAuth: true } },
-    { path: '/tasks/:id', component: TaskEdit, meta: { requiresAuth: true } },
-    { path: '/instances', component: InstanceList, meta: { requiresAuth: true } },
-    { path: '/instances/:id', component: InstanceDetail, meta: { requiresAuth: true } },
-    { path: '/mutex-groups', component: MutexGroupList, meta: { requiresAuth: true } },
-    { path: '/mutex-groups/:id', component: MutexGroupDetail, meta: { requiresAuth: true } },
-    { path: '/prizes', component: PrizeList, meta: { requiresAuth: true } },
-    { path: '/prizes/new', component: PrizeEdit, meta: { requiresAuth: true } },
-    { path: '/prizes/:id', component: PrizeEdit, meta: { requiresAuth: true } },
-    { path: '/prize-records', component: PrizeRecordList, meta: { requiresAuth: true } },
-    { path: '/operation-logs', component: OperationLogs, meta: { requiresAuth: true } },
+    { path: '/', redirect: '/tasks', meta: { noTab: true } },
+    { path: '/login', component: Login, meta: { noTab: true } },
+    { path: '/tasks', name: 'TaskList', component: TaskList, meta: { requiresAuth: true, title: '任务列表' } },
+    { path: '/tasks/new', name: 'TaskNew', component: TaskEdit, meta: { requiresAuth: true, title: '新建任务' } },
+    { path: '/tasks/:id', name: 'TaskEdit', component: TaskEdit, meta: { requiresAuth: true, title: (route) => `编辑任务 #${route.params.id}` } },
+    { path: '/instances', name: 'InstanceList', component: InstanceList, meta: { requiresAuth: true, title: '实例查询' } },
+    { path: '/instances/:id', name: 'InstanceDetail', component: InstanceDetail, meta: { requiresAuth: true, title: (route) => `实例详情 #${route.params.id}` } },
+    { path: '/mutex-groups', name: 'MutexGroupList', component: MutexGroupList, meta: { requiresAuth: true, title: '互斥组管理' } },
+    { path: '/mutex-groups/:id', name: 'MutexGroupDetail', component: MutexGroupDetail, meta: { requiresAuth: true, title: (route) => `互斥组详情 #${route.params.id}` } },
+    { path: '/prizes', name: 'PrizeList', component: PrizeList, meta: { requiresAuth: true, title: '奖品配置' } },
+    { path: '/prizes/new', name: 'PrizeNew', component: PrizeEdit, meta: { requiresAuth: true, title: '新建奖品' } },
+    { path: '/prizes/:id', name: 'PrizeEdit', component: PrizeEdit, meta: { requiresAuth: true, title: (route) => `编辑奖品 #${route.params.id}` } },
+    { path: '/prize-records', name: 'PrizeRecordList', component: PrizeRecordList, meta: { requiresAuth: true, title: '奖品记录' } },
+    { path: '/operation-logs', name: 'OperationLogs', component: OperationLogs, meta: { requiresAuth: true, title: '操作日志' } },
     {
       path: '/dashboard',
       name: 'Dashboard',
       component: () => import('../views/Dashboard.vue'),
       meta: { requiresAuth: true, title: '运营仪表盘' }
     },
-    { path: '/simulate', component: SimulatePage, meta: { requiresAuth: true } },
+    { path: '/simulate', name: 'SimulatePage', component: SimulatePage, meta: { requiresAuth: true, title: '模拟测试' } },
     {
       path: '/tasks/:id/metrics',
       name: 'TaskMetrics',
       component: () => import('../views/TaskMetrics.vue'),
-      meta: { requiresAuth: true, title: '任务指标' }
+      meta: { requiresAuth: true, title: (route) => `任务指标 #${route.params.id}` }
     },
   ],
 })
@@ -55,4 +64,9 @@ router.beforeEach((to, _from, next) => {
   } else {
     next()
   }
+})
+
+router.afterEach((to) => {
+  const tabStore = useTabStore()
+  tabStore.addTab(to)
 })

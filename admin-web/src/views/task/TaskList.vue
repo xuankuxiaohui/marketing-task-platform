@@ -176,6 +176,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'TaskList' })
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'

@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'MutexGroupDetail' })
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'

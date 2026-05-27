@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'OperationLogs' })
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { listOperationLogs, type OperationLogVO, type OperationLogQueryParams } from '../api/operation-log'

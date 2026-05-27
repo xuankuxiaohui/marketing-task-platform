@@ -79,6 +79,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'PrizeList' })
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { listPrizes, togglePrize } from '../../api/prize'

@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'MutexGroupList' })
 import { onMounted, ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { listMutexGroups, createMutexGroup, updateMutexGroup, deleteMutexGroup, type MutexGroup } from '../../api/mutex-group'
