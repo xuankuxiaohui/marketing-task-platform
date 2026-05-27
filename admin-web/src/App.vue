@@ -85,6 +85,19 @@
               <span>实例查询</span>
             </template>
           </el-menu-item>
+          <el-sub-menu index="/users-group">
+            <template #title>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              <span>用户管理</span>
+            </template>
+            <el-menu-item index="/admin-users">后台用户</el-menu-item>
+            <el-menu-item index="/client-users">客户端用户</el-menu-item>
+          </el-sub-menu>
           <el-sub-menu index="/system-group">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
@@ -157,6 +170,7 @@ const openGroups = computed(() => {
   const groups: string[] = []
   if (route.path.startsWith('/tasks')) groups.push('/tasks-group')
   if (route.path.startsWith('/prizes') || route.path.startsWith('/prize-records')) groups.push('/prizes-group')
+  if (route.path.startsWith('/admin-users') || route.path.startsWith('/client-users')) groups.push('/users-group')
   if (route.path.startsWith('/operation-logs')) groups.push('/system-group')
   return groups
 })
