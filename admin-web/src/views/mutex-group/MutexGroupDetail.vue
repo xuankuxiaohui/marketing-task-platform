@@ -40,9 +40,10 @@
           <span :class="['period-pill', periodClass(row.periodType)]">{{ periodLabel(row.periodType) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="100">
+      <el-table-column label="操作" width="160">
         <template #default="scope">
           <el-button size="small" type="primary" plain @click="$router.push(`/tasks/${scope.row.id}`)">查看</el-button>
+          <el-button size="small" type="danger" plain @click="handleUnlink(scope.row.id, scope.row.name)">移除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -54,8 +55,8 @@
 defineOptions({ name: 'MutexGroupDetail' })
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { getMutexGroup, getMutexGroupTasks, type MutexGroup } from '../../api/mutex-group'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getMutexGroup, getMutexGroupTasks, unlinkMutexGroupTask, type MutexGroup } from '../../api/mutex-group'
 
 const route = useRoute()
 const groupId = Number(route.params.id)
@@ -83,6 +84,25 @@ async function load() {
     ElMessage.error('加载互斥组详情失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function handleUnlink(taskId: number, taskName: string) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要将任务「${taskName}」从互斥组中移除吗？移除后该任务不再受互斥约束。`,
+      '确认移除',
+      { confirmButtonText: '移除', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await unlinkMutexGroupTask(groupId, taskId)
+    ElMessage.success('已移除')
+    load()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '移除失败')
   }
 }
 
