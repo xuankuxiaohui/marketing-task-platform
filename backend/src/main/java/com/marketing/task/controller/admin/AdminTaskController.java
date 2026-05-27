@@ -7,6 +7,7 @@ import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
+import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.TaskStepTransition;
 import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.domain.vo.TaskStepTransitionVO;
@@ -152,8 +153,20 @@ public class AdminTaskController {
     @GetMapping("/{taskId}/transitions")
     public Result<List<TaskStepTransitionVO>> transitions(@PathVariable Long taskId) {
         List<TaskStepTransition> transitions = transitionMapper.selectByTaskId(taskId);
+        if (transitions.isEmpty()) {
+            return Result.ok(Collections.emptyList());
+        }
+        Map<Long, String> idToCode = taskStepMapper.selectList(
+                        new LambdaQueryWrapper<TaskStep>().eq(TaskStep::getTaskId, taskId))
+                .stream()
+                .collect(Collectors.toMap(TaskStep::getId, TaskStep::getCode));
         List<TaskStepTransitionVO> vos = transitions.stream()
-                .map(TaskStepTransitionVO::from)
+                .map(t -> {
+                    TaskStepTransitionVO vo = TaskStepTransitionVO.from(t);
+                    vo.setStepCode(idToCode.get(t.getStepId()));
+                    vo.setTargetStepCode(idToCode.get(t.getTargetStepId()));
+                    return vo;
+                })
                 .collect(Collectors.toList());
         return Result.ok(vos);
     }
