@@ -2,6 +2,7 @@ package com.marketing.task.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -43,6 +44,8 @@ public class Task {
     private String grayType;
     @Schema(description = "灰度配置 JSON")
     private String grayConfig;
+    @TableLogic
+    private Integer deleted;
     private String createdBy;
     private String updatedBy;
     private LocalDateTime createdAt;

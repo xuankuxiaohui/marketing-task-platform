@@ -416,6 +416,18 @@ List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
         cacheService.evict(taskId);
     }
 
+    @Transactional
+    public void deleteTask(Long taskId) {
+        Task task = requireTask(taskId);
+        if (TaskStatus.PUBLISHED.name().equals(task.getStatus())
+                || TaskStatus.SCHEDULED.name().equals(task.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS, "已发布或定时发布的任务不能删除，请先下线");
+        }
+        task.setDeleted(1);
+        taskMapper.deleteById(task);
+        cacheService.evict(taskId);
+    }
+
     public BatchTaskResult batchPublish(List<Long> taskIds) {
         List<Long> success = new ArrayList<>();
         List<BatchTaskResult.FailedItem> failed = new ArrayList<>();

@@ -317,6 +317,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'SimulatePage' })
 import { ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   getTestUsers,
@@ -374,8 +375,17 @@ const callbackEvents = reactive<Record<number, string>>({})
 const progressInputs = reactive<Record<number, number>>({})
 
 // ---- lifecycle ----
+const route = useRoute()
+
 onMounted(async () => {
   await Promise.all([loadTestUsers(), loadPublishedTasks()])
+  const queryTaskId = route.query.taskId
+  if (queryTaskId) {
+    const id = Number(queryTaskId)
+    if (publishedTasks.value.some(t => t.id === id)) {
+      selectedTaskId.value = id
+    }
+  }
 })
 
 async function loadTestUsers() {

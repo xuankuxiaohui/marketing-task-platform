@@ -83,6 +83,13 @@ export const useTabStore = defineStore('tab', {
       this._persist()
     },
 
+    closeLeftTabs(fullPath: string) {
+      const idx = this.tabs.findIndex((t) => t.fullPath === fullPath)
+      if (idx === -1) return
+      this.tabs = this.tabs.filter((t, i) => i >= idx || !t.closable)
+      this._persist()
+    },
+
     restore() {
       try {
         const raw = sessionStorage.getItem(STORAGE_KEY)

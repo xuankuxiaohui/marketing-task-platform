@@ -54,6 +54,10 @@ export function getTaskById(id: number) {
   return http.get(`/admin/task/${id}`)
 }
 
+export function deleteTask(id: number) {
+  return http.delete(`/admin/task/${id}`)
+}
+
 export function publishTask(id: number) {
   return http.post(`/admin/task/${id}/publish`)
 }

@@ -30,8 +30,9 @@
       :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
     >
       <div class="ctx-item" @click="handleCloseCurrent">关闭当前</div>
-      <div class="ctx-item" @click="handleCloseOther">关闭其他</div>
+      <div class="ctx-item" @click="handleCloseLeft">关闭左侧</div>
       <div class="ctx-item" @click="handleCloseRight">关闭右侧</div>
+      <div class="ctx-item" @click="handleCloseOther">关闭其他</div>
     </div>
   </teleport>
 </template>
@@ -97,6 +98,16 @@ function handleCloseOther() {
 function handleCloseRight() {
   if (contextMenu.tab) {
     tabStore.closeRightTabs(contextMenu.tab.fullPath)
+  }
+  closeContextMenu()
+}
+
+function handleCloseLeft() {
+  if (contextMenu.tab) {
+    tabStore.closeLeftTabs(contextMenu.tab.fullPath)
+    if (contextMenu.tab.fullPath !== tabStore.activeTabFullPath) {
+      router.push(contextMenu.tab.fullPath)
+    }
   }
   closeContextMenu()
 }

@@ -51,6 +51,19 @@ public class AdminTaskController {
                                            @RequestParam(required = false) String status,
                                            @RequestParam(required = false) String keyword,
                                            @RequestParam(required = false) String periodType) {
+
+        // Handle "DELETED" status: query soft-deleted records via custom mapper
+        if ("DELETED".equals(status)) {
+            long offset = (page - 1) * size;
+            List<Task> deletedTasks = taskMapper.selectDeletedPage(offset, size, null, keyword, periodType);
+            long total = taskMapper.countDeleted(null, keyword, periodType);
+            List<TaskAdminVO> vos = deletedTasks.stream().map(TaskAdminVO::from).collect(Collectors.toList());
+            enrichCounts(vos);
+            IPage<TaskAdminVO> voPage = new Page<>(page, size, total);
+            voPage.setRecords(vos);
+            return Result.ok(voPage);
+        }
+
         LambdaQueryWrapper<Task> wrapper = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
             wrapper.eq(Task::getStatus, status);
@@ -68,7 +81,14 @@ public class AdminTaskController {
                 .map(TaskAdminVO::from)
                 .collect(Collectors.toList());
 
-        // batch enrich step counts and instance counts
+        enrichCounts(vos);
+
+        IPage<TaskAdminVO> voPage = new Page<>(taskPage.getCurrent(), taskPage.getSize(), taskPage.getTotal());
+        voPage.setRecords(vos);
+        return Result.ok(voPage);
+    }
+
+    private void enrichCounts(List<TaskAdminVO> vos) {
         if (!vos.isEmpty()) {
             Set<Long> taskIds = vos.stream().map(TaskAdminVO::getId).collect(Collectors.toSet());
             Map<Long, Integer> stepCounts = buildCountMap(taskStepMapper.countByTaskIds(taskIds));
@@ -78,10 +98,6 @@ public class AdminTaskController {
                 vo.setInstanceCount(instanceCounts.getOrDefault(vo.getId(), 0));
             }
         }
-
-        IPage<TaskAdminVO> voPage = new Page<>(taskPage.getCurrent(), taskPage.getSize(), taskPage.getTotal());
-        voPage.setRecords(vos);
-        return Result.ok(voPage);
     }
 
     private static Map<Long, Integer> buildCountMap(List<Map<String, Object>> rows) {
@@ -123,6 +139,16 @@ public class AdminTaskController {
         Task task = taskMapper.selectById(id);
         String operatorId = UserContextHolder.get().getUserId();
         operationLogService.record(operatorId, "OFFLINE", "TASK", id, task != null ? task.getName() : "任务#" + id, null);
+        return Result.ok(null);
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable Long id) {
+        Task task = taskMapper.selectById(id);
+        String taskName = task != null ? task.getName() : "任务#" + id;
+        taskService.deleteTask(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "DELETE", "TASK", id, taskName, null);
         return Result.ok(null);
     }
 

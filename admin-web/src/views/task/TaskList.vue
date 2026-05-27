@@ -33,6 +33,7 @@
         <el-option label="已发布" value="PUBLISHED" />
         <el-option label="已下线" value="OFFLINE" />
         <el-option label="定时发布" value="SCHEDULED" />
+        <el-option label="已删除" value="DELETED" />
       </el-select>
       <el-select v-model="filters.periodType" placeholder="全部周期" clearable style="width: 140px" @change="search">
         <el-option label="全部周期" value="" />
@@ -47,7 +48,7 @@
     </div>
 
     <!-- batch action bar -->
-    <div v-if="selectedRows.length > 0" class="batch-bar">
+    <div v-if="selectedRows.length > 0 && filters.status !== 'DELETED'" class="batch-bar">
       <span class="batch-info">已选择 {{ selectedRows.length }} 个任务</span>
       <el-button type="primary" size="small" :loading="batchPublishing" @click="batchPublish">批量发布</el-button>
       <el-button type="danger" size="small" :loading="batchOfflining" @click="batchOffline">批量下线</el-button>
@@ -55,7 +56,7 @@
     </div>
 
     <el-table :data="rows" v-loading="loading" @selection-change="onSelectionChange">
-      <el-table-column type="selection" width="50" />
+      <el-table-column v-if="filters.status !== 'DELETED'" type="selection" width="50" />
       <el-table-column prop="id" label="ID" width="75" align="center" />
       <el-table-column prop="code" label="编码" min-width="140">
         <template #default="{ row }">
@@ -128,61 +129,33 @@
           <span class="time-cell">{{ formatTime(row.updatedAt) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="240" fixed="right">
+      <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" type="primary" @click="$router.push(`/tasks/${row.id}`)">编辑</el-button>
-          <el-button
-            size="small"
-            type="default"
-            :loading="copyingId === row.id"
-            @click="openCopyDialog(row)"
-          >
-            复制
-          </el-button>
-          <el-button
-            v-if="row.status === 'DRAFT'"
-            size="small"
-            type="success"
-            :loading="publishingId === row.id"
-            @click="publish(row.id)"
-          >
-            发布
-          </el-button>
-          <el-button
-            v-if="row.status === 'DRAFT' || row.status === 'OFFLINE'"
-            size="small"
-            type="warning"
-            @click="openScheduleDialog(row)"
-          >
-            定时发布
-          </el-button>
-          <el-button
-            v-if="row.status === 'SCHEDULED'"
-            size="small"
-            type="danger"
-            :loading="cancellingId === row.id"
-            @click="cancelSchedule(row.id)"
-          >
-            取消定时
-          </el-button>
-          <el-button
-            v-if="row.status === 'PUBLISHED'"
-            size="small"
-            type="danger"
-            :loading="offliningId === row.id"
-            @click="offline(row.id)"
-          >
-            下线
-          </el-button>
-          <el-button
-            v-if="row.status === 'OFFLINE'"
-            size="small"
-            type="success"
-            :loading="publishingId === row.id"
-            @click="publish(row.id)"
-          >
-            上线
-          </el-button>
+          <div class="action-cell">
+            <template v-if="row.status !== 'DELETED'">
+              <el-button size="small" type="primary" @click="$router.push(`/tasks/${row.id}`)">编辑</el-button>
+              <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, row)">
+                <el-button size="small" text>
+                  更多
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-left:2px;vertical-align:-1px"><polyline points="6 9 12 15 18 9"/></svg>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="copy">复制</el-dropdown-item>
+                    <el-dropdown-item v-if="row.status === 'DRAFT'" command="publish">发布</el-dropdown-item>
+                    <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'OFFLINE'" command="schedule">定时发布</el-dropdown-item>
+                    <el-dropdown-item v-if="row.status === 'SCHEDULED'" command="cancelSchedule">取消定时</el-dropdown-item>
+                    <el-dropdown-item v-if="row.status === 'PUBLISHED'" command="offline">下线</el-dropdown-item>
+                    <el-dropdown-item v-if="row.status === 'OFFLINE'" command="publish">上线</el-dropdown-item>
+                    <el-dropdown-item command="delete" divided>
+                      <span style="color:var(--el-color-danger)">删除</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </template>
+            <span v-else class="deleted-label">已删除</span>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -245,8 +218,8 @@
 defineOptions({ name: 'TaskList' })
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { listTasks, offlineTask, publishTask, copyTask, batchPublishTasks, batchOfflineTasks, schedulePublishTask, cancelSchedulePublish } from '../../api/task'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { listTasks, offlineTask, publishTask, copyTask, deleteTask, batchPublishTasks, batchOfflineTasks, schedulePublishTask, cancelSchedulePublish } from '../../api/task'
 import { listMutexGroups, type MutexGroup } from '../../api/mutex-group'
 
 const router = useRouter()
@@ -257,6 +230,7 @@ const mutexGroupMap = ref<Record<number, string>>({})
 const publishingId = ref<number | null>(null)
 const offliningId = ref<number | null>(null)
 const copyingId = ref<number | null>(null)
+const deletingId = ref<number | null>(null)
 
 // Copy dialog state
 const copyDialogVisible = ref(false)
@@ -283,8 +257,8 @@ function getMutexGroupName(id: number) {
 const periodLabel = (t: string) => ({ ONCE: '一次性', DAILY: '每日', MONTHLY: '每月', CRON: 'Cron', SPECIAL: '特殊' }[t] || t)
 const periodClass = (t: string) => ({ ONCE: 'period-once', DAILY: 'period-daily', MONTHLY: 'period-monthly', CRON: 'period-cron', SPECIAL: 'period-special' }[t] || '')
 
-const statusLabel = (s: string) => ({ DRAFT: '草稿', PUBLISHED: '已发布', OFFLINE: '已下线', SCHEDULED: '定时发布' }[s] || s)
-const statusClass = (s: string) => ({ DRAFT: 'draft', PUBLISHED: 'published', OFFLINE: 'offline', SCHEDULED: 'scheduled' }[s] || '')
+const statusLabel = (s: string) => ({ DRAFT: '草稿', PUBLISHED: '已发布', OFFLINE: '已下线', SCHEDULED: '定时发布', DELETED: '已删除' }[s] || s)
+const statusClass = (s: string) => ({ DRAFT: 'draft', PUBLISHED: 'published', OFFLINE: 'offline', SCHEDULED: 'scheduled', DELETED: 'deleted' }[s] || '')
 
 function statusTooltip(s: string) {
   return {
@@ -292,6 +266,7 @@ function statusTooltip(s: string) {
     PUBLISHED: '已发布状态：任务在线，C 端用户可见并可参与',
     OFFLINE: '已下线状态：任务已停止，C 端用户不可见',
     SCHEDULED: '定时发布：任务将在指定时间自动发布',
+    DELETED: '已删除：任务已被逻辑删除',
   }[s] || s
 }
 
@@ -488,6 +463,49 @@ async function cancelSchedule(id: number) {
   }
 }
 
+async function handleDelete(row: any) {
+  try {
+    await ElMessageBox.confirm(`确定删除任务「${row.name}」？删除后不可恢复。`, '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    deletingId.value = row.id
+    await deleteTask(row.id)
+    ElMessage.success('已删除')
+    await load()
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.response?.data?.message || '删除任务失败')
+    }
+  } finally {
+    deletingId.value = null
+  }
+}
+
+function handleAction(command: string, row: any) {
+  switch (command) {
+    case 'copy':
+      openCopyDialog(row)
+      break
+    case 'publish':
+      publish(row.id)
+      break
+    case 'schedule':
+      openScheduleDialog(row)
+      break
+    case 'cancelSchedule':
+      cancelSchedule(row.id)
+      break
+    case 'offline':
+      offline(row.id)
+      break
+    case 'delete':
+      handleDelete(row)
+      break
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -601,6 +619,8 @@ onMounted(load)
 .status-pill.offline::before { background: var(--color-text-disabled); }
 .status-pill.scheduled { background: var(--color-pink-subtle); color: var(--color-pink-text); }
 .status-pill.scheduled::before { background: var(--color-pink-text); }
+.status-pill.deleted { background: var(--el-color-danger-light-9); color: var(--el-color-danger); }
+.status-pill.deleted::before { background: var(--el-color-danger); }
 
 .version-badge {
   color: var(--color-text-muted);
@@ -612,6 +632,17 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* action cell */
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.deleted-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 /* batch action bar */
