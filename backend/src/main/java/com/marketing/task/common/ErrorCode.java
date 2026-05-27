@@ -25,6 +25,8 @@ public enum ErrorCode {
 
     // ---- Task ----
     TASK_NOT_FOUND(404, "TASK_001", "任务不存在"),
+    INVALID_PARAM(422, "TASK_002", "参数错误"),
+    INVALID_STATUS(422, "TASK_003", "任务状态不允许此操作"),
 
     // ---- Step ----
     STEP_NOT_FOUND(404, "STEP_001", "步骤不存在"),

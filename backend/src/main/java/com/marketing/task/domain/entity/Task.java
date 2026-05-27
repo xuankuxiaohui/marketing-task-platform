@@ -31,8 +31,10 @@ public class Task {
     private LocalDateTime startTime;
     @Schema(description = "结束时间")
     private LocalDateTime endTime;
-    @Schema(description = "状态: DRAFT/PUBLISHED/OFFLINE")
+    @Schema(description = "状态: DRAFT/PUBLISHED/OFFLINE/SCHEDULED")
     private String status;
+    @Schema(description = "定时发布时间")
+    private LocalDateTime scheduledPublishAt;
     @Schema(description = "版本号")
     private Integer version;
     @Schema(description = "互斥组ID")

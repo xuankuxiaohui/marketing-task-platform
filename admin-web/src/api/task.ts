@@ -62,8 +62,29 @@ export function offlineTask(id: number) {
   return http.post(`/admin/task/${id}/offline`)
 }
 
-export function copyTask(id: number) {
-  return http.post(`/admin/task/${id}/copy`)
+export function copyTask(id: number, data?: { name?: string; code?: string }) {
+  return http.post(`/admin/task/${id}/copy`, data)
+}
+
+export interface BatchTaskResult {
+  success: number[]
+  failed: { id: number; reason: string }[]
+}
+
+export function batchPublishTasks(taskIds: number[]) {
+  return http.post<BatchTaskResult>('/admin/task/batch-publish', { taskIds })
+}
+
+export function batchOfflineTasks(taskIds: number[]) {
+  return http.post<BatchTaskResult>('/admin/task/batch-offline', { taskIds })
+}
+
+export function schedulePublishTask(id: number, publishAt: string) {
+  return http.post(`/admin/task/${id}/schedule-publish`, { publishAt })
+}
+
+export function cancelSchedulePublish(id: number) {
+  return http.post(`/admin/task/${id}/cancel-schedule`)
 }
 
 export interface TaskVersion {

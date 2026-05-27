@@ -10,6 +10,7 @@ import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.InstanceStatus;
 import com.marketing.task.domain.enums.TaskStatus;
+import com.marketing.task.domain.dto.BatchTaskResult;
 import com.marketing.task.domain.dto.TaskAggregateDTO;
 import com.marketing.task.domain.entity.TaskFilter;
 import com.marketing.task.domain.entity.TaskPlatform;
@@ -415,13 +416,68 @@ List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
         cacheService.evict(taskId);
     }
 
+    public BatchTaskResult batchPublish(List<Long> taskIds) {
+        List<Long> success = new ArrayList<>();
+        List<BatchTaskResult.FailedItem> failed = new ArrayList<>();
+        for (Long taskId : taskIds) {
+            try {
+                publish(taskId);
+                success.add(taskId);
+            } catch (Exception e) {
+                failed.add(new BatchTaskResult.FailedItem(taskId, e.getMessage()));
+            }
+        }
+        return new BatchTaskResult(success, failed);
+    }
+
+    public BatchTaskResult batchOffline(List<Long> taskIds) {
+        List<Long> success = new ArrayList<>();
+        List<BatchTaskResult.FailedItem> failed = new ArrayList<>();
+        for (Long taskId : taskIds) {
+            try {
+                offline(taskId);
+                success.add(taskId);
+            } catch (Exception e) {
+                failed.add(new BatchTaskResult.FailedItem(taskId, e.getMessage()));
+            }
+        }
+        return new BatchTaskResult(success, failed);
+    }
+
     @Transactional
-    public Long copyTask(Long sourceTaskId) {
+    public void schedulePublish(Long taskId, LocalDateTime publishAt) {
+        if (publishAt == null || !publishAt.isAfter(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.INVALID_PARAM, "定时发布时间必须在当前时间之后");
+        }
+        Task task = requireTask(taskId);
+        if (!TaskStatus.DRAFT.name().equals(task.getStatus()) && !TaskStatus.OFFLINE.name().equals(task.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS, "只有草稿或已下线的任务可以设置定时发布");
+        }
+        task.setStatus(TaskStatus.SCHEDULED.name());
+        task.setScheduledPublishAt(publishAt);
+        taskMapper.updateById(task);
+        cacheService.evict(taskId);
+    }
+
+    @Transactional
+    public void cancelScheduledPublish(Long taskId) {
+        Task task = requireTask(taskId);
+        if (!TaskStatus.SCHEDULED.name().equals(task.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS, "任务不是定时发布状态");
+        }
+        task.setStatus(TaskStatus.DRAFT.name());
+        task.setScheduledPublishAt(null);
+        taskMapper.updateById(task);
+        cacheService.evict(taskId);
+    }
+
+    @Transactional
+    public Long copyTask(Long sourceTaskId, String customName, String customCode) {
         Task source = requireTask(sourceTaskId);
 
         Task copy = new Task();
-        copy.setCode(source.getCode() + "_copy_" + System.currentTimeMillis() / 1000);
-        copy.setName(source.getName() + " (副本)");
+        copy.setCode(customCode != null && !customCode.isBlank() ? customCode : source.getCode() + "_copy_" + System.currentTimeMillis() / 1000);
+        copy.setName(customName != null && !customName.isBlank() ? customName : source.getName() + " (副本)");
         copy.setDescription(source.getDescription());
         copy.setPeriodType(source.getPeriodType());
         copy.setCronExpr(source.getCronExpr());

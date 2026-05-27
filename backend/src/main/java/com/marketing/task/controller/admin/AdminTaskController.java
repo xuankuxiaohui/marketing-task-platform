@@ -4,7 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
+import com.marketing.task.domain.dto.BatchTaskRequest;
+import com.marketing.task.domain.dto.BatchTaskResult;
+import com.marketing.task.domain.dto.SchedulePublishRequest;
 import com.marketing.task.domain.dto.TaskAggregateDTO;
+import com.marketing.task.domain.dto.TaskCopyRequest;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.TaskDefinitionSnapshot;
 import com.marketing.task.domain.entity.TaskStep;
@@ -120,9 +124,45 @@ public class AdminTaskController {
         return Result.ok(null);
     }
 
+    @PostMapping("/batch-publish")
+    public Result<BatchTaskResult> batchPublish(@Valid @RequestBody BatchTaskRequest request) {
+        BatchTaskResult result = taskService.batchPublish(request.getTaskIds());
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "BATCH_PUBLISH", "TASK", null, "批量发布 " + result.getSuccess().size() + " 个任务", null);
+        return Result.ok(result);
+    }
+
+    @PostMapping("/batch-offline")
+    public Result<BatchTaskResult> batchOffline(@Valid @RequestBody BatchTaskRequest request) {
+        BatchTaskResult result = taskService.batchOffline(request.getTaskIds());
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "BATCH_OFFLINE", "TASK", null, "批量下线 " + result.getSuccess().size() + " 个任务", null);
+        return Result.ok(result);
+    }
+
+    @PostMapping("/{id}/schedule-publish")
+    public Result<Void> schedulePublish(@PathVariable Long id, @RequestBody SchedulePublishRequest request) {
+        taskService.schedulePublish(id, request.getPublishAt());
+        Task task = taskMapper.selectById(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "SCHEDULE_PUBLISH", "TASK", id, task != null ? task.getName() : "任务#" + id, "定时发布: " + request.getPublishAt());
+        return Result.ok(null);
+    }
+
+    @PostMapping("/{id}/cancel-schedule")
+    public Result<Void> cancelSchedule(@PathVariable Long id) {
+        taskService.cancelScheduledPublish(id);
+        Task task = taskMapper.selectById(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "CANCEL_SCHEDULE", "TASK", id, task != null ? task.getName() : "任务#" + id, null);
+        return Result.ok(null);
+    }
+
     @PostMapping("/{id}/copy")
-    public Result<Long> copy(@PathVariable Long id) {
-        Long newTaskId = taskService.copyTask(id);
+    public Result<Long> copy(@PathVariable Long id, @RequestBody(required = false) TaskCopyRequest request) {
+        String customName = request != null ? request.getName() : null;
+        String customCode = request != null ? request.getCode() : null;
+        Long newTaskId = taskService.copyTask(id, customName, customCode);
         Task newTask = taskMapper.selectById(newTaskId);
         String operatorId = UserContextHolder.get().getUserId();
         operationLogService.record(operatorId, "CREATE", "TASK", newTaskId, newTask != null ? newTask.getName() : "任务#" + newTaskId, "从任务#" + id + "复制");

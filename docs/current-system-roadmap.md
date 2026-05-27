@@ -120,6 +120,7 @@
 - 任务指标页 (v0.3.0)：TaskMetrics 累计指标 + 按日趋势表格 + 日期范围选择。
 - 模拟测试 Tab (v0.3.0)：SimulateTab 用户身份模拟 + CALLBACK/PROGRESS 手动触发 + 一键全流程测试。
 - 条件分支 UI (v0.4.0)：步骤编辑弹窗新增"分支配置"区域，分支图标 + 数量 badge，target 下拉排除自身。
+- DAG 可视化步骤编辑器 (v0.4.0)：VueFlow 画布 + 拖拽节点创建 + 属性面板 + 自定义节点/边渲染 + DAG 布局算法 + 键盘快捷键 + localStorage 位置持久化。
 
 ### Client 前端
 
@@ -148,7 +149,8 @@
 | CRON 调度 | `TaskCycleScheduler` 每 5 分钟扫描并激活新周期 | 尚未实现批量预创建用户实例 |
 | allowlist/denylist | ✅ list_data 表 + ListDataService 已实现，inAllowlist/notInDenylist 可查表 | — |
 | 平台适配器 | Adapter 已注册，detail() 已通过 PlatformAdapterRegistry 合并 step + stepPlatform | IOS/Android/Miniapp adapter 均为默认实现 |
-| 步骤推进 | ✅ 条件分支已实现，多分支路由 + 默认线性 fallback | 尚未支持可视化 DAG 编辑 |
+| 步骤推进 | ✅ 条件分支已实现，多分支路由 + 默认线性 fallback | — |
+| DAG 可视化编辑 | ✅ VueFlow 画布 + 拖拽节点 + 属性面板 | — |
 | 集成测试 | ✅ 171 tests 全量通过 (153 unit + 18 integration)，含 HTTP MockMvc 层 | — |
 | OpenAPI 类型 | ✅ 已刷新，消除手写与生成差异 | — |
 
@@ -255,6 +257,21 @@
 7. ✅ HTTP 层 MockMvc 集成测试 (v0.4.0)：AdminTaskControllerTest (4) + ClientTaskControllerTest (5)。
 8. ✅ 前端类型刷新 (v0.4.0)：admin-web 类型与后端 OpenAPI 保持一致。
 
+### P4：发布效率增强 (v0.5.0)
+
+1. **Copy 功能增强**：
+   - 后端 copy 端点支持自定义名称/code 参数。
+   - 前端复制弹窗，预填默认名称，允许修改。
+2. **批量发布/下线**：
+   - `POST /api/admin/task/batch-publish` + `batch-offline` 端点。
+   - 独立执行语义，返回成功/失败明细。
+   - 前端多选 checkbox + 批量操作工具栏 + 结果反馈弹窗。
+3. **定时发布**：
+   - `task` 表新增 `scheduled_publish_at` 列 (Flyway V15)。
+   - `TaskStatus` 枚举新增 `SCHEDULED`。
+   - 新建 `TaskPublishScheduler` 每分钟扫描并自动发布。
+   - 前端定时发布弹窗 + 取消定时功能。
+
 ## 4. 建议的下一步落地顺序
 
 ```mermaid
@@ -276,5 +293,8 @@ flowchart TD
     O --> P[P2-4 监控指标与埋点 ✅]
     P --> Q[P2-5 审计日志 ✅]
     Q --> R[P3 工程化补齐 ✅]
-    R --> S[下一步: SSO对接 / 批量预创建实例 / DAG可视化编辑]
+    R --> S[DAG 可视化编辑器 ✅]
+    S --> T[P4-1 Copy 功能增强]
+    T --> U[P4-2 批量发布/下线]
+    U --> V[P4-3 定时发布]
 ```

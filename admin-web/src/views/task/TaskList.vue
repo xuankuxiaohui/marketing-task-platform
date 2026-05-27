@@ -32,6 +32,7 @@
         <el-option label="草稿" value="DRAFT" />
         <el-option label="已发布" value="PUBLISHED" />
         <el-option label="已下线" value="OFFLINE" />
+        <el-option label="定时发布" value="SCHEDULED" />
       </el-select>
       <el-select v-model="filters.periodType" placeholder="全部周期" clearable style="width: 140px" @change="search">
         <el-option label="全部周期" value="" />
@@ -45,7 +46,16 @@
       <el-button @click="reset">重置</el-button>
     </div>
 
-    <el-table :data="rows" v-loading="loading">
+    <!-- batch action bar -->
+    <div v-if="selectedRows.length > 0" class="batch-bar">
+      <span class="batch-info">已选择 {{ selectedRows.length }} 个任务</span>
+      <el-button type="primary" size="small" :loading="batchPublishing" @click="batchPublish">批量发布</el-button>
+      <el-button type="danger" size="small" :loading="batchOfflining" @click="batchOffline">批量下线</el-button>
+      <el-button size="small" @click="clearSelection">取消选择</el-button>
+    </div>
+
+    <el-table :data="rows" v-loading="loading" @selection-change="onSelectionChange">
+      <el-table-column type="selection" width="50" />
       <el-table-column prop="id" label="ID" width="75" align="center" />
       <el-table-column prop="code" label="编码" min-width="140">
         <template #default="{ row }">
@@ -125,7 +135,7 @@
             size="small"
             type="default"
             :loading="copyingId === row.id"
-            @click="copy(row.id)"
+            @click="openCopyDialog(row)"
           >
             复制
           </el-button>
@@ -137,6 +147,23 @@
             @click="publish(row.id)"
           >
             发布
+          </el-button>
+          <el-button
+            v-if="row.status === 'DRAFT' || row.status === 'OFFLINE'"
+            size="small"
+            type="warning"
+            @click="openScheduleDialog(row)"
+          >
+            定时发布
+          </el-button>
+          <el-button
+            v-if="row.status === 'SCHEDULED'"
+            size="small"
+            type="danger"
+            :loading="cancellingId === row.id"
+            @click="cancelSchedule(row.id)"
+          >
+            取消定时
           </el-button>
           <el-button
             v-if="row.status === 'PUBLISHED'"
@@ -172,6 +199,45 @@
         @current-change="onPageChange"
       />
     </div>
+
+    <!-- Copy dialog -->
+    <el-dialog v-model="copyDialogVisible" title="复制任务" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="原任务">
+          <el-input :model-value="copyForm.originalName" disabled />
+        </el-form-item>
+        <el-form-item label="新名称">
+          <el-input v-model="copyForm.name" placeholder="请输入新任务名称" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="copyDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="copyingId === copyForm.id" @click="confirmCopy">确认复制</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Schedule publish dialog -->
+    <el-dialog v-model="scheduleDialogVisible" title="定时发布" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="任务">
+          <el-input :model-value="scheduleForm.taskName" disabled />
+        </el-form-item>
+        <el-form-item label="发布时间">
+          <el-date-picker
+            v-model="scheduleForm.publishAt"
+            type="datetime"
+            placeholder="选择发布时间"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="scheduleDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="schedulingId === scheduleForm.taskId" @click="confirmSchedule">确认定时</el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -180,7 +246,7 @@ defineOptions({ name: 'TaskList' })
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { listTasks, offlineTask, publishTask, copyTask } from '../../api/task'
+import { listTasks, offlineTask, publishTask, copyTask, batchPublishTasks, batchOfflineTasks, schedulePublishTask, cancelSchedulePublish } from '../../api/task'
 import { listMutexGroups, type MutexGroup } from '../../api/mutex-group'
 
 const router = useRouter()
@@ -192,6 +258,21 @@ const publishingId = ref<number | null>(null)
 const offliningId = ref<number | null>(null)
 const copyingId = ref<number | null>(null)
 
+// Copy dialog state
+const copyDialogVisible = ref(false)
+const copyForm = reactive({ id: 0, name: '', originalName: '' })
+
+// Batch operation state
+const selectedRows = ref<any[]>([])
+const batchPublishing = ref(false)
+const batchOfflining = ref(false)
+
+// Schedule dialog state
+const scheduleDialogVisible = ref(false)
+const scheduleForm = reactive({ taskId: 0, taskName: '', publishAt: '' })
+const schedulingId = ref<number | null>(null)
+const cancellingId = ref<number | null>(null)
+
 const pagination = reactive({ page: 1, size: 20 })
 const filters = reactive({ keyword: '', status: '', periodType: '' })
 
@@ -202,14 +283,15 @@ function getMutexGroupName(id: number) {
 const periodLabel = (t: string) => ({ ONCE: '一次性', DAILY: '每日', MONTHLY: '每月', CRON: 'Cron', SPECIAL: '特殊' }[t] || t)
 const periodClass = (t: string) => ({ ONCE: 'period-once', DAILY: 'period-daily', MONTHLY: 'period-monthly', CRON: 'period-cron', SPECIAL: 'period-special' }[t] || '')
 
-const statusLabel = (s: string) => ({ DRAFT: '草稿', PUBLISHED: '已发布', OFFLINE: '已下线' }[s] || s)
-const statusClass = (s: string) => ({ DRAFT: 'draft', PUBLISHED: 'published', OFFLINE: 'offline' }[s] || '')
+const statusLabel = (s: string) => ({ DRAFT: '草稿', PUBLISHED: '已发布', OFFLINE: '已下线', SCHEDULED: '定时发布' }[s] || s)
+const statusClass = (s: string) => ({ DRAFT: 'draft', PUBLISHED: 'published', OFFLINE: 'offline', SCHEDULED: 'scheduled' }[s] || '')
 
 function statusTooltip(s: string) {
   return {
     DRAFT: '草稿状态：任务尚未发布，C端用户不可见',
     PUBLISHED: '已发布状态：任务在线，C 端用户可见并可参与',
     OFFLINE: '已下线状态：任务已停止，C 端用户不可见',
+    SCHEDULED: '定时发布：任务将在指定时间自动发布',
   }[s] || s
 }
 
@@ -296,17 +378,113 @@ async function offline(id: number) {
   }
 }
 
-async function copy(id: number) {
-  copyingId.value = id
+function openCopyDialog(row: any) {
+  copyForm.id = row.id
+  copyForm.originalName = row.name
+  copyForm.name = row.name + ' (副本)'
+  copyDialogVisible.value = true
+}
+
+async function confirmCopy() {
+  copyingId.value = copyForm.id
   try {
-    const { data } = await copyTask(id)
+    const { data } = await copyTask(copyForm.id, { name: copyForm.name })
     const newTaskId = data.data
     ElMessage.success('复制成功')
+    copyDialogVisible.value = false
     router.push(`/tasks/${newTaskId}`)
   } catch (e: any) {
     ElMessage.error(e.response?.data?.message || '复制任务失败')
   } finally {
     copyingId.value = null
+  }
+}
+
+function onSelectionChange(selection: any[]) {
+  selectedRows.value = selection
+}
+
+function clearSelection() {
+  selectedRows.value = []
+}
+
+async function batchPublish() {
+  const ids = selectedRows.value.map(r => r.id)
+  if (ids.length === 0) return
+  batchPublishing.value = true
+  try {
+    const { data } = await batchPublishTasks(ids)
+    const result = data.data
+    if (result.failed.length === 0) {
+      ElMessage.success(`成功发布 ${result.success.length} 个任务`)
+    } else {
+      ElMessage.warning(`成功 ${result.success.length} 个，失败 ${result.failed.length} 个`)
+    }
+    clearSelection()
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '批量发布失败')
+  } finally {
+    batchPublishing.value = false
+  }
+}
+
+async function batchOffline() {
+  const ids = selectedRows.value.map(r => r.id)
+  if (ids.length === 0) return
+  batchOfflining.value = true
+  try {
+    const { data } = await batchOfflineTasks(ids)
+    const result = data.data
+    if (result.failed.length === 0) {
+      ElMessage.success(`成功下线 ${result.success.length} 个任务`)
+    } else {
+      ElMessage.warning(`成功 ${result.success.length} 个，失败 ${result.failed.length} 个`)
+    }
+    clearSelection()
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '批量下线失败')
+  } finally {
+    batchOfflining.value = false
+  }
+}
+
+function openScheduleDialog(row: any) {
+  scheduleForm.taskId = row.id
+  scheduleForm.taskName = row.name
+  scheduleForm.publishAt = ''
+  scheduleDialogVisible.value = true
+}
+
+async function confirmSchedule() {
+  if (!scheduleForm.publishAt) {
+    ElMessage.warning('请选择发布时间')
+    return
+  }
+  schedulingId.value = scheduleForm.taskId
+  try {
+    await schedulePublishTask(scheduleForm.taskId, scheduleForm.publishAt)
+    ElMessage.success('定时发布设置成功')
+    scheduleDialogVisible.value = false
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '设置定时发布失败')
+  } finally {
+    schedulingId.value = null
+  }
+}
+
+async function cancelSchedule(id: number) {
+  cancellingId.value = id
+  try {
+    await cancelSchedulePublish(id)
+    ElMessage.success('已取消定时发布')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '取消定时发布失败')
+  } finally {
+    cancellingId.value = null
   }
 }
 
@@ -421,6 +599,8 @@ onMounted(load)
 .status-pill.draft::before { background: var(--color-warning); }
 .status-pill.offline { background: var(--color-border-light); color: var(--color-text-muted); }
 .status-pill.offline::before { background: var(--color-text-disabled); }
+.status-pill.scheduled { background: var(--color-pink-subtle); color: var(--color-pink-text); }
+.status-pill.scheduled::before { background: var(--color-pink-text); }
 
 .version-badge {
   color: var(--color-text-muted);
@@ -432,5 +612,21 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+/* batch action bar */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--el-color-primary-light-9);
+  border-radius: 4px;
+}
+.batch-info {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  font-weight: 500;
 }
 </style>
