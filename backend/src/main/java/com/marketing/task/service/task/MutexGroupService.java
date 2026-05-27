@@ -18,6 +18,7 @@ import java.util.List;
 public class MutexGroupService {
     private final MutexGroupMapper mutexGroupMapper;
     private final TaskMapper taskMapper;
+    private final TaskDefinitionCacheService taskDefinitionCacheService;
 
     public List<MutexGroup> listAll() {
         return mutexGroupMapper.selectList(null);
@@ -54,6 +55,21 @@ public class MutexGroupService {
             throw new BusinessException(ErrorCode.MUTEX_GROUP_NOT_EMPTY, "互斥组下仍有 " + taskCount + " 个任务，无法删除");
         }
         mutexGroupMapper.deleteById(id);
+    }
+
+    @Transactional
+    public void unlinkTask(Long groupId, Long taskId) {
+        requireGroup(groupId);
+        Task task = taskMapper.selectById(taskId);
+        if (task == null) {
+            throw new BusinessException(ErrorCode.TASK_NOT_FOUND);
+        }
+        if (!groupId.equals(task.getMutexGroupId())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "该任务不属于此互斥组");
+        }
+        task.setMutexGroupId(null);
+        taskMapper.updateById(task);
+        taskDefinitionCacheService.evict(taskId);
     }
 
     public int countTasks(Long groupId) {

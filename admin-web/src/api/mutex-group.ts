@@ -33,3 +33,7 @@ export function updateMutexGroup(id: number, group: MutexGroup) {
 export function deleteMutexGroup(id: number) {
   return http.delete(`/admin/mutex-groups/${id}`)
 }
+
+export function unlinkMutexGroupTask(groupId: number, taskId: number) {
+  return http.delete(`/admin/mutex-groups/${groupId}/tasks/${taskId}`)
+}
