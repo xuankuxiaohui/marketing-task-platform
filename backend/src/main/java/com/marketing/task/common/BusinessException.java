@@ -4,7 +4,6 @@ import lombok.Getter;
 
 @Getter
 public class BusinessException extends RuntimeException {
-    private final int code;
     private final ErrorCode errorCode;
 
     public BusinessException(String message) {
@@ -18,12 +17,9 @@ public class BusinessException extends RuntimeException {
     public BusinessException(ErrorCode errorCode, String message) {
         super(message);
         this.errorCode = errorCode;
-        this.code = errorCode.getCode();
     }
 
-    public BusinessException(int code, String message) {
-        super(message);
-        this.code = code;
-        this.errorCode = null;
+    public int getHttpStatus() {
+        return errorCode.getHttpStatus();
     }
 }

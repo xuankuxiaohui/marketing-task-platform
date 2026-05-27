@@ -1,6 +1,7 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.TaskPlatform;
@@ -32,7 +33,7 @@ public class AdminPlatformController {
     public Result<TaskPlatformVO> getById(@PathVariable Long taskId, @PathVariable Long platformId) {
         TaskPlatform platform = taskPlatformMapper.selectById(platformId);
         if (platform == null || !platform.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "端配置不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "端配置不存在");
         }
         return Result.ok(TaskPlatformVO.from(platform));
     }
@@ -63,7 +64,7 @@ public class AdminPlatformController {
                                          @Valid @RequestBody TaskPlatformVO vo) {
         TaskPlatform existing = taskPlatformMapper.selectById(platformId);
         if (existing == null || !existing.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "端配置不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "端配置不存在");
         }
         TaskPlatform platform = vo.toEntity();
         platform.setId(platformId);
@@ -77,7 +78,7 @@ public class AdminPlatformController {
     public Result<Void> delete(@PathVariable Long taskId, @PathVariable Long platformId) {
         TaskPlatform existing = taskPlatformMapper.selectById(platformId);
         if (existing == null || !existing.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "端配置不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "端配置不存在");
         }
         taskPlatformMapper.deleteById(platformId);
         cacheService.evict(taskId);

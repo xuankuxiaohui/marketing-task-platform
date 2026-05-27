@@ -25,6 +25,8 @@
 
 Controller 统一返回 `Result<T>`：
 
+成功响应：
+
 ```json
 {
   "code": 0,
@@ -33,10 +35,39 @@ Controller 统一返回 `Result<T>`：
 }
 ```
 
-- 成功：`code = 0`，`message = "ok"`。
-- 业务错误：使用明确错误码和可给前端展示的 `message`。
+错误响应：
+
+```json
+{
+  "code": 4000,
+  "httpStatus": 404,
+  "subCode": "TASK_001",
+  "message": "任务不存在"
+}
+```
+
+- 成功：`code = 0`，`message = "ok"`，不返回 `httpStatus` 和 `subCode`。
+- 业务错误：`code` 为唯一业务错误码（见下表），`httpStatus` 为 HTTP 状态码，`subCode` 为人类可读标识。
+- 前端通过 `code` 区分具体错误类型，通过 `httpStatus` 判断错误大类。
 - 分页：`IPage<T>` 直接放入 `data`，不做二次包装。
 - 不在 Controller 返回裸对象、裸集合或未包装错误。
+- Controller 中的业务错误必须 `throw new BusinessException(ErrorCode.XXX)` 而非 `return Result.fail(...)`，以确保 HTTP 状态码正确。
+
+### ErrorCode 分配规则
+
+| 范围 | 域 |
+|---|---|
+| 1000-1999 | 系统通用（参数错误、未授权、无权限、资源不存在、系统错误） |
+| 2000-2999 | Auth（登录、注册） |
+| 3000-3999 | Captcha（验证码） |
+| 4000-4999 | Task（任务） |
+| 5000-5999 | Step（步骤） |
+| 6000-6999 | Instance / Mutex（实例、互斥） |
+| 7000-7999 | Cycle（周期） |
+| 8000-8999 | Prize / Reward（奖品、发奖） |
+| 9000-9999 | Filter（过滤表达式） |
+
+新增 ErrorCode 时按域分配下一个可用编号，不要跨域使用。
 
 ## 接口对象边界
 

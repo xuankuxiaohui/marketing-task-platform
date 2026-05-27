@@ -51,7 +51,7 @@ public class MutexGroupService {
         long taskCount = taskMapper.selectCount(new LambdaQueryWrapper<Task>()
                 .eq(Task::getMutexGroupId, id));
         if (taskCount > 0) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "互斥组下仍有 " + taskCount + " 个任务，无法删除");
+            throw new BusinessException(ErrorCode.MUTEX_GROUP_NOT_EMPTY, "互斥组下仍有 " + taskCount + " 个任务，无法删除");
         }
         mutexGroupMapper.deleteById(id);
     }

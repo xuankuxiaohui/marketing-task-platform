@@ -1,6 +1,7 @@
 package com.marketing.task.prize.controller;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.context.UserContextHolder;
@@ -39,14 +40,14 @@ public class ClientPrizeController {
         String userId = UserContextHolder.get().getUserId();
         PrizeRecord record = prizeService.getRecord(recordId);
         if (record == null || !record.getUserId().equals(userId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "中奖记录不存在");
+            throw new BusinessException(ErrorCode.PRIZE_RECORD_NOT_FOUND);
         }
         if (record.getExpireTime().isBefore(LocalDateTime.now())) {
-            return Result.fail(ErrorCode.BAD_REQUEST, "奖品已过期");
+            throw new BusinessException(ErrorCode.PRIZE_CLAIM_EXPIRED);
         }
         ClaimResult result = claimService.claim(recordId);
         if (result.getErrorMessage() != null) {
-            return Result.fail(ErrorCode.INTERNAL_ERROR, result.getErrorMessage());
+            throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, result.getErrorMessage());
         }
         return Result.ok(result);
     }
@@ -56,7 +57,7 @@ public class ClientPrizeController {
         String userId = UserContextHolder.get().getUserId();
         PrizeRecord record = prizeService.getRecord(recordId);
         if (record == null || !record.getUserId().equals(userId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "中奖记录不存在");
+            throw new BusinessException(ErrorCode.PRIZE_RECORD_NOT_FOUND);
         }
         return Result.ok(record);
     }

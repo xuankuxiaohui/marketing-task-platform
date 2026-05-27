@@ -3,6 +3,8 @@ package com.marketing.task.controller.admin;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.BatchTaskRequest;
 import com.marketing.task.domain.dto.BatchTaskResult;
@@ -185,7 +187,7 @@ public class AdminTaskController {
     public Result<TaskDefinitionSnapshot> versionDetail(@PathVariable Long id, @PathVariable Long versionId) {
         TaskDefinitionSnapshot snapshot = snapshotMapper.selectById(versionId);
         if (snapshot == null || !snapshot.getTaskId().equals(id)) {
-            return Result.fail(404, "版本快照不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "版本快照不存在");
         }
         return Result.ok(snapshot);
     }

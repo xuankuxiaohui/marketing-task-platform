@@ -3,6 +3,8 @@ package com.marketing.task.prize.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.marketing.task.common.BusinessException;
+import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.prize.domain.entity.Prize;
@@ -113,10 +115,10 @@ public class AdminPrizeController {
     @PostMapping("/records/{id}/reissue")
     public Result<String> reissue(@PathVariable Long id) {
         PrizeRecord record = recordMapper.selectById(id);
-        if (record == null) return Result.fail(400, "奖品记录不存在");
+        if (record == null) throw new BusinessException(ErrorCode.PRIZE_RECORD_NOT_FOUND);
         String s = record.getStatus();
-        if ("GRANTED".equals(s)) return Result.fail(400, "该记录已发放成功，无需补发");
-        if ("CLAIMING".equals(s)) return Result.fail(400, "该记录正在领取中，请稍后再试");
+        if ("GRANTED".equals(s)) throw new BusinessException(ErrorCode.PRIZE_RECORD_INVALID_STATUS, "该记录已发放成功，无需补发");
+        if ("CLAIMING".equals(s)) throw new BusinessException(ErrorCode.PRIZE_RECORD_INVALID_STATUS, "该记录正在领取中，请稍后再试");
         record.setStatus("WON");
         record.setRetryCount(0);
         record.setErrorMessage(null);

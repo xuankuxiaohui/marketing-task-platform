@@ -1,6 +1,7 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.TaskStep;
@@ -34,7 +35,7 @@ public class AdminStepController {
     public Result<TaskStepVO> getById(@PathVariable Long taskId, @PathVariable Long stepId) {
         TaskStep step = taskStepMapper.selectById(stepId);
         if (step == null || !step.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "步骤不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "步骤不存在");
         }
         return Result.ok(TaskStepVO.from(step));
     }
@@ -58,7 +59,7 @@ public class AdminStepController {
                                      @Valid @RequestBody TaskStepVO vo) {
         TaskStep existing = taskStepMapper.selectById(stepId);
         if (existing == null || !existing.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "步骤不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "步骤不存在");
         }
         TaskStep step = vo.toEntity();
         step.setId(stepId);
@@ -72,7 +73,7 @@ public class AdminStepController {
     public Result<Void> delete(@PathVariable Long taskId, @PathVariable Long stepId) {
         TaskStep existing = taskStepMapper.selectById(stepId);
         if (existing == null || !existing.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "步骤不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "步骤不存在");
         }
         taskStepMapper.deleteById(stepId);
         cacheService.evict(taskId);

@@ -20,19 +20,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Result<Void>> handleBusinessException(BusinessException ex) {
-        String subCode = ex.getErrorCode() != null ? ex.getErrorCode().getSubCode() : "NONE";
-        String logMsg = "BusinessException [{}] {} - {}";
-        if (ex.getCode() >= 500) {
-            log.error(logMsg, subCode, ex.getCode(), ex.getMessage(), ex);
+        ErrorCode ec = ex.getErrorCode();
+        if (ec.getHttpStatus() >= 500) {
+            log.error("BusinessException [{}] {} - {}", ec.getSubCode(), ec.getCode(), ex.getMessage(), ex);
         } else {
-            log.warn(logMsg, subCode, ex.getCode(), ex.getMessage());
+            log.warn("BusinessException [{}] {} - {}", ec.getSubCode(), ec.getCode(), ex.getMessage());
         }
-        if (ex.getErrorCode() != null) {
-            return ResponseEntity.status(ex.getCode())
-                    .body(Result.fail(ex.getErrorCode(), ex.getMessage()));
-        }
-        return ResponseEntity.status(ex.getCode())
-                .body(Result.fail(ex.getCode(), ex.getMessage()));
+        return ResponseEntity.status(ex.getHttpStatus())
+                .body(Result.fail(ec, ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

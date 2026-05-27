@@ -1,6 +1,7 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.TaskStepPlatform;
@@ -54,7 +55,7 @@ public class AdminStepPlatformController {
                                @PathVariable Long stepPlatformId) {
         TaskStepPlatform existing = taskStepPlatformMapper.selectById(stepPlatformId);
         if (existing == null || !existing.getStepId().equals(stepId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "步骤端配置不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "步骤端配置不存在");
         }
         taskStepPlatformMapper.deleteById(stepPlatformId);
         cacheService.evict(taskId);

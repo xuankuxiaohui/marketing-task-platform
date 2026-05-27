@@ -1,6 +1,7 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.TaskFilter;
@@ -33,7 +34,7 @@ public class AdminFilterCrudController {
     public Result<TaskFilterVO> getById(@PathVariable Long taskId, @PathVariable Long filterId) {
         TaskFilter filter = taskFilterMapper.selectById(filterId);
         if (filter == null || !filter.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "过滤器不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "过滤器不存在");
         }
         return Result.ok(TaskFilterVO.from(filter));
     }
@@ -65,7 +66,7 @@ public class AdminFilterCrudController {
                                        @Valid @RequestBody TaskFilterVO vo) {
         TaskFilter existing = taskFilterMapper.selectById(filterId);
         if (existing == null || !existing.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "过滤器不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "过滤器不存在");
         }
         TaskFilter filter = vo.toEntity();
         filter.setId(filterId);
@@ -79,7 +80,7 @@ public class AdminFilterCrudController {
     public Result<Void> delete(@PathVariable Long taskId, @PathVariable Long filterId) {
         TaskFilter existing = taskFilterMapper.selectById(filterId);
         if (existing == null || !existing.getTaskId().equals(taskId)) {
-            return Result.fail(ErrorCode.NOT_FOUND, "过滤器不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "过滤器不存在");
         }
         taskFilterMapper.deleteById(filterId);
         cacheService.evict(taskId);
