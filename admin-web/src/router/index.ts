@@ -13,6 +13,8 @@ import MutexGroupDetail from '../views/mutex-group/MutexGroupDetail.vue'
 import SimulatePage from '../views/simulate/SimulatePage.vue'
 import InstanceDetail from '../views/instance/InstanceDetail.vue'
 import OperationLogs from '../views/OperationLogs.vue'
+import AdminUserList from '../views/user/AdminUserList.vue'
+import ClientUserList from '../views/user/ClientUserList.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -45,6 +47,8 @@ export const router = createRouter({
       component: () => import('../views/Dashboard.vue'),
       meta: { requiresAuth: true, title: '运营仪表盘' }
     },
+    { path: '/admin-users', name: 'AdminUserList', component: AdminUserList, meta: { requiresAuth: true, title: '后台用户管理' } },
+    { path: '/client-users', name: 'ClientUserList', component: ClientUserList, meta: { requiresAuth: true, title: '客户端用户管理' } },
     { path: '/simulate', name: 'SimulatePage', component: SimulatePage, meta: { requiresAuth: true, title: '模拟测试' } },
     {
       path: '/tasks/:id/metrics',

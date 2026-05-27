@@ -14,6 +14,8 @@ public enum ErrorCode {
     // ---- Auth (2000-2999) ----
     AUTH_REQUIRED(2000, 401, "AUTH_001", "缺少用户上下文"),
     USER_EXISTS(2001, 409, "AUTH_002", "用户名已存在"),
+    USER_NOT_FOUND(2002, 404, "AUTH_003", "用户不存在"),
+    CANNOT_KICK_SELF(2003, 400, "AUTH_004", "不能踢自己下线"),
 
     // ---- Captcha (3000-3999) ----
     CAPTCHA_MISSING(3000, 400, "CAPTCHA_001", "验证码参数缺失"),
