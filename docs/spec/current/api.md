@@ -1,6 +1,123 @@
 # v0.4.0 API 文档
 
-最后更新：2026-05-26
+最后更新：2026-05-27
+
+## v0.5.1 变更概述
+
+v0.5.1 新增用户管理 API（后台用户 + 客户端用户）、互斥组移除任务关联 API。
+
+---
+
+## 用户管理 API
+
+### 后台用户管理
+
+#### 分页查询后台用户
+
+```
+GET /api/admin/admin-users?page=1&size=20&keyword=admin
+```
+
+返回：`Result<IPage<AdminUser>>`
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | long | 否 | 页码，默认 1 |
+| size | long | 否 | 每页条数，默认 20 |
+| keyword | String | 否 | 搜索关键字（匹配 username / nickname） |
+
+#### 重置后台用户密码
+
+```
+PUT /api/admin/admin-users/{id}/reset-password
+```
+
+返回：`Result<String>` — 新密码明文（10 位随机字母数字）
+
+#### 启用/停用后台用户
+
+```
+PUT /api/admin/admin-users/{id}/toggle-enabled
+```
+
+返回：`Result<Boolean>` — 新的启用状态
+
+停用时自动踢下线（调用 `StpUtil.kickout()`）。
+
+#### 踢后台用户下线
+
+```
+POST /api/admin/admin-users/{id}/kick
+```
+
+返回：`Result<Void>`
+
+仅终止 session，不改变 enabled 状态。
+
+---
+
+### 客户端用户管理
+
+#### 分页查询客户端用户
+
+```
+GET /api/admin/client-users?page=1&size=20&keyword=测试
+```
+
+返回：`Result<IPage<ClientUser>>`
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | long | 否 | 页码，默认 1 |
+| size | long | 否 | 每页条数，默认 20 |
+| keyword | String | 否 | 搜索关键字（匹配 username / nickname / province / role） |
+
+#### 重置客户端用户密码
+
+```
+PUT /api/admin/client-users/{id}/reset-password
+```
+
+返回：`Result<String>` — 新密码明文
+
+#### 启用/停用客户端用户
+
+```
+PUT /api/admin/client-users/{id}/toggle-enabled
+```
+
+返回：`Result<Boolean>` — 新的启用状态
+
+停用时自动踢下线（调用 `clientStpLogic.kickout()`）。
+
+#### 踢客户端用户下线
+
+```
+POST /api/admin/client-users/{id}/kick
+```
+
+返回：`Result<Void>`
+
+---
+
+## 互斥组增强 API
+
+### 移除任务关联
+
+```
+DELETE /api/admin/mutex-groups/{groupId}/tasks/{taskId}
+```
+
+返回：`Result<Void>`
+
+将任务的 `mutex_group_id` 设为 NULL，清除任务定义缓存。
+
+错误码：
+- `NOT_FOUND` (1003) — 互斥组不存在
+- `TASK_NOT_FOUND` (4000) — 任务不存在
+- `BAD_REQUEST` (1000) — 任务不属于此互斥组
+
+---
 
 ## v0.4.0 变更概述
 

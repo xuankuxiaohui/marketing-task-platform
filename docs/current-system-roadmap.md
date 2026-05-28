@@ -1,4 +1,4 @@
-最后更新：2026-05-26
+最后更新：2026-05-27
 
 ## 1.已经完成的内容
 
@@ -93,6 +93,11 @@
 	  - MetricsService 封装 Micrometer（6 个 Counter + 1 个 Timer）。
 	  - task_metrics 聚合表 + TaskMetricsScheduler 每 5 分钟聚合。
 	  - AdminMetricsController：dashboard / task summary / daily 趋势 API。
+	- 用户管理 (v0.5.1)：
+	  - AdminUserController + ClientUserController（/api/admin/admin-users, /api/admin/client-users）。
+	  - 分页查询、重置密码、启用/停用、踢下线四个管理操作。
+	  - Sa-Token kickout() 强制踢下线，停用时自动踢。
+	  - ErrorCode 新增 USER_NOT_FOUND、CANNOT_KICK_SELF。
 	- 管理端模拟测试 (v0.3.0)：
 	  - SimulateContextHolder ThreadLocal 模拟用户上下文。
 	  - AdminSimulateController：impersonate / callback / progress / full-flow API。
@@ -121,6 +126,7 @@
 - 模拟测试 Tab (v0.3.0)：SimulateTab 用户身份模拟 + CALLBACK/PROGRESS 手动触发 + 一键全流程测试。
 - 条件分支 UI (v0.4.0)：步骤编辑弹窗新增"分支配置"区域，分支图标 + 数量 badge，target 下拉排除自身。
 - DAG 可视化步骤编辑器 (v0.4.0)：VueFlow 画布 + 拖拽节点创建 + 属性面板 + 自定义节点/边渲染 + DAG 布局算法 + 键盘快捷键 + localStorage 位置持久化。
+- 用户管理页面 (v0.5.1)：AdminUserList + ClientUserList（分页查询、重置密码弹窗、启用/停用、踢下线），侧边栏"用户管理"子菜单。
 
 ### Client 前端
 
@@ -198,11 +204,12 @@
    - ClientTaskController.detail() 注入 PlatformAdapterRegistry，合并 step + stepPlatform。
    - TaskStepVO 新增 platformConfig 字段 (buttonText/jumpType/jumpTarget)，@JsonInclude(NON_NULL)。
    - adapter.renderStep() 为每个步骤调用，支持平台特化渲染。
-4. ~~优化互斥组能力~~ ✅ 已完成 (2026-05-25)：
+4. ~~优化互斥组能力~~ ✅ 已完成 (2026-05-25, 增强 2026-05-27)：
    - mutex_group 独立表 + Admin CRUD（MutexGroupList/MutexGroupDetail）。
    - Task 表 mutex_group_key 迁移为 mutex_group_id 外键。
    - 任务编辑中互斥组改为下拉选择器；死锁修复（keyOwner 模式）。
    - 跨周期互斥 (cross_cycle 列 + Flyway V12 + 前端切换 UI)。
+   - 互斥组详情页支持移除任务关联（DELETE /{groupId}/tasks/{taskId}）。
 5. ~~增加任务灰度与实验能力~~ ✅ 已完成 (2026-05-24, v0.3.1)：
    - 百分比分流 (inGrayPercent)。
    - AB 实验分组 (inABGroup)。
