@@ -1,14 +1,12 @@
-# v0.4.0 API 文档
+# 当前版本 API 文档
 
-最后更新：2026-05-27
+最后更新：2026-05-28
 
-## v0.5.1 变更概述
-
-v0.5.1 新增用户管理 API（后台用户 + 客户端用户）、互斥组移除任务关联 API。
+当前版本：v0.5.1
 
 ---
 
-## 用户管理 API
+## v0.5.1 — 用户管理 API
 
 ### 后台用户管理
 
@@ -100,7 +98,7 @@ POST /api/admin/client-users/{id}/kick
 
 ---
 
-## 互斥组增强 API
+## v0.5.1 — 互斥组增强 API
 
 ### 移除任务关联
 
@@ -119,13 +117,172 @@ DELETE /api/admin/mutex-groups/{groupId}/tasks/{taskId}
 
 ---
 
-## v0.4.0 变更概述
+## v0.5.0 — 批量发布
 
-v0.4.0 新增条件分支路由 API、升级 Sa-Token 鉴权、步骤平台配置纳入快照。
+```
+POST /api/admin/task/batch-publish
+Content-Type: application/json
+
+{
+  "taskIds": [1, 2, 3]
+}
+```
+
+返回：`Result<BatchTaskResult>`
+
+```json
+{
+  "code": 200,
+  "data": {
+    "success": [1, 2],
+    "failed": [
+      { "id": 3, "reason": "任务状态不合法，当前状态: PUBLISHED" }
+    ]
+  }
+}
+```
+
+校验规则：
+- `taskIds` 不能为空
+- 逐个执行 `publish()`，单个失败不阻塞其他
+- 仅 DRAFT / SCHEDULED 状态可发布
 
 ---
 
-## 条件分支 API (P1)
+## v0.5.0 — 批量下线
+
+```
+POST /api/admin/task/batch-offline
+Content-Type: application/json
+
+{
+  "taskIds": [1, 2, 3]
+}
+```
+
+返回：`Result<BatchTaskResult>`
+
+校验规则：
+- `taskIds` 不能为空
+- 逐个执行 `offline()`，单个失败不阻塞其他
+- 仅 PUBLISHED 状态可下线
+
+---
+
+## v0.5.0 — 定时发布
+
+### 设置定时发布
+
+```
+POST /api/admin/task/{id}/schedule-publish
+Content-Type: application/json
+
+{
+  "publishAt": "2026-06-01T10:00:00"
+}
+```
+
+返回：`Result<Void>`
+
+校验规则：
+- `publishAt` 不能为空，必须在未来
+- 任务状态必须为 DRAFT 或 SCHEDULED
+- 设置后任务状态变为 SCHEDULED
+
+### 取消定时发布
+
+```
+POST /api/admin/task/{id}/cancel-schedule
+```
+
+返回：`Result<Void>`
+
+校验规则：
+- 任务状态必须为 SCHEDULED
+- 取消后任务状态回退为 DRAFT
+
+---
+
+## v0.5.0 — 复制任务（增强）
+
+```
+POST /api/admin/task/{id}/copy
+Content-Type: application/json
+
+{
+  "name": "自定义任务名称",
+  "code": "custom_task_code"
+}
+```
+
+返回：`Result<Long>` — 新任务 ID
+
+请求体可选：
+- `name` — 自定义名称，不传则为 `"{原名} (副本)"`
+- `code` — 自定义 code，不传则为 `"{原code}_copy_{timestamp}"`
+
+复制范围：任务主体、步骤、过滤器、平台配置、步骤平台配置、分支配置。新任务状态为 DRAFT，version=0。
+
+---
+
+## v0.5.0 — 任务软删除
+
+```
+DELETE /api/admin/task/{id}
+```
+
+返回：`Result<Void>`
+
+行为变更：从硬删除改为软删除（设置 `deleted=1`）。
+
+### 查询已删除任务
+
+```
+GET /api/admin/task?page=1&size=20&status=DELETED
+```
+
+`status=DELETED` 时查询 `deleted=1` 的任务。其他 status 值默认过滤 `deleted=0`。
+
+---
+
+## v0.5.0 — DTO 结构
+
+### BatchTaskRequest
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| taskIds | List\<Long\> | 是 | 任务 ID 列表，不能为空 |
+
+### BatchTaskResult
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| success | List\<Long\> | 成功的任务 ID 列表 |
+| failed | List\<FailedItem\> | 失败的任务及原因 |
+
+### BatchTaskResult.FailedItem
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | Long | 失败的任务 ID |
+| reason | String | 失败原因 |
+
+### SchedulePublishRequest
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| publishAt | LocalDateTime | 是 | 定时发布时间 |
+
+### TaskCopyRequest
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| name | String | 否 | 自定义任务名称 |
+| code | String | 否 | 自定义任务 code |
+
+---
+
+## v0.4.0 — 条件分支 API
 
 ### 获取步骤的分支列表
 
@@ -208,61 +365,35 @@ Content-Type: application/json
 
 ---
 
-## Sa-Token 鉴权 (P2)
+## v0.4.0 — Sa-Token 鉴权
 
-### 鉴权方式变更
+### 鉴权方式
 
-| 层面 | 变更前 | 变更后 |
-|---|---|---|
-| Admin 认证 | AdminJwtProvider + AdminAuthInterceptor | Sa-Token `StpUtil` (type=admin) + SaInterceptor |
-| Client 认证 | ClientJwtProvider + ClientAuthInterceptor | Sa-Token `StpUserUtil` (type=client) + SaInterceptor |
-| Token 格式 | 自定义 JWT (jjwt) | Sa-Token JWT 插件 (`sa-token-jwt`) |
-| 用户上下文 | UserContext + UserContextHolder | SaTokenUserContextBridge → UserContext（对外接口不变） |
+| 层面 | 实现 |
+|---|---|
+| Admin 认证 | Sa-Token `StpUtil` (type=admin) + SaInterceptor |
+| Client 认证 | Sa-Token `StpUserUtil` (type=client) + SaInterceptor |
+| Token 格式 | Sa-Token JWT 插件 (`sa-token-jwt`) |
+| 用户上下文 | SaTokenUserContextBridge → UserContext（对外接口不变） |
 
-### 登录 Controller（签名不变）
+### 登录端点
 
 ```
 POST /api/admin/auth/login
 POST /api/client/auth/login
 ```
 
-内部切换为 `StpUtil.login()` / `StpUserUtil.login()`，返回 `SaTokenInfo`。
+内部调用 `StpUtil.login()` / `StpUserUtil.login()`，返回 `SaTokenInfo`。
 
-### 新增能力
-
-| 能力 | 实现方式 |
-|---|---|
-| Token 自动续期 | `sa-token.active-timeout: 1800` |
-| 并发登录控制 | `sa-token.is-concurrent: true` |
-| 登出/Token 失效 | `StpUtil.logout()` / `StpUserUtil.logout()` |
-| SSO 扩展点 | `sa-token-sso` 依赖预留 |
-| OAuth2/OIDC 扩展点 | `sa-token-oauth2` 依赖预留 |
-
-### Mock 模式兼容
+### Mock 模式
 
 `mock-enabled: true` 时，从 `X-User-*` 请求头直接构造 UserContext，SaInterceptor 跳过鉴权。
 
 ---
 
-## 快照增强 (P3)
+## v0.3.x — 历史 API
 
-TaskSnapshotDTO 新增 `stepPlatforms` 和 `transitions` 字段，发布时固化到快照。C 端 `detail()` 从快照读取，无需回表。
-
----
-
-## HTTP 集成测试 (P3)
-
-| 测试类 | 测试数 | 覆盖 |
-|---|---|---|
-| AdminTaskControllerTest | 4 | 聚合保存+发布、获取详情、列表查询 |
-| ClientTaskControllerTest | 5 | 任务列表(含过滤)、详情、实例创建、CLICK 推进 |
-| TaskLifecycleIntegrationTest | 9 | 全链路：签到/问卷/阅读进度、互斥、灰度、快照、奖品 |
-
----
-
-## v0.3.x API（历史）
-
-### v0.3.0 — Admin Metrics API
+### Admin Metrics API
 
 ```
 GET /api/admin/metrics/dashboard
@@ -270,7 +401,7 @@ GET /api/admin/metrics/task/{taskId}/summary
 GET /api/admin/metrics/task/{taskId}/daily?from=2026-05-01&to=2026-05-24
 ```
 
-### v0.3.0 — Admin Simulation API
+### Admin Simulation API
 
 ```
 POST   /api/admin/simulate/impersonate
@@ -286,24 +417,24 @@ POST   /api/admin/simulate/click
 GET    /api/admin/simulate/instance/{instanceId}/events
 ```
 
-### v0.3.1 — Admin Instance API
+### Admin Instance API
 
 ```
 GET  /api/admin/instance?page=1&size=20&userId=xxx&taskId=123&status=IN_PROGRESS
 GET  /api/admin/instance/{id}
 ```
 
-### v0.3.1 — 过滤表达式新增灰度函数
+### 过滤表达式灰度函数
 
 `inGrayPercent(percent)`, `inABGroup(groupName)`, `inCrowd(crowdId)`
 
-### v0.3.2 — 任务列表优化
+### 任务列表优化
 
 ```
 GET /api/admin/task?page=1&size=20&status=DRAFT&keyword=签到&periodType=DAILY
 ```
 
-### v0.3.3 — 奖品记录管理
+### 奖品记录管理
 
 ```
 GET  /api/admin/prize/records?page=1&size=20&userId=xxx&prizeId=1&status=FAILED
