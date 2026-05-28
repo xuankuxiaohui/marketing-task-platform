@@ -39,4 +39,5 @@ public class Prize {
     private LocalDateTime endTime;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String activityCode;
 }

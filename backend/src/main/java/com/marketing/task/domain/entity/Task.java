@@ -50,4 +50,5 @@ public class Task {
     private String updatedBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String activityCode;
 }

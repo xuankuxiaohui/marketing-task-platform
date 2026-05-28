@@ -1,4 +1,4 @@
-package com.marketing.task.signin.domain.entity;
+package com.marketing.task.activity.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -8,25 +8,23 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("signin_config")
-public class SignInConfig {
+@TableName("activity")
+public class Activity {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String code;
     private String name;
+    private String description;
     private String status;
-    private String periodType;
-    private Integer basePoints;
-    private String streakConfig;
-    private Integer pointExpireDays;
-    private Boolean catchUpEnabled;
-    private Integer catchUpCost;
-    private Integer catchUpMaxDays;
+    private String grayType;
+    private String grayConfig;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private String description;
+    private String participationRules;
+    private Integer cacheVersion;
     private String createdBy;
     private String updatedBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private String activityCode;
+    private Integer deleted;
 }

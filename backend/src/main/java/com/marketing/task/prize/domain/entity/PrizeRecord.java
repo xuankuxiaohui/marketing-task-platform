@@ -35,4 +35,5 @@ public class PrizeRecord {
     private LocalDateTime grantedAt;
     private LocalDateTime updatedAt;
     private LocalDateTime createdAt;
+    private String activityCode;
 }
