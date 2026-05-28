@@ -19,6 +19,8 @@ export const router = createRouter({
         { path: 'tasks', component: () => import('../views/task/TaskList.vue'), meta: { requiresAuth: true } },
         { path: 'task/:id', component: () => import('../views/task/TaskDetail.vue'), meta: { requiresAuth: true, hideTabbar: true } },
         { path: 'prizes', component: () => import('../views/prize/PrizeRecords.vue'), meta: { requiresAuth: true } },
+        { path: 'signin', component: () => import('../views/signin/SignInPage.vue'), meta: { requiresAuth: true } },
+        { path: 'points', component: () => import('../views/point/PointRecords.vue'), meta: { requiresAuth: true, hideTabbar: true } },
       ],
     },
   ],

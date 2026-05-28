@@ -12,6 +12,9 @@
       <van-tabbar-item name="tasks" icon="todo-list-o">
         任务
       </van-tabbar-item>
+      <van-tabbar-item name="signin" icon="clock-o">
+        签到
+      </van-tabbar-item>
       <van-tabbar-item name="prizes" icon="gift-o">
         奖品
       </van-tabbar-item>
@@ -33,11 +36,13 @@ const showTabbar = computed(() => {
 
 const activeTab = computed(() => {
   if (route.path.startsWith('/prizes')) return 'prizes'
+  if (route.path.startsWith('/signin')) return 'signin'
   return 'tasks'
 })
 
 function onTabChange(name: string) {
-  router.push(name === 'prizes' ? '/prizes' : '/tasks')
+  const map: Record<string, string> = { tasks: '/tasks', signin: '/signin', prizes: '/prizes' }
+  router.push(map[name] || '/tasks')
 }
 </script>
 

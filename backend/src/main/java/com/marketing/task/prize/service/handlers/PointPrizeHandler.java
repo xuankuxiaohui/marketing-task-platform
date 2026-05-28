@@ -8,15 +8,20 @@ import com.marketing.task.prize.domain.entity.PrizeRecord;
 import com.marketing.task.prize.domain.enums.PrizeType;
 import com.marketing.task.prize.service.GrantResult;
 import com.marketing.task.prize.service.PrizeHandler;
+import com.marketing.task.signin.service.PointService;
 import com.marketing.task.utils.JsonUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Slf4j
 @Component("pointPrizeHandler")
+@RequiredArgsConstructor
 public class PointPrizeHandler implements PrizeHandler {
+    private final PointService pointService;
 
     @Override
     public PrizeType supports() { return PrizeType.POINT; }
@@ -38,14 +43,23 @@ public class PointPrizeHandler implements PrizeHandler {
         try {
             PointParams params = JsonUtil.jsonToObjV2(record.getPrizeParamsJson(), PointParams.class);
             int amount = params.getAmount() * record.getQuantity();
-            log.info("[PointPrize] 发放积分 userId={}, amount={}, recordId={}",
+            LocalDateTime expireAt = record.getExpireTime();
+            String reason = params.getReason() != null ? params.getReason() : prize.getName();
+
+            pointService.earn(record.getUserId(), amount, "TASK_REWARD",
+                    record.getId(), expireAt, "任务奖励: " + reason);
+
+            log.info("[PointPrize] 积分入账 userId={}, amount={}, recordId={}",
                     record.getUserId(), amount, record.getId());
-            // 内部逻辑：积分账户由本系统管理，直接入账
-            // TODO: 对接真实积分账户系统后替换
-            return GrantResult.success("PNT-" + UUID.randomUUID().toString().substring(0, 8));
+            return GrantResult.success("PNT-" + record.getId());
         } catch (Exception e) {
             log.error("积分发放失败, recordId={}", record.getId(), e);
             throw new BusinessException(ErrorCode.PRIZE_HANDLER_ERROR, "积分发放失败，请联系客服");
         }
+    }
+
+    @Override
+    public Optional<Long> queryBalance(String userId) {
+        return Optional.of(pointService.getBalance(userId).getBalance());
     }
 }

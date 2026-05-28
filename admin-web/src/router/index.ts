@@ -15,6 +15,8 @@ import InstanceDetail from '../views/instance/InstanceDetail.vue'
 import OperationLogs from '../views/OperationLogs.vue'
 import AdminUserList from '../views/user/AdminUserList.vue'
 import ClientUserList from '../views/user/ClientUserList.vue'
+import SignInConfigList from '../views/signin/SignInConfigList.vue'
+import SignInConfigEdit from '../views/signin/SignInConfigEdit.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -49,6 +51,9 @@ export const router = createRouter({
     },
     { path: '/admin-users', name: 'AdminUserList', component: AdminUserList, meta: { requiresAuth: true, title: '后台用户管理' } },
     { path: '/client-users', name: 'ClientUserList', component: ClientUserList, meta: { requiresAuth: true, title: '客户端用户管理' } },
+    { path: '/signin-configs', name: 'SignInConfigList', component: SignInConfigList, meta: { requiresAuth: true, title: '签到活动' } },
+    { path: '/signin-configs/new', name: 'SignInConfigNew', component: SignInConfigEdit, meta: { requiresAuth: true, title: '新建签到活动' } },
+    { path: '/signin-configs/:id', name: 'SignInConfigEdit', component: SignInConfigEdit, meta: { requiresAuth: true, title: (route) => `编辑签到活动 #${route.params.id}` } },
     { path: '/simulate', name: 'SimulatePage', component: SimulatePage, meta: { requiresAuth: true, title: '模拟测试' } },
     {
       path: '/tasks/:id/metrics',
