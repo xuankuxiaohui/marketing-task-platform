@@ -1,34 +1,46 @@
-/* Design tokens for client-web (Vant 4 + Vue 3) */
+/* Design tokens for client-web — "Dynamic Rewards Hub" */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Brand */
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-active: #1e40af;
-  --color-brand-subtle: #eff6ff;
-  --color-brand-gradient: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  /* ── Brand ── */
+  --color-brand: #6366f1;
+  --color-brand-hover: #4f46e5;
+  --color-brand-active: #4338ca;
+  --color-brand-subtle: #eef2ff;
+  --color-brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  --color-brand-gradient-vivid: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #c084fc 100%);
+  --color-brand-gradient-warm: linear-gradient(135deg, #f97316 0%, #ef4444 50%, #ec4899 100%);
+  --color-brand-gradient-ocean: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #6366f1 100%);
+  --color-brand-gradient-forest: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%);
+  --color-brand-gradient-sunset: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ef4444 100%);
 
-  /* Surface */
-  --color-bg: #f7f8fa;
-  --color-bg-gradient: linear-gradient(180deg, #f0f5ff 0%, #f7f8fa 40%);
+  /* ── Surface ── */
+  --color-bg: #f0f2f5;
+  --color-bg-warm: #faf8f5;
+  --color-bg-gradient: linear-gradient(180deg, #eef2ff 0%, #f0f2f5 40%);
   --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-glass: rgba(255, 255, 255, 0.72);
+  --color-surface-glass-border: rgba(255, 255, 255, 0.2);
 
-  /* Text */
-  --color-text-primary: #1e293b;
+  /* ── Text ── */
+  --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
   --color-text-muted: #94a3b8;
+  --color-text-inverse: #ffffff;
 
-  /* Border */
+  /* ── Border ── */
   --color-border: #e2e8f0;
   --color-border-light: #f1f5f9;
 
-  /* Status — instance */
+  /* ── Status — instance ── */
   --color-status-pending: #f59e0b;
   --color-status-pending-bg: #fef3c7;
   --color-status-pending-text: #92400e;
-  --color-status-progress: #2563eb;
-  --color-status-progress-bg: #dbeafe;
-  --color-status-progress-text: #1d4ed8;
+  --color-status-progress: #6366f1;
+  --color-status-progress-bg: #eef2ff;
+  --color-status-progress-text: #4338ca;
   --color-status-success: #10b981;
   --color-status-success-bg: #d1fae5;
   --color-status-success-text: #065f46;
@@ -36,119 +48,238 @@
   --color-status-expired-bg: #f1f5f9;
   --color-status-expired-text: #64748b;
 
-  /* Status — prize */
+  /* ── Status — prize ── */
   --color-won: #f59e0b;
   --color-won-bg: #fef3c7;
   --color-won-text: #92400e;
-  --color-granted: #16a34a;
-  --color-granted-bg: #dcfce7;
-  --color-granted-text: #16a34a;
-  --color-claiming-bg: #dbeafe;
-  --color-claiming-text: #2563eb;
-  --color-failed: #dc2626;
-  --color-failed-bg: #fee2e2;
+  --color-granted: #10b981;
+  --color-granted-bg: #d1fae5;
+  --color-granted-text: #065f46;
+  --color-claiming-bg: #eef2ff;
+  --color-claiming-text: #6366f1;
+  --color-failed: #ef4444;
+  --color-failed-bg: #fef2f2;
   --color-failed-text: #dc2626;
 
-  /* Period type colors */
+  /* ── Period type colors ── */
   --color-once: #f59e0b;
   --color-once-bg: #fef3c7;
   --color-once-text: #92400e;
-  --color-once-icon-bg: #fef3c7;
+  --color-once-icon-bg: linear-gradient(135deg, #fef3c7, #fde68a);
   --color-once-icon: #d97706;
-  --color-daily: #3b82f6;
-  --color-daily-bg: #dbeafe;
-  --color-daily-text: #1d4ed8;
-  --color-daily-icon-bg: #dbeafe;
-  --color-daily-icon: #2563eb;
+  --color-daily: #6366f1;
+  --color-daily-bg: #eef2ff;
+  --color-daily-text: #4338ca;
+  --color-daily-icon-bg: linear-gradient(135deg, #eef2ff, #c7d2fe);
+  --color-daily-icon: #6366f1;
   --color-monthly: #8b5cf6;
-  --color-monthly-bg: #ede9fe;
+  --color-monthly-bg: #f5f3ff;
   --color-monthly-text: #6d28d9;
-  --color-monthly-icon-bg: #ede9fe;
-  --color-monthly-icon: #7c3aed;
+  --color-monthly-icon-bg: linear-gradient(135deg, #f5f3ff, #ddd6fe);
+  --color-monthly-icon: #8b5cf6;
   --color-cron: #ec4899;
-  --color-cron-bg: #fce7f3;
+  --color-cron-bg: #fdf2f8;
   --color-cron-text: #be185d;
-  --color-cron-icon-bg: #fce7f3;
-  --color-cron-icon: #db2777;
+  --color-cron-icon-bg: linear-gradient(135deg, #fdf2f8, #fbcfe8);
+  --color-cron-icon: #ec4899;
   --color-special: #10b981;
-  --color-special-bg: #d1fae5;
+  --color-special-bg: #ecfdf5;
   --color-special-text: #047857;
-  --color-special-icon-bg: #d1fae5;
-  --color-special-icon: #059669;
+  --color-special-icon-bg: linear-gradient(135deg, #ecfdf5, #a7f3d0);
+  --color-special-icon: #10b981;
 
-  /* Step colors */
-  --color-step-done: #2563eb;
-  --color-step-active-ring: #2563eb;
+  /* ── Step colors ── */
+  --color-step-done: #6366f1;
+  --color-step-active-ring: #6366f1;
   --color-step-pending-bg: #f1f5f9;
   --color-step-line: #e2e8f0;
 
-  /* Nav */
+  /* ── Nav ── */
   --color-nav-prize: #f59e0b;
 
-  /* Spacing */
+  /* ── Accent colors ── */
+  --color-accent-orange: #f97316;
+  --color-accent-pink: #ec4899;
+  --color-accent-cyan: #06b6d4;
+  --color-accent-emerald: #10b981;
+
+  /* ── Spacing ── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
+  /* ── Radius ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-round: 9999px;
 
-  /* Shadow */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-up: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  --shadow-brand: 0 8px 24px rgba(37, 99, 235, 0.25);
+  /* ── Shadow ── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+  --shadow-up: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-brand: 0 8px 32px rgba(99, 102, 241, 0.3);
+  --shadow-brand-lg: 0 12px 40px rgba(99, 102, 241, 0.35);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.08);
 
-  /* Transition */
+  /* ── Transition ── */
   --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Font */
+  /* ── Font ── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
 
-  /* Vant 4 theme overrides */
-  --van-primary-color: #2563eb;
-  --van-blue: #2563eb;
-  --van-background: #f7f8fa;
+  /* ── Glassmorphism ── */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-blur: blur(20px);
+
+  /* ── Vant 4 theme overrides ── */
+  --van-primary-color: #6366f1;
+  --van-blue: #6366f1;
+  --van-background: #f0f2f5;
   --van-background-2: #ffffff;
-  --van-text-color: #1e293b;
+  --van-text-color: #0f172a;
   --van-text-color-2: #475569;
   --van-text-color-3: #94a3b8;
   --van-border-color: #e2e8f0;
-  --van-border-radius-lg: 10px;
-  --van-border-radius-md: 8px;
-
+  --van-border-radius-lg: 16px;
+  --van-border-radius-md: 12px;
 }
 
+/* ── Global Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.35); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Utility classes ── */
+.animate-in {
+  animation: fadeInUp 0.4s ease both;
+}
+
+.animate-in-delay-1 { animation-delay: 0.05s; }
+.animate-in-delay-2 { animation-delay: 0.1s; }
+.animate-in-delay-3 { animation-delay: 0.15s; }
+.animate-in-delay-4 { animation-delay: 0.2s; }
+.animate-in-delay-5 { animation-delay: 0.25s; }
+.animate-in-delay-6 { animation-delay: 0.3s; }
+.animate-in-delay-7 { animation-delay: 0.35s; }
+.animate-in-delay-8 { animation-delay: 0.4s; }
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.gradient-text {
+  background: var(--color-brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Toast Overrides ── */
 .van-toast {
   --van-toast-background: #ffffff;
-  --van-toast-text-color: #1e293b;
+  --van-toast-text-color: #0f172a;
   --van-toast-max-width: 80%;
   --van-toast-font-size: 14px;
-  --van-toast-radius: 10px;
-  --van-toast-text-padding: 10px 16px;
+  --van-toast-radius: 14px;
+  --van-toast-text-padding: 12px 20px;
   --van-toast-text-min-width: 0;
   --van-toast-default-width: auto;
   --van-toast-default-min-height: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 .van-toast.toast-success {
-  --van-toast-background: #ecfdf5;
+  --van-toast-background: linear-gradient(135deg, #d1fae5, #ecfdf5);
   --van-toast-text-color: #065f46;
 }
 
 .van-toast.toast-fail {
-  --van-toast-background: #fef2f2;
+  --van-toast-background: linear-gradient(135deg, #fef2f2, #fee2e2);
   --van-toast-text-color: #991b1b;
 }
 
 .van-toast.toast-info {
-  --van-toast-background: #ffffff;
-  --van-toast-text-color: #1e293b;
+  --van-toast-background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+  --van-toast-text-color: #4338ca;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
 }

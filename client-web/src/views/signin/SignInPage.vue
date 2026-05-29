@@ -1,10 +1,68 @@
 <template>
   <div class="signin-page">
-    <van-nav-bar title="签到">
-      <template #right>
-        <van-icon name="balance-o" size="20" @click="$router.push('/points')" />
-      </template>
-    </van-nav-bar>
+    <div class="signin-hero">
+      <div class="hero-bg">
+        <div class="hero-orb orb-1"></div>
+        <div class="hero-orb orb-2"></div>
+        <div class="hero-orb orb-3"></div>
+      </div>
+      <div class="hero-content">
+        <div class="hero-top">
+          <h1 class="hero-title">每日签到</h1>
+          <div class="hero-points-btn" @click="$router.push('/points')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v12M8 10l4-4 4 4M8 14l4 4 4-4" />
+            </svg>
+            <span v-if="status">{{ status.pointBalance }}</span>
+          </div>
+        </div>
+
+        <div v-if="configs.length > 1" class="config-tabs-hero">
+          <div
+            v-for="c in configs"
+            :key="c.id"
+            :class="['config-pill', { active: currentConfig?.id === c.id }]"
+            @click="switchConfig(c)"
+          >
+            {{ c.name }}
+          </div>
+        </div>
+
+        <div class="hero-stats" v-if="status">
+          <div class="stat-block">
+            <div class="stat-big">{{ status.currentStreak }}</div>
+            <div class="stat-label">连续签到</div>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-block">
+            <div class="stat-big">{{ status.pointBalance }}</div>
+            <div class="stat-label">积分余额</div>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-block">
+            <div class="stat-big">{{ calendar?.totalSignedDays || 0 }}</div>
+            <div class="stat-label">本月签到</div>
+          </div>
+        </div>
+
+        <div class="tier-section" v-if="status?.nextTierDay">
+          <div class="tier-hint">
+            再签 <strong>{{ status.nextTierDay - status.currentStreak }}</strong> 天可获
+            <strong>{{ status.nextTierBonus }}</strong> 积分
+          </div>
+          <div class="tier-bar-bg">
+            <div class="tier-bar-fill" :style="{ width: tierPercent + '%' }">
+              <div class="tier-bar-shimmer"></div>
+            </div>
+          </div>
+          <div class="tier-labels">
+            <span>0</span>
+            <span>{{ status.nextTierDay }}天</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <van-loading v-if="initialLoading" size="24px" vertical class="loading-wrap">加载中...</van-loading>
 
@@ -13,61 +71,23 @@
     </template>
 
     <template v-else>
-      <!-- Config selector (if multiple) -->
-      <div v-if="configs.length > 1" class="config-tabs">
-        <div
-          v-for="c in configs"
-          :key="c.id"
-          :class="['config-tab', { active: currentConfig?.id === c.id }]"
-          @click="switchConfig(c)"
-        >
-          {{ c.name }}
-        </div>
-      </div>
-
-      <!-- Status card -->
-      <div class="status-card" v-if="status">
-        <div class="status-top">
-          <div class="balance-section">
-            <div class="balance-label">积分余额</div>
-            <div class="balance-value">{{ status.pointBalance }}</div>
-          </div>
-          <div class="streak-section">
-            <div class="streak-value">{{ status.currentStreak }}</div>
-            <div class="streak-label">连续签到</div>
-          </div>
-        </div>
-
-        <!-- Tier progress -->
-        <div class="tier-progress" v-if="status.nextTierDay">
-          <div class="tier-hint">
-            再签 <strong>{{ status.nextTierDay - status.currentStreak }}</strong> 天可获
-            <strong>{{ status.nextTierBonus }}</strong> 积分奖励
-          </div>
-          <div class="tier-bar-bg">
-            <div class="tier-bar-fill" :style="{ width: tierPercent + '%' }"></div>
-          </div>
-          <div class="tier-bar-labels">
-            <span>0</span>
-            <span>{{ status.nextTierDay }}天</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendar -->
-      <div class="calendar-section">
+      <div class="calendar-card animate-in animate-in-delay-1">
         <div class="calendar-header">
-          <van-icon name="arrow-left" size="18" @click="prevPeriod" />
+          <div class="cal-nav" @click="prevPeriod">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
           <span class="calendar-title">{{ calendar?.periodKey || '' }}</span>
-          <van-icon name="arrow" size="18" @click="nextPeriod" />
+          <div class="cal-nav" @click="nextPeriod">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>
 
         <div class="calendar-grid" v-if="calendar">
-          <div class="calendar-day-header" v-for="d in weekDays" :key="d">{{ d }}</div>
+          <div class="cal-day-header" v-for="d in weekDays" :key="d">{{ d }}</div>
           <div
             v-for="(day, i) in calendarDays"
             :key="i"
-            :class="['calendar-day', { empty: !day.date, signed: day.signed, today: day.isToday, catchup: day.catchUp }]"
+            :class="['cal-day', { empty: !day.date, signed: day.signed, today: day.isToday, catchup: day.catchUp }]"
           >
             <template v-if="day.date">
               <span class="day-num">{{ day.dayNum }}</span>
@@ -79,54 +99,61 @@
           </div>
         </div>
 
-        <div class="calendar-stats" v-if="calendar">
-          <span>本月签到 <strong>{{ calendar.totalSignedDays }}</strong> 天</span>
-          <span>连续 <strong>{{ calendar.currentStreak }}</strong> 天</span>
+        <div class="calendar-legend" v-if="calendar">
+          <div class="legend-item">
+            <span class="legend-dot signed-dot"></span>
+            <span>已签到</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot today-dot"></span>
+            <span>今天</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot catchup-dot"></span>
+            <span>补签</span>
+          </div>
         </div>
       </div>
 
-      <!-- Action buttons -->
-      <div class="action-section">
-        <van-button
+      <div class="action-section animate-in animate-in-delay-2">
+        <button
           v-if="status && !status.todaySigned"
-          type="primary"
-          round
-          block
-          size="large"
-          :loading="signing"
+          class="sign-btn"
+          :class="{ signing }"
           @click="doSignIn"
+          :disabled="signing"
         >
-          立即签到 +{{ currentConfig?.basePoints || 0 }}积分
-        </van-button>
-        <van-button
-          v-else-if="status?.todaySigned"
-          round
-          block
-          size="large"
-          disabled
-        >
+          <span class="sign-btn-bg"></span>
+          <span class="sign-btn-content">
+            <svg v-if="!signing" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span v-if="signing" class="sign-spinner"></span>
+            <span>立即签到 +{{ currentConfig?.basePoints || 0 }}积分</span>
+          </span>
+        </button>
+        <div v-else-if="status?.todaySigned" class="signed-done">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           今日已签到
-        </van-button>
+        </div>
 
-        <van-button
+        <button
           v-if="currentConfig?.catchUpEnabled && status && !status.todaySigned"
-          plain
-          round
-          block
-          size="small"
           class="catchup-btn"
           @click="showCatchUp = true"
         >
           补签（消耗 {{ currentConfig.catchUpCost }} 积分）
-        </van-button>
+        </button>
       </div>
 
-      <!-- Sign-in result popup -->
       <van-action-sheet v-model:show="showResult" title="签到成功">
         <div class="result-content" v-if="signResult">
-          <div class="result-points">
-            <span class="result-points-value">+{{ signResult.totalPoints }}</span>
-            <span class="result-points-label">积分</span>
+          <div class="result-hero">
+            <div class="result-points-ring">
+              <span class="result-points-value">+{{ signResult.totalPoints }}</span>
+              <span class="result-points-label">积分</span>
+            </div>
           </div>
           <div class="result-details">
             <div class="result-row">
@@ -145,7 +172,6 @@
         </div>
       </van-action-sheet>
 
-      <!-- Catch-up picker -->
       <van-action-sheet v-model:show="showCatchUp" title="补签">
         <div class="catchup-content">
           <p class="catchup-desc">选择要补签的日期（消耗 {{ currentConfig?.catchUpCost }} 积分）</p>
@@ -158,6 +184,7 @@
             >
               <span class="catchup-date-text">{{ d.label }}</span>
               <span v-if="d.signed" class="catchup-date-signed">已签</span>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
         </div>
@@ -343,278 +370,244 @@ onMounted(async () => {
   background: var(--color-bg);
 }
 
-.loading-wrap {
-  margin-top: 60px;
+/* Hero */
+.signin-hero {
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 16px;
 }
 
-.config-tabs {
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #4f46e5 0%, #7c3aed 50%, #a78bfa 100%);
+}
+
+.hero-orb { position: absolute; border-radius: 50%; filter: blur(60px); }
+.orb-1 { width: 200px; height: 200px; background: rgba(236, 72, 153, 0.3); top: -60px; right: -40px; animation: float 10s ease-in-out infinite; }
+.orb-2 { width: 160px; height: 160px; background: rgba(6, 182, 212, 0.25); bottom: -40px; left: -30px; animation: float 12s ease-in-out infinite 3s; }
+.orb-3 { width: 120px; height: 120px; background: rgba(251, 191, 36, 0.2); top: 30%; left: 40%; animation: float 8s ease-in-out infinite 1s; }
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 48px 20px 0;
+}
+
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.hero-points-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-round);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+
+.hero-points-btn:active { transform: scale(0.95); }
+
+.config-tabs-hero {
   display: flex;
   gap: 8px;
-  padding: 12px 14px 0;
+  margin-top: 16px;
   overflow-x: auto;
 }
-.config-tab {
+
+.config-pill {
   flex-shrink: 0;
   padding: 6px 16px;
   border-radius: var(--radius-round);
   font-size: 13px;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
 }
-.config-tab.active {
-  background: var(--color-brand);
+
+.config-pill.active {
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
   font-weight: 600;
 }
 
-.status-card {
-  margin: 12px 14px;
-  padding: 20px;
-  background: var(--color-brand-gradient);
-  border-radius: var(--radius-lg);
-  color: #fff;
-}
-.status-top {
+.hero-stats {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-.balance-label {
-  font-size: 12px;
-  opacity: 0.8;
-}
-.balance-value {
-  font-size: 32px;
-  font-weight: 700;
-  margin-top: 2px;
-}
-.streak-section {
-  text-align: center;
-}
-.streak-value {
-  font-size: 28px;
-  font-weight: 700;
-}
-.streak-label {
-  font-size: 12px;
-  opacity: 0.8;
+  justify-content: space-around;
+  margin-top: 20px;
+  padding: 18px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tier-progress {
-  margin-top: 16px;
-}
-.tier-hint {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-bottom: 8px;
-}
-.tier-bar-bg {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.tier-bar-fill {
-  height: 100%;
-  background: #fff;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-.tier-bar-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  opacity: 0.7;
-  margin-top: 4px;
-}
+.stat-block { text-align: center; flex: 1; }
+.stat-big { font-size: 26px; font-weight: 800; color: #fff; line-height: 1.2; }
+.stat-label { font-size: 11px; color: rgba(255, 255, 255, 0.55); margin-top: 4px; }
+.stat-sep { width: 1px; height: 32px; background: rgba(255, 255, 255, 0.15); }
 
-.calendar-section {
-  margin: 0 14px 12px;
+.tier-section { margin-top: 16px; }
+.tier-hint { font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; }
+.tier-hint strong { color: #fff; }
+.tier-bar-bg { height: 8px; background: rgba(255, 255, 255, 0.15); border-radius: 4px; overflow: hidden; }
+.tier-bar-fill { height: 100%; background: #fff; border-radius: 4px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+.tier-bar-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.2), transparent); background-size: 200% 100%; animation: shimmer 2s infinite; }
+.tier-labels { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+/* Calendar */
+.calendar-card {
+  margin: -4px 16px 12px;
+  position: relative;
+  z-index: 2;
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
 }
+
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-}
-.calendar-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-primary);
+  margin-bottom: 14px;
 }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-.calendar-day-header {
-  text-align: center;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  padding: 4px 0 8px;
-}
-.calendar-day {
-  position: relative;
-  text-align: center;
-  padding: 8px 0;
-  border-radius: var(--radius-sm);
-  min-height: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.calendar-day.empty {
-  visibility: hidden;
-}
-.calendar-day.signed {
-  background: var(--color-brand-subtle);
-}
-.calendar-day.today {
-  background: var(--color-brand);
-  color: #fff;
-  border-radius: 50%;
-}
-.calendar-day.today .day-num {
-  color: #fff;
-  font-weight: 700;
-}
-.calendar-day.catchup {
-  border: 1px dashed var(--color-brand);
+.cal-nav {
+  width: 32px; height: 32px; border-radius: 10px; background: var(--color-bg);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: var(--color-text-secondary); transition: all 0.2s ease;
 }
 
-.day-num {
-  font-size: 13px;
-  color: var(--color-text-primary);
+.cal-nav:active { transform: scale(0.9); background: var(--color-brand-subtle); color: var(--color-brand); }
+.calendar-title { font-size: 16px; font-weight: 700; color: var(--color-text-primary); }
+
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day-header { text-align: center; font-size: 11px; color: var(--color-text-muted); padding: 4px 0 8px; font-weight: 500; }
+
+.cal-day {
+  position: relative; text-align: center; padding: 8px 0; border-radius: 10px;
+  min-height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.day-check {
-  color: var(--color-brand);
-  margin-top: 1px;
+.cal-day.empty { visibility: hidden; }
+.cal-day.signed { background: var(--color-brand-subtle); }
+.cal-day.today { background: var(--color-brand); color: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
+.cal-day.today .day-num { color: #fff; font-weight: 700; }
+.cal-day.catchup { border: 1.5px dashed var(--color-brand); }
+
+.day-num { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.day-check { color: var(--color-brand); margin-top: 1px; }
+.cal-day.today .day-check { color: #fff; }
+.day-catchup-badge { position: absolute; top: 2px; right: 2px; font-size: 8px; background: var(--color-brand); color: #fff; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+
+.calendar-legend {
+  display: flex; justify-content: center; gap: 16px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--color-border-light);
 }
-.calendar-day.today .day-check {
-  color: #fff;
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.signed-dot { background: var(--color-brand-subtle); border: 1px solid var(--color-brand); }
+.today-dot { background: var(--color-brand); }
+.catchup-dot { background: transparent; border: 1.5px dashed var(--color-brand); }
+
+/* Action */
+.action-section { padding: 0 16px 24px; }
+
+.sign-btn {
+  width: 100%; height: 56px; border: none; border-radius: 18px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+  background-size: 200% 200%; color: #fff; font-size: 17px; font-weight: 700;
+  font-family: var(--font-sans); cursor: pointer; position: relative;
+  overflow: hidden; transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.35);
 }
-.day-catchup-badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 8px;
-  background: var(--color-brand);
-  color: #fff;
-  border-radius: 50%;
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sign-btn:active:not(.signing) { transform: scale(0.98); }
+.sign-btn.signing { opacity: 0.8; cursor: not-allowed; }
+
+.sign-btn-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed, #a78bfa);
+  background-size: 200% 200%; animation: gradient-shift 3s ease infinite;
 }
 
-.calendar-stats {
-  display: flex;
-  justify-content: space-around;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border-light);
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-.calendar-stats strong {
-  color: var(--color-brand);
+.sign-btn-content {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
 
-.action-section {
-  padding: 0 14px 20px;
+.sign-spinner {
+  display: inline-block; width: 20px; height: 20px;
+  border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
 }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.signed-done {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; height: 56px; background: var(--color-status-success-bg);
+  color: var(--color-status-success-text); border-radius: 18px;
+  font-size: 16px; font-weight: 600;
+}
+
 .catchup-btn {
-  margin-top: 10px;
+  width: 100%; height: 44px; border: 1.5px solid var(--color-brand-subtle);
+  border-radius: 14px; background: transparent; color: var(--color-brand);
+  font-size: 14px; font-weight: 600; font-family: var(--font-sans);
+  cursor: pointer; margin-top: 10px; transition: all 0.2s ease;
 }
+.catchup-btn:active { transform: scale(0.98); background: var(--color-brand-subtle); }
 
-.result-content {
-  padding: 0 var(--space-4) var(--space-5);
+/* Result */
+.result-content { padding: 0 20px 24px; }
+.result-hero { text-align: center; padding: 24px 0; }
+.result-points-ring {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: var(--color-brand-subtle); border: 3px solid var(--color-brand);
 }
-.result-points {
-  text-align: center;
-  padding: 20px 0;
-}
-.result-points-value {
-  font-size: 40px;
-  font-weight: 700;
-  color: var(--color-brand);
-}
-.result-points-label {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  margin-left: 4px;
-}
-.result-details {
-  background: var(--color-bg);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-}
-.result-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border-light);
-}
-.result-row:last-child {
-  border-bottom: none;
-}
-.bonus-text {
-  color: var(--color-brand);
-  font-weight: 600;
-}
-.tier-text {
-  color: var(--color-brand);
-  font-weight: 600;
-}
+.result-points-value { font-size: 32px; font-weight: 800; color: var(--color-brand); }
+.result-points-label { font-size: 13px; color: var(--color-text-muted); margin-top: 2px; }
 
-.catchup-content {
-  padding: 0 var(--space-4) var(--space-5);
-}
-.catchup-desc {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin-bottom: 12px;
-}
-.catchup-dates {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.result-details { background: var(--color-bg); border-radius: var(--radius-md); padding: 12px 16px; }
+.result-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 13px; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border-light); }
+.result-row:last-child { border-bottom: none; }
+.bonus-text { color: var(--color-brand); font-weight: 700; }
+.tier-text { color: var(--color-brand); font-weight: 700; }
+
+/* Catch-up */
+.catchup-content { padding: 0 20px 24px; }
+.catchup-desc { font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px; }
+.catchup-dates { display: flex; flex-direction: column; gap: 8px; }
 .catchup-date {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: var(--color-bg);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; background: var(--color-bg); border-radius: var(--radius-md);
+  cursor: pointer; transition: all 0.2s ease;
 }
-.catchup-date:active:not(.disabled) {
-  transform: scale(0.985);
-}
-.catchup-date.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.catchup-date-text {
-  font-size: 14px;
-  color: var(--color-text-primary);
-  font-weight: 500;
-}
-.catchup-date-signed {
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
+.catchup-date:active:not(.disabled) { transform: scale(0.98); background: var(--color-brand-subtle); }
+.catchup-date.disabled { opacity: 0.5; cursor: not-allowed; }
+.catchup-date-text { font-size: 14px; color: var(--color-text-primary); font-weight: 500; }
+.catchup-date-signed { font-size: 12px; color: var(--color-text-muted); }
+
+.loading-wrap { margin-top: 60px; }
 </style>
