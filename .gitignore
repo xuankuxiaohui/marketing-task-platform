@@ -10,8 +10,7 @@ target/
 !.env.example
 .superpowers
 graphify-out/
-/client-web/tsconfig.tsbuildinfo
-/admin-web/tsconfig.tsbuildinfo
+tsconfig.tsbuildinfo
 .claude-flow/
 /client-web/src/api/generated/schema.d.ts
 /admin-web/src/api/generated/schema.d.ts
