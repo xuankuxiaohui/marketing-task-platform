@@ -2,6 +2,8 @@ package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.marketing.task.activity.domain.dto.ActivityDailyVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.marketing.task.activity.domain.dto.ActivityOverviewVO;
 import com.marketing.task.activity.domain.dto.ActivitySummaryVO;
 import com.marketing.task.activity.domain.entity.Activity;
@@ -18,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Admin - Metrics", description = "数据指标")
 @RestController
 @RequestMapping("/api/admin/metrics")
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class AdminMetricsController {
     private final ActivityStatsMapper activityStatsMapper;
     private final ActivityMapper activityMapper;
 
+    @Operation(summary = "仪表盘概览")
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> dashboard() {
         LocalDate today = LocalDate.now();
@@ -50,6 +54,7 @@ public class AdminMetricsController {
         ));
     }
 
+    @Operation(summary = "任务指标汇总")
     @GetMapping("/task/{taskId}/summary")
     public Result<Map<String, Object>> summary(@PathVariable Long taskId) {
         List<TaskMetrics> all = taskMetricsMapper.selectList(
@@ -72,6 +77,7 @@ public class AdminMetricsController {
         ));
     }
 
+    @Operation(summary = "任务每日指标")
     @GetMapping("/task/{taskId}/daily")
     public Result<List<TaskMetrics>> daily(@PathVariable Long taskId,
                                             @RequestParam String from,
@@ -82,6 +88,7 @@ public class AdminMetricsController {
 
     // --- Activity-level statistics ---
 
+    @Operation(summary = "活动指标概览")
     @GetMapping("/activities")
     public Result<List<ActivityOverviewVO>> activityOverview() {
         List<ActivityStats> allStats = activityStatsMapper.selectList(
@@ -112,6 +119,7 @@ public class AdminMetricsController {
         return Result.ok(result);
     }
 
+    @Operation(summary = "活动指标汇总")
     @GetMapping("/activity/{activityCode}/summary")
     public Result<ActivitySummaryVO> activitySummary(@PathVariable String activityCode) {
         List<ActivityStats> all = activityStatsMapper.selectList(
@@ -129,6 +137,7 @@ public class AdminMetricsController {
         return Result.ok(vo);
     }
 
+    @Operation(summary = "活动每日指标")
     @GetMapping("/activity/{activityCode}/daily")
     public Result<List<ActivityDailyVO>> activityDaily(@PathVariable String activityCode,
                                                       @RequestParam String from,

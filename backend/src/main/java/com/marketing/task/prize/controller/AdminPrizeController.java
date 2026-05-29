@@ -14,6 +14,8 @@ import com.marketing.task.prize.mapper.PrizeMapper;
 import com.marketing.task.prize.mapper.PrizeRecordMapper;
 import com.marketing.task.prize.service.ClaimService;
 import com.marketing.task.service.OperationLogService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
+@Tag(name = "Admin - Prizes", description = "奖品管理")
 @RestController
 @RequestMapping("/api/admin/prize")
 @RequiredArgsConstructor
@@ -31,6 +34,7 @@ public class AdminPrizeController {
     private final ClaimService claimService;
     private final OperationLogService operationLogService;
 
+    @Operation(summary = "分页查询奖品列表")
     @GetMapping
     public Result<Page<Prize>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -41,6 +45,7 @@ public class AdminPrizeController {
         return Result.ok(result);
     }
 
+    @Operation(summary = "创建奖品")
     @PostMapping
     public Result<Prize> create(@RequestBody Prize prize) {
         prizeMapper.insert(prize);
@@ -49,6 +54,7 @@ public class AdminPrizeController {
         return Result.ok(prize);
     }
 
+    @Operation(summary = "更新奖品")
     @PutMapping("/{id}")
     public Result<Prize> update(@PathVariable Long id, @RequestBody Prize prize) {
         prize.setId(id);
@@ -58,6 +64,7 @@ public class AdminPrizeController {
         return Result.ok(prize);
     }
 
+    @Operation(summary = "切换奖品启用状态")
     @PostMapping("/{id}/toggle")
     public Result<Void> toggle(@PathVariable Long id) {
         Prize prize = prizeMapper.selectById(id);
@@ -68,11 +75,13 @@ public class AdminPrizeController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "查询奖品详情")
     @GetMapping("/{id}")
     public Result<Prize> detail(@PathVariable Long id) {
         return Result.ok(prizeMapper.selectById(id));
     }
 
+    @Operation(summary = "查询奖品发放记录")
     @GetMapping("/{id}/records")
     public Result<List<PrizeRecord>> records(@PathVariable Long id) {
         List<PrizeRecord> records = recordMapper.selectList(
@@ -82,6 +91,7 @@ public class AdminPrizeController {
         return Result.ok(records);
     }
 
+    @Operation(summary = "分页查询全部发放记录")
     @GetMapping("/records")
     public Result<Page<PrizeRecord>> listRecords(
             @RequestParam(defaultValue = "1") int page,
@@ -114,6 +124,7 @@ public class AdminPrizeController {
                 .last("LIMIT 500"));
     }
 
+    @Operation(summary = "补发奖品")
     @PostMapping("/records/{id}/reissue")
     public Result<String> reissue(@PathVariable Long id) {
         PrizeRecord record = recordMapper.selectById(id);

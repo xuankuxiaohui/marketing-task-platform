@@ -2,15 +2,19 @@ package com.marketing.task.activity.controller;
 
 import com.marketing.task.activity.domain.dto.*;
 import com.marketing.task.activity.domain.entity.Activity;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.marketing.task.activity.domain.entity.ActivityDisplayRule;
 import com.marketing.task.activity.service.ActivityCacheService;
 import com.marketing.task.activity.service.ActivityRuleService;
 import com.marketing.task.activity.service.ActivityService;
+import com.marketing.task.activity.service.ParticipationLogService;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.context.UserContextHolder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
+@Slf4j
+@Tag(name = "Client - Activities", description = "C端活动")
 @RestController
 @RequestMapping("/api/client/activities")
 @RequiredArgsConstructor
@@ -26,7 +32,9 @@ public class ClientActivityController {
     private final ActivityService activityService;
     private final ActivityCacheService cacheService;
     private final ActivityRuleService ruleService;
+    private final ParticipationLogService participationLogService;
 
+    @Operation(summary = "获取活动列表")
     @GetMapping
     public Result<List<ActivityListVO>> list() {
         List<Activity> activities = activityService.listOnlineActivities();
@@ -44,6 +52,7 @@ public class ClientActivityController {
         return Result.ok(vos);
     }
 
+    @Operation(summary = "获取活动详情")
     @GetMapping("/{id}")
     public Result<ActivityDetailVO> getDetail(@PathVariable Long id) {
         ActivityDetailVO detail = activityService.getDetail(id);
@@ -61,6 +70,7 @@ public class ClientActivityController {
         return Result.ok(detail);
     }
 
+    @Operation(summary = "获取活动展示规则")
     @GetMapping("/{id}/display-rule")
     public ResponseEntity<?> getDisplayRule(@PathVariable Long id, @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
         Activity activity = cacheService.getActivity(id);
@@ -89,6 +99,7 @@ public class ClientActivityController {
                 .body(vo);
     }
 
+    @Operation(summary = "参与活动")
     @PostMapping("/{id}/participate")
     public Result<RuleCheckResult> participate(@PathVariable Long id, HttpServletRequest request) {
         String userId = UserContextHolder.get().getUserId();
@@ -108,6 +119,13 @@ public class ClientActivityController {
         context.setClientIp(getClientIp(request));
 
         RuleCheckResult result = ruleService.check(activity, context);
+
+        try {
+            participationLogService.recordParticipation(activity.getCode(), userIdLong, context.getClientIp(), result);
+        } catch (Exception e) {
+            log.warn("记录活动参与日志异常，不影响主流程: activityCode={}", activity.getCode(), e);
+        }
+
         if (!result.isPassed()) {
             return Result.fail(ErrorCode.ACTIVITY_RULE_CHECK_FAILED, result.getFailMessage());
         }

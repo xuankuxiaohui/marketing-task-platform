@@ -428,7 +428,23 @@ List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
         cacheService.evict(taskId);
     }
 
+    @Transactional
+    public void restoreTask(Long taskId) {
+        Task task = taskMapper.selectDeletedById(taskId);
+        if (task == null) {
+            throw new BusinessException(ErrorCode.TASK_NOT_FOUND, "任务不存在或未被删除");
+        }
+        task.setDeleted(0);
+        task.setUpdatedAt(LocalDateTime.now());
+        taskMapper.updateById(task);
+        cacheService.evict(taskId);
+        log.info("恢复任务: id={}", taskId);
+    }
+
     public BatchTaskResult batchPublish(List<Long> taskIds) {
+        if (taskIds.size() > 50) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "批量操作最多支持50个任务");
+        }
         List<Long> success = new ArrayList<>();
         List<BatchTaskResult.FailedItem> failed = new ArrayList<>();
         for (Long taskId : taskIds) {
@@ -443,6 +459,9 @@ List<TaskStepPlatform> stepPlatforms = taskStepPlatformMapper.selectList(
     }
 
     public BatchTaskResult batchOffline(List<Long> taskIds) {
+        if (taskIds.size() > 50) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "批量操作最多支持50个任务");
+        }
         List<Long> success = new ArrayList<>();
         List<BatchTaskResult.FailedItem> failed = new ArrayList<>();
         for (Long taskId : taskIds) {

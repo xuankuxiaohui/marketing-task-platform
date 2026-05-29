@@ -6,6 +6,7 @@
           <span class="page-title">后台用户管理</span>
           <p class="page-sub">管理系统后台用户账号</p>
         </div>
+        <el-button type="primary" @click="openCreateDialog">新建用户</el-button>
       </div>
     </template>
 
@@ -69,20 +70,54 @@
         @current-change="onPageChange"
       />
     </div>
+
+    <el-dialog v-model="createDialogVisible" title="新建管理员" width="420px" :close-on-click-modal="false">
+      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="80px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="createForm.username" placeholder="3-32个字符" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="createForm.password" type="password" show-password placeholder="至少6个字符" />
+        </el-form-item>
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="createForm.nickname" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="createLoading" @click="handleCreate">确定</el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'AdminUserList' })
 import { onMounted, reactive, ref } from 'vue'
+import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listAdminUsers, resetAdminUserPassword, toggleAdminUserEnabled, kickAdminUser } from '../../api/admin-user'
+import { listAdminUsers, resetAdminUserPassword, toggleAdminUserEnabled, kickAdminUser, createAdminUser } from '../../api/admin-user'
 
 const rows = ref<any[]>([])
 const loading = ref(false)
 const total = ref(0)
 const pagination = reactive({ page: 1, size: 20 })
 const filters = reactive({ keyword: '' })
+
+const createDialogVisible = ref(false)
+const createLoading = ref(false)
+const createFormRef = ref<FormInstance>()
+const createForm = reactive({ username: '', password: '', nickname: '' })
+const createRules: FormRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 32, message: '长度3-32个字符', trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 64, message: '长度6-64个字符', trigger: 'blur' },
+  ],
+}
 
 const formatTime = (t: string | null | undefined) => {
   if (!t) return '--'
@@ -137,6 +172,33 @@ async function handleKick(id: number) {
     ElMessage.success('已踢下线')
   } catch (e: any) {
     ElMessage.error(e.response?.data?.message || '操作失败')
+  }
+}
+
+function openCreateDialog() {
+  createForm.username = ''
+  createForm.password = ''
+  createForm.nickname = ''
+  createDialogVisible.value = true
+}
+
+async function handleCreate() {
+  const valid = await createFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+  createLoading.value = true
+  try {
+    await createAdminUser({
+      username: createForm.username,
+      password: createForm.password,
+      nickname: createForm.nickname || undefined,
+    })
+    ElMessage.success('创建成功')
+    createDialogVisible.value = false
+    load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '创建失败')
+  } finally {
+    createLoading.value = false
   }
 }
 

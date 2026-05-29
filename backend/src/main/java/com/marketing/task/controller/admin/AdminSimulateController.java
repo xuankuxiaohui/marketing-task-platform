@@ -15,12 +15,15 @@ import com.marketing.task.mapper.UserTaskStepProgressMapper;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import com.marketing.task.service.task.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "Admin - Simulate", description = "模拟测试")
 @RestController
 @RequestMapping("/api/admin/simulate")
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ public class AdminSimulateController {
     private final EventLogMapper eventLogMapper;
     private final TaskDefinitionCacheService cacheService;
 
+    @Operation(summary = "设置模拟用户身份")
     @PostMapping("/impersonate")
     public Result<Map<String, Object>> impersonate(@RequestBody Map<String, Object> body) {
         String userId = getString(body, "userId", "sim_user");
@@ -56,12 +60,14 @@ public class AdminSimulateController {
         return Result.ok(Map.of("userId", ctx.getUserId(), "platform", ctx.getPlatform().name()));
     }
 
+    @Operation(summary = "清除模拟用户身份")
     @DeleteMapping("/impersonate")
     public Result<Void> clearImpersonate() {
         SimulateContextHolder.clear();
         return Result.ok(null);
     }
 
+    @Operation(summary = "模拟回调事件")
     @PostMapping("/callback")
     public Result<UserTaskInstanceVO> simulateCallback(@RequestBody Map<String, Object> body) {
         Long instanceId = toLong(body.get("instanceId"));
@@ -70,6 +76,7 @@ public class AdminSimulateController {
         return Result.ok(UserTaskInstanceVO.from(stepAdvanceEngine.callback(instance, eventKey)));
     }
 
+    @Operation(summary = "模拟步骤进度推进")
     @PostMapping("/progress")
     public Result<UserTaskInstanceVO> simulateProgress(@RequestBody Map<String, Object> body) {
         Long instanceId = toLong(body.get("instanceId"));
@@ -80,6 +87,7 @@ public class AdminSimulateController {
             stepAdvanceEngine.progress(instance, stepId, progressValue.intValue())));
     }
 
+    @Operation(summary = "模拟完整任务流程")
     @PostMapping("/full-flow/{taskId}")
     public Result<List<Map<String, Object>>> fullFlow(@PathVariable Long taskId) {
         UserContext ctx = SimulateContextHolder.get();
@@ -100,6 +108,7 @@ public class AdminSimulateController {
         return Result.ok(results);
     }
 
+    @Operation(summary = "查询当前模拟状态")
     @GetMapping("/status")
     public Result<Map<String, Object>> status() {
         UserContext ctx = SimulateContextHolder.get();
@@ -109,6 +118,7 @@ public class AdminSimulateController {
 
     // ---- new standalone simulation APIs ----
 
+    @Operation(summary = "查询测试用户列表")
     @GetMapping("/test-users")
     public Result<List<Map<String, Object>>> testUsers() {
         List<UserTaskInstance> instances = instanceMapper.selectList(
@@ -131,6 +141,7 @@ public class AdminSimulateController {
         return Result.ok(users);
     }
 
+    @Operation(summary = "启动模拟任务流程")
     @PostMapping("/flow")
     public Result<Map<String, Object>> startFlow(@RequestBody Map<String, Object> body) {
         String userId = getString(body, "userId", null);
@@ -158,12 +169,14 @@ public class AdminSimulateController {
         return Result.ok(buildInstanceDetail(instance));
     }
 
+    @Operation(summary = "查询任务实例详情")
     @GetMapping("/instance/{instanceId}/detail")
     public Result<Map<String, Object>> instanceDetail(@PathVariable Long instanceId) {
         UserTaskInstance instance = taskService.requireInstance(instanceId);
         return Result.ok(buildInstanceDetail(instance));
     }
 
+    @Operation(summary = "模拟步骤点击")
     @PostMapping("/click")
     public Result<Map<String, Object>> simulateClick(@RequestBody Map<String, Object> body) {
         Long instanceId = toLong(body.get("instanceId"));
@@ -173,6 +186,7 @@ public class AdminSimulateController {
         return Result.ok(buildInstanceDetail(updated));
     }
 
+    @Operation(summary = "查询实例事件日志")
     @GetMapping("/instance/{instanceId}/events")
     public Result<List<EventLog>> instanceEvents(@PathVariable Long instanceId) {
         List<EventLog> events = eventLogMapper.selectList(

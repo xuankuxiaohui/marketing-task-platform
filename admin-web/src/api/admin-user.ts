@@ -30,3 +30,13 @@ export function toggleAdminUserEnabled(id: number) {
 export function kickAdminUser(id: number) {
   return http.post(`/admin/admin-users/${id}/kick`)
 }
+
+export interface AdminUserCreateParams {
+  username: string
+  password: string
+  nickname?: string
+}
+
+export function createAdminUser(data: AdminUserCreateParams) {
+  return http.post('/admin/admin-users', data)
+}

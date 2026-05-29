@@ -30,4 +30,7 @@ public interface TaskMapper extends BaseMapper<Task> {
     long countDeleted(@Param("status") String status,
                       @Param("keyword") String keyword,
                       @Param("periodType") String periodType);
+
+    @Select("SELECT * FROM task WHERE id = #{id} AND deleted = 1")
+    Task selectDeletedById(@Param("id") Long id);
 }

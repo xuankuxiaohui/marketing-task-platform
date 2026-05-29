@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -33,6 +34,25 @@ public class AdminUserManagementService {
         }
         wrapper.orderByDesc(AdminUser::getId);
         return adminUserMapper.selectPage(Page.of(page, size), wrapper);
+    }
+
+    @Transactional
+    public AdminUser create(String username, String password, String nickname) {
+        Long existing = adminUserMapper.selectCount(
+                new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUsername, username));
+        if (existing > 0) {
+            throw new BusinessException(ErrorCode.USER_EXISTS);
+        }
+        AdminUser user = new AdminUser();
+        user.setUsername(username);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setNickname(nickname);
+        user.setEnabled(true);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        adminUserMapper.insert(user);
+        log.info("创建管理员: id={}, username={}", user.getId(), username);
+        return user;
     }
 
     @Transactional

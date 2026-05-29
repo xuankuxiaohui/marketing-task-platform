@@ -2,6 +2,8 @@ package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "Admin - Tasks", description = "任务管理")
 @RestController
 @RequestMapping("/api/admin/task")
 @RequiredArgsConstructor
@@ -45,6 +48,7 @@ public class AdminTaskController {
     private final TaskService taskService;
     private final OperationLogService operationLogService;
 
+    @Operation(summary = "分页查询任务")
     @GetMapping
     public Result<IPage<TaskAdminVO>> page(@RequestParam(defaultValue = "1") long page,
                                            @RequestParam(defaultValue = "20") long size,
@@ -110,6 +114,7 @@ public class AdminTaskController {
         return map;
     }
 
+    @Operation(summary = "创建或更新任务")
     @PostMapping
     public Result<TaskAdminVO> save(@Valid @RequestBody TaskAggregateDTO dto) {
         TaskAdminVO vo = taskService.saveAggregate(dto);
@@ -119,11 +124,13 @@ public class AdminTaskController {
         return Result.ok(vo);
     }
 
+    @Operation(summary = "获取任务详情")
     @GetMapping("/{id}")
     public Result<TaskAdminVO> getById(@PathVariable Long id) {
         return Result.ok(TaskAdminVO.from(taskService.requireTask(id)));
     }
 
+    @Operation(summary = "发布任务")
     @PostMapping("/{id}/publish")
     public Result<Void> publish(@PathVariable Long id) {
         taskService.publish(id);
@@ -133,6 +140,7 @@ public class AdminTaskController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "下线任务")
     @PostMapping("/{id}/offline")
     public Result<Void> offline(@PathVariable Long id) {
         taskService.offline(id);
@@ -142,6 +150,7 @@ public class AdminTaskController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "删除任务")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         Task task = taskMapper.selectById(id);
@@ -152,6 +161,18 @@ public class AdminTaskController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "恢复已删除任务")
+    @PostMapping("/{id}/restore")
+    public Result<Void> restore(@PathVariable Long id) {
+        taskService.restoreTask(id);
+        Task task = taskMapper.selectById(id);
+        String operatorId = UserContextHolder.get().getUserId();
+        operationLogService.record(operatorId, "RESTORE", "TASK", id,
+                task != null ? task.getName() : "任务#" + id, null);
+        return Result.ok(null);
+    }
+
+    @Operation(summary = "批量发布")
     @PostMapping("/batch-publish")
     public Result<BatchTaskResult> batchPublish(@Valid @RequestBody BatchTaskRequest request) {
         BatchTaskResult result = taskService.batchPublish(request.getTaskIds());
@@ -160,6 +181,7 @@ public class AdminTaskController {
         return Result.ok(result);
     }
 
+    @Operation(summary = "批量下线")
     @PostMapping("/batch-offline")
     public Result<BatchTaskResult> batchOffline(@Valid @RequestBody BatchTaskRequest request) {
         BatchTaskResult result = taskService.batchOffline(request.getTaskIds());
@@ -168,6 +190,7 @@ public class AdminTaskController {
         return Result.ok(result);
     }
 
+    @Operation(summary = "定时发布")
     @PostMapping("/{id}/schedule-publish")
     public Result<Void> schedulePublish(@PathVariable Long id, @RequestBody SchedulePublishRequest request) {
         taskService.schedulePublish(id, request.getPublishAt());
@@ -177,6 +200,7 @@ public class AdminTaskController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "取消定时发布")
     @PostMapping("/{id}/cancel-schedule")
     public Result<Void> cancelSchedule(@PathVariable Long id) {
         taskService.cancelScheduledPublish(id);
@@ -186,6 +210,7 @@ public class AdminTaskController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "复制任务")
     @PostMapping("/{id}/copy")
     public Result<Long> copy(@PathVariable Long id, @RequestBody(required = false) TaskCopyRequest request) {
         String customName = request != null ? request.getName() : null;
@@ -197,6 +222,7 @@ public class AdminTaskController {
         return Result.ok(newTaskId);
     }
 
+    @Operation(summary = "获取版本历史")
     @GetMapping("/{id}/versions")
     public Result<List<TaskVersionVO>> versions(@PathVariable Long id) {
         List<TaskDefinitionSnapshot> snapshots = snapshotMapper.selectList(
@@ -209,6 +235,7 @@ public class AdminTaskController {
         return Result.ok(vos);
     }
 
+    @Operation(summary = "获取版本详情")
     @GetMapping("/{id}/versions/{versionId}")
     public Result<TaskDefinitionSnapshot> versionDetail(@PathVariable Long id, @PathVariable Long versionId) {
         TaskDefinitionSnapshot snapshot = snapshotMapper.selectById(versionId);
@@ -218,6 +245,7 @@ public class AdminTaskController {
         return Result.ok(snapshot);
     }
 
+    @Operation(summary = "获取步骤流转配置")
     @GetMapping("/{taskId}/transitions")
     public Result<List<TaskStepTransitionVO>> transitions(@PathVariable Long taskId) {
         List<TaskStepTransition> transitions = transitionMapper.selectByTaskId(taskId);

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS task (
     start_time TIMESTAMP NULL,
     end_time TIMESTAMP NULL,
     status VARCHAR(16) NOT NULL DEFAULT 'DRAFT',
+    scheduled_publish_at TIMESTAMP NULL,
     version INT NOT NULL DEFAULT 0,
     mutex_group_id BIGINT NULL,
     gray_type VARCHAR(16) DEFAULT 'NONE',
@@ -336,4 +337,61 @@ CREATE TABLE IF NOT EXISTS list_data (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_list_entry (list_type, list_key, user_id),
     INDEX idx_list_query (list_type, list_key)
+);
+
+-- V18: activity module
+CREATE TABLE IF NOT EXISTS activity (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(64) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    description VARCHAR(512) NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'DRAFT',
+    gray_type VARCHAR(16) DEFAULT 'ALL',
+    gray_config TEXT NULL,
+    start_time TIMESTAMP NULL,
+    end_time TIMESTAMP NULL,
+    participation_rules TEXT NULL,
+    cache_version INT DEFAULT 0,
+    created_by VARCHAR(64) NULL,
+    updated_by VARCHAR(64) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INT NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_activity_code (code)
+);
+
+CREATE TABLE IF NOT EXISTS activity_display_rule (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    activity_code VARCHAR(64) NOT NULL,
+    content TEXT NOT NULL,
+    content_hash VARCHAR(64) NULL,
+    updated_by VARCHAR(64) NULL,
+    updated_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_display_rule_code (activity_code)
+);
+
+CREATE TABLE IF NOT EXISTS activity_stats (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    activity_code VARCHAR(64) NOT NULL,
+    stat_date DATE NOT NULL,
+    participant_count INT DEFAULT 0,
+    completion_count INT DEFAULT 0,
+    reward_count INT DEFAULT 0,
+    UNIQUE KEY uk_activity_code_date (activity_code, stat_date)
+);
+
+-- V22: participation_log
+CREATE TABLE IF NOT EXISTS participation_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    activity_code VARCHAR(64) NOT NULL,
+    user_id BIGINT NOT NULL,
+    client_ip VARCHAR(64) NULL,
+    checker_result VARCHAR(16) NOT NULL DEFAULT 'PASS',
+    fail_code VARCHAR(64) NULL,
+    fail_message VARCHAR(256) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_pl_activity_code (activity_code),
+    INDEX idx_pl_user_activity (user_id, activity_code),
+    INDEX idx_pl_created_at (created_at)
 );

@@ -353,4 +353,42 @@ class TaskServiceTest {
         taskService = createService();
         assertDoesNotThrow(() -> taskService.getOrCreateInstance(task, ctx));
     }
+
+    @Test
+    void batchPublish_exceedingSizeLimit_shouldThrow() {
+        taskService = createService();
+        List<Long> tooManyIds = java.util.stream.LongStream.rangeClosed(1, 51).boxed().toList();
+        assertThrows(BusinessException.class, () -> taskService.batchPublish(tooManyIds));
+    }
+
+    @Test
+    void batchOffline_exceedingSizeLimit_shouldThrow() {
+        taskService = createService();
+        List<Long> tooManyIds = java.util.stream.LongStream.rangeClosed(1, 51).boxed().toList();
+        assertThrows(BusinessException.class, () -> taskService.batchOffline(tooManyIds));
+    }
+
+    @Test
+    void restoreTask_deletedTask_shouldRestore() {
+        Task deletedTask = createTask(1L, null);
+        deletedTask.setDeleted(1);
+        when(taskMapper.selectDeletedById(1L)).thenReturn(deletedTask);
+        when(taskMapper.updateById(any(Task.class))).thenReturn(1);
+
+        taskService = createService();
+        assertDoesNotThrow(() -> taskService.restoreTask(1L));
+
+        ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
+        verify(taskMapper).updateById(captor.capture());
+        assertEquals(0, captor.getValue().getDeleted());
+        verify(cacheService).evict(1L);
+    }
+
+    @Test
+    void restoreTask_nonDeletedTask_shouldThrow() {
+        when(taskMapper.selectDeletedById(1L)).thenReturn(null);
+
+        taskService = createService();
+        assertThrows(BusinessException.class, () -> taskService.restoreTask(1L));
+    }
 }

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.marketing.task.context.UserContextHolder;
 import com.marketing.task.prize.domain.entity.PrizeRecord;
 import com.marketing.task.prize.domain.enums.PrizeRecordStatus;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Client - Prizes", description = "C端奖品")
 @RestController
 @RequestMapping("/api/client/prize")
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class ClientPrizeController {
     private final ClaimService claimService;
     private final PrizeRecordMapper recordMapper;
 
+    @Operation(summary = "获取奖品记录列表")
     @GetMapping("/records")
     public Result<Map<String, Object>> records(@RequestParam(required = false) String status) {
         String userId = UserContextHolder.get().getUserId();
@@ -35,6 +39,7 @@ public class ClientPrizeController {
         return Result.ok(Map.of("records", records, "counts", counts));
     }
 
+    @Operation(summary = "领取奖品")
     @PostMapping("/{recordId}/claim")
     public Result<ClaimResult> claim(@PathVariable Long recordId) {
         String userId = UserContextHolder.get().getUserId();
@@ -52,6 +57,7 @@ public class ClientPrizeController {
         return Result.ok(result);
     }
 
+    @Operation(summary = "获取奖品记录详情")
     @GetMapping("/{recordId}")
     public Result<PrizeRecord> detail(@PathVariable Long recordId) {
         String userId = UserContextHolder.get().getUserId();

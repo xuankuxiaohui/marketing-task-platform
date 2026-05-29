@@ -59,6 +59,10 @@ export function deleteTask(id: number) {
   return http.delete(`/admin/task/${id}`)
 }
 
+export function restoreTask(id: number) {
+  return http.post(`/admin/task/${id}/restore`)
+}
+
 export function publishTask(id: number) {
   return http.post(`/admin/task/${id}/publish`)
 }

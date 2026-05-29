@@ -18,6 +18,8 @@ import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import com.marketing.task.service.task.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +28,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Tag(name = "Client - Tasks", description = "C端任务")
 @RestController
 @RequestMapping("/api/client/task")
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class ClientTaskController {
     private final PlatformAdapterRegistry platformAdapterRegistry;
     private final EventTrackingService eventTrackingService;
 
+    @Operation(summary = "获取任务列表")
     @GetMapping("/list")
     public Result<List<TaskClientVO>> list() {
         UserContext userContext = UserContextHolder.get();
@@ -48,6 +52,7 @@ public class ClientTaskController {
         return Result.ok(tasks);
     }
 
+    @Operation(summary = "获取任务详情")
     @GetMapping("/{taskId}")
     public Result<TaskInstanceDetailDTO> detail(@PathVariable Long taskId) {
         UserContext userContext = UserContextHolder.get();
@@ -74,6 +79,7 @@ public class ClientTaskController {
         return Result.ok(new TaskInstanceDetailDTO(instanceVO, stepVOs, spVOs));
     }
 
+    @Operation(summary = "开始任务")
     @PostMapping("/{taskId}/start")
     public Result<UserTaskInstanceVO> start(@PathVariable Long taskId) {
         UserContext userContext = UserContextHolder.get();
@@ -109,6 +115,7 @@ public class ClientTaskController {
                         .eq(TaskStepPlatform::getPlatform, userContext.getPlatform().name()));
     }
 
+    @Operation(summary = "点击步骤")
     @PostMapping("/{taskId}/step/{stepId}/click")
     public Result<UserTaskInstanceVO> click(@PathVariable Long taskId, @PathVariable Long stepId) {
         UserContext userContext = UserContextHolder.get();

@@ -2,6 +2,8 @@ package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.BusinessException;
@@ -27,6 +29,7 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "Admin - Instances", description = "用户实例管理")
 @RestController
 @RequestMapping("/api/admin/instance")
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class AdminInstanceController {
     private final TaskStepMapper taskStepMapper;
     private final EventLogMapper eventLogMapper;
 
+    @Operation(summary = "分页查询用户实例")
     @GetMapping
     public Result<IPage<UserTaskInstanceVO>> page(@RequestParam(defaultValue = "1") long page,
                                                    @RequestParam(defaultValue = "20") long size,
@@ -79,6 +83,7 @@ public class AdminInstanceController {
         return Result.ok(voPage);
     }
 
+    @Operation(summary = "获取实例详情")
     @GetMapping("/{id}")
     public Result<Map<String, Object>> detail(@PathVariable Long id) {
         UserTaskInstance instance = instanceMapper.selectById(id);
@@ -132,6 +137,7 @@ public class AdminInstanceController {
         return Result.ok(data);
     }
 
+    @Operation(summary = "获取实例事件日志")
     @GetMapping("/{id}/events")
     public Result<List<EventLog>> events(@PathVariable Long id) {
         List<EventLog> events = eventLogMapper.selectList(

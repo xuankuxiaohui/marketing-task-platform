@@ -160,7 +160,10 @@
                 </template>
               </el-dropdown>
             </template>
-            <span v-else class="deleted-label">已删除</span>
+            <template v-else>
+              <el-button size="small" type="success" plain @click="handleRestore(row)">恢复</el-button>
+              <span class="deleted-label">已删除</span>
+            </template>
           </div>
         </template>
       </el-table-column>
@@ -225,7 +228,7 @@ defineOptions({ name: 'TaskList' })
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listTasks, offlineTask, publishTask, copyTask, deleteTask, batchPublishTasks, batchOfflineTasks, schedulePublishTask, cancelSchedulePublish } from '../../api/task'
+import { listTasks, offlineTask, publishTask, copyTask, deleteTask, restoreTask, batchPublishTasks, batchOfflineTasks, schedulePublishTask, cancelSchedulePublish } from '../../api/task'
 import { listMutexGroups, type MutexGroup } from '../../api/mutex-group'
 
 const router = useRouter()
@@ -486,6 +489,23 @@ async function handleDelete(row: any) {
     }
   } finally {
     deletingId.value = null
+  }
+}
+
+async function handleRestore(row: any) {
+  try {
+    await ElMessageBox.confirm(`确定恢复任务「${row.name}」？`, '确认恢复', {
+      confirmButtonText: '恢复',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
+    await restoreTask(row.id)
+    ElMessage.success('已恢复')
+    await load()
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e.response?.data?.message || '恢复任务失败')
+    }
   }
 }
 

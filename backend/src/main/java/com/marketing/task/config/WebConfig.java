@@ -1,5 +1,6 @@
 package com.marketing.task.config;
 
+import com.marketing.task.interceptor.GlobalRateLimitInterceptor;
 import com.marketing.task.interceptor.UserContextInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -11,11 +12,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
     private final UserContextInterceptor userContextInterceptor;
+    private final GlobalRateLimitInterceptor rateLimitInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/api/admin/**", "/api/client/**")
+                .order(0);
         registry.addInterceptor(userContextInterceptor)
-                .addPathPatterns("/api/admin/**", "/api/client/**");
+                .addPathPatterns("/api/admin/**", "/api/client/**")
+                .order(1);
     }
 
     @Override

@@ -10,6 +10,7 @@ public enum ErrorCode {
     FORBIDDEN(1002, 403, "FORBIDDEN", "无权限"),
     NOT_FOUND(1003, 404, "NOT_FOUND", "资源不存在"),
     INTERNAL_ERROR(1004, 500, "INTERNAL_ERROR", "系统错误"),
+    RATE_LIMIT_EXCEEDED(1006, 429, "RATE_LIMIT_EXCEEDED", "请求过于频繁，请稍后重试"),
 
     // ---- Auth (2000-2999) ----
     AUTH_REQUIRED(2000, 401, "AUTH_001", "缺少用户上下文"),

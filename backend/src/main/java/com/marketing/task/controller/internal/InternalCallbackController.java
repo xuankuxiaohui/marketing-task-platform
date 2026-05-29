@@ -5,6 +5,8 @@ import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.dto.CallbackRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.marketing.task.domain.dto.ProgressRequest;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.vo.UserTaskInstanceVO;
@@ -14,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Internal", description = "内部回调接口")
 @RestController
 @RequestMapping("/api/internal/task")
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class InternalCallbackController {
     private final UserTaskInstanceMapper instanceMapper;
     private final StepAdvanceEngine stepAdvanceEngine;
 
+    @Operation(summary = "任务回调")
     @PostMapping("/callback")
     public Result<UserTaskInstanceVO> callback(@Valid @RequestBody CallbackRequest request) {
         UserTaskInstance instance = resolveInstance(request.getInstanceId(),
@@ -28,6 +32,7 @@ public class InternalCallbackController {
         return Result.ok(UserTaskInstanceVO.from(stepAdvanceEngine.callback(instance, request.getCallbackEventKey())));
     }
 
+    @Operation(summary = "任务进度上报")
     @PostMapping("/progress")
     public Result<UserTaskInstanceVO> progress(@Valid @RequestBody ProgressRequest request) {
         UserTaskInstance instance = resolveInstance(request.getInstanceId(),

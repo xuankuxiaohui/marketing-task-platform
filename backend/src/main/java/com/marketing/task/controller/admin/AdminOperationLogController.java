@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.marketing.task.common.Result;
 import com.marketing.task.domain.entity.OperationLog;
 import com.marketing.task.mapper.OperationLogMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -14,12 +16,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+@Tag(name = "Admin - Operation Logs", description = "操作日志")
 @RestController
 @RequestMapping("/api/admin/operation-logs")
 @RequiredArgsConstructor
 public class AdminOperationLogController {
     private final OperationLogMapper operationLogMapper;
 
+    @Operation(summary = "分页查询操作日志")
     @GetMapping
     public Result<IPage<OperationLog>> list(@RequestParam(defaultValue = "1") long page,
                                              @RequestParam(defaultValue = "20") long size,

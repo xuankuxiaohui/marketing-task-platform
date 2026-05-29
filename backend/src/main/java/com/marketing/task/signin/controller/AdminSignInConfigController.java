@@ -14,12 +14,15 @@ import com.marketing.task.signin.domain.enums.SignInConfigStatus;
 import com.marketing.task.signin.mapper.SignInConfigMapper;
 import com.marketing.task.signin.mapper.SignInRecordMapper;
 import com.marketing.task.signin.service.PointService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 
+@Tag(name = "Admin - Sign-in", description = "签到管理")
 @RestController
 @RequestMapping("/api/admin/signin")
 @RequiredArgsConstructor
@@ -29,6 +32,7 @@ public class AdminSignInConfigController {
     private final PointService pointService;
     private final OperationLogService operationLogService;
 
+    @Operation(summary = "分页查询签到配置列表")
     @GetMapping("/configs")
     public Result<Page<SignInConfig>> listConfigs(
             @RequestParam(defaultValue = "1") int page,
@@ -47,11 +51,13 @@ public class AdminSignInConfigController {
         return Result.ok(configMapper.selectPage(pageParam, wrapper));
     }
 
+    @Operation(summary = "查询签到配置详情")
     @GetMapping("/configs/{id}")
     public Result<SignInConfig> getConfig(@PathVariable Long id) {
         return Result.ok(requireConfig(id));
     }
 
+    @Operation(summary = "创建签到配置")
     @PostMapping("/configs")
     public Result<SignInConfig> createConfig(@RequestBody SignInConfig config) {
         config.setId(null);
@@ -65,6 +71,7 @@ public class AdminSignInConfigController {
         return Result.ok(config);
     }
 
+    @Operation(summary = "更新签到配置")
     @PutMapping("/configs/{id}")
     public Result<SignInConfig> updateConfig(@PathVariable Long id, @RequestBody SignInConfig config) {
         SignInConfig existing = requireConfig(id);
@@ -80,6 +87,7 @@ public class AdminSignInConfigController {
         return Result.ok(configMapper.selectById(id));
     }
 
+    @Operation(summary = "发布签到活动")
     @PostMapping("/configs/{id}/publish")
     public Result<Void> publish(@PathVariable Long id) {
         SignInConfig config = requireConfig(id);
@@ -95,6 +103,7 @@ public class AdminSignInConfigController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "下线签到活动")
     @PostMapping("/configs/{id}/offline")
     public Result<Void> offline(@PathVariable Long id) {
         SignInConfig config = requireConfig(id);
@@ -109,6 +118,7 @@ public class AdminSignInConfigController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "删除签到配置")
     @DeleteMapping("/configs/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         SignInConfig config = requireConfig(id);
@@ -121,6 +131,7 @@ public class AdminSignInConfigController {
         return Result.ok(null);
     }
 
+    @Operation(summary = "查询签到统计")
     @GetMapping("/configs/{id}/stats")
     public Result<Map<String, Object>> getStats(@PathVariable Long id) {
         requireConfig(id);
@@ -136,6 +147,7 @@ public class AdminSignInConfigController {
                 "totalSigned", totalCount));
     }
 
+    @Operation(summary = "查询签到记录")
     @GetMapping("/configs/{id}/records")
     public Result<Page<SignInRecord>> getRecords(
             @PathVariable Long id,
@@ -153,6 +165,7 @@ public class AdminSignInConfigController {
         return Result.ok(recordMapper.selectPage(pageParam, wrapper));
     }
 
+    @Operation(summary = "查询积分交易记录")
     @GetMapping("/points/transactions")
     public Result<Page<PointTransaction>> getPointTransactions(
             @RequestParam(defaultValue = "1") int page,
@@ -162,6 +175,7 @@ public class AdminSignInConfigController {
         return Result.ok(pointService.getTransactions(userId, type, page, size));
     }
 
+    @Operation(summary = "手动发放积分")
     @PostMapping("/points/grant")
     public Result<Void> grantPoints(@RequestBody Map<String, Object> body) {
         String userId = (String) body.get("userId");

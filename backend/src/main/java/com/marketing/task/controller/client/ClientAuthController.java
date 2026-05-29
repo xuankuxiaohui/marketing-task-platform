@@ -6,6 +6,8 @@ import com.marketing.task.domain.dto.LoginResponse;
 import com.marketing.task.domain.dto.RegisterRequest;
 import com.marketing.task.security.CaptchaService;
 import com.marketing.task.service.auth.ClientAuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Client - Auth", description = "C端认证")
 @RestController
 @RequestMapping("/api/client/auth")
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class ClientAuthController {
     @Value("${sa-token.timeout:7200}")
     private long tokenTimeout;
 
+    @Operation(summary = "用户注册")
     @PostMapping("/register")
     public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest req) {
         captchaService.verify(req.captchaKey(), req.captchaCode());
@@ -35,6 +39,7 @@ public class ClientAuthController {
                 result.orgId(), result.level(), "WEB"));
     }
 
+    @Operation(summary = "用户登录")
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         captchaService.verify(req.captchaKey(), req.captchaCode());
