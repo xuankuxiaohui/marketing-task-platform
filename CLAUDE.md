@@ -63,7 +63,7 @@ Controller 统一返回 `Result<T>`，分页直接 `Result<IPage<T>>`。
 | C 端 Vant 4 | `docs/conventions/frontend/web.md` |
 | 架构图 / ER 图 / 序列图 | `docs/architecture.md` |
 | 已完成 / 当前限制 / 路线图 | `docs/current-system-roadmap.md` |
-| 当前版本 API / SQL / release notes | `docs/spec/current/` |
+| 当前版本功能清单 / 模块 API / SQL | `docs/spec/current/` |
 | 历史版本快照 | `docs/spec/` 下 `v0.1.0` … `v0.4.0` |
 | Git 提交格式 | `docs/conventions/git.md` |
 | 本地开发 / 部署 / 上线检查 | `docs/deployment.md` |
@@ -75,4 +75,4 @@ Controller 统一返回 `Result<T>`，分页直接 `Result<IPage<T>>`。
 - 小步修改，不顺手重构无关模块；删除或迁移旧逻辑前确认没有前端、测试、文档、配置仍在引用。
 - 不新增 `any`；后端不写 `Map<String, Object>` 作为 HTTP 契约。
 - 测试范围随风险决定：后端 `cd backend && ./mvnw test`，前端 `npm run type-check` 或 `npm run build`。若未运行，说明原因和残余风险。
-- 提交格式见 `docs/conventions/git.md`。不提交构建产物、`tsconfig.tsbuildinfo`、IDE 私有配置、本地密钥。
+- 提交格式见 `docs/conventions/git.md`。
