@@ -5,9 +5,11 @@ import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.domain.enums.LimitScope;
 import com.marketing.task.activity.service.RateLimiter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(201)
 @RequiredArgsConstructor
 public class UserTotalLimitChecker extends AbstractLimitChecker {
 

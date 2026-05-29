@@ -42,26 +42,35 @@
               </svg>
               <span>任务管理</span>
             </template>
-            <el-menu-item index="/tasks">任务列表</el-menu-item>
-          </el-sub-menu>
-          <el-menu-item index="/simulate">
-            <template #title>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            <el-menu-item index="/tasks">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
               </svg>
-              <span>模拟测试</span>
-            </template>
-          </el-menu-item>
-          <el-menu-item index="/mutex-groups">
-            <template #title>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
+              <span>任务列表</span>
+            </el-menu-item>
+            <el-menu-item index="/instances">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <span>实例查询</span>
+            </el-menu-item>
+            <el-menu-item index="/mutex-groups">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
                 <circle cx="8" cy="8" r="5"/>
                 <circle cx="16" cy="16" r="5"/>
                 <line x1="10.5" y1="10.5" x2="13.5" y2="13.5"/>
               </svg>
               <span>互斥组管理</span>
-            </template>
-          </el-menu-item>
+            </el-menu-item>
+            <el-menu-item index="/simulate">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>模拟测试</span>
+            </el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/signin-configs">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
@@ -74,6 +83,31 @@
               <span>签到活动</span>
             </template>
           </el-menu-item>
+          <el-sub-menu index="/activities-group">
+            <template #title>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+              <span>活动管理</span>
+            </template>
+            <el-menu-item index="/activities">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+              </svg>
+              <span>活动列表</span>
+            </el-menu-item>
+            <el-menu-item index="/activities/sub-modules">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <circle cx="8" cy="8" r="5"/>
+                <circle cx="16" cy="16" r="5"/>
+                <line x1="10.5" y1="10.5" x2="13.5" y2="13.5"/>
+              </svg>
+              <span>活动关联</span>
+            </el-menu-item>
+          </el-sub-menu>
           <el-sub-menu index="/prizes-group">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
@@ -83,20 +117,22 @@
               </svg>
               <span>奖品管理</span>
             </template>
-            <el-menu-item index="/prizes">奖品配置</el-menu-item>
-            <el-menu-item index="/prize-records">奖品记录</el-menu-item>
-          </el-sub-menu>
-          <el-menu-item index="/instances">
-            <template #title>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
+            <el-menu-item index="/prizes">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
               </svg>
-              <span>实例查询</span>
-            </template>
-          </el-menu-item>
+              <span>奖品配置</span>
+            </el-menu-item>
+            <el-menu-item index="/prize-records">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+              <span>奖品记录</span>
+            </el-menu-item>
+          </el-sub-menu>
           <el-sub-menu index="/users-group">
             <template #title>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nav-icon">
@@ -107,8 +143,22 @@
               </svg>
               <span>用户管理</span>
             </template>
-            <el-menu-item index="/admin-users">后台用户</el-menu-item>
-            <el-menu-item index="/client-users">客户端用户</el-menu-item>
+            <el-menu-item index="/admin-users">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <span>后台用户</span>
+            </el-menu-item>
+            <el-menu-item index="/client-users">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                <path d="M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+              <span>客户端用户</span>
+            </el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="/system-group">
             <template #title>
@@ -118,7 +168,15 @@
               </svg>
               <span>系统管理</span>
             </template>
-            <el-menu-item index="/operation-logs">操作日志</el-menu-item>
+            <el-menu-item index="/operation-logs">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sub-icon">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span>操作日志</span>
+            </el-menu-item>
           </el-sub-menu>
         </el-menu>
 
@@ -180,11 +238,13 @@ tabStore.restore()
 
 const openGroups = computed(() => {
   const groups: string[] = []
-  if (route.path.startsWith('/tasks')) groups.push('/tasks-group')
-  if (route.path.startsWith('/prizes') || route.path.startsWith('/prize-records')) groups.push('/prizes-group')
-  if (route.path.startsWith('/admin-users') || route.path.startsWith('/client-users')) groups.push('/users-group')
-  if (route.path.startsWith('/operation-logs')) groups.push('/system-group')
-  if (route.path.startsWith('/signin-configs')) groups.push('/signin-group')
+  const p = route.path
+  if (p.startsWith('/tasks') || p.startsWith('/instances') || p.startsWith('/mutex-groups') || p.startsWith('/simulate')) groups.push('/tasks-group')
+  if (p.startsWith('/prizes') || p.startsWith('/prize-records')) groups.push('/prizes-group')
+  if (p.startsWith('/activities')) groups.push('/activities-group')
+  if (p.startsWith('/admin-users') || p.startsWith('/client-users')) groups.push('/users-group')
+  if (p.startsWith('/operation-logs')) groups.push('/system-group')
+  if (p.startsWith('/signin-configs')) groups.push('/signin-group')
   return groups
 })
 
@@ -193,6 +253,14 @@ const breadcrumbs = computed(() => {
   const parts: string[] = []
   if (path.startsWith('/tasks/') && path.endsWith('/metrics')) {
     parts.push('任务管理', '任务指标')
+  } else if (path.startsWith('/activities/sub-modules')) {
+    parts.push('活动管理', '活动关联')
+  } else if (path.startsWith('/activities/') && path !== '/activities' && path !== '/activities/new') {
+    parts.push('活动管理', '编辑活动')
+  } else if (path === '/activities/new') {
+    parts.push('活动管理', '新建活动')
+  } else if (path === '/activities') {
+    parts.push('活动管理', '活动列表')
   } else if (path.startsWith('/tasks/') && path !== '/tasks' && path !== '/tasks/new') {
     parts.push('任务管理', '编辑任务')
   } else if (path.startsWith('/mutex-groups/') && path !== '/mutex-groups') {
@@ -304,6 +372,11 @@ const handleLogout = () => {
   margin-right: 8px;
   flex-shrink: 0;
   opacity: 0.55;
+}
+.sub-icon {
+  margin-right: 6px;
+  flex-shrink: 0;
+  opacity: 0.4;
 }
 .sidebar-menu :deep(.el-menu-item.is-active) .nav-icon,
 .sidebar-menu :deep(.el-sub-menu.is-opened .el-sub-menu__title) .nav-icon {

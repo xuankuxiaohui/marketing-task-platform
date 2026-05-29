@@ -103,7 +103,7 @@ public class PrizeService {
         record.setPrizeIcon(prize.getIconUrl());
         record.setPrizeImage(prize.getClaimZoneImageUrl());
         record.setPrizeParamsJson(prize.getParamsJson());
-        record.setActivityId(prize.getActivityId());
+        record.setActivityCode(prize.getActivityCode());
         record.setExpireTime(calcExpireTime(prize, now));
         record.setWonAt(now);
         record.setRetryCount(0);

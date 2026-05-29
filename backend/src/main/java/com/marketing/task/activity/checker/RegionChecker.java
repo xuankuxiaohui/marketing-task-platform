@@ -5,9 +5,11 @@ import com.marketing.task.activity.domain.dto.ParticipationContext;
 import com.marketing.task.activity.domain.dto.RuleCheckResult;
 import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.domain.enums.CheckerType;
-import org.springframework.stereotype.Component;
-
-@Component
+/**
+ * Region checker — not yet implemented. Deactivated by removing @Component
+ * so Spring does not register it in the checker chain.
+ * Re-enable by adding @Component back once region logic is ready.
+ */
 public class RegionChecker extends AbstractParticipationChecker {
 
     @Override

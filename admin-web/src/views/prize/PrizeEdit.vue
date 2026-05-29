@@ -35,8 +35,8 @@
           </el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item label="活动 ID">
-            <el-input-number v-model="form.activityId" :min="0" placeholder="关联活动" controls-position="right" style="width:100%" />
+          <el-form-item label="活动编码">
+            <ActivityPicker v-model="form.activityCode" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -202,6 +202,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createPrize, getPrize, updatePrize, type Prize } from '../../api/prize'
+import ActivityPicker from '../../components/ActivityPicker.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -214,6 +215,7 @@ const form = reactive<Prize>({
   type: 'POINT',
   name: '',
   description: '',
+  activityCode: '',
   handlerBean: '',
   paramsJson: '',
   totalStock: undefined,

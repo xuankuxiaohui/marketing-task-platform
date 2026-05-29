@@ -26,15 +26,17 @@ public class LocalRateLimiter implements RateLimiter {
         long now = System.currentTimeMillis();
         long windowStart = now - window.toMillis();
 
-        while (!timestamps.isEmpty() && timestamps.peekFirst() < windowStart) {
-            timestamps.pollFirst();
-        }
+        synchronized (timestamps) {
+            while (!timestamps.isEmpty() && timestamps.peekFirst() < windowStart) {
+                timestamps.pollFirst();
+            }
 
-        if (timestamps.size() >= maxCount) {
-            return false;
-        }
+            if (timestamps.size() >= maxCount) {
+                return false;
+            }
 
-        timestamps.addLast(now);
-        return true;
+            timestamps.addLast(now);
+            return true;
+        }
     }
 }

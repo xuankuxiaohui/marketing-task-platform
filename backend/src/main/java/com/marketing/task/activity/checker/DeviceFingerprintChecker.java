@@ -1,15 +1,16 @@
 package com.marketing.task.activity.checker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketing.task.activity.domain.dto.AntiFraudConfig;
 import com.marketing.task.activity.domain.dto.ParticipationContext;
 import com.marketing.task.activity.domain.dto.RuleCheckResult;
 import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.domain.enums.AntiFraudType;
 import com.marketing.task.activity.service.RateLimiter;
+import com.marketing.task.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@Order(300)
 @RequiredArgsConstructor
 public class DeviceFingerprintChecker implements ParticipationChecker {
 
@@ -45,26 +47,22 @@ public class DeviceFingerprintChecker implements ParticipationChecker {
             return RuleCheckResult.pass();
         } catch (Exception e) {
             log.warn("DeviceFingerprintChecker执行异常: activityCode={}", activity.getCode(), e);
-            return RuleCheckResult.pass();
+            return RuleCheckResult.fail("CHECKER_ERROR", "规则校验异常，请稍后重试", checkerType());
         }
     }
 
     private AntiFraudConfig findConfig(Activity activity) {
         if (activity.getParticipationRules() == null) return null;
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> rules = mapper.readValue(activity.getParticipationRules(), new TypeReference<>() {});
-            List<Map<String, Object>> antiFraud = (List<Map<String, Object>>) rules.getOrDefault("antiFraud", Collections.emptyList());
-            for (Map<String, Object> af : antiFraud) {
-                if (checkerType().equals(af.get("type"))) {
-                    AntiFraudConfig config = new AntiFraudConfig();
-                    config.setType((String) af.get("type"));
-                    config.setParams((Map<String, Object>) af.get("params"));
-                    return config;
-                }
+        Map<String, Object> rules = JsonUtil.jsonToObj(activity.getParticipationRules(), new TypeReference<>() {});
+        if (rules == null) return null;
+        List<Map<String, Object>> antiFraud = (List<Map<String, Object>>) rules.getOrDefault("antiFraud", Collections.emptyList());
+        for (Map<String, Object> af : antiFraud) {
+            if (checkerType().equals(af.get("type"))) {
+                AntiFraudConfig config = new AntiFraudConfig();
+                config.setType((String) af.get("type"));
+                config.setParams((Map<String, Object>) af.get("params"));
+                return config;
             }
-        } catch (Exception e) {
-            log.warn("解析participation_rules失败: activityCode={}", activity.getCode(), e);
         }
         return null;
     }

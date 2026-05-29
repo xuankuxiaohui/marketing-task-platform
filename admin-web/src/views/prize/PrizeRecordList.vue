@@ -12,6 +12,7 @@
     <div class="filter-bar">
       <el-input v-model="filters.userId" placeholder="用户ID" clearable style="width:160px" />
       <el-input v-model.number="filters.prizeId" placeholder="奖品ID" clearable style="width:140px" />
+      <el-input v-model="filters.activityCode" placeholder="活动编码" clearable style="width:160px" />
       <el-select v-model="filters.status" placeholder="状态" clearable style="width:130px">
         <el-option label="待领取" value="WON" />
         <el-option label="领取中" value="CLAIMING" />
@@ -29,6 +30,12 @@
     <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="记录ID" width="90" />
       <el-table-column prop="userId" label="用户ID" width="130" />
+      <el-table-column prop="activityCode" label="活动编码" width="130">
+        <template #default="{ row }">
+          <code v-if="row.activityCode" class="code-cell">{{ row.activityCode }}</code>
+          <span v-else class="na-text">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="prizeId" label="奖品ID" width="80" align="center" />
       <el-table-column prop="prizeName" label="奖品名称" min-width="120">
         <template #default="{ row }">
@@ -93,8 +100,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'PrizeRecordList' })
 import { onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { listPrizeRecords, reissuePrizeRecord } from '../../api/prize'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const route = useRoute()
 
 const rows = ref<any[]>([])
 const total = ref(0)
@@ -107,6 +117,7 @@ const filters = reactive({
   userId: '',
   prizeId: null as number | null,
   status: '',
+  activityCode: '',
   startDate: '',
   endDate: '',
 })
@@ -142,6 +153,7 @@ async function load() {
     if (filters.userId) params.userId = filters.userId
     if (filters.prizeId) params.prizeId = filters.prizeId
     if (filters.status) params.status = filters.status
+    if (filters.activityCode) params.activityCode = filters.activityCode
     if (filters.startDate) params.startDate = filters.startDate
     if (filters.endDate) params.endDate = filters.endDate
     const { data } = await listPrizeRecords(params)
@@ -161,6 +173,7 @@ function reset() {
   filters.userId = ''
   filters.prizeId = null
   filters.status = ''
+  filters.activityCode = ''
   filters.startDate = ''
   filters.endDate = ''
   filters.page = 1
@@ -189,7 +202,13 @@ async function reissue(id: number) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  const queryCode = route.query.activityCode as string
+  if (queryCode) {
+    filters.activityCode = queryCode
+  }
+  load()
+})
 </script>
 
 <style scoped>
@@ -269,6 +288,14 @@ onMounted(load)
   font-size: 12px;
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
+}
+.code-cell {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .pager-wrap {

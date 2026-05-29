@@ -89,6 +89,7 @@ public class AdminPrizeController {
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) Long prizeId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String activityCode,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
         expireOverdueRecords();
@@ -96,6 +97,7 @@ public class AdminPrizeController {
         if (userId != null && !userId.isBlank()) qw.eq(PrizeRecord::getUserId, userId);
         if (prizeId != null) qw.eq(PrizeRecord::getPrizeId, prizeId);
         if (status != null && !status.isBlank()) qw.eq(PrizeRecord::getStatus, status);
+        if (activityCode != null && !activityCode.isBlank()) qw.eq(PrizeRecord::getActivityCode, activityCode);
         if (startDate != null && !startDate.isBlank())
             qw.ge(PrizeRecord::getWonAt, LocalDate.parse(startDate).atStartOfDay());
         if (endDate != null && !endDate.isBlank())

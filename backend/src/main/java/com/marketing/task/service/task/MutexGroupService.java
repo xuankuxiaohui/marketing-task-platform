@@ -1,6 +1,7 @@
 package com.marketing.task.service.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.marketing.task.common.BusinessException;
 import com.marketing.task.common.ErrorCode;
 import com.marketing.task.domain.entity.MutexGroup;
@@ -67,8 +68,9 @@ public class MutexGroupService {
         if (!groupId.equals(task.getMutexGroupId())) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "该任务不属于此互斥组");
         }
-        task.setMutexGroupId(null);
-        taskMapper.updateById(task);
+        taskMapper.update(null, new LambdaUpdateWrapper<Task>()
+                .eq(Task::getId, taskId)
+                .set(Task::getMutexGroupId, null));
         taskDefinitionCacheService.evict(taskId);
     }
 

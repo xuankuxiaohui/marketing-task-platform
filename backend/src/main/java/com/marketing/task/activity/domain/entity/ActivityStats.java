@@ -1,14 +1,20 @@
 package com.marketing.task.activity.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 @TableName("activity_stats")
 public class ActivityStats {
-    private Long activityId;
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    private String activityCode;
     private LocalDate statDate;
     private Integer participantCount;
     private Integer completionCount;

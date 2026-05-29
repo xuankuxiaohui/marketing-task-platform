@@ -86,6 +86,15 @@
   - 步骤推进测试。
   - 任务互斥测试。
   - 端到端集成测试（9 个场景，H2 内存库，Spring Boot Test）。
+- Activity 模块（v0.5.x）：
+  - activity / activity_display_rule / activity_stats 三表，Flyway V18-V21。
+  - 活动配置管理 CRUD + 状态机 DRAFT→PUBLISHED→ONLINE→OFFLINE。
+  - 展示规则（富文本内容 + content_hash ETag）。
+  - 灰度控制（NONE/RATIO）+ participation_rules 参与规则引擎。
+  - 参与规则校验链：白名单/新用户/次数限制/设备指纹/IP 限频。
+  - Caffeine 缓存 + cache_version 版本失效。
+  - ActivityStatsScheduler 定时上下线 + 活动统计聚合。
+  - C 端活动列表/详情/参与校验 API。
 
 	- 监控指标与埋点 (v0.3.0)：
 	  - `event_log` 表 + EventType 枚举（8 种事件类型）。
@@ -127,6 +136,7 @@
 - 条件分支 UI (v0.4.0)：步骤编辑弹窗新增"分支配置"区域，分支图标 + 数量 badge，target 下拉排除自身。
 - DAG 可视化步骤编辑器 (v0.4.0)：VueFlow 画布 + 拖拽节点创建 + 属性面板 + 自定义节点/边渲染 + DAG 布局算法 + 键盘快捷键 + localStorage 位置持久化。
 - 用户管理页面 (v0.5.1)：AdminUserList + ClientUserList（分页查询、重置密码弹窗、启用/停用、踢下线），侧边栏"用户管理"子菜单。
+- 活动管理 (v0.5.x)：活动列表页 + 活动编辑页（基本信息/展示规则/灰度配置/参与规则），Dashboard 活动维度统计卡片。
 
 ### Client 前端
 

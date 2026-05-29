@@ -17,6 +17,7 @@ import com.marketing.task.prize.mapper.PrizeMapper;
 import com.marketing.task.signin.mapper.SignInConfigMapper;
 import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.signin.domain.entity.SignInConfig;
+import com.marketing.task.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,13 +59,24 @@ public class ActivityService {
     }
 
     @Transactional
-    public Activity create(Activity activity, String operatorId) {
+    public ActivityDetailVO create(ActivityCreateRequest request, String operatorId) {
         Long existing = activityMapper.selectCount(
-                new LambdaQueryWrapper<Activity>().eq(Activity::getCode, activity.getCode()));
+                new LambdaQueryWrapper<Activity>().eq(Activity::getCode, request.getCode()));
         if (existing > 0) {
-            throw new BusinessException(ErrorCode.ACTIVITY_CODE_EXISTS, "活动编码已存在: " + activity.getCode());
+            throw new BusinessException(ErrorCode.ACTIVITY_CODE_EXISTS, "活动编码已存在: " + request.getCode());
         }
-        activity.setId(null);
+        Activity activity = new Activity();
+        activity.setCode(request.getCode());
+        activity.setName(request.getName());
+        activity.setDescription(request.getDescription());
+        activity.setGrayType(request.getGrayType());
+        activity.setGrayConfig(request.getGrayConfig());
+        if (request.getEndTime().isBefore(request.getStartTime())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "结束时间不能早于开始时间");
+        }
+        activity.setStartTime(request.getStartTime());
+        activity.setEndTime(request.getEndTime());
+        activity.setParticipationRules(request.getParticipationRules());
         activity.setStatus(ActivityStatus.DRAFT.name());
         activity.setCacheVersion(1);
         activity.setCreatedAt(LocalDateTime.now());
@@ -73,30 +85,43 @@ public class ActivityService {
         activity.setUpdatedBy(operatorId);
         activity.setDeleted(0);
         activityMapper.insert(activity);
-        log.info("创建活动: code={}, name={}", activity.getCode(), activity.getName());
-        return activity;
+        log.info("创建活动: id={}, code={}, name={}, status={}", activity.getId(), activity.getCode(), activity.getName(), activity.getStatus());
+        return getDetail(activity.getId());
     }
 
     @Transactional
-    public Activity update(Long id, Activity update, String operatorId) {
+    public ActivityDetailVO update(Long id, ActivityUpdateRequest request, String operatorId) {
         Activity activity = requireActivity(id);
         if (!isEditable(activity)) {
             throw new BusinessException(ErrorCode.ACTIVITY_INVALID_STATUS, "仅DRAFT和OFFLINE状态可编辑");
         }
-        update.setId(id);
-        update.setUpdatedAt(LocalDateTime.now());
-        update.setUpdatedBy(operatorId);
-        activityMapper.updateById(update);
+        if (request.getName() != null) activity.setName(request.getName());
+        if (request.getDescription() != null) activity.setDescription(request.getDescription());
+        if (request.getGrayType() != null) activity.setGrayType(request.getGrayType());
+        if (request.getGrayConfig() != null) activity.setGrayConfig(request.getGrayConfig());
+        if (request.getStartTime() != null) activity.setStartTime(request.getStartTime());
+        if (request.getEndTime() != null) activity.setEndTime(request.getEndTime());
+        if (request.getParticipationRules() != null) activity.setParticipationRules(request.getParticipationRules());
+        LocalDateTime effectiveStart = request.getStartTime() != null ? request.getStartTime() : activity.getStartTime();
+        LocalDateTime effectiveEnd = request.getEndTime() != null ? request.getEndTime() : activity.getEndTime();
+        if (effectiveEnd.isBefore(effectiveStart)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "结束时间不能早于开始时间");
+        }
+        activity.setUpdatedAt(LocalDateTime.now());
+        activity.setUpdatedBy(operatorId);
+        activityMapper.updateById(activity);
         cacheService.evictActivity(id);
         log.info("更新活动: id={}, operator={}", id, operatorId);
-        return activityMapper.selectById(id);
+        return getDetail(id);
     }
 
     @Transactional
     public void delete(Long id, String operatorId) {
         Activity activity = requireActivity(id);
         if (!ActivityStatus.DRAFT.name().equals(activity.getStatus())) {
-            throw new BusinessException(ErrorCode.ACTIVITY_INVALID_STATUS, "仅DRAFT状态可删除");
+            log.warn("删除失败: id={}, 当前状态={}", id, activity.getStatus());
+            throw new BusinessException(ErrorCode.ACTIVITY_INVALID_STATUS,
+                    "仅DRAFT状态可删除，当前状态: " + activity.getStatus());
         }
         activity.setDeleted(1);
         activity.setUpdatedAt(LocalDateTime.now());
@@ -111,8 +136,15 @@ public class ActivityService {
     @Transactional
     public void publish(Long id, String operatorId) {
         Activity activity = requireActivity(id);
-        if (!ActivityStatus.DRAFT.name().equals(activity.getStatus())) {
-            throw new BusinessException(ErrorCode.ACTIVITY_INVALID_STATUS, "仅DRAFT状态可发布");
+        String status = activity.getStatus();
+        if (!ActivityStatus.DRAFT.name().equals(status) && !ActivityStatus.OFFLINE.name().equals(status)) {
+            log.warn("发布失败: id={}, 当前状态={}", id, status);
+            throw new BusinessException(ErrorCode.ACTIVITY_INVALID_STATUS,
+                    "仅DRAFT或OFFLINE状态可发布，当前状态: " + status);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (activity.getEndTime() != null && now.isAfter(activity.getEndTime())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "活动已过结束时间，无法发布");
         }
         activity.setStatus(ActivityStatus.PUBLISHED.name());
         activity.setUpdatedAt(LocalDateTime.now());
@@ -154,22 +186,37 @@ public class ActivityService {
     // --- Display Rule ---
 
     public ActivityDisplayRule getDisplayRule(Long activityId) {
-        return cacheService.getDisplayRule(activityId);
+        Activity activity = requireActivity(activityId);
+        return cacheService.getDisplayRule(activity.getCode());
     }
 
     @Transactional
     public void updateDisplayRule(Long activityId, String content, String operatorId) {
-        requireActivity(activityId);
+        Activity activity = requireActivity(activityId);
+        String activityCode = activity.getCode();
         String contentHash = sha256(content);
-        ActivityDisplayRule rule = displayRuleMapper.selectById(activityId);
+        ActivityDisplayRule rule = displayRuleMapper.selectOne(
+                new LambdaQueryWrapper<ActivityDisplayRule>()
+                        .eq(ActivityDisplayRule::getActivityCode, activityCode));
         if (rule == null) {
             rule = new ActivityDisplayRule();
-            rule.setActivityId(activityId);
+            rule.setActivityCode(activityCode);
             rule.setContent(content);
             rule.setContentHash(contentHash);
             rule.setUpdatedAt(LocalDateTime.now());
             rule.setUpdatedBy(operatorId);
-            displayRuleMapper.insert(rule);
+            try {
+                displayRuleMapper.insert(rule);
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                rule = displayRuleMapper.selectOne(
+                        new LambdaQueryWrapper<ActivityDisplayRule>()
+                                .eq(ActivityDisplayRule::getActivityCode, activityCode));
+                rule.setContent(content);
+                rule.setContentHash(contentHash);
+                rule.setUpdatedAt(LocalDateTime.now());
+                rule.setUpdatedBy(operatorId);
+                displayRuleMapper.updateById(rule);
+            }
         } else {
             rule.setContent(content);
             rule.setContentHash(contentHash);
@@ -177,8 +224,8 @@ public class ActivityService {
             rule.setUpdatedBy(operatorId);
             displayRuleMapper.updateById(rule);
         }
-        cacheService.evictDisplayRule(activityId);
-        log.info("更新展示规则: activityId={}", activityId);
+        cacheService.evictDisplayRule(activityCode);
+        log.info("更新展示规则: activityCode={}", activityCode);
     }
 
     // --- Sub-modules ---
@@ -228,14 +275,12 @@ public class ActivityService {
             return true;
         }
         if (GrayType.RATIO.name().equals(activity.getGrayType())) {
-            try {
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                Map<String, Object> config = mapper.readValue(activity.getGrayConfig(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
-                int ratio = ((Number) config.get("ratio")).intValue();
-                return (userId.hashCode() & 0x7FFFFFFF) % 100 < ratio;
-            } catch (Exception e) {
+            Map<String, Object> config = JsonUtil.jsonToObj(activity.getGrayConfig(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
+            if (config == null) {
                 return true;
             }
+            int ratio = ((Number) config.get("ratio")).intValue();
+            return (userId.hashCode() & 0x7FFFFFFF) % 100 < ratio;
         }
         return true;
     }
@@ -277,7 +322,9 @@ public class ActivityService {
         vo.setStartTime(activity.getStartTime());
         vo.setEndTime(activity.getEndTime());
         vo.setParticipationRules(activity.getParticipationRules());
-        vo.setHasDisplayRule(displayRuleMapper.selectById(activity.getId()) != null);
+        vo.setHasDisplayRule(displayRuleMapper.selectOne(
+                new LambdaQueryWrapper<ActivityDisplayRule>()
+                        .eq(ActivityDisplayRule::getActivityCode, activity.getCode())) != null);
         vo.setCreatedAt(activity.getCreatedAt());
         vo.setUpdatedAt(activity.getUpdatedAt());
         return vo;

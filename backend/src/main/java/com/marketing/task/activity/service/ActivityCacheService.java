@@ -26,7 +26,12 @@ public class ActivityCacheService {
             .expireAfterWrite(Duration.ofMinutes(10))
             .build();
 
-    private final Cache<Long, ActivityDisplayRule> ruleCache = Caffeine.newBuilder()
+    private final Cache<String, Activity> activityByCodeCache = Caffeine.newBuilder()
+            .maximumSize(1_000)
+            .expireAfterWrite(Duration.ofMinutes(10))
+            .build();
+
+    private final Cache<String, ActivityDisplayRule> ruleCache = Caffeine.newBuilder()
             .maximumSize(1_000)
             .expireAfterWrite(Duration.ofMinutes(30))
             .build();
@@ -36,23 +41,29 @@ public class ActivityCacheService {
     }
 
     public Activity getActivityByCode(String code) {
-        return activityMapper.selectOne(
+        return activityByCodeCache.get(code, key -> activityMapper.selectOne(
                 new LambdaQueryWrapper<Activity>()
-                        .eq(Activity::getCode, code)
-                        .eq(Activity::getDeleted, 0));
+                        .eq(Activity::getCode, key)
+                        .eq(Activity::getDeleted, 0)));
     }
 
-    public ActivityDisplayRule getDisplayRule(Long activityId) {
-        return ruleCache.get(activityId, key -> displayRuleMapper.selectById(key));
+    public ActivityDisplayRule getDisplayRule(String activityCode) {
+        return ruleCache.get(activityCode, key -> displayRuleMapper.selectOne(
+                new LambdaQueryWrapper<ActivityDisplayRule>()
+                        .eq(ActivityDisplayRule::getActivityCode, key)));
     }
 
     public void evictActivity(Long id) {
+        Activity cached = activityCache.getIfPresent(id);
         activityCache.invalidate(id);
+        if (cached != null) {
+            activityByCodeCache.invalidate(cached.getCode());
+        }
         log.info("清除活动缓存: id={}", id);
     }
 
-    public void evictDisplayRule(Long activityId) {
-        ruleCache.invalidate(activityId);
-        log.info("清除展示规则缓存: activityId={}", activityId);
+    public void evictDisplayRule(String activityCode) {
+        ruleCache.invalidate(activityCode);
+        log.info("清除展示规则缓存: activityCode={}", activityCode);
     }
 }

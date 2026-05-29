@@ -24,6 +24,11 @@
 | V14 | `V14__step_branching.sql` | 步骤条件分支表 |
 | V15 | `V15__task_scheduled_publish.sql` | 定时发布字段 |
 | V16 | `V16__task_soft_delete.sql` | 软删除字段 |
+| V17 | `V17__signin_module.sql` | 签到模块：signin_config, signin_record, point_account, point_transaction |
+| V18 | `V18__activity_module.sql` | 活动模块：activity, activity_display_rule, activity_stats + 子模块 activity_code 关联 |
+| V19 | `V19__activity_code_unify.sql` | activity_display_rule 从 activity_id 迁移到 activity_code |
+| V20 | `V20__prize_activity_code_unify.sql` | prize/prize_record 删除 activity_id 列 |
+| V21 | `V21__activity_stats_code.sql` | activity_stats 从 activity_id 迁移到 activity_code |
 
 ---
 

@@ -14,9 +14,9 @@
     </template>
     <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="奖品ID" width="80" />
-      <el-table-column prop="activityId" label="活动ID" width="80" align="center">
+      <el-table-column prop="activityCode" label="活动编码" width="120" align="center">
         <template #default="{ row }">
-          <span class="activity-id-cell">{{ row.activityId ?? '-' }}</span>
+          <span class="activity-code-cell">{{ row.activityCode ?? '-' }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="name" label="名称" min-width="140">
@@ -187,9 +187,11 @@ onMounted(load)
 .status-dot.enabled { color: var(--color-published-text); }
 .status-dot.disabled { color: var(--color-text-disabled); }
 
-.activity-id-cell {
+.activity-code-cell {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
 }
 
 .pager-wrap {

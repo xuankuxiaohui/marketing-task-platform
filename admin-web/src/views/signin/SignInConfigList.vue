@@ -37,6 +37,11 @@
           <span class="name-cell">{{ row.name }}</span>
         </template>
       </el-table-column>
+      <el-table-column prop="activityCode" label="活动编码" width="140">
+        <template #default="{ row }">
+          <span class="code-cell">{{ row.activityCode ?? '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="周期" width="80" align="center">
         <template #default="{ row }">
           <span :class="['type-pill', row.periodType === 'WEEKLY' ? 't-weekly' : 't-monthly']">
@@ -235,6 +240,14 @@ onMounted(load)
   margin-bottom: 12px;
 }
 
+.code-cell {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--color-brand-primary-subtle);
+  color: var(--color-brand-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
 .name-cell {
   font-weight: 600;
   color: var(--color-text-primary);

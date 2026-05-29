@@ -5,12 +5,14 @@ import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.domain.enums.LimitScope;
 import com.marketing.task.activity.service.RateLimiter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 @Component
+@Order(202)
 @RequiredArgsConstructor
 public class GlobalDailyLimitChecker extends AbstractLimitChecker {
 

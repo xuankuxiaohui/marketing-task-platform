@@ -3,6 +3,10 @@
     <el-form-item label="任务编码">
       <el-input v-model="model.code" placeholder="例如：daily_checkin" />
     </el-form-item>
+    <el-form-item label="关联活动">
+      <ActivityPicker v-model="model.activityCode" />
+      <span class="form-hint">关联到指定活动，留空表示不关联</span>
+    </el-form-item>
     <el-form-item label="任务名称">
       <el-input v-model="model.name" placeholder="例如：每日签到" />
     </el-form-item>
@@ -71,6 +75,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from 'vue'
 import { listMutexGroups, type MutexGroup } from '../../../api/mutex-group'
+import ActivityPicker from '../../../components/ActivityPicker.vue'
 
 const model = defineModel<any>({ required: true })
 

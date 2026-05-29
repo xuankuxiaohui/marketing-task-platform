@@ -17,6 +17,9 @@ import AdminUserList from '../views/user/AdminUserList.vue'
 import ClientUserList from '../views/user/ClientUserList.vue'
 import SignInConfigList from '../views/signin/SignInConfigList.vue'
 import SignInConfigEdit from '../views/signin/SignInConfigEdit.vue'
+import ActivityList from '../views/activity/ActivityList.vue'
+import ActivityEdit from '../views/activity/ActivityEdit.vue'
+import ActivitySubModules from '../views/activity/ActivitySubModules.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -54,6 +57,10 @@ export const router = createRouter({
     { path: '/signin-configs', name: 'SignInConfigList', component: SignInConfigList, meta: { requiresAuth: true, title: '签到活动' } },
     { path: '/signin-configs/new', name: 'SignInConfigNew', component: SignInConfigEdit, meta: { requiresAuth: true, title: '新建签到活动' } },
     { path: '/signin-configs/:id', name: 'SignInConfigEdit', component: SignInConfigEdit, meta: { requiresAuth: true, title: (route) => `编辑签到活动 #${route.params.id}` } },
+    { path: '/activities', name: 'ActivityList', component: ActivityList, meta: { requiresAuth: true, title: '活动列表' } },
+    { path: '/activities/new', name: 'ActivityNew', component: ActivityEdit, meta: { requiresAuth: true, title: '新建活动' } },
+    { path: '/activities/:id', name: 'ActivityEdit', component: ActivityEdit, meta: { requiresAuth: true, title: (route) => `编辑活动 #${route.params.id}` } },
+    { path: '/activities/sub-modules', name: 'ActivitySubModules', component: ActivitySubModules, meta: { requiresAuth: true, title: '活动关联' } },
     { path: '/simulate', name: 'SimulatePage', component: SimulatePage, meta: { requiresAuth: true, title: '模拟测试' } },
     {
       path: '/tasks/:id/metrics',

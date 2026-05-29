@@ -5,11 +5,13 @@ import com.marketing.task.activity.domain.dto.ParticipationContext;
 import com.marketing.task.activity.domain.dto.RuleCheckResult;
 import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.domain.enums.CheckerType;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
 @Component
+@Order(100)
 public class NewUserChecker extends AbstractParticipationChecker {
 
     @Override

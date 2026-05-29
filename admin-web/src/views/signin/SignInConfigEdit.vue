@@ -35,6 +35,13 @@
           </el-form-item>
         </el-col>
       </el-row>
+      <el-row :gutter="20">
+        <el-col :span="12">
+          <el-form-item label="关联活动">
+            <ActivityPicker v-model="form.activityCode" />
+          </el-form-item>
+        </el-col>
+      </el-row>
 
       <el-form-item label="活动说明">
         <el-input v-model="form.description" type="textarea" :rows="2" placeholder="签到活动描述" />
@@ -125,6 +132,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createSignInConfig, getSignInConfig, updateSignInConfig, type StreakConfigObj, type StreakTier } from '../../api/signin'
+import ActivityPicker from '../../components/ActivityPicker.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -135,6 +143,7 @@ const isNew = computed(() => id.value === null)
 
 const form = reactive({
   name: '',
+  activityCode: '',
   periodType: 'MONTHLY',
   basePoints: 10,
   description: '',
@@ -182,6 +191,7 @@ onMounted(async () => {
       const { data } = await getSignInConfig(id.value!)
       const config = data.data
       form.name = config.name
+      form.activityCode = config.activityCode || ''
       form.periodType = config.periodType
       form.basePoints = config.basePoints
       form.description = config.description || ''

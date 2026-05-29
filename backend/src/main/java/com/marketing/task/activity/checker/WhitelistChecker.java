@@ -9,9 +9,11 @@ import com.marketing.task.domain.entity.ListData;
 import com.marketing.task.mapper.ListDataMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(100)
 @RequiredArgsConstructor
 public class WhitelistChecker extends AbstractParticipationChecker {
 

@@ -3,6 +3,7 @@ import { http } from './http'
 export interface SignInConfig {
   id?: number
   name: string
+  activityCode?: string
   status?: string
   periodType: string
   basePoints: number

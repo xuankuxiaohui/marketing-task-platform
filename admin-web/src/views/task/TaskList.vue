@@ -63,6 +63,11 @@
           <code class="code-cell">{{ row.code }}</code>
         </template>
       </el-table-column>
+      <el-table-column prop="activityCode" label="活动编码" width="140">
+        <template #default="{ row }">
+          <span class="code-cell">{{ row.activityCode ?? '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="name" label="名称" min-width="140">
         <template #default="{ row }">
           <span class="name-cell">{{ row.name }}</span>
@@ -142,6 +147,7 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="copy">复制</el-dropdown-item>
+                    <el-dropdown-item v-if="row.status === 'PUBLISHED'" command="simulate">模拟测试</el-dropdown-item>
                     <el-dropdown-item v-if="row.status === 'DRAFT'" command="publish">发布</el-dropdown-item>
                     <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'OFFLINE'" command="schedule">定时发布</el-dropdown-item>
                     <el-dropdown-item v-if="row.status === 'SCHEDULED'" command="cancelSchedule">取消定时</el-dropdown-item>
@@ -487,6 +493,9 @@ function handleAction(command: string, row: any) {
   switch (command) {
     case 'copy':
       openCopyDialog(row)
+      break
+    case 'simulate':
+      router.push(`/simulate?taskId=${row.id}`)
       break
     case 'publish':
       publish(row.id)

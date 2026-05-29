@@ -14,7 +14,7 @@ export interface Prize {
   userMonthlyLimit?: number
   userDailyLimit?: number
   limitsJson?: string
-  activityId?: number
+  activityCode?: string
   groupKey?: string
   groupStrategy?: string
   groupWeight?: number
@@ -44,6 +44,7 @@ export interface PrizeRecord {
   prizeIcon?: string
   prizeImage?: string
   status?: string
+  activityCode?: string
   expireTime?: string
   retryCount?: number
   errorMessage?: string
@@ -83,6 +84,7 @@ export interface PrizeRecordQuery {
   userId?: string
   prizeId?: number
   status?: string
+  activityCode?: string
   startDate?: string
   endDate?: string
 }

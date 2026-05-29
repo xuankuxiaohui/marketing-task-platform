@@ -1,12 +1,12 @@
 package com.marketing.task.activity.checker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketing.task.activity.domain.dto.LimitConfig;
 import com.marketing.task.activity.domain.dto.ParticipationContext;
 import com.marketing.task.activity.domain.dto.RuleCheckResult;
 import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.service.RateLimiter;
+import com.marketing.task.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -35,26 +35,22 @@ public abstract class AbstractLimitChecker implements ParticipationChecker {
             return RuleCheckResult.pass();
         } catch (Exception e) {
             log.warn("LimitChecker执行异常: type={}, activityCode={}, error={}", checkerType(), activity.getCode(), e.getMessage());
-            return RuleCheckResult.pass();
+            return RuleCheckResult.fail("CHECKER_ERROR", "规则校验异常，请稍后重试", checkerType());
         }
     }
 
     private LimitConfig findConfig(Activity activity) {
         if (activity.getParticipationRules() == null) return null;
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> rules = mapper.readValue(activity.getParticipationRules(), new TypeReference<>() {});
-            List<Map<String, Object>> limits = (List<Map<String, Object>>) rules.getOrDefault("limits", Collections.emptyList());
-            for (Map<String, Object> l : limits) {
-                if (checkerType().equals(l.get("scope"))) {
-                    LimitConfig config = new LimitConfig();
-                    config.setScope((String) l.get("scope"));
-                    config.setMax(((Number) l.get("max")).intValue());
-                    return config;
-                }
+        Map<String, Object> rules = JsonUtil.jsonToObj(activity.getParticipationRules(), new TypeReference<>() {});
+        if (rules == null) return null;
+        List<Map<String, Object>> limits = (List<Map<String, Object>>) rules.getOrDefault("limits", Collections.emptyList());
+        for (Map<String, Object> l : limits) {
+            if (checkerType().equals(l.get("scope"))) {
+                LimitConfig config = new LimitConfig();
+                config.setScope((String) l.get("scope"));
+                config.setMax(((Number) l.get("max")).intValue());
+                return config;
             }
-        } catch (Exception e) {
-            log.warn("解析participation_rules失败: activityCode={}", activity.getCode(), e);
         }
         return null;
     }

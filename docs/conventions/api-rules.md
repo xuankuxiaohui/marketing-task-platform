@@ -6,12 +6,12 @@
 
 | 命名空间 | 使用方 | 鉴权 |
 |---|---|---|
-| `/api/admin/**` | admin-web 管理后台 | AdminAuthInterceptor |
-| `/api/client/**` | client-web C 端 | ClientAuthInterceptor |
+| `/api/admin/**` | admin-web 管理后台 | SaInterceptor + StpUtil (type=admin) |
+| `/api/client/**` | client-web C 端 | SaInterceptor + StpUserUtil (type=client) |
 | `/api/internal/**` | 外部业务系统 | 无拦截器 |
 | `/api/captcha` | 共享验证码 | 无拦截器 |
 
-鉴权排除路径：`/api/admin/auth/login`、`/api/client/auth/login`、`/api/client/auth/register`。
+鉴权排除路径（SaTokenRouteConfig）：`/api/admin/auth/login`、`/api/client/auth/login`、`/api/client/auth/register`。mock 模式 (`app.auth.mock-enabled`) 跳过全部鉴权。
 
 ## REST 约定
 
@@ -66,6 +66,7 @@ Controller 统一返回 `Result<T>`：
 | 7000-7999 | Cycle（周期） |
 | 8000-8999 | Prize / Reward（奖品、发奖） |
 | 9000-9999 | Filter（过滤表达式） |
+| 10000-10099 | Activity（活动） |
 
 新增 ErrorCode 时按域分配下一个可用编号，不要跨域使用。
 

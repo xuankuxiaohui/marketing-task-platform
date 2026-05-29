@@ -1,9 +1,6 @@
 package com.marketing.task.activity.controller;
 
-import com.marketing.task.activity.domain.dto.ActivityDetailVO;
-import com.marketing.task.activity.domain.dto.ActivityListVO;
-import com.marketing.task.activity.domain.dto.ParticipationContext;
-import com.marketing.task.activity.domain.dto.RuleCheckResult;
+import com.marketing.task.activity.domain.dto.*;
 import com.marketing.task.activity.domain.entity.Activity;
 import com.marketing.task.activity.domain.entity.ActivityDisplayRule;
 import com.marketing.task.activity.service.ActivityCacheService;
@@ -41,7 +38,7 @@ public class ClientActivityController {
             vo.setStatus(a.getStatus());
             vo.setStartTime(a.getStartTime());
             vo.setEndTime(a.getEndTime());
-            vo.setHasDisplayRule(cacheService.getDisplayRule(a.getId()) != null);
+            vo.setHasDisplayRule(cacheService.getDisplayRule(a.getCode()) != null);
             return vo;
         }).toList();
         return Result.ok(vos);
@@ -52,7 +49,13 @@ public class ClientActivityController {
         ActivityDetailVO detail = activityService.getDetail(id);
         String userId = UserContextHolder.get().getUserId();
         Activity activity = cacheService.getActivity(id);
-        if (!activityService.isUserInGray(activity, Long.parseLong(userId))) {
+        long userIdLong;
+        try {
+            userIdLong = Long.parseLong(userId);
+        } catch (NumberFormatException e) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "无效的用户ID");
+        }
+        if (!activityService.isUserInGray(activity, userIdLong)) {
             throw new BusinessException(ErrorCode.ACTIVITY_GRAY_NOT_VISIBLE);
         }
         return Result.ok(detail);
@@ -60,7 +63,11 @@ public class ClientActivityController {
 
     @GetMapping("/{id}/display-rule")
     public ResponseEntity<?> getDisplayRule(@PathVariable Long id, @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
-        ActivityDisplayRule rule = cacheService.getDisplayRule(id);
+        Activity activity = cacheService.getActivity(id);
+        if (activity == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        ActivityDisplayRule rule = cacheService.getDisplayRule(activity.getCode());
         if (rule == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
@@ -69,10 +76,17 @@ public class ClientActivityController {
                     .eTag(rule.getContentHash())
                     .build();
         }
+        DisplayRuleVO vo = new DisplayRuleVO();
+        vo.setId(rule.getId());
+        vo.setActivityCode(rule.getActivityCode());
+        vo.setContent(rule.getContent());
+        vo.setContentHash(rule.getContentHash());
+        vo.setUpdatedAt(rule.getUpdatedAt());
+        vo.setUpdatedBy(rule.getUpdatedBy());
         return ResponseEntity.ok()
                 .eTag(rule.getContentHash())
                 .cacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofMinutes(30)))
-                .body(rule);
+                .body(vo);
     }
 
     @PostMapping("/{id}/participate")
@@ -84,7 +98,13 @@ public class ClientActivityController {
         }
 
         ParticipationContext context = new ParticipationContext();
-        context.setUserId(Long.parseLong(userId));
+        long userIdLong;
+        try {
+            userIdLong = Long.parseLong(userId);
+        } catch (NumberFormatException e) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "无效的用户ID");
+        }
+        context.setUserId(userIdLong);
         context.setClientIp(getClientIp(request));
 
         RuleCheckResult result = ruleService.check(activity, context);

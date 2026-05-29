@@ -43,20 +43,6 @@
         </template>
         <PlatformsTab ref="platformsTabRef" />
       </el-tab-pane>
-      <el-tab-pane v-if="taskId" label="模拟测试" name="simulate">
-        <template #label>
-          <span class="tab-label" @click.prevent="$router.push(`/simulate?taskId=${taskId}`)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            模拟测试
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="opacity:0.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </span>
-        </template>
-        <div class="simulate-redirect">
-          <el-empty description="模拟测试已迁移至独立页面">
-            <el-button type="primary" @click="$router.push(`/simulate?taskId=${taskId}`)">前往模拟测试</el-button>
-          </el-empty>
-        </div>
-      </el-tab-pane>
     </el-tabs>
     <div class="form-actions">
       <el-button type="primary" @click="submit" :loading="submitting">保存</el-button>
@@ -369,11 +355,6 @@ function formatTime(t: string | undefined) {
 
 .edit-tabs {
   margin-top: 4px;
-}
-
-.simulate-redirect {
-  padding: 40px 0;
-  text-align: center;
 }
 
 .form-actions {

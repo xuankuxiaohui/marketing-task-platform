@@ -24,7 +24,6 @@ public class PrizeRecord {
     private String prizeIcon;
     private String prizeImage;
     private String prizeParamsJson;
-    private Long activityId;
     private String status;
     private LocalDateTime expireTime;
     private Integer retryCount;

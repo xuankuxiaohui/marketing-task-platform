@@ -1,11 +1,11 @@
 package com.marketing.task.activity.checker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marketing.task.activity.domain.dto.CheckerConfig;
 import com.marketing.task.activity.domain.dto.ParticipationContext;
 import com.marketing.task.activity.domain.dto.RuleCheckResult;
 import com.marketing.task.activity.domain.entity.Activity;
+import com.marketing.task.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -27,26 +27,22 @@ public abstract class AbstractParticipationChecker implements ParticipationCheck
             return doCheck(activity, context, config);
         } catch (Exception e) {
             log.warn("Checker执行异常: type={}, activityCode={}, error={}", checkerType(), activity.getCode(), e.getMessage());
-            return RuleCheckResult.pass();
+            return RuleCheckResult.fail("CHECKER_ERROR", "规则校验异常，请稍后重试", checkerType());
         }
     }
 
     private CheckerConfig findConfig(Activity activity) {
         if (activity.getParticipationRules() == null) return null;
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> rules = mapper.readValue(activity.getParticipationRules(), new TypeReference<>() {});
-            List<Map<String, Object>> checkers = (List<Map<String, Object>>) rules.getOrDefault("checkers", Collections.emptyList());
-            for (Map<String, Object> c : checkers) {
-                if (checkerType().equals(c.get("type"))) {
-                    CheckerConfig config = new CheckerConfig();
-                    config.setType((String) c.get("type"));
-                    config.setParams((Map<String, Object>) c.get("params"));
-                    return config;
-                }
+        Map<String, Object> rules = JsonUtil.jsonToObj(activity.getParticipationRules(), new TypeReference<>() {});
+        if (rules == null) return null;
+        List<Map<String, Object>> checkers = (List<Map<String, Object>>) rules.getOrDefault("checkers", Collections.emptyList());
+        for (Map<String, Object> c : checkers) {
+            if (checkerType().equals(c.get("type"))) {
+                CheckerConfig config = new CheckerConfig();
+                config.setType((String) c.get("type"));
+                config.setParams((Map<String, Object>) c.get("params"));
+                return config;
             }
-        } catch (Exception e) {
-            log.warn("解析participation_rules失败: activityCode={}", activity.getCode(), e);
         }
         return null;
     }

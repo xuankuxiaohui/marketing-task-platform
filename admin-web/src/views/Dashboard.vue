@@ -28,6 +28,28 @@
       </el-col>
     </el-row>
     <el-card class="table-card">
+      <template #header><span>活动维度统计</span></template>
+      <el-table :data="activityStats" stripe v-loading="loading">
+        <el-table-column prop="activityCode" label="活动编码" width="160">
+          <template #default="{ row }">
+            <span class="task-link" @click="router.push(`/activities/${row.activityCode}`)">
+              {{ row.activityCode }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="activityName" label="活动名称" min-width="140" />
+        <el-table-column prop="participantCount" label="参与人数" />
+        <el-table-column prop="completionCount" label="完成人数" />
+        <el-table-column prop="rewardCount" label="发奖数" />
+        <el-table-column label="完成率" width="100">
+          <template #default="{ row }">
+            {{ row.participantCount > 0 ? ((row.completionCount / row.participantCount) * 100).toFixed(1) : '0.0' }}%
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-card class="table-card">
       <template #header><span>Top 10 任务指标</span></template>
       <el-table :data="topTasks" stripe v-loading="loading">
         <el-table-column prop="taskId" label="任务 ID" width="100" align="center">
@@ -52,7 +74,7 @@ defineOptions({ name: 'Dashboard' })
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getDashboard, type TaskMetrics } from '../api/metrics'
+import { getDashboard, getActivityOverview, type TaskMetrics, type ActivityStats } from '../api/metrics'
 
 const router = useRouter()
 
@@ -68,6 +90,7 @@ const today = ref<TaskMetrics>({
   avgFilterMs: 0,
 })
 const topTasks = ref<TaskMetrics[]>([])
+const activityStats = ref<ActivityStats[]>([])
 const loading = ref(false)
 
 const rewardRate = computed(() => {
@@ -79,10 +102,13 @@ const rewardRate = computed(() => {
 onMounted(async () => {
   loading.value = true
   try {
-    const { data: res } = await getDashboard()
-    if (res?.data) {
-      today.value = res.data.today || today.value
-      topTasks.value = res.data.topTasks || []
+    const [dashRes, actRes] = await Promise.all([getDashboard(), getActivityOverview()])
+    if (dashRes?.data?.data) {
+      today.value = dashRes.data.data.today || today.value
+      topTasks.value = dashRes.data.data.topTasks || []
+    }
+    if (actRes?.data?.data) {
+      activityStats.value = actRes.data.data || []
     }
   } catch (e: any) {
     ElMessage.error(e.response?.data?.message || '加载仪表盘数据失败')

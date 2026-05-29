@@ -6,6 +6,7 @@ import type { TaskPlatform } from './platform'
 export interface Task {
   id?: number
   code: string
+  activityCode?: string
   name: string
   description?: string
   periodType: string

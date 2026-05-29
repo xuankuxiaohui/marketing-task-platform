@@ -24,7 +24,6 @@ public class Prize {
     private Integer userMonthlyLimit;
     private Integer userDailyLimit;
     private String limitsJson;
-    private Long activityId;
     private String groupKey;
     private String groupStrategy;
     private Integer groupWeight;

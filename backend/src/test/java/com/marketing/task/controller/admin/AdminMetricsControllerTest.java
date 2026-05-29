@@ -1,6 +1,7 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.marketing.task.activity.mapper.ActivityStatsMapper;
 import com.marketing.task.domain.entity.TaskMetrics;
 import com.marketing.task.mapper.TaskMetricsMapper;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ class AdminMetricsControllerTest {
 
     @Mock
     private TaskMetricsMapper taskMetricsMapper;
+
+    @Mock
+    private ActivityStatsMapper activityStatsMapper;
 
     @InjectMocks
     private AdminMetricsController controller;

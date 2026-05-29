@@ -51,7 +51,7 @@
             filterable
             placeholder="选择已发布任务"
             style="width: 280px"
-            :disabled="!selectedUserId"
+            :disabled="!selectedUserId && !taskLocked"
           >
             <el-option
               v-for="t in publishedTasks"
@@ -370,6 +370,8 @@ const steps = ref<any[]>([])
 const events = ref<any[]>([])
 const loadingEvents = ref(false)
 
+const taskLocked = ref(false)
+
 const actionLoading = reactive<Record<number, boolean>>({})
 const callbackEvents = reactive<Record<number, string>>({})
 const progressInputs = reactive<Record<number, number>>({})
@@ -384,6 +386,7 @@ onMounted(async () => {
     const id = Number(queryTaskId)
     if (publishedTasks.value.some(t => t.id === id)) {
       selectedTaskId.value = id
+      taskLocked.value = true
     }
   }
 })
@@ -408,8 +411,9 @@ async function loadPublishedTasks() {
 }
 
 function onUserChange() {
-  // clear task selection when user changes
-  selectedTaskId.value = null
+  if (!taskLocked.value) {
+    selectedTaskId.value = null
+  }
 }
 
 // ---- flow control ----
@@ -481,6 +485,8 @@ function stopSimulation() {
   instanceInfo.value = null
   steps.value = []
   events.value = []
+  taskLocked.value = false
+  selectedTaskId.value = null
   ElMessage.info('已退出模拟')
 }
 

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class TaskAdminVO {
     private Long id;
     private String code;
+    private String activityCode;
     private String name;
     private String description;
     private String periodType;
@@ -34,6 +35,7 @@ public class TaskAdminVO {
         TaskAdminVO vo = new TaskAdminVO();
         vo.setId(task.getId());
         vo.setCode(task.getCode());
+        vo.setActivityCode(task.getActivityCode());
         vo.setName(task.getName());
         vo.setDescription(task.getDescription());
         vo.setPeriodType(task.getPeriodType());
@@ -55,6 +57,7 @@ public class TaskAdminVO {
         Task task = new Task();
         task.setId(this.id);
         task.setCode(this.code);
+        task.setActivityCode(this.activityCode);
         task.setName(this.name);
         task.setDescription(this.description);
         task.setPeriodType(this.periodType);
