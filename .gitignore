@@ -9,6 +9,7 @@ target/
 .env.*
 !.env.example
 .superpowers
+superpowers/
 graphify-out/
 tsconfig.tsbuildinfo
 .claude-flow/
