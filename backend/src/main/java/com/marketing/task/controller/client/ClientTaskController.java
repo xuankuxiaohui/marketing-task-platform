@@ -1,9 +1,9 @@
 package com.marketing.task.controller.client;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.marketing.task.common.Result;
-import com.marketing.task.context.UserContext;
-import com.marketing.task.context.UserContextHolder;
+import com.marketing.common.Result;
+import com.marketing.context.UserContext;
+import com.marketing.context.UserContextHolder;
 import com.marketing.task.domain.dto.TaskInstanceDetailDTO;
 import com.marketing.task.domain.dto.TaskSnapshotDTO;
 import com.marketing.task.domain.entity.Task;
@@ -13,7 +13,7 @@ import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.vo.*;
 import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.service.platform.PlatformAdapterRegistry;
-import com.marketing.task.common.EventType;
+import com.marketing.common.EventType;
 import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;

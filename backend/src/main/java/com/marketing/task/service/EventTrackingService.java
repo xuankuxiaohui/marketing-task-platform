@@ -2,9 +2,9 @@ package com.marketing.task.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.marketing.task.common.EventType;
-import com.marketing.task.domain.entity.EventLog;
-import com.marketing.task.mapper.EventLogMapper;
+import com.marketing.common.EventType;
+import com.marketing.system.domain.entity.EventLog;
+import com.marketing.system.mapper.EventLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

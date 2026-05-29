@@ -1,6 +1,6 @@
 package com.marketing.task.service.filter;
 
-import com.marketing.task.context.UserContext;
+import com.marketing.context.UserContext;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import lombok.RequiredArgsConstructor;

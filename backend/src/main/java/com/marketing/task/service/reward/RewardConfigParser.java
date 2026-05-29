@@ -2,7 +2,7 @@ package com.marketing.task.service.reward;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.marketing.task.domain.reward.RewardConfig;
-import com.marketing.task.utils.JsonUtil;
+import com.marketing.utils.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

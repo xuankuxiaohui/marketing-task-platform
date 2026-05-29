@@ -2,7 +2,7 @@ package com.marketing.task.service.reward;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.marketing.task.common.BusinessException;
+import com.marketing.common.BusinessException;
 import com.marketing.task.domain.entity.RewardRecord;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;

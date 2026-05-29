@@ -1,14 +1,14 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.marketing.task.common.Result;
-import com.marketing.task.context.UserContextHolder;
+import com.marketing.common.Result;
+import com.marketing.context.UserContextHolder;
 import com.marketing.task.domain.entity.MutexGroup;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.vo.MutexGroupVO;
 import com.marketing.task.domain.vo.TaskAdminVO;
 import com.marketing.task.mapper.TaskMapper;
-import com.marketing.task.service.OperationLogService;
+import com.marketing.system.service.OperationLogService;
 import com.marketing.task.service.task.MutexGroupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

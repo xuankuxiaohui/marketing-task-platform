@@ -1,13 +1,13 @@
 package com.marketing.task.service.step;
 
-import com.marketing.task.common.EventType;
-import com.marketing.task.context.UserContext;
-import com.marketing.task.context.UserContextHolder;
+import com.marketing.common.EventType;
+import com.marketing.context.UserContext;
+import com.marketing.context.UserContextHolder;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;
 import com.marketing.task.domain.enums.StepType;
-import com.marketing.task.prize.service.GrantContext;
-import com.marketing.task.prize.service.PrizeService;
+import com.marketing.prize.service.GrantContext;
+import com.marketing.prize.service.PrizeService;
 import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.reward.RewardService;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,9 @@
 package com.marketing.task.service;
 
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.marketing.task.common.EventType;
-import com.marketing.task.domain.entity.EventLog;
-import com.marketing.task.mapper.EventLogMapper;
+import com.marketing.common.EventType;
+import com.marketing.system.domain.entity.EventLog;
+import com.marketing.system.mapper.EventLogMapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.session.Configuration;
 import org.junit.jupiter.api.BeforeAll;

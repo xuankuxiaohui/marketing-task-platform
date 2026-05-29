@@ -1,10 +1,10 @@
 package com.marketing.task.service.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.common.ErrorCode;
-import com.marketing.task.context.UserContext;
-import com.marketing.task.common.EventType;
+import com.marketing.common.BusinessException;
+import com.marketing.common.ErrorCode;
+import com.marketing.context.UserContext;
+import com.marketing.common.EventType;
 import com.marketing.task.domain.entity.MutexGroup;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;
@@ -33,7 +33,7 @@ import com.marketing.task.mapper.TaskStepPlatformMapper;
 import com.marketing.task.mapper.TaskStepTransitionMapper;
 import com.marketing.task.mapper.UserTaskInstanceMapper;
 import com.marketing.task.service.EventTrackingService;
-import com.marketing.task.utils.JsonUtil;
+import com.marketing.utils.JsonUtil;
 import com.marketing.task.service.cycle.CycleKeyResolver;
 import com.marketing.task.service.filter.FilterEvaluator;
 import com.marketing.task.service.step.StepAdvanceEngine;

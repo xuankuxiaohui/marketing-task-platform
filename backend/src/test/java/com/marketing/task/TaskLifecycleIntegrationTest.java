@@ -1,15 +1,15 @@
 package com.marketing.task;
 
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.context.UserContext;
-import com.marketing.task.context.UserContextHolder;
+import com.marketing.common.BusinessException;
+import com.marketing.context.UserContext;
+import com.marketing.context.UserContextHolder;
 import com.marketing.task.domain.entity.*;
 import com.marketing.task.domain.enums.*;
 import com.marketing.task.mapper.*;
-import com.marketing.task.prize.domain.entity.Prize;
-import com.marketing.task.prize.domain.entity.PrizeRecord;
-import com.marketing.task.prize.mapper.PrizeMapper;
-import com.marketing.task.prize.mapper.PrizeRecordMapper;
+import com.marketing.prize.domain.entity.Prize;
+import com.marketing.prize.domain.entity.PrizeRecord;
+import com.marketing.prize.mapper.PrizeMapper;
+import com.marketing.prize.mapper.PrizeRecordMapper;
 import com.marketing.task.service.step.StepAdvanceEngine;
 import com.marketing.task.service.task.TaskDefinitionCacheService;
 import com.marketing.task.service.task.TaskService;

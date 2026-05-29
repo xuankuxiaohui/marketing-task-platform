@@ -23,4 +23,4 @@ spring:
 
 logging:
   level:
-    com.marketing.task: debug
+    com.marketing: debug

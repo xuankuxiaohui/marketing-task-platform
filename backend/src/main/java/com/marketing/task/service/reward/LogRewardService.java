@@ -1,9 +1,9 @@
 package com.marketing.task.service.reward;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.common.ErrorCode;
-import com.marketing.task.common.EventType;
+import com.marketing.common.BusinessException;
+import com.marketing.common.ErrorCode;
+import com.marketing.common.EventType;
 import com.marketing.task.domain.entity.RewardRecord;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.UserTaskInstance;

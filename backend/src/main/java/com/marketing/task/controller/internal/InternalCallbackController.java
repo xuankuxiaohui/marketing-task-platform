@@ -1,9 +1,9 @@
 package com.marketing.task.controller.internal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.common.ErrorCode;
-import com.marketing.task.common.Result;
+import com.marketing.common.BusinessException;
+import com.marketing.common.ErrorCode;
+import com.marketing.common.Result;
 import com.marketing.task.domain.dto.CallbackRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

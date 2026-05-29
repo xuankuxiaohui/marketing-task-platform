@@ -14,7 +14,7 @@ import com.marketing.task.mapper.TaskMapper;
 import com.marketing.task.mapper.TaskPlatformMapper;
 import com.marketing.task.mapper.TaskStepMapper;
 import com.marketing.task.mapper.TaskStepTransitionMapper;
-import com.marketing.task.utils.JsonUtil;
+import com.marketing.utils.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;

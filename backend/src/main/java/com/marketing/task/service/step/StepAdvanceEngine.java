@@ -2,11 +2,11 @@ package com.marketing.task.service.step;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.common.ErrorCode;
-import com.marketing.task.common.EventType;
-import com.marketing.task.context.UserContext;
-import com.marketing.task.context.UserContextHolder;
+import com.marketing.common.BusinessException;
+import com.marketing.common.ErrorCode;
+import com.marketing.common.EventType;
+import com.marketing.context.UserContext;
+import com.marketing.context.UserContextHolder;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.TaskStepTransition;
 import com.marketing.task.domain.entity.UserTaskInstance;

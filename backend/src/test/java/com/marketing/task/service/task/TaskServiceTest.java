@@ -2,8 +2,8 @@ package com.marketing.task.service.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.context.UserContext;
+import com.marketing.common.BusinessException;
+import com.marketing.context.UserContext;
 import com.marketing.task.domain.entity.MutexGroup;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.entity.UserTaskInstance;

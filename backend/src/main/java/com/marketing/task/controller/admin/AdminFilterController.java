@@ -1,6 +1,6 @@
 package com.marketing.task.controller.admin;
 
-import com.marketing.task.common.Result;
+import com.marketing.common.Result;
 import com.marketing.task.domain.dto.FilterValidateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

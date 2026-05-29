@@ -1,7 +1,7 @@
 package com.marketing.task.service.step;
 
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.marketing.task.common.BusinessException;
+import com.marketing.common.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.session.Configuration;
@@ -75,7 +75,7 @@ class StepAdvanceEngineTest {
                 new ClickStepHandler(),
                 new CallbackStepHandler(),
                 new ProgressStepHandler(),
-                new RewardStepHandler(mock(com.marketing.task.prize.service.PrizeService.class), mock(com.marketing.task.service.reward.RewardService.class), eventTrackingService)
+                new RewardStepHandler(mock(com.marketing.prize.service.PrizeService.class), mock(com.marketing.task.service.reward.RewardService.class), eventTrackingService)
         );
         engine = new StepAdvanceEngine(taskStepMapper, instanceMapper, progressMapper, handlers, cacheService, eventTrackingService, transitionMapper, filterExpressionEngine);
 

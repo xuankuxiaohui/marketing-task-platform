@@ -1,7 +1,7 @@
 package com.marketing.task.service.cycle;
 
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.common.ErrorCode;
+import com.marketing.common.BusinessException;
+import com.marketing.common.ErrorCode;
 import com.marketing.task.domain.entity.Task;
 import com.marketing.task.domain.enums.PeriodType;
 import org.springframework.stereotype.Component;

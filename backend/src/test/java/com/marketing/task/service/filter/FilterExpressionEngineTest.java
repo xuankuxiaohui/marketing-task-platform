@@ -1,7 +1,7 @@
 package com.marketing.task.service.filter;
 
-import com.marketing.task.common.BusinessException;
-import com.marketing.task.context.UserContext;
+import com.marketing.common.BusinessException;
+import com.marketing.context.UserContext;
 import com.marketing.task.service.EventTrackingService;
 import com.marketing.task.service.MetricsService;
 import org.junit.jupiter.api.BeforeEach;

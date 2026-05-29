@@ -1,7 +1,7 @@
 package com.marketing.task.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.marketing.task.common.Result;
+import com.marketing.common.Result;
 import com.marketing.task.domain.entity.TaskStep;
 import com.marketing.task.domain.entity.TaskStepPlatform;
 import com.marketing.task.domain.vo.TaskStepPlatformVO;
