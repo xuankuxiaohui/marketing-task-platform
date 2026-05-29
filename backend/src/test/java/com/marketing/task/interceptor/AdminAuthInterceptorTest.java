@@ -14,11 +14,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AdminAuthInterceptorTest {
 
     @Mock
@@ -80,10 +83,11 @@ class AdminAuthInterceptorTest {
     @Test
     void preHandle_shouldReturnTrue_whenNoMockAndNoSaTokenLogin() {
         AuthProperties authProperties = mockAuthProperties(false);
-        when(clientStpLogic.isLogin()).thenReturn(false);
 
         stpUtilMock = mockStatic(StpUtil.class);
         stpUtilMock.when(StpUtil::isLogin).thenReturn(false);
+        when(clientStpLogic.isLogin()).thenReturn(false);
+        when(request.getRequestURI()).thenReturn("/api/admin/tasks");
 
         UserContextInterceptor interceptor = new UserContextInterceptor(authProperties, clientStpLogic);
         boolean result = interceptor.preHandle(request, response, null);

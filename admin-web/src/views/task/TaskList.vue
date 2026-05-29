@@ -397,8 +397,7 @@ async function batchPublish() {
   if (ids.length === 0) return
   batchPublishing.value = true
   try {
-    const { data } = await batchPublishTasks(ids)
-    const result = data.data
+    const { data: result } = await batchPublishTasks(ids)
     if (result.failed.length === 0) {
       ElMessage.success(`成功发布 ${result.success.length} 个任务`)
     } else {
@@ -418,8 +417,7 @@ async function batchOffline() {
   if (ids.length === 0) return
   batchOfflining.value = true
   try {
-    const { data } = await batchOfflineTasks(ids)
-    const result = data.data
+    const { data: result } = await batchOfflineTasks(ids)
     if (result.failed.length === 0) {
       ElMessage.success(`成功下线 ${result.success.length} 个任务`)
     } else {
