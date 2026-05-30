@@ -37,6 +37,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+rate-limit:
+  type: ${RATE_LIMIT_TYPE:local}
+
 activity:
   rate-limiter:
     type: local

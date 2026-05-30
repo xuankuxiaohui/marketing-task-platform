@@ -51,7 +51,6 @@ public class SignInService {
         LocalDate today = LocalDate.now();
         String periodKey = resolvePeriodKey(config.getPeriodType(), today);
 
-        // Idempotent check
         SignInRecord existing = findRecord(configId, userId, today);
         if (existing != null) {
             PointAccount account = pointService.getBalance(userId);
@@ -61,16 +60,13 @@ public class SignInService {
                     account.getBalance(), existing.getCatchUp());
         }
 
-        // Calculate streak
         int streakDay = calculateStreak(configId, userId, today, config.getPeriodType(), periodKey);
 
-        // Apply maxStreak cap
         StreakTierConfig tierConfig = parseStreakConfig(config.getStreakConfig());
         if (tierConfig != null && tierConfig.getMaxStreak() != null) {
             streakDay = Math.min(streakDay, tierConfig.getMaxStreak());
         }
 
-        // Calculate points
         int basePoints = config.getBasePoints();
         int bonusPoints = 0;
         Integer tierReached = null;
@@ -84,7 +80,6 @@ public class SignInService {
         }
         int totalPoints = basePoints + bonusPoints;
 
-        // Create record
         SignInRecord record = new SignInRecord();
         record.setConfigId(configId);
         record.setUserId(userId);
@@ -99,16 +94,17 @@ public class SignInService {
         try {
             recordMapper.insert(record);
         } catch (DuplicateKeyException e) {
-            // Concurrent sign-in, return existing
             SignInRecord dup = findRecord(configId, userId, today);
-            PointAccount account = pointService.getBalance(userId);
-            return SignInResult.ok(dup.getId(), dup.getStreakDay(),
-                    dup.getBasePoints(), dup.getBonusPoints(),
-                    dup.getTotalPoints(), dup.getTierReached(),
-                    account.getBalance(), dup.getCatchUp());
+            if (dup != null) {
+                PointAccount account = pointService.getBalance(userId);
+                return SignInResult.ok(dup.getId(), dup.getStreakDay(),
+                        dup.getBasePoints(), dup.getBonusPoints(),
+                        dup.getTotalPoints(), dup.getTierReached(),
+                        account.getBalance(), dup.getCatchUp());
+            }
+            throw e;
         }
 
-        // Grant points
         LocalDateTime expireAt = calculateExpireAt(config.getPointExpireDays());
         pointService.earn(userId, totalPoints, SOURCE_SIGNIN, record.getId(), expireAt,
                 "每日签到: " + config.getName());

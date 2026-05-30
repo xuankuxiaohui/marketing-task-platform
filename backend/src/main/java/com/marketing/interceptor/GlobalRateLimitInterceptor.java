@@ -1,13 +1,13 @@
 package com.marketing.interceptor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.marketing.common.ErrorCode;
 import com.marketing.common.Result;
+import com.marketing.utils.IpUtils;
+import com.marketing.utils.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,14 +15,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.time.Duration;
-import java.util.Deque;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Slf4j
 @Component
 public class GlobalRateLimitInterceptor implements HandlerInterceptor {
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${rate-limit.client.max-requests:100}")
     private int clientMaxRequests;
@@ -36,10 +32,15 @@ public class GlobalRateLimitInterceptor implements HandlerInterceptor {
     @Value("${rate-limit.admin.window-seconds:1}")
     private int adminWindowSeconds;
 
-    private final Cache<String, Deque<Long>> counters = Caffeine.newBuilder()
-            .maximumSize(100_000)
-            .expireAfterAccess(Duration.ofMinutes(10))
-            .build();
+    private final RateLimiter rateLimiter;
+
+    public GlobalRateLimitInterceptor(
+            @Qualifier("localRateLimiter") RateLimiter localRateLimiter,
+            @Qualifier("redisRateLimiter") RateLimiter redisRateLimiter,
+            @Value("${rate-limit.type:local}") String rateLimitType) {
+        this.rateLimiter = "redis".equalsIgnoreCase(rateLimitType) ? redisRateLimiter : localRateLimiter;
+        log.info("Rate limiter initialized with type: {}", rateLimitType);
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -48,7 +49,7 @@ public class GlobalRateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String ip = getClientIp(request);
+        String ip = IpUtils.getRealIpAddr(request);
         String key;
         int maxRequests;
         Duration window;
@@ -65,47 +66,16 @@ public class GlobalRateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        if (!tryAcquire(key, maxRequests, window)) {
+        if (!rateLimiter.tryAcquire(key, maxRequests, window)) {
             log.warn("请求限流: ip={}, path={}, key={}", ip, path, key);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding("UTF-8");
             Result<Void> result = Result.fail(ErrorCode.RATE_LIMIT_EXCEEDED);
-            response.getWriter().write(objectMapper.writeValueAsString(result));
+            response.getWriter().write(JsonUtil.objToJson(result));
             return false;
         }
 
         return true;
-    }
-
-    private boolean tryAcquire(String key, int maxRequests, Duration window) {
-        Deque<Long> timestamps = counters.get(key, k -> new ConcurrentLinkedDeque<>());
-        long now = System.currentTimeMillis();
-        long windowStart = now - window.toMillis();
-
-        synchronized (timestamps) {
-            while (!timestamps.isEmpty() && timestamps.peekFirst() < windowStart) {
-                timestamps.pollFirst();
-            }
-            if (timestamps.size() >= maxRequests) {
-                return false;
-            }
-            timestamps.addLast(now);
-            return true;
-        }
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty()) {
-            ip = ip.split(",")[0].trim();
-        }
-        if (ip == null || ip.isEmpty()) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty()) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
     }
 }

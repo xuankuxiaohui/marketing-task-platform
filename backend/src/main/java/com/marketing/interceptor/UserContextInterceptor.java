@@ -16,11 +16,18 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class UserContextInterceptor implements HandlerInterceptor {
+
+    private static final Pattern TAG_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
+    private static final Pattern USER_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
+    private static final Pattern PROVINCE_PATTERN = Pattern.compile("^[a-zA-Z\u4e00-\u9fa5]+$");
+    private static final Pattern ROLE_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
+    private static final Pattern ORG_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]+$");
 
     private final AuthProperties authProperties;
     private final StpLogic clientStpLogic;
@@ -67,7 +74,7 @@ public class UserContextInterceptor implements HandlerInterceptor {
         String path = request.getRequestURI();
         if (path.startsWith("/api/admin/")) {
             return UserContext.builder()
-                    .userId(request.getHeader("X-User-Id"))
+                    .userId(sanitizeUserId(request.getHeader("X-User-Id")))
                     .platform(Platform.ADMIN)
                     .build();
         }
@@ -79,17 +86,74 @@ public class UserContextInterceptor implements HandlerInterceptor {
                 : Arrays.stream(tagsHeader.split(","))
                         .map(String::trim)
                         .filter(s -> !s.isBlank())
+                        .filter(this::isValidTag)
                         .collect(Collectors.toSet());
 
         return UserContext.builder()
-                .userId(request.getHeader("X-User-Id"))
-                .province(request.getHeader("X-User-Province"))
-                .role(request.getHeader("X-User-Role"))
+                .userId(sanitizeUserId(request.getHeader("X-User-Id")))
+                .province(sanitizeProvince(request.getHeader("X-User-Province")))
+                .role(sanitizeRole(request.getHeader("X-User-Role")))
                 .tags(tags)
-                .orgId(request.getHeader("X-User-Org-Id"))
+                .orgId(sanitizeOrgId(request.getHeader("X-User-Org-Id")))
                 .level(parseInt(request.getHeader("X-User-Level")))
                 .platform(parsePlatform(request.getHeader("X-Platform")))
                 .build();
+    }
+
+    private boolean isValidTag(String tag) {
+        if (!TAG_PATTERN.matcher(tag).matches()) {
+            log.warn("Invalid tag rejected: {}", tag);
+            return false;
+        }
+        return true;
+    }
+
+    private String sanitizeUserId(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String sanitized = value.trim();
+        if (!USER_ID_PATTERN.matcher(sanitized).matches()) {
+            log.warn("Invalid X-User-Id header rejected: {}", value);
+            return null;
+        }
+        return sanitized;
+    }
+
+    private String sanitizeProvince(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String sanitized = value.trim();
+        if (!PROVINCE_PATTERN.matcher(sanitized).matches()) {
+            log.warn("Invalid X-User-Province header rejected: {}", value);
+            return null;
+        }
+        return sanitized;
+    }
+
+    private String sanitizeRole(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String sanitized = value.trim();
+        if (!ROLE_PATTERN.matcher(sanitized).matches()) {
+            log.warn("Invalid X-User-Role header rejected: {}", value);
+            return null;
+        }
+        return sanitized;
+    }
+
+    private String sanitizeOrgId(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String sanitized = value.trim();
+        if (!ORG_ID_PATTERN.matcher(sanitized).matches()) {
+            log.warn("Invalid X-User-Org-Id header rejected: {}", value);
+            return null;
+        }
+        return sanitized;
     }
 
     private Integer parseInt(String value) {
