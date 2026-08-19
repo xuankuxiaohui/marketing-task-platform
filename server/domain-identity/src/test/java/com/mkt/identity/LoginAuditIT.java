@@ -48,7 +48,7 @@ class LoginAuditIT {
                 boolean success = ThreadLocalRandom.current().nextBoolean();
                 futures.add(pool.submit(() -> {
                     start.await();
-                    env.tx.executeWithoutResult(status -> attempt(env, password, success));
+                    attempt(env, password, success);
                     return null;
                 }));
             }
@@ -80,11 +80,18 @@ class LoginAuditIT {
         var issued = env.captchas.issue(AdminAuthService.CAPTCHA_REALM);
         String code = env.captchaCode(AdminAuthService.CAPTCHA_REALM, issued.captchaId());
         try {
-            env.adminAuth.login(
-                    new AdminLoginCommand("admin", success ? password : "WrongPass1!", issued.captchaId(), code, null),
-                    new AuthAttemptContext("10.0.0.8", "it-agent", null));
+            env.adminAuth
+                    .login(
+                            new AdminLoginCommand(
+                                    "admin",
+                                    success ? password : "WrongPass1!",
+                                    issued.captchaId(),
+                                    code,
+                                    null),
+                            new AuthAttemptContext("10.0.0.8", "it-agent", null))
+                    .orThrow();
         } catch (RuntimeException ignored) {
-            // expected for failures / lock
+            // after the TX proxy committed lock/audit
         }
     }
 }

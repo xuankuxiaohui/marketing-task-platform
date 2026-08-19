@@ -80,8 +80,9 @@ class AdminAuthServiceTest {
         when(users.listPermissionCodes(1L)).thenReturn(List.of("identity:admin-user:query"));
 
         AdminAuthService.IssuedAdminSession issued = service.login(
-                new AdminLoginCommand("alice", "Abcdef12!x", "cid", "code", null),
-                new AuthAttemptContext("10.0.0.1", "ua", null));
+                        new AdminLoginCommand("alice", "Abcdef12!x", "cid", "code", null),
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow();
 
         assertThat(issued.token()).startsWith("admin:");
         assertThat(issued.body().csrfToken()).isEqualTo(issued.csrfToken());
@@ -100,7 +101,8 @@ class AdminAuthServiceTest {
 
         assertThatThrownBy(() -> service.login(
                         new AdminLoginCommand("alice", "wrongpass1!", "cid", "code", null),
-                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
@@ -115,7 +117,8 @@ class AdminAuthServiceTest {
         when(users.getByUsername("alice")).thenReturn(user);
         assertThatThrownBy(() -> service.login(
                         new AdminLoginCommand("alice", "wrongpass1!", "cid", "code", null),
-                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.LOGIN_LOCKED);
@@ -129,8 +132,9 @@ class AdminAuthServiceTest {
         when(users.listRoleCodes(9L)).thenReturn(List.of());
         when(users.listPermissionCodes(9L)).thenReturn(List.of());
         AdminAuthService.IssuedAdminSession first = service.login(
-                new AdminLoginCommand("alice", "OldPass12!x", "cid", "code", null),
-                new AuthAttemptContext("10.0.0.1", "ua", null));
+                        new AdminLoginCommand("alice", "OldPass12!x", "cid", "code", null),
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow();
         service.changePassword(9L, new ChangePasswordCommand("OldPass12!x", "NewPass12!x"), first.token());
         verify(users).updatePassword(eq(9L), anyString());
         assertThat(new SessionService().adminSessionValid(first.token().substring("admin:".length()))).isTrue();
@@ -142,7 +146,8 @@ class AdminAuthServiceTest {
         when(users.getByUsername("alice")).thenReturn(user);
         assertThatThrownBy(() -> service.login(
                         new AdminLoginCommand("alice", "wrongpass1!", "cid", "code", null),
-                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class);
         JsonNode payload = JsonUtil.readTree(outbox.all().get(0).payload());
         assertThat(payload.get("operatorId").isNull()).isTrue();
@@ -163,7 +168,8 @@ class AdminAuthServiceTest {
                 .consume(anyString(), anyString(), anyString());
         assertThatThrownBy(() -> service.login(
                         new AdminLoginCommand("alice", "wrongpass1!", "cid", "bad", null),
-                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.LOGIN_LOCKED);
@@ -180,7 +186,8 @@ class AdminAuthServiceTest {
         when(users.getByUsername("alice")).thenReturn(user);
         assertThatThrownBy(() -> service.login(
                         new AdminLoginCommand("alice", "wrongpass1!", "cid", "code", null),
-                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                        new AuthAttemptContext("10.0.0.1", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);

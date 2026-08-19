@@ -390,7 +390,7 @@ _测试：§7.3 R29.1_
 
 _需求：R1、R4、R32 部分_
 _设计：design §4.2、§4.9.1、§6.1_
-_测试：§7.3 R1.1–R1.3、R4.1、R32.1_
+_测试：§7.3 R1.1–R1.3、R4.1、R32.1；`LoginLockPropertyTest`、`LoginAuditIT`、`PasswordChangeSessionIT`、`NamespaceIsolationIT`、`AdminAuthServiceTransactionalTest`、`PortalAuthServiceTransactionalTest`、`LoginLockCommitIT`_
 
 ### 任务 22：RBAC 与权限树（编组 E）
 

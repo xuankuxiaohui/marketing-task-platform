@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.mkt.identity.application.AuthAttempt;
 import com.mkt.identity.application.PortalAuthService;
 import com.mkt.identity.response.PortalAuthResponse;
 import com.mkt.identity.response.UsernameAvailableResponse;
@@ -39,7 +40,7 @@ class PortalAuthControllerTest {
         when(authService.usernameAvailable(anyString(), anyString()))
                 .thenReturn(new UsernameAvailableResponse(true, null));
         when(authService.register(any(), any())).thenReturn(new PortalAuthResponse("client:t", 9L, "用户9"));
-        when(authService.login(any(), any())).thenReturn(new PortalAuthResponse("client:t2", 9L, "用户9"));
+        when(authService.login(any(), any())).thenReturn(AuthAttempt.ok(new PortalAuthResponse("client:t2", 9L, "用户9")));
         doNothing().when(authService).logout(any());
 
         mvc.perform(get("/api/common/auth/username-available").param("username", "bob_01"))

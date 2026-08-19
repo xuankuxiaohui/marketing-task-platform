@@ -120,8 +120,8 @@ public final class IdentityITSupport implements AutoCloseable {
         AuthRateLimiter rates = new AuthRateLimiter(limiter, (key, def) -> 10_000);
         SessionService sessions = new SessionService();
         LoginAuditAppender audits = new LoginAuditAppender(publisher);
-        AdminAuthService adminAuth =
-                new AdminAuthService(adminUsers, captchas, rates, hasher, sessions, audits, configs, clock);
+        AdminAuthService adminAuth = TransactionalProxies.proxy(
+                new AdminAuthService(adminUsers, captchas, rates, hasher, sessions, audits, configs, clock), txm);
         RiskCheckPort pass = new RiskCheckPort() {
             @Override
             public RiskVerdict check(com.mkt.contract.RiskScene scene, com.mkt.contract.RiskSubject subject) {
@@ -133,8 +133,9 @@ public final class IdentityITSupport implements AutoCloseable {
                 return new UserRiskSummary(0, List.of());
             }
         };
-        PortalAuthService portalAuth = new PortalAuthService(
-                portalUsers, captchas, rates, hasher, sessions, pass, publisher, configs, clock);
+        PortalAuthService portalAuth = TransactionalProxies.proxy(
+                new PortalAuthService(portalUsers, captchas, rates, hasher, sessions, pass, publisher, configs, clock),
+                txm);
         OutboxRelay relay = new OutboxRelay(
                 outbox, OutboxProducer.ADMIN, new PlatformLock(kv), clock, List.of(new AuditLogConsumer(jdbc, clock)));
         return new IdentityITSupport(

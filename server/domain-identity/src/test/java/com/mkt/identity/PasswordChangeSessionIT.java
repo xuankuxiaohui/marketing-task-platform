@@ -55,12 +55,12 @@ class PasswordChangeSessionIT {
     }
 
     private static AdminAuthService.IssuedAdminSession login(IdentityITSupport env, String password) {
-        return env.tx.execute(status -> {
-            var issued = env.captchas.issue(AdminAuthService.CAPTCHA_REALM);
-            String code = env.captchaCode(AdminAuthService.CAPTCHA_REALM, issued.captchaId());
-            return env.adminAuth.login(
-                    new AdminLoginCommand("admin", password, issued.captchaId(), code, null),
-                    new AuthAttemptContext("10.0.0.8", "it-agent", null));
-        });
+        var issued = env.captchas.issue(AdminAuthService.CAPTCHA_REALM);
+        String code = env.captchaCode(AdminAuthService.CAPTCHA_REALM, issued.captchaId());
+        return env.adminAuth
+                .login(
+                        new AdminLoginCommand("admin", password, issued.captchaId(), code, null),
+                        new AuthAttemptContext("10.0.0.8", "it-agent", null))
+                .orThrow();
     }
 }

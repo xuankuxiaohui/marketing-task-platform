@@ -111,13 +111,15 @@ class PortalAuthServiceTest {
         user.setFailedAttempts(0);
         when(users.getByUsername("bob_01")).thenReturn(user);
         var ok = service.login(
-                new com.mkt.identity.command.PortalLoginCommand("bob_01", "abcdefg1", "cid", "code"),
-                new AuthAttemptContext("10.0.0.2", "ua", null));
+                        new com.mkt.identity.command.PortalLoginCommand("bob_01", "abcdefg1", "cid", "code"),
+                        new AuthAttemptContext("10.0.0.2", "ua", null))
+                .orThrow();
         assertThat(ok.token()).startsWith("client:");
         user.setStatus("DISABLED");
         assertThatThrownBy(() -> service.login(
                         new com.mkt.identity.command.PortalLoginCommand("bob_01", "abcdefg1", "cid", "code"),
-                        new AuthAttemptContext("10.0.0.2", "ua", null)))
+                        new AuthAttemptContext("10.0.0.2", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.ACCOUNT_DISABLED);
@@ -125,7 +127,8 @@ class PortalAuthServiceTest {
         user.setStatus("ENABLED");
         assertThatThrownBy(() -> service.login(
                         new com.mkt.identity.command.PortalLoginCommand("bob_01", "abcdefg1", "cid", "code"),
-                        new AuthAttemptContext("10.0.0.2", "ua", null)))
+                        new AuthAttemptContext("10.0.0.2", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.RISK_BLOCKED_LOGIN);
@@ -148,7 +151,8 @@ class PortalAuthServiceTest {
                 .consume(anyString(), anyString(), anyString());
         assertThatThrownBy(() -> service.login(
                         new PortalLoginCommand("bob_01", "wrong", "cid", "bad"),
-                        new AuthAttemptContext("10.0.0.2", "ua", null)))
+                        new AuthAttemptContext("10.0.0.2", "ua", null))
+                .orThrow())
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.LOGIN_LOCKED);

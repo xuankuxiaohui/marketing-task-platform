@@ -41,7 +41,8 @@ public class AdminAuthController {
             @Valid @RequestBody AdminLoginCommand command,
             HttpServletRequest request,
             HttpServletResponse response) {
-        AdminAuthService.IssuedAdminSession issued = authService.login(command, context(request, command.deviceId()));
+        AdminAuthService.IssuedAdminSession issued =
+                authService.login(command, context(request, command.deviceId())).orThrow();
         AuthCookies.writeSession(response, issued.token());
         AuthCookies.writeCsrf(response, issued.csrfToken());
         return Result.ok(issued.body());

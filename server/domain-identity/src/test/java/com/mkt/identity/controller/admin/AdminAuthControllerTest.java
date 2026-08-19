@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mkt.identity.application.AdminAuthService;
+import com.mkt.identity.application.AuthAttempt;
 import com.mkt.identity.response.AdminLoginResponse;
 import com.mkt.identity.support.AuthCookies;
 import com.mkt.kernel.UserContext;
@@ -42,10 +43,10 @@ class AdminAuthControllerTest {
     @Test
     void loginSetsHttpOnlySecureStrictCookieAndCsrf() throws Exception {
         when(authService.login(any(), any()))
-                .thenReturn(new AdminAuthService.IssuedAdminSession(
+                .thenReturn(AuthAttempt.ok(new AdminAuthService.IssuedAdminSession(
                         new AdminLoginResponse(1L, "超管", List.of("super-admin"), List.of(), true, "csrf-1"),
                         "admin:raw-token",
-                        "csrf-1"));
+                        "csrf-1")));
         MockHttpServletResponse response = mvc.perform(post("/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(

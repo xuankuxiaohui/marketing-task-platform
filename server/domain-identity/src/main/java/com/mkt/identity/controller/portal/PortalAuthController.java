@@ -56,7 +56,7 @@ public class PortalAuthController {
             @Valid @RequestBody PortalLoginCommand command,
             @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
             HttpServletRequest request) {
-        return Result.ok(authService.login(command, context(request, deviceId)));
+        return Result.ok(authService.login(command, context(request, deviceId)).orThrow());
     }
 
     @PostMapping("/logout")

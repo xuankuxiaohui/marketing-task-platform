@@ -120,45 +120,54 @@ public class PortalAuthService {
         return new PortalAuthResponse(token, entity.getId(), nickname);
     }
 
+    /**
+     * Business rejection is a committed result so {@code failed_attempts} / {@code locked_until}
+     * survive the proxy. Callers throw via {@link AuthAttempt#orThrow()} after return
+     * (05-security §3.4; not REQUIRES_NEW).
+     */
     @Transactional
-    public PortalAuthResponse login(PortalLoginCommand command, AuthAttemptContext context) {
+    public AuthAttempt<PortalAuthResponse> login(PortalLoginCommand command, AuthAttemptContext context) {
         String username = Usernames.normalize(command.username());
         rateLimiter.assertLogin(context.ip(), username);
         Instant now = clock.instant();
         PortalUserEntity user = username == null ? null : users.getByUsername(username);
-        if (user != null) {
+        try {
+            if (user != null) {
+                LoginLock.State lock = lockOf(user);
+                if (lock.locked(now)) {
+                    throw locked(lock, now);
+                }
+            }
+            captchas.consume(CAPTCHA_REALM, command.captchaId(), command.captchaCode());
+            String deviceId = DeviceIds.normalizeOrNull(context.deviceId());
+            Long subjectId = user == null ? null : user.getId();
+            rejectIfBlocked(RiskScene.LOGIN, subjectId, context.ip(), deviceId, AuthErrorCodes.RISK_BLOCKED_LOGIN);
+            if (user == null) {
+                throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
+            }
             LoginLock.State lock = lockOf(user);
             if (lock.locked(now)) {
                 throw locked(lock, now);
             }
-        }
-        captchas.consume(CAPTCHA_REALM, command.captchaId(), command.captchaCode());
-        String deviceId = DeviceIds.normalizeOrNull(context.deviceId());
-        Long subjectId = user == null ? null : user.getId();
-        rejectIfBlocked(RiskScene.LOGIN, subjectId, context.ip(), deviceId, AuthErrorCodes.RISK_BLOCKED_LOGIN);
-        if (user == null) {
-            throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
-        }
-        LoginLock.State lock = lockOf(user);
-        if (lock.locked(now)) {
-            throw locked(lock, now);
-        }
-        if (!hasher.matches(command.password(), user.getPasswordHash())) {
-            LoginLock.State next = LoginLock.onFailure(lock, now);
-            users.saveLock(user.getId(), next);
-            if (next.locked(now)) {
-                throw locked(next, now);
+            if (!hasher.matches(command.password(), user.getPasswordHash())) {
+                LoginLock.State next = LoginLock.onFailure(lock, now);
+                users.saveLock(user.getId(), next);
+                if (next.locked(now)) {
+                    throw locked(next, now);
+                }
+                throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
             }
-            throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
+            if (!user.enabled()) {
+                throw new BusinessException(AuthErrorCodes.ACCOUNT_DISABLED);
+            }
+            int max = configs.getInt(AuthConfigKeys.PORTAL_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_PORTAL_MAX_CONCURRENT);
+            String token = sessions.loginClient(user.getId(), max, deviceId, user.getUsername());
+            users.markLoginSuccess(user.getId(), now);
+            appendEvent(EventCodes.AUTH_LOGIN_SUCCESS, user.getId(), context.ip(), deviceId);
+            return AuthAttempt.ok(new PortalAuthResponse(token, user.getId(), user.getNickname()));
+        } catch (BusinessException ex) {
+            return AuthAttempt.rejected(ex);
         }
-        if (!user.enabled()) {
-            throw new BusinessException(AuthErrorCodes.ACCOUNT_DISABLED);
-        }
-        int max = configs.getInt(AuthConfigKeys.PORTAL_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_PORTAL_MAX_CONCURRENT);
-        String token = sessions.loginClient(user.getId(), max, deviceId, user.getUsername());
-        users.markLoginSuccess(user.getId(), now);
-        appendEvent(EventCodes.AUTH_LOGIN_SUCCESS, user.getId(), context.ip(), deviceId);
-        return new PortalAuthResponse(token, user.getId(), user.getNickname());
     }
 
     public void logout(String presentedToken) {

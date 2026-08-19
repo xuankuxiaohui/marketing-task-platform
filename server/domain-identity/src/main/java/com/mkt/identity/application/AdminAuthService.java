@@ -56,20 +56,24 @@ public class AdminAuthService {
         this.clock = clock;
     }
 
+    /**
+     * Business rejection is a committed result: failed_attempts, locked_until, and failure
+     * {@code audit.log} must persist. Callers throw via {@link AuthAttempt#orThrow()} after
+     * this method returns (05-security §3.4; not REQUIRES_NEW).
+     */
     @Transactional
-    public IssuedAdminSession login(AdminLoginCommand command, AuthAttemptContext context) {
+    public AuthAttempt<IssuedAdminSession> login(AdminLoginCommand command, AuthAttemptContext context) {
         String username = Usernames.normalize(command.username());
         rateLimiter.assertLogin(context.ip(), username);
         Instant now = clock.instant();
         AdminUserEntity user = username == null ? null : users.getByUsername(username);
-        if (user != null) {
-            LoginLock.State lock = lockOf(user);
-            if (lock.locked(now)) {
-                auditFailure(command, context, username);
-                throw locked(lock, now);
-            }
-        }
         try {
+            if (user != null) {
+                LoginLock.State lock = lockOf(user);
+                if (lock.locked(now)) {
+                    throw locked(lock, now);
+                }
+            }
             captchas.consume(CAPTCHA_REALM, command.captchaId(), command.captchaCode());
             AdminLoginResponse body = authenticate(user, command.password(), now);
             String csrf = CsrfTokens.create();
@@ -85,7 +89,7 @@ public class AdminAuthService {
                     context.ip(),
                     context.userAgent(),
                     summary(username));
-            return new IssuedAdminSession(
+            return AuthAttempt.ok(new IssuedAdminSession(
                     new AdminLoginResponse(
                             body.userId(),
                             body.nickname(),
@@ -94,10 +98,10 @@ public class AdminAuthService {
                             body.mustChangePassword(),
                             csrf),
                     token,
-                    csrf);
+                    csrf));
         } catch (BusinessException ex) {
             auditFailure(command, context, username);
-            throw ex;
+            return AuthAttempt.rejected(ex);
         }
     }
 
