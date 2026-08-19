@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -47,6 +48,12 @@ public class GlobalExceptionHandler {
                 .map(GlobalExceptionHandler::formatViolation)
                 .collect(Collectors.joining("; "));
         return paramInvalid(message);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Result<Void>> handleUnreadable(HttpMessageNotReadableException ex) {
+        log.warn("unreadable body, traceId={}", TraceIds.current());
+        return paramInvalid(CommonErrorCodes.PARAM_INVALID.message());
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)

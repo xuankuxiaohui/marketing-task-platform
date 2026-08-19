@@ -12,6 +12,9 @@ spring:
 mkt:
   outbox:
     producer: admin
+  track:
+    retention-event-days: 90
+
 
 springdoc:
   api-docs:

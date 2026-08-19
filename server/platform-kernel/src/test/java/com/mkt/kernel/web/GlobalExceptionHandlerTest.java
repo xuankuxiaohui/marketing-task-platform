@@ -13,7 +13,9 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpInputMessage;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -80,6 +82,19 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().code()).isEqualTo("common.server-error");
         assertThat(response.getBody().message()).isEqualTo(CommonErrorCodes.SERVER_ERROR.message());
         assertThat(response.getBody().message()).doesNotContain("jdbc");
+    }
+
+    @Test
+    void unreadableBodyIsParamInvalidWithoutCause() {
+        HttpInputMessage body = org.mockito.Mockito.mock(HttpInputMessage.class);
+        ResponseEntity<Result<Void>> response =
+                handler.handleUnreadable(new HttpMessageNotReadableException("JSON parse error at line 1", body));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo("common.param-invalid");
+        assertThat(response.getBody().message()).isEqualTo(CommonErrorCodes.PARAM_INVALID.message());
+        assertThat(response.getBody().message()).doesNotContain("JSON parse");
     }
 
     @Test

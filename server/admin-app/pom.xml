@@ -71,7 +71,6 @@
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-tracking</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

@@ -361,11 +361,11 @@ _测试：§7.3 R26.1–R26.4；判定链单测覆盖黑优先 / 白名单跳规
 
 ### 任务 19：domain-tracking 上报与事件（编组 D）
 
-- [ ] `POST /api/common/track/batch`：部分接受；畸形丢弃计数；登录 / 匿名双身份
-- [ ] 客户端批次 **直写** `evt_event_log`（批次一行 JSON，R28.9）
-- [ ] 服务端业务事件 **只经 Outbox**（§6.4 路由表），禁止业务事务内直写 evt
-- [ ] 未登记 / 停用策略读附录 A（`track.unregistered-policy` / `track.disabled-event-policy`）
-- [ ] 分区调度 8（`sched:evt-partition`）。审计保留清理是调度 9，归任务 25，本任务不要删 `sys_audit_log`
+- [x] `POST /api/common/track/batch`：部分接受；畸形丢弃计数；登录 / 匿名双身份
+- [x] 客户端批次 **直写** `evt_event_log`（批次一行 JSON，R28.9）
+- [x] 服务端业务事件 **只经 Outbox**（§6.4 路由表），禁止业务事务内直写 evt
+- [x] 未登记 / 停用策略读附录 A（`track.unregistered-policy` / `track.disabled-event-policy`）
+- [x] 分区调度 8（`sched:evt-partition`）。审计保留清理是调度 9，归任务 25，本任务不要删 `sys_audit_log`
 
 _需求：R28_
 _设计：design §3.7、§4.9.3、§6.4、§6.7-8/9_
