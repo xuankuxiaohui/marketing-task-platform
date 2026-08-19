@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
+import cn.dev33.satoken.filter.SaTokenContextFilterForJakartaServlet;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.mkt.identity.application.AdminAuthService;
@@ -79,7 +80,7 @@ class PermissionImmediateEffectIT {
                     new SessionAvailability(env.kv),
                     new AdminForbiddenAudit(env.identityAudits, env.txm));
             MockMvc mvc = MockMvcBuilders.standaloneSetup(new RoleAdminController(env.roles))
-                    .addFilters(session, new CsrfFilter())
+                    .addFilters(new SaTokenContextFilterForJakartaServlet(), session, new CsrfFilter())
                     .addInterceptors(new SaInterceptor())
                     .setControllerAdvice(new GlobalExceptionHandler(), new SaTokenExceptionHandler())
                     .build();
