@@ -66,7 +66,10 @@ class FlywayV1IT {
                 "SELECT username, password_hash, must_change_password FROM sys_admin_user WHERE id = 1");
         assertThat(admin.get("username")).isEqualTo("admin");
         assertThat(admin.get("password_hash")).isEqualTo("");
-        assertThat(((Number) admin.get("must_change_password")).intValue()).isEqualTo(1);
+        // TINYINT(1): Connector/J may return Boolean or Number.
+        assertThat(TinyintFlags.isOneOrTrue(admin.get("must_change_password")))
+                .as("super-admin must_change_password must be 1/true")
+                .isTrue();
 
         Integer builtIn = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM sys_role WHERE built_in = 1 AND code = 'super-admin'", Integer.class);

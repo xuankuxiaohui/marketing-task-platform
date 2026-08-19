@@ -1,6 +1,7 @@
 package com.mkt.risk.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mkt.risk.application.RiskListUk;
 import com.mkt.risk.entity.RiskListItemEntity;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +15,8 @@ public interface RiskListItemMapper extends BaseMapper<RiskListItemEntity> {
             @Param("dimension") String dimension,
             @Param("listType") String listType,
             @Param("listValue") String listValue);
+
+    List<RiskListItemEntity> listByUks(@Param("uks") List<RiskListUk> uks);
 
     long countByQuery(
             @Param("dimension") String dimension,

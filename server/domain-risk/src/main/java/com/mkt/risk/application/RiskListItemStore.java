@@ -8,6 +8,8 @@ public interface RiskListItemStore {
 
     RiskListItemEntity getByUk(String dimension, String listType, String listValue);
 
+    List<RiskListItemEntity> listByUks(List<RiskListUk> uks);
+
     int insert(RiskListItemEntity entity);
 
     RiskListItemEntity getById(long id);

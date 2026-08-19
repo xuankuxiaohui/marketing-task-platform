@@ -2,7 +2,9 @@ package com.mkt.infra.redis;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.redisson.api.RLock;
@@ -23,6 +25,24 @@ public final class RedissonKeyValueStore implements KeyValueStore {
     @Override
     public String get(String key) {
         return (String) client.getBucket(key, StringCodec.INSTANCE).get();
+    }
+
+    @Override
+    public Map<String, String> getMany(List<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> found = client.getBuckets(StringCodec.INSTANCE).get(keys.toArray(String[]::new));
+        if (found == null || found.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> values = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : found.entrySet()) {
+            if (entry.getValue() != null) {
+                values.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return values;
     }
 
     @Override

@@ -61,13 +61,15 @@ class CaseHandleAuditIT {
                             && row.getReason() != null
                             && !row.getReason().isBlank()
                             && row.getCreatedAt() != null);
+            java.sql.Timestamp atStart = java.sql.Timestamp.from(start);
             env.jdbc.update(
                     """
                     INSERT INTO risk_hit_log
-                    (id, hit_type, rule_code, user_id, dimension_value, context, hit_value, threshold, action_result, simulated, occurred_at)
-                    VALUES (9001, 'LIST', 'USER:BLACK', 800, NULL, CAST('{}' AS JSON), '1', '1', 'REJECTED', 0, ?)
+                    (id, hit_type, rule_code, user_id, dimension_value, context, hit_value, threshold, action_result, simulated, occurred_at, created_at)
+                    VALUES (9001, 'LIST', 'USER:BLACK', 800, NULL, CAST('{}' AS JSON), '1', '1', 'REJECTED', 0, ?, ?)
                     """,
-                    java.sql.Timestamp.from(start));
+                    atStart,
+                    atStart);
             var hits = env.cases.pageHits(new RiskHitQuery(
                     "USER:BLACK",
                     "LIST",

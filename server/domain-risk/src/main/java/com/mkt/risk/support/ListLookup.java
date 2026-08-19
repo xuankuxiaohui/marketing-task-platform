@@ -51,30 +51,31 @@ public class ListLookup {
     }
 
     private List<ListEntry> snapshot(RiskSubject subject) {
-        List<ListEntry> entries = new ArrayList<>(6);
+        List<RiskListProjection.LookupKey> keys = new ArrayList<>(6);
         if (subject.userId() != null) {
-            add(entries, RiskDimension.USER, RiskListType.BLACK, String.valueOf(subject.userId()));
-            add(entries, RiskDimension.USER, RiskListType.WHITE, String.valueOf(subject.userId()));
+            addKey(keys, RiskDimension.USER, RiskListType.BLACK, String.valueOf(subject.userId()));
+            addKey(keys, RiskDimension.USER, RiskListType.WHITE, String.valueOf(subject.userId()));
         }
-        add(entries, RiskDimension.IP, RiskListType.BLACK, subject.ip());
-        add(entries, RiskDimension.IP, RiskListType.WHITE, subject.ip());
+        addKey(keys, RiskDimension.IP, RiskListType.BLACK, subject.ip());
+        addKey(keys, RiskDimension.IP, RiskListType.WHITE, subject.ip());
         if (subject.deviceId() != null) {
-            add(entries, RiskDimension.DEVICE, RiskListType.BLACK, subject.deviceId());
-            add(entries, RiskDimension.DEVICE, RiskListType.WHITE, subject.deviceId());
+            addKey(keys, RiskDimension.DEVICE, RiskListType.BLACK, subject.deviceId());
+            addKey(keys, RiskDimension.DEVICE, RiskListType.WHITE, subject.deviceId());
         }
-        return entries;
+        return projection.lookupMany(keys);
     }
 
-    private void add(List<ListEntry> entries, RiskDimension dimension, RiskListType type, String value) {
+    private static void addKey(
+            List<RiskListProjection.LookupKey> keys,
+            RiskDimension dimension,
+            RiskListType type,
+            String value) {
         String key = dimension == RiskDimension.USER
                 ? value
                 : RiskListImportParser.normalizeOrNull(dimension, value);
         if (key == null || key.isBlank()) {
             return;
         }
-        ListEntry found = projection.lookup(dimension, type, key);
-        if (found != null) {
-            entries.add(found);
-        }
+        keys.add(new RiskListProjection.LookupKey(dimension, type, key));
     }
 }

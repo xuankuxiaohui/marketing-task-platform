@@ -3,10 +3,13 @@ package com.mkt.infra.outbox;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -46,6 +49,23 @@ class EvtEventLogWriterTest {
         writer.consume(new OutboxRecord(
                 8L, OutboxRoutes.AUDIT_LOG, "admin", "audit", "1", "{}", "PENDING", 0, null, Instant.now()));
         verify(jdbc, times(2)).update(anyString(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void skipsInsertWhenIdAlreadyExists() {
+        when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(7L))).thenReturn(1);
+        writer.consume(new OutboxRecord(
+                7L,
+                OutboxRoutes.TASK_INSTANCE_START,
+                "admin",
+                "task_instance",
+                "1",
+                "{\"userId\":3}",
+                "PENDING",
+                0,
+                null,
+                Instant.now()));
+        verify(jdbc, never()).update(anyString(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
