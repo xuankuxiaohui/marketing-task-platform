@@ -1,0 +1,3 @@
+com.mkt.tracking.TrackingAutoConfiguration
+com.mkt.tracking.TrackingPortalAutoConfiguration
+com.mkt.tracking.TrackingAdminAutoConfiguration

@@ -1,2 +1,2 @@
-/** Tracking domain. Implementation arrives in tasks 19–20. */
+/** Tracking domain: client batch ingest and event partitions (task 19). */
 package com.mkt.tracking;

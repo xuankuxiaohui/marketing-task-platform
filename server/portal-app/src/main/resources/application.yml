@@ -11,6 +11,14 @@ spring:
 mkt:
   outbox:
     producer: portal
+  track:
+    batch-max-size: 50
+    event-max-payload-kb: 8
+    unregistered-policy: accept
+    disabled-event-policy: drop-count
+    rate-limit-per-minute: 60
+    retention-event-days: 90
+
 
 springdoc:
   api-docs:
