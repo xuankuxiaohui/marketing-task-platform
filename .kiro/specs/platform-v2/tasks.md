@@ -404,12 +404,12 @@ _测试：§7.3 R2.1–R2.2_
 
 ### 任务 23：用户管理三组端点（编组 E）
 
-- [ ] admin-user CRUD / 重置 / 停用
-- [ ] portal-user 查询 / 档案覆盖式编辑 / 停用 / 重置 / `DELETE` 逻辑删除级联失效
-- [ ] internal-apps 五要素：query / add / rotate / disable / enable；secret AES-256-GCM + 24h 双活
-- [ ] 实现 `UserAttributePort.attributes`（缓存）与 `lockAndGet`（`SELECT ... FOR UPDATE`，不走缓存）；`accountStatus` 四态
-- [ ] R5.6 详情聚合：identity 控制器组装 `RewardPort.userSummary` + `RiskCheckPort.userSummary` + `TaskReadPort.instanceCounts`（任务 12 契约；实现可先替身，真实现分别在 28/32/18）。**禁止**直查他域表
-- [ ] 启停 / 逻辑删除 / 档案变更 afterCommit evict `identity:user-attr`
+- [x] admin-user CRUD / 重置 / 停用
+- [x] portal-user 查询 / 档案覆盖式编辑 / 停用 / 重置 / `DELETE` 逻辑删除级联失效
+- [x] internal-apps 五要素：query / add / rotate / disable / enable；secret AES-256-GCM + 24h 双活
+- [x] 实现 `UserAttributePort.attributes`（缓存）与 `lockAndGet`（`SELECT ... FOR UPDATE`，不走缓存）；`accountStatus` 四态
+- [x] R5.6 详情聚合：identity 控制器组装 `RewardPort.userSummary` + `RiskCheckPort.userSummary` + `TaskReadPort.instanceCounts`（任务 12 契约；实现可先替身，真实现分别在 28/32/18）。**禁止**直查他域表
+- [x] 启停 / 逻辑删除 / 档案变更 afterCommit evict `identity:user-attr`
 
 _需求：R3、R5、R15.2_
 _设计：design §2.2.3、§3.2.8、§4.2_
