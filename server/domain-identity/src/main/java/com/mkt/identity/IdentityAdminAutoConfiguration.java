@@ -3,7 +3,6 @@ package com.mkt.identity;
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
-import com.mkt.identity.application.AdminAuthService;
 import com.mkt.identity.application.AdminUserStore;
 import com.mkt.identity.application.IdentityAuditAppender;
 import com.mkt.identity.audit.AuditedAspect;
@@ -35,7 +34,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.admin.AdminApplication")
-@ConditionalOnBean(AdminAuthService.class)
 @ComponentScan(basePackages = "com.mkt.identity.controller.admin")
 @EnableAspectJAutoProxy
 public class IdentityAdminAutoConfiguration {

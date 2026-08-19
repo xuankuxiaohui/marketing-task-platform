@@ -1,14 +1,12 @@
 package com.mkt.identity;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.mkt.identity.application.PortalAuthService;
 import com.mkt.identity.support.SessionAuthFilter;
 import com.mkt.identity.support.SessionSide;
 import com.mkt.infra.degrade.SessionAvailability;
 import com.mkt.infra.session.KickReasonStore;
 import com.mkt.infra.session.StpClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +15,6 @@ import org.springframework.core.Ordered;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.portal.PortalApplication")
-@ConditionalOnBean(PortalAuthService.class)
 @ComponentScan(basePackages = "com.mkt.identity.controller.portal")
 public class IdentityPortalAutoConfiguration {
 
