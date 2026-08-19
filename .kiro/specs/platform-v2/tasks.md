@@ -383,10 +383,10 @@ _测试：§7.3 R29.1_
 
 ### 任务 21：admin 认证与双账号会话（编组 E）
 
-- [ ] 后台登录 / 验证码 / CSRF / 改密；门户注册 / 登录
-- [ ] 双 `StpLogic`（admin / client）互不串扰；并发上限热调；踢下线 + D-02 401 原因码
-- [ ] 注册 / 登录入口接 `RiskCheckPort`
-- [ ] Cookie 安全属性按 NFR 安全 1
+- [x] 后台登录 / 验证码 / CSRF / 改密；门户注册 / 登录
+- [x] 双 `StpLogic`（admin / client）互不串扰；并发上限热调；踢下线 + D-02 401 原因码
+- [x] 注册 / 登录入口接 `RiskCheckPort`
+- [x] Cookie 安全属性按 NFR 安全 1
 
 _需求：R1、R4、R32 部分_
 _设计：design §4.2、§4.9.1、§6.1_

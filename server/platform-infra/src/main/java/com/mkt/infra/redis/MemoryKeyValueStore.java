@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 public final class MemoryKeyValueStore implements KeyValueStore {
 
     private final Map<String, String> values = new ConcurrentHashMap<>();
+    private final Map<String, Long> ttlSecondsByKey = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Double>> zsets = new ConcurrentHashMap<>();
     private final Map<String, List<Consumer<String>>> subscribers = new ConcurrentHashMap<>();
     private final Map<String, Thread> locks = new ConcurrentHashMap<>();
@@ -30,18 +31,48 @@ public final class MemoryKeyValueStore implements KeyValueStore {
     public void set(String key, String value) {
         requireAvailable();
         values.put(key, value);
+        ttlSecondsByKey.remove(key);
     }
 
     @Override
     public void set(String key, String value, Duration ttl) {
         requireAvailable();
         values.put(key, value);
+        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
+            ttlSecondsByKey.remove(key);
+            return;
+        }
+        ttlSecondsByKey.put(key, Math.max(1L, ttl.toSeconds()));
+    }
+
+    @Override
+    public long ttlSeconds(String key) {
+        requireAvailable();
+        if (!values.containsKey(key)) {
+            return -2L;
+        }
+        Long ttl = ttlSecondsByKey.get(key);
+        return ttl == null ? -1L : ttl;
+    }
+
+    @Override
+    public void expire(String key, Duration ttl) {
+        requireAvailable();
+        if (!values.containsKey(key)) {
+            return;
+        }
+        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
+            ttlSecondsByKey.remove(key);
+            return;
+        }
+        ttlSecondsByKey.put(key, Math.max(1L, ttl.toSeconds()));
     }
 
     @Override
     public void unlink(String key) {
         requireAvailable();
         values.remove(key);
+        ttlSecondsByKey.remove(key);
         zsets.remove(key);
     }
 
@@ -50,6 +81,7 @@ public final class MemoryKeyValueStore implements KeyValueStore {
         requireAvailable();
         String prefix = pattern.endsWith("*") ? pattern.substring(0, pattern.length() - 1) : pattern;
         values.keySet().removeIf(k -> k.startsWith(prefix));
+        ttlSecondsByKey.keySet().removeIf(k -> k.startsWith(prefix));
         zsets.keySet().removeIf(k -> k.startsWith(prefix));
     }
 

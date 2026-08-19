@@ -56,6 +56,23 @@ public final class RedissonKeyValueStore implements KeyValueStore {
     }
 
     @Override
+    public long ttlSeconds(String key) {
+        long millis = client.getBucket(key, StringCodec.INSTANCE).remainTimeToLive();
+        if (millis == -2L) {
+            return -2L;
+        }
+        if (millis == -1L) {
+            return -1L;
+        }
+        return Math.max(1L, millis / 1000L);
+    }
+
+    @Override
+    public void expire(String key, Duration ttl) {
+        client.getBucket(key, StringCodec.INSTANCE).expire(ttl);
+    }
+
+    @Override
     public void unlink(String key) {
         client.getBucket(key, StringCodec.INSTANCE).delete();
     }

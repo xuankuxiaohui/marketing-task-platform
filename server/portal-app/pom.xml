@@ -24,6 +24,14 @@
         </dependency>
         <dependency>
             <groupId>com.mkt</groupId>
+            <artifactId>domain-identity</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-risk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
             <artifactId>domain-tracking</artifactId>
         </dependency>
         <dependency>
