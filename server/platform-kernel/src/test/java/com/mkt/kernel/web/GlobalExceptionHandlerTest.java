@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
+import com.mkt.kernel.RateLimitedException;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.trace.TraceIds;
 import jakarta.validation.ConstraintViolation;
@@ -71,6 +72,16 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(400);
         assertThat(response.getBody().message()).isEqualTo("pageSize: must be <= 100");
+    }
+
+    @Test
+    void rateLimitedSetsRetryAfter() {
+        ResponseEntity<Result<Void>> response =
+                handler.handleBusiness(new RateLimitedException(CommonErrorCodes.RATE_LIMITED, 60));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(429);
+        assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("60");
+        assertThat(response.getBody().code()).isEqualTo("common.rate-limited");
     }
 
     @Test

@@ -17,7 +17,13 @@ import com.mkt.infra.outbox.JdbcOutboxStore;
 import com.mkt.infra.outbox.OutboxProducer;
 import com.mkt.infra.outbox.OutboxRelay;
 import com.mkt.infra.outbox.OutboxStore;
+import cn.dev33.satoken.SaManager;
+import cn.dev33.satoken.config.SaCookieConfig;
+import cn.dev33.satoken.config.SaTokenConfig;
+import cn.dev33.satoken.dao.SaTokenDao;
+import com.mkt.infra.session.KickReasonListener;
 import com.mkt.infra.session.KickReasonStore;
+import com.mkt.infra.session.SaTokenDaoKeyValue;
 import java.time.Clock;
 import javax.sql.DataSource;
 import java.util.List;
@@ -76,6 +82,44 @@ public class InfraAutoConfiguration {
     @ConditionalOnMissingBean(KickReasonStore.class)
     KickReasonStore kickReasonStore(KeyValueStore keyValueStore) {
         return new KickReasonStore(keyValueStore);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(SaTokenDao.class)
+    SaTokenDao saTokenDao(KeyValueStore keyValueStore) {
+        SaTokenDao dao = new SaTokenDaoKeyValue(keyValueStore);
+        SaManager.setSaTokenDao(dao);
+        return dao;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(KickReasonListener.class)
+    KickReasonListener kickReasonListener(KickReasonStore kickReasonStore) {
+        return new KickReasonListener(kickReasonStore);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(SaTokenConfig.class)
+    SaTokenConfig saTokenConfig() {
+        SaTokenConfig config = new SaTokenConfig();
+        config.setTokenName("satoken");
+        config.setTimeout(1800);
+        config.setActiveTimeout(1800);
+        config.setIsConcurrent(true);
+        config.setIsShare(false);
+        config.setMaxLoginCount(5);
+        config.setIsReadHeader(true);
+        config.setIsReadCookie(true);
+        config.setIsWriteHeader(false);
+        config.setAutoRenew(true);
+        SaCookieConfig cookie = new SaCookieConfig();
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setSameSite("Strict");
+        cookie.setPath("/");
+        config.setCookie(cookie);
+        SaManager.setConfig(config);
+        return config;
     }
 
     @Bean

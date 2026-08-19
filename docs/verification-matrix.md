@@ -36,6 +36,7 @@
 | 20 | R29.1 | 调试查询无副作用 | `tracking DebugQueryNoSideEffectIT` | 集成 |
 | 21 | R1.1 | 锁定触发不变量 | `identity LoginLockPropertyTest` | jqwik |
 | 21 | R1.2 | 审计完整性（登录） | `identity LoginAuditIT` | 集成 |
+| 21 | R1.2 / R1.3 | 失败锁定与审计经代理提交 | `identity AdminAuthServiceTransactionalTest` / `PortalAuthServiceTransactionalTest` / `LoginLockCommitIT` | 单元+集成 |
 | 21 | R1.3 | 改密会话失效 | `identity PasswordChangeSessionIT` | 集成 |
 | 21 | R4.1 | 账号体系隔离 | `portal NamespaceIsolationIT` | 集成 |
 | 22 | R2.1 | 权限判定确定性 | `identity PermissionUnionPropertyTest` | jqwik |

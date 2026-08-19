@@ -3,6 +3,7 @@ package com.mkt.kernel.web;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.ErrorCode;
+import com.mkt.kernel.RateLimitedException;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.trace.TraceIds;
 import jakarta.validation.ConstraintViolation;
@@ -29,7 +30,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleBusiness(BusinessException ex) {
         ErrorCode errorCode = ex.errorCode();
         log.warn("business rejected, code={}, traceId={}", errorCode.code(), TraceIds.current());
-        return ResponseEntity.status(errorCode.httpStatus()).body(Result.fail(errorCode, ex.getMessage()));
+        var body = ResponseEntity.status(errorCode.httpStatus());
+        if (ex instanceof RateLimitedException limited && limited.retryAfterSeconds() > 0) {
+            body.header("Retry-After", String.valueOf(limited.retryAfterSeconds()));
+        }
+        return body.body(Result.fail(errorCode, ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

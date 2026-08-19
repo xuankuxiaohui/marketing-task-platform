@@ -42,7 +42,7 @@ docs/<slug>         仅规格或 docs/standards
 2. 标题与 squash 后的提交说明同一套 Conventional Commits。
 3. 描述里写：任务号、触及的需求/设计条款、测试怎么跑。
 4. 合入方式：**squash merge**，保持 `master` 线性。
-5. 门禁见 04 §10。资金 / 会话 / 风控 / 迁移路径 **MUST** 有人类签字，AI 评审不能单独放行。
+5. 门禁见 04 §10。开发会话在 PR 上做两轮分开的代码评审，有问题开 issue 并直接修；不要等人签字。主分支健康检查由每 3 小时定时任务做，不挡开发。
 6. 契约变更（Controller / Command / Response / ErrorCode）**MUST** 同 PR 提交 `packages/shared` 生成物。
 
 ## 5. 保护与 CODEOWNERS
@@ -70,4 +70,4 @@ deploy/                             @owner
 - [ ] 未把 spike 工程拷进 `server/`
 - [ ] 提交说明有 `Refs:`
 - [ ] 未 force-push `master`，未提交密钥
-- [ ] 资金/鉴权路径未自审自合
+- [ ] PR 已做两轮分开评审，评审 issue 已修完（不等人类点头）

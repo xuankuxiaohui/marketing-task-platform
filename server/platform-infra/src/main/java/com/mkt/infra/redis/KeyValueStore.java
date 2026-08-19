@@ -31,6 +31,13 @@ public interface KeyValueStore {
 
     void set(String key, String value, Duration ttl);
 
+    /**
+     * Remaining TTL in seconds. {@code -2} missing, {@code -1} no expire (Sa-Token convention).
+     */
+    long ttlSeconds(String key);
+
+    void expire(String key, Duration ttl);
+
     void unlink(String key);
 
     void unlinkByPattern(String pattern);

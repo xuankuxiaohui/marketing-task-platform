@@ -27,6 +27,23 @@ public final class KickReasonStore {
         store.set(key(loginType, token), reason.code(), TTL);
     }
 
+    public Optional<KickReason> peek(String loginType, String token) {
+        String raw = store.get(key(loginType, token));
+        if (raw == null) {
+            return Optional.empty();
+        }
+        return Optional.of(KickReason.fromCode(raw));
+    }
+
+    public Optional<KickReason> peekQuiet(String loginType, String token) {
+        try {
+            return peek(loginType, token);
+        } catch (RuntimeException ex) {
+            log.warn("kick-reason peek failed", ex);
+            return Optional.empty();
+        }
+    }
+
     public Optional<KickReason> readAndDelete(String loginType, String token) {
         String redisKey = key(loginType, token);
         String raw = store.get(redisKey);

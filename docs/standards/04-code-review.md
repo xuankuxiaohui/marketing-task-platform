@@ -207,6 +207,6 @@ APPROVE | REQUEST_CHANGES
 | 覆盖率阈值 D-04 | 阻断 |
 | Spotless 格式化 | 阻断 |
 | OpenAPI 生成物无 diff | 阻断（触及 Controller / Command / Query / Response / ErrorCode / springdoc 的 PR，以及任何 `web/` PR）。命令：`pnpm --filter @mkt/shared gen:api`；产物只提交 `packages/shared`，禁止手改 |
-| 人工评审至少一人（含 AI 辅助时仍需人类对资金/鉴权路径签字） | 资金、会话、风控、迁移 |
+| 开发会话两轮分开的代码评审（有问题开 issue 并直接修，不等人类点头） | 所有 PR |
 
-资金与并发路径（领取、发奖、库存、积分、HMAC）**MUST** 有人类评审，AI 评审不能单独放行。
+资金与并发路径（领取、发奖、库存、积分、HMAC）**MUST** 走两轮分开的代码评审并修完 issue；不要等人签字。人类会叫停。

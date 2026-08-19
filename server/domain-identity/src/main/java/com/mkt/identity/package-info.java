@@ -1,2 +1,2 @@
-/** Identity and system-management domain. Implementation arrives in tasks 21–25. */
+/** Identity and system-management domain. */
 package com.mkt.identity;

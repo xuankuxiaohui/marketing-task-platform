@@ -52,7 +52,6 @@
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-identity</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.mkt</groupId>
