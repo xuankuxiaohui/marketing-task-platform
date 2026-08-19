@@ -1,11 +1,13 @@
 package com.mkt.identity;
 
 import cn.dev33.satoken.SaManager;
+import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.mkt.identity.application.AdminAuthService;
 import com.mkt.identity.application.AdminUserStore;
 import com.mkt.identity.support.AdminStpInterface;
 import com.mkt.identity.support.CsrfFilter;
+import com.mkt.identity.support.ForbiddenAuditSink;
 import com.mkt.identity.support.SessionAuthFilter;
 import com.mkt.identity.support.SessionSide;
 import com.mkt.infra.degrade.SessionAvailability;
@@ -18,6 +20,8 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.Ordered;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.admin.AdminApplication")
@@ -35,12 +39,22 @@ public class IdentityAdminAutoConfiguration {
 
     @Bean
     FilterRegistrationBean<SessionAuthFilter> adminSessionAuthFilter(
-            KickReasonStore kickReasons, SessionAvailability availability) {
+            KickReasonStore kickReasons, SessionAvailability availability, ForbiddenAuditSink forbiddenAudit) {
         FilterRegistrationBean<SessionAuthFilter> bean = new FilterRegistrationBean<>();
-        bean.setFilter(new SessionAuthFilter(SessionSide.ADMIN, kickReasons, availability));
+        bean.setFilter(new SessionAuthFilter(SessionSide.ADMIN, kickReasons, availability, forbiddenAudit));
         bean.setOrder(Ordered.HIGHEST_PRECEDENCE + 2);
         bean.addUrlPatterns("/*");
         return bean;
+    }
+
+    @Bean
+    WebMvcConfigurer adminSaInterceptorConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                registry.addInterceptor(new SaInterceptor()).addPathPatterns("/admin/**");
+            }
+        };
     }
 
     @Bean

@@ -1,11 +1,14 @@
 package com.mkt.identity.controller.admin;
 
 import com.mkt.identity.application.AdminAuthService;
+import com.mkt.identity.application.AdminMenuService;
 import com.mkt.identity.application.AuthAttemptContext;
 import com.mkt.identity.command.AdminLoginCommand;
 import com.mkt.identity.command.ChangePasswordCommand;
 import com.mkt.identity.domain.DeviceIds;
 import com.mkt.identity.response.AdminLoginResponse;
+import com.mkt.identity.response.AdminProfileResponse;
+import com.mkt.identity.response.MenuNodeResponse;
 import com.mkt.identity.response.OkResponse;
 import com.mkt.identity.support.AuthCookies;
 import com.mkt.identity.support.ClientIp;
@@ -18,6 +21,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,9 +35,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminAuthController {
 
     private final AdminAuthService authService;
+    private final AdminMenuService menus;
 
-    public AdminAuthController(AdminAuthService authService) {
+    public AdminAuthController(AdminAuthService authService, AdminMenuService menus) {
         this.authService = authService;
+        this.menus = menus;
     }
 
     @PostMapping("/login")
@@ -60,6 +67,18 @@ public class AdminAuthController {
                 context(request, null));
         AuthCookies.clear(response);
         return Result.ok(OkResponse.yes());
+    }
+
+    @GetMapping("/menus")
+    @Operation(summary = "当前用户菜单树", description = "登录态；仅返回有权菜单及其子树（R2.4）")
+    public Result<List<MenuNodeResponse>> menus() {
+        return Result.ok(menus.menus(UserContext.require().userId()));
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "当前用户资料", description = "登录态；空角色用户可用（R3.2）")
+    public Result<AdminProfileResponse> profile() {
+        return Result.ok(menus.profile(UserContext.require().userId()));
     }
 
     @PutMapping("/password")

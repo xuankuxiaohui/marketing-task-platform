@@ -28,11 +28,21 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
     private final SessionSide side;
     private final KickReasonStore kickReasons;
     private final SessionAvailability availability;
+    private final ForbiddenAuditSink forbiddenAudit;
 
     public SessionAuthFilter(SessionSide side, KickReasonStore kickReasons, SessionAvailability availability) {
+        this(side, kickReasons, availability, null);
+    }
+
+    public SessionAuthFilter(
+            SessionSide side,
+            KickReasonStore kickReasons,
+            SessionAvailability availability,
+            ForbiddenAuditSink forbiddenAudit) {
         this.side = side;
         this.kickReasons = kickReasons;
         this.availability = availability;
+        this.forbiddenAudit = forbiddenAudit;
     }
 
     @Override
@@ -124,9 +134,24 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             renew(logic, raw);
             slideAdminCookies(request, response, presented);
             chain.doFilter(request, response);
+            auditForbidden(request, response);
         } finally {
             UserContext.clear();
         }
+    }
+
+    private void auditForbidden(HttpServletRequest request, HttpServletResponse response) {
+        if (forbiddenAudit == null || side != SessionSide.ADMIN) {
+            return;
+        }
+        if (response.getStatus() != com.mkt.kernel.CommonErrorCodes.PERMISSION_DENIED.httpStatus()) {
+            return;
+        }
+        UserPrincipal principal = UserContext.current().orElse(null);
+        if (principal == null) {
+            return;
+        }
+        forbiddenAudit.onForbidden(principal.userId(), principal.username(), request.getMethod(), path(request));
     }
 
     private void slideAdminCookies(HttpServletRequest request, HttpServletResponse response, String presented) {

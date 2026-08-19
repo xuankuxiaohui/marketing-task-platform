@@ -14,5 +14,7 @@ class AuthErrorCodesTest {
         assertThat(AuthErrorCodes.RISK_BLOCKED_REGISTER.httpStatus()).isEqualTo(403);
         assertThat(AuthErrorCodes.RISK_BLOCKED_LOGIN.message()).isEqualTo("暂时无法登录");
         assertThat(AuthErrorCodes.ACCOUNT_DISABLED.httpStatus()).isEqualTo(403);
+        assertThat(AuthErrorCodes.ROLE_BUILT_IN.code()).isEqualTo("auth.role.built-in");
+        assertThat(AuthErrorCodes.ROLE_BUILT_IN.httpStatus()).isEqualTo(400);
     }
 }

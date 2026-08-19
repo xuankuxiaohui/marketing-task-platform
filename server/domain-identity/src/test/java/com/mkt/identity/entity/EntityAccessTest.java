@@ -91,4 +91,38 @@ class EntityAccessTest {
         assertThat(c.getMasked()).isZero();
         assertThat(c.getStatus()).isEqualTo("ENABLED");
     }
+
+    @Test
+    void roleAndPermissionFlags() {
+        RoleEntity role = new RoleEntity();
+        role.setId(1L);
+        role.setCode("super-admin");
+        role.setName("超管");
+        role.setDescription("d");
+        role.setStatus("ENABLED");
+        role.setBuiltIn(1);
+        role.setCreatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        role.setUpdatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        assertThat(role.builtInFlag()).isTrue();
+        assertThat(role.enabled()).isTrue();
+        role.setBuiltIn(0);
+        role.setStatus("DISABLED");
+        assertThat(role.builtInFlag()).isFalse();
+        assertThat(role.enabled()).isFalse();
+        PermissionEntity p = new PermissionEntity();
+        p.setId(2L);
+        p.setParentId(0L);
+        p.setType("MENU");
+        p.setName("角色");
+        p.setRoute("/system/roles");
+        p.setComponent("system/role/index");
+        p.setIcon("role");
+        p.setSort(1);
+        p.setStatus("ENABLED");
+        p.setCreatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        assertThat(p.enabled()).isTrue();
+        assertThat(p.getRoute()).isEqualTo("/system/roles");
+        p.setStatus("DISABLED");
+        assertThat(p.enabled()).isFalse();
+    }
 }

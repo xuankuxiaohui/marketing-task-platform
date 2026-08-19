@@ -16,6 +16,8 @@ import com.mkt.kernel.UserContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -298,6 +300,21 @@ class SessionAuthFilterTest {
                 }))
                 .isInstanceOf(ServletException.class);
         assertThat(UserContext.current()).isEmpty();
+    }
+
+    @Test
+    void interceptorForbiddenWritesAuditForAdmin() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        AtomicReference<String> audited = new AtomicReference<>();
+        SessionAuthFilter filter = new SessionAuthFilter(
+                SessionSide.ADMIN, kicks, availability, (userId, username, method, path) -> audited.set(
+                        userId + ":" + username + ":" + method + ":" + path));
+        MockHttpServletRequest req = request("GET", "/admin/identity/roles");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, (r, s) -> ((HttpServletResponse) s).setStatus(403));
+        assertThat(audited.get()).isEqualTo("7:alice:GET:/admin/identity/roles");
     }
 
     private static String setCookie(MockHttpServletResponse response, String name) {

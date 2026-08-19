@@ -26,6 +26,7 @@ public interface AdminUserMapper extends BaseMapper<AdminUserEntity> {
             INNER JOIN sys_role r ON r.id = ur.role_id
             WHERE ur.admin_user_id = #{userId}
               AND r.status = 'ENABLED'
+              AND p.status = 'ENABLED'
               AND p.type = 'OPERATION'
               AND p.code IS NOT NULL
             """)

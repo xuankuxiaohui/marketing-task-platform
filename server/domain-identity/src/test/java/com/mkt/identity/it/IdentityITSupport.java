@@ -13,15 +13,23 @@ import com.mkt.identity.application.AdminUserStore;
 import com.mkt.identity.application.AuditLogConsumer;
 import com.mkt.identity.application.AuthRateLimiter;
 import com.mkt.identity.application.CaptchaService;
+import com.mkt.identity.application.IdentityAuditAppender;
 import com.mkt.identity.application.LoginAuditAppender;
 import com.mkt.identity.application.PasswordHasher;
 import com.mkt.identity.application.PortalAuthService;
 import com.mkt.identity.application.PortalUserStore;
+import com.mkt.identity.application.RbacPermissionCache;
+import com.mkt.identity.application.RoleAppService;
 import com.mkt.identity.application.SessionService;
 import com.mkt.identity.config.MybatisConfigService;
 import com.mkt.identity.config.SysConfigMapper;
 import com.mkt.identity.mapper.AdminUserMapper;
+import com.mkt.identity.mapper.AdminUserRoleMapper;
+import com.mkt.identity.mapper.PermissionMapper;
 import com.mkt.identity.mapper.PortalUserMapper;
+import com.mkt.identity.mapper.RoleMapper;
+import com.mkt.identity.mapper.RolePermissionMapper;
+import com.mkt.infra.cache.TwoLevelPlatformCache;
 import com.mkt.infra.lock.PlatformLock;
 import com.mkt.infra.outbox.AwaitOutboxDrain;
 import com.mkt.infra.outbox.EventPublisher;
@@ -56,6 +64,11 @@ public final class IdentityITSupport implements AutoCloseable {
     public final AwaitOutboxDrain drain;
     public final PasswordHasher hasher;
     public final SessionService sessions;
+    public final AdminUserStore adminUsers;
+    public final RoleAppService roles;
+    public final RbacPermissionCache permissionCache;
+    public final IdentityAuditAppender identityAudits;
+    public final org.springframework.transaction.PlatformTransactionManager txm;
     private final HikariDataSource dataSource;
 
     private IdentityITSupport(
@@ -69,6 +82,11 @@ public final class IdentityITSupport implements AutoCloseable {
             AwaitOutboxDrain drain,
             PasswordHasher hasher,
             SessionService sessions,
+            AdminUserStore adminUsers,
+            RoleAppService roles,
+            RbacPermissionCache permissionCache,
+            IdentityAuditAppender identityAudits,
+            org.springframework.transaction.PlatformTransactionManager txm,
             HikariDataSource dataSource) {
         this.clock = clock;
         this.jdbc = jdbc;
@@ -80,6 +98,11 @@ public final class IdentityITSupport implements AutoCloseable {
         this.drain = drain;
         this.hasher = hasher;
         this.sessions = sessions;
+        this.adminUsers = adminUsers;
+        this.roles = roles;
+        this.permissionCache = permissionCache;
+        this.identityAudits = identityAudits;
+        this.txm = txm;
         this.dataSource = dataSource;
     }
 
@@ -111,7 +134,25 @@ public final class IdentityITSupport implements AutoCloseable {
         DataSourceTransactionManager txm = new DataSourceTransactionManager(ds);
         TransactionTemplate tx = new TransactionTemplate(txm);
         SqlSessionTemplate sql = mybatis(ds);
-        AdminUserStore adminUsers = new AdminUserStore(sql.getMapper(AdminUserMapper.class));
+        AdminUserMapper adminUserMapper = sql.getMapper(AdminUserMapper.class);
+        RoleMapper roleMapper = sql.getMapper(RoleMapper.class);
+        PermissionMapper permissionMapper = sql.getMapper(PermissionMapper.class);
+        RolePermissionMapper rolePermissionMapper = sql.getMapper(RolePermissionMapper.class);
+        AdminUserRoleMapper adminUserRoleMapper = sql.getMapper(AdminUserRoleMapper.class);
+        RbacPermissionCache rbacCache =
+                new RbacPermissionCache(new TwoLevelPlatformCache(kv), adminUserMapper, roleMapper, permissionMapper);
+        AdminUserStore adminUsers = new AdminUserStore(adminUserMapper, rbacCache);
+        IdentityAuditAppender identityAudits = new IdentityAuditAppender(publisher);
+        RoleAppService roleApp = TransactionalProxies.proxy(
+                new RoleAppService(
+                        roleMapper,
+                        adminUserRoleMapper,
+                        rolePermissionMapper,
+                        permissionMapper,
+                        rbacCache,
+                        identityAudits,
+                        clock),
+                txm);
         PortalUserStore portalUsers = new PortalUserStore(sql.getMapper(PortalUserMapper.class));
         MybatisConfigService configs = new MybatisConfigService(sql.getMapper(SysConfigMapper.class));
         PasswordHasher hasher = new PasswordHasher();
@@ -149,6 +190,11 @@ public final class IdentityITSupport implements AutoCloseable {
                 new AwaitOutboxDrain(outbox, OutboxProducer.ADMIN, relay, clock),
                 hasher,
                 sessions,
+                adminUsers,
+                roleApp,
+                rbacCache,
+                identityAudits,
+                txm,
                 ds);
     }
 
@@ -163,6 +209,10 @@ public final class IdentityITSupport implements AutoCloseable {
             configuration.addMapper(AdminUserMapper.class);
             configuration.addMapper(PortalUserMapper.class);
             configuration.addMapper(SysConfigMapper.class);
+            configuration.addMapper(RoleMapper.class);
+            configuration.addMapper(PermissionMapper.class);
+            configuration.addMapper(RolePermissionMapper.class);
+            configuration.addMapper(AdminUserRoleMapper.class);
             factoryBean.setConfiguration(configuration);
             GlobalConfig globalConfig = new GlobalConfig();
             GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
