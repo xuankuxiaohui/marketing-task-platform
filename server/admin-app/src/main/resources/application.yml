@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: admin-app
+
+springdoc:
+  api-docs:
+    path: /admin/v3/api-docs
+  swagger-ui:
+    enabled: false

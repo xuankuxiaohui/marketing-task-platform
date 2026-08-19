@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:192.168.88.149}:${MYSQL_PORT:3308}/${MYSQL_DATABASE:mkt_platform}?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8
+    username: ${MYSQL_USERNAME:mkt}
+    password: ${MYSQL_PASSWORD:Mkt_2026_88x149}
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_id
