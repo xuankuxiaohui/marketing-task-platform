@@ -276,12 +276,12 @@ _测试：ResultJsonIT、ErrorCodeFormatTest、MutableClockTest、TraceIdFilterI
 
 ### 任务 12：platform-contract 跨域契约（编组 C）
 
-- [ ] 三写端口：`RewardPort` / `UserAttributePort` / `RiskCheckPort`（签名见 §2.2.3）
-- [ ] D-13 只读：`RewardPort.userSummary`、`RiskCheckPort.userSummary`、`TaskReadPort.instanceCounts`（无写方法）
-- [ ] `UserAttributePort`：`attributes` + `lockAndGet`；`UserAttributes` 含 `accountStatus`（`ACTIVE|DISABLED|DELETED|NOT_FOUND`）
-- [ ] 记录类型：`GrantContext` / `UserAttributes` / `RiskVerdict` / `RiskScene` / `RiskSubject` / `UserRewardSummary` / `UserRiskSummary` / `InstanceCounts`
-- [ ] D-05 事件常量 + 事件基类；`audit.log` 为内部码不进附录 D
-- [ ] RL-06 纯度：contract 模块无 Spring / 无 JDBC / 无 Redis 依赖
+- [x] 三写端口：`RewardPort` / `UserAttributePort` / `RiskCheckPort`（签名见 §2.2.3）
+- [x] D-13 只读：`RewardPort.userSummary`、`RiskCheckPort.userSummary`、`TaskReadPort.instanceCounts`（无写方法）
+- [x] `UserAttributePort`：`attributes` + `lockAndGet`；`UserAttributes` 含 `accountStatus`（`ACTIVE|DISABLED|DELETED|NOT_FOUND`）
+- [x] 记录类型：`GrantContext` / `UserAttributes` / `RiskVerdict` / `RiskScene` / `RiskSubject` / `UserRewardSummary` / `UserRiskSummary` / `InstanceCounts`
+- [x] D-05 事件常量 + 事件基类；`audit.log` 为内部码不进附录 D
+- [x] RL-06 纯度：contract 模块无 Spring / 无 JDBC / 无 Redis 依赖
 
 _需求：R14.5、R18.1、R15.2、R26、R9.1、R13.6_
 _设计：design §2.2.2、§2.2.3、§6.4、D-12_
