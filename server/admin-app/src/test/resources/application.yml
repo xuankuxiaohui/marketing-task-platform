@@ -1,0 +1,7 @@
+# Tests without MySQL: do not start a DataSource / Flyway (RL-09 production default stays on).
+spring:
+  flyway:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration

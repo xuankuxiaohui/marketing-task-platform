@@ -32,6 +32,9 @@
 | Testcontainers | — | 8 | 备选 | spike/8-misc/REPORT.md | 本机无 Docker；LAN 连通替代 |
 | ArchUnit | **1.5.0** | 8 | 采用 | spike/8-misc/REPORT.md | 1.4.1 不支持 class file 70 |
 | logstash-logback-encoder | **8.1** | 8 | 采用 | spike/8-misc/REPORT.md | JSON 含 MDC `traceId` |
+| Flyway | Boot BOM starter-flyway + `flyway-mysql` | 13 | 采用 | — | 脚本只在 platform-db；仅 admin-app 执行 |
+| MySQL driver | Boot BOM `mysql-connector-j` | 13 | 采用 | — | 现网 MySQL 8.0.25 |
+| Testcontainers | Boot BOM 2.0.5 `testcontainers-junit-jupiter` + `testcontainers-mysql` | 13 | 备选本机 / CI 采用 | — | `FlywayV1IT`；本机无 Docker 走 `-DskipITs` |
 
 结论枚举：`待冒烟` / `采用` / `备选` / `阻塞`。
 

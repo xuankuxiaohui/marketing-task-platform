@@ -1,6 +1,8 @@
 spring:
   application:
     name: portal-app
+  flyway:
+    enabled: false
 
 springdoc:
   api-docs:
