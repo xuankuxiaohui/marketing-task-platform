@@ -9,6 +9,10 @@ spring:
     username: ${MKT_DATASOURCE_USERNAME:mkt}
     password: ${MKT_DATASOURCE_PASSWORD:}
 
+mkt:
+  outbox:
+    producer: admin
+
 springdoc:
   api-docs:
     path: /admin/v3/api-docs
