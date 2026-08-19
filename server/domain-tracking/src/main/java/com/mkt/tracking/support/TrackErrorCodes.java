@@ -6,7 +6,9 @@ import com.mkt.kernel.ErrorCodeFormat;
 /** Track error codes (design §3.9 / §4.9.3). */
 public enum TrackErrorCodes implements ErrorCode {
     BATCH_OVERFLOW("track.batch.overflow", 400, "单批事件数超过上限"),
-    BATCH_RATE_LIMITED("track.batch.rate-limited", 429, "上报过于频繁");
+    BATCH_RATE_LIMITED("track.batch.rate-limited", 429, "上报过于频繁"),
+    METADATA_DUPLICATE_CODE("track.metadata.duplicate-code", 400, "事件编码已存在"),
+    QUERY_RATE_LIMITED("track.query.rate-limited", 429, "调试查询过于频繁");
 
     private final String code;
     private final int httpStatus;

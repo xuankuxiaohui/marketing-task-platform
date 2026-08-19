@@ -9,11 +9,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Partition scheduler 8 only on admin-app (design §6.7). */
+/** Admin controllers + partition scheduler 8 only on admin-app (03 §6.1 / design §6.7). */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.admin.AdminApplication")
+@ComponentScan(basePackages = "com.mkt.tracking.controller.admin")
 public class TrackingAdminAutoConfiguration {
 
     @Bean

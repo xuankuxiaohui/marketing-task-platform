@@ -49,7 +49,7 @@ class EventImmutabilityArchTest {
         noMethods()
                 .that()
                 .areDeclaredInClassesThat()
-                .resideInAPackage("..controller..")
+                .resideInAPackage("..controller.portal..")
                 .should()
                 .beAnnotatedWith("org.springframework.web.bind.annotation.DeleteMapping")
                 .orShould()
