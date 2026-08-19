@@ -427,12 +427,12 @@ _测试：§7.3 R7.1、R8.1、R9.1_
 
 ### 任务 25：审计 AOP 与会话管理端点（编组 E）
 
-- [ ] `@Audited` 机械规则：**仅**非 GET 的 `/admin/**`；`/api/common/**` 与 `/internal/**` 禁止标注
-- [ ] 落库只经 Outbox `audit.log`（R10.3）；拦截器 403 由过滤器补审计（R2.3）
-- [ ] 失败登录 `operator_id=NULL`、`operator_name`=提交用户名
-- [ ] 脱敏截断管线经 Outbox；R10.2 必记清单全覆盖
-- [ ] 调度 9 `sched:audit-clean`（`retention.audit-days`，分批 5000）
-- [ ] 会话列表 / 踢下线按 accountType + account 维度
+- [x] `@Audited` 机械规则：**仅**非 GET 的 `/admin/**`；`/api/common/**` 与 `/internal/**` 禁止标注
+- [x] 落库只经 Outbox `audit.log`（R10.3）；拦截器 403 由过滤器补审计（R2.3）
+- [x] 失败登录 `operator_id=NULL`、`operator_name`=提交用户名
+- [x] 脱敏截断管线经 Outbox；R10.2 必记清单全覆盖
+- [x] 调度 9 `sched:audit-clean`（`retention.audit-days`，分批 5000）
+- [x] 会话列表 / 踢下线按 accountType + account 维度
 
 _需求：R6、R10_
 _设计：design §4.2、§6.1、§6.5_
