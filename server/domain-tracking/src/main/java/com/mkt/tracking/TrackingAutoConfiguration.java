@@ -9,17 +9,18 @@ import com.mkt.tracking.domain.UnregisteredPolicy;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackSettings;
 import java.time.Clock;
-import javax.sql.DataSource;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
+/**
+ * Tracking domain beans. Class-level {@code @ConditionalOnBean} cannot pair with {@code @ComponentScan}
+ * (Spring Boot 4 REGISTER_BEAN).
+ */
 @AutoConfiguration
-@ConditionalOnBean(DataSource.class)
 @MapperScan("com.mkt.tracking.mapper")
 @ComponentScan(basePackages = "com.mkt.tracking.application")
 public class TrackingAutoConfiguration {
