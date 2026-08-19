@@ -394,9 +394,9 @@ _测试：§7.3 R1.1–R1.3、R4.1、R32.1；`LoginLockPropertyTest`、`LoginAud
 
 ### 任务 22：RBAC 与权限树（编组 E）
 
-- [ ] 用户—角色—权限五表端点；权限树 / 菜单种子 = §4.10
-- [ ] `rbac:permission` 缓存；变更 afterCommit 立即生效（RL-10 无鉴权后门）
-- [ ] 超管内置、不可改权限集
+- [x] 用户—角色—权限五表端点；权限树 / 菜单种子 = §4.10
+- [x] `rbac:permission` 缓存；变更 afterCommit 立即生效（RL-10 无鉴权后门）
+- [x] 超管内置、不可改权限集
 
 _需求：R2_
 _设计：design §3.2.2、§4.2、§6.2_
