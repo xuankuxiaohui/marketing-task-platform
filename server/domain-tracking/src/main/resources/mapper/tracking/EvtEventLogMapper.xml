@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.tracking.mapper.EvtEventLogMapper">
+
+    <sql id="cols">
+        id, source, event_code, user_id, device_id, platform, app_version, ip,
+        events, batch_size, registered, simulated, server_time
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="eventCode != null and eventCode != ''">
+                AND (
+                    event_code = #{eventCode}
+                    OR JSON_CONTAINS(events, JSON_OBJECT('code', #{eventCode}))
+                )
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="source != null and source != ''">
+                AND source = #{source}
+            </if>
+            <if test="deviceId != null and deviceId != ''">
+                AND device_id = #{deviceId}
+            </if>
+            <if test="from != null">
+                AND server_time &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND server_time &lt;= #{to}
+            </if>
+            <if test="sampleRatioPercent != null and sampleRatioPercent &lt; 100">
+                AND MOD(id, 100) &lt; #{sampleRatioPercent}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM evt_event_log
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.tracking.entity.EvtEventLogEntity">
+        SELECT <include refid="cols"/>
+        FROM evt_event_log
+        <include refid="queryWhere"/>
+        ORDER BY server_time DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

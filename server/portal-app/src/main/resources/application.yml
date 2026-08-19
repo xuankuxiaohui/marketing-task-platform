@@ -17,6 +17,8 @@ mkt:
     unregistered-policy: accept
     disabled-event-policy: drop-count
     rate-limit-per-minute: 60
+    query-sample-ratio-percent: 1
+    query-rate-limit-per-minute: 60
     retention-event-days: 90
 
 

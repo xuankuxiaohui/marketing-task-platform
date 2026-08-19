@@ -14,6 +14,8 @@ public final class TrackSettings {
     private volatile UnregisteredPolicy unregisteredPolicy = UnregisteredPolicy.ACCEPT;
     private volatile DisabledEventPolicy disabledEventPolicy = DisabledEventPolicy.DROP_COUNT;
     private volatile int rateLimitPerMinute = 60;
+    private volatile int querySampleRatioPercent = 1;
+    private volatile int queryRateLimitPerMinute = 60;
     private volatile int retentionEventDays = 90;
 
     public int batchMaxSize() {
@@ -59,6 +61,32 @@ public final class TrackSettings {
 
     public void setRateLimitPerMinute(int rateLimitPerMinute) {
         this.rateLimitPerMinute = rateLimitPerMinute;
+    }
+
+    public int querySampleRatioPercent() {
+        return querySampleRatioPercent;
+    }
+
+    public void setQuerySampleRatioPercent(int querySampleRatioPercent) {
+        if (querySampleRatioPercent < 1) {
+            this.querySampleRatioPercent = 1;
+        } else if (querySampleRatioPercent > 100) {
+            this.querySampleRatioPercent = 100;
+        } else {
+            this.querySampleRatioPercent = querySampleRatioPercent;
+        }
+    }
+
+    /**
+     * Independent debug-query limiter (R29.3). Appendix A has no dedicated key; process default
+     * matches {@code ratelimit.track.batch} magnitude, separate Redis bucket.
+     */
+    public int queryRateLimitPerMinute() {
+        return queryRateLimitPerMinute;
+    }
+
+    public void setQueryRateLimitPerMinute(int queryRateLimitPerMinute) {
+        this.queryRateLimitPerMinute = queryRateLimitPerMinute < 1 ? 1 : queryRateLimitPerMinute;
     }
 
     public int retentionEventDays() {
