@@ -194,6 +194,41 @@ class TaskDefinitionAppServiceTest {
     }
 
     @Test
+    void lowercaseGrayAndActionScopeAreNormalized() {
+        var cmd = new TaskDefinitionSaveCommand(
+                null,
+                "norm_task",
+                "规范",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                0,
+                "none",
+                null,
+                null,
+                null,
+                null,
+                new com.mkt.task.command.TaskGrayCommand("ratio", 10, null, null, null),
+                null,
+                List.of(new TaskStepCommand("go", "go", 1, "click", null, null)),
+                List.of(),
+                List.of(new com.mkt.task.command.TaskActionCommand(
+                        "task", null, "web", "route", java.util.Map.of("route", "home"), "去")));
+        var saved = service.saveAggregate(cmd);
+        var view = service.get(saved.id());
+        assertThat(view.cycleType()).isEqualTo("NONE");
+        assertThat(view.gray().type()).isEqualTo("RATIO");
+        assertThat(view.steps().get(0).type()).isEqualTo("CLICK");
+        assertThat(view.actions()).hasSize(1);
+        assertThat(view.actions().get(0).scope()).isEqualTo("TASK");
+        assertThat(view.actions().get(0).platform()).isEqualTo("WEB");
+        assertThat(view.actions().get(0).actionType()).isEqualTo("ROUTE");
+    }
+
+    @Test
     void publishedNotDeletable() {
         var saved = service.saveAggregate(legal());
         var entity = definitions.getById(saved.id());

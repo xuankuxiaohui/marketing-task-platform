@@ -289,7 +289,7 @@ public class TaskDefinitionAppService {
                 && !command.startTime().isBefore(command.endTime())) {
             throw new BusinessException(TaskErrorCodes.TIME_WINDOW_INVALID);
         }
-        validateGray(command.gray());
+        TaskGrayCommand gray = normalizeGray(command.gray());
         validateFilter(command.filter());
         validateMutex(command.mutexGroupId(), cycleType, command.id());
         List<TaskStepCommand> steps = command.steps() == null ? List.of() : command.steps();
@@ -300,8 +300,8 @@ public class TaskDefinitionAppService {
         List<TaskTransitionCommand> transitions =
                 command.transitions() == null ? List.of() : command.transitions();
         validateGraph(normalizedSteps, transitions);
-        List<TaskActionCommand> actions = command.actions() == null ? List.of() : command.actions();
-        validateActions(normalizedSteps, actions);
+        List<TaskActionCommand> actions = normalizeActions(
+                command.actions() == null ? List.of() : command.actions(), normalizedSteps);
         return new ValidatedAggregate(
                 new TaskDefinitionSaveCommand(
                         command.id(),
@@ -319,7 +319,7 @@ public class TaskDefinitionAppService {
                         command.specialStart(),
                         command.specialEnd(),
                         command.mutexGroupId(),
-                        command.gray(),
+                        gray,
                         command.filter(),
                         normalizedSteps,
                         transitions,
@@ -329,9 +329,9 @@ public class TaskDefinitionAppService {
                 actions);
     }
 
-    private void validateGray(TaskGrayCommand gray) {
+    private TaskGrayCommand normalizeGray(TaskGrayCommand gray) {
         if (gray == null) {
-            return;
+            return null;
         }
         String type = gray.type() == null ? GrayTypes.NONE : gray.type().trim().toUpperCase(Locale.ROOT);
         if (!GrayTypes.valid(type)) {
@@ -342,9 +342,9 @@ public class TaskDefinitionAppService {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "gray.ratio 须为 0-100");
             }
         }
+        String group = gray.abGroup() == null ? null : gray.abGroup().trim().toUpperCase(Locale.ROOT);
         if (GrayTypes.AB.equals(type)) {
-            String group = gray.abGroup() == null ? "" : gray.abGroup().trim().toUpperCase(Locale.ROOT);
-            if (!Set.of("A", "B", "AB").contains(group)) {
+            if (group == null || !Set.of("A", "B", "AB").contains(group)) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "gray.abGroup 非法");
             }
         }
@@ -354,6 +354,7 @@ public class TaskDefinitionAppService {
                 requireCrowd(gray.excludeCrowdId());
             }
         }
+        return new TaskGrayCommand(type, gray.ratio(), group, gray.crowdId(), gray.excludeCrowdId());
     }
 
     private void validateFilter(TaskFilterCommand filter) {
@@ -449,13 +450,14 @@ public class TaskDefinitionAppService {
         }
     }
 
-    private void validateActions(List<TaskStepCommand> steps, List<TaskActionCommand> actions) {
+    private List<TaskActionCommand> normalizeActions(List<TaskActionCommand> actions, List<TaskStepCommand> steps) {
         Set<String> stepCodes = new HashSet<>();
         for (TaskStepCommand step : steps) {
             stepCodes.add(step.code());
         }
         Set<String> taskPlatforms = new HashSet<>();
         Set<String> stepPlatforms = new HashSet<>();
+        List<TaskActionCommand> normalized = new ArrayList<>();
         for (TaskActionCommand action : actions) {
             if (action == null) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "动作配置非法");
@@ -463,6 +465,7 @@ public class TaskDefinitionAppService {
             String scope = action.scope() == null ? "" : action.scope().trim().toUpperCase(Locale.ROOT);
             String platform = action.platform() == null ? "" : action.platform().trim().toUpperCase(Locale.ROOT);
             String type = action.actionType() == null ? "" : action.actionType().trim().toUpperCase(Locale.ROOT);
+            String stepCode = action.stepCode() == null ? null : action.stepCode().trim();
             if (!ActionSchemas.validPlatform(platform) || !ActionSchemas.validType(type)) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "动作配置非法");
             }
@@ -474,16 +477,18 @@ public class TaskDefinitionAppService {
                     throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "任务级动作端重复");
                 }
             } else if ("STEP".equals(scope)) {
-                if (action.stepCode() == null || !stepCodes.contains(action.stepCode())) {
+                if (stepCode == null || !stepCodes.contains(stepCode)) {
                     throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "步骤级动作未引用步骤");
                 }
-                if (!stepPlatforms.add(action.stepCode() + ":" + platform)) {
+                if (!stepPlatforms.add(stepCode + ":" + platform)) {
                     throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "步骤级动作端重复");
                 }
             } else {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "动作 scope 非法");
             }
+            normalized.add(new TaskActionCommand(scope, stepCode, platform, type, action.params(), action.buttonText()));
         }
+        return List.copyOf(normalized);
     }
 
     private void requireCrowds(List<Long> ids) {
