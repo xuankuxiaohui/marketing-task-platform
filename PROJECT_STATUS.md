@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**编码（编组 E 任务 25 已开 PR、未合）** / 当前任务：**25 审计 AOP 与会话管理端点，未合 master** / 更新：2026-08-19
+> 阶段：**编码（编组 F 任务 26 已开 PR、未合）** / 当前任务：**26 任务定义聚合与表达式引擎，未合 master** / 更新：2026-08-19
 
 ## 项目一句话
 
@@ -7,37 +7,37 @@
 
 ## 现在做到哪
 
-- 已勾选任务：**1–25**（任务 22/23/24/25 仅在任务链分支，未合 master）
-- 进行中：无（任务 25 已开 PR #23；一轮评审 #24/#25 已修）
-- 下一步：任务 26 任务定义聚合与表达式引擎（叠在 `task/25-audit-session`）；**禁止 merge**
-- Git：工作分支 `task/25-audit-session`（叠在 PR #18 / `task/24-dict-config-cache` 上），PR 目标 **master**。唯一长期分支是 **master**
+- 已勾选任务：**1–26**（任务 22/23/24/25/26 仅在任务链分支，未合 master）
+- 进行中：无（任务 26 已开 PR #28；一轮评审 #29 已修）
+- 下一步：任务 27 发布版本与定时发布（叠在 `task/26-task-definition`）；**禁止 merge**
+- Git：工作分支 `task/26-task-definition`（叠在 PR #23 / `task/25-audit-session` 上），PR 目标 **master**。唯一长期分支是 **master**
 
 ## 关键技术决策（本轮新发生的）
 
-- `@Audited` AOP 写 Outbox `audit.log`；服务层已手工 append 的路径 `AuditOnce` 跳过，禁止同一写操作两行
-- 失败登录仍走 `LoginAuditAppender`：`operator_id=NULL`、`operator_name`=提交用户名
-- 拦截器 403 仍由 `SessionAuthFilter` 补审计；`AuditOnce` 在过滤器 finally 与 AOP 入口清掉，避免线程复用漏记
-- 脱敏：JsonUtil → Hutool `DesensitizedUtil`（password/token/secret/phone）→ 2000 + `...(truncated)`
-- 调度 9 `sched:audit-clean`：`retention.audit-days`（默认 180），分批 5000
-- 会话列表/踢下线按 `accountType`+`account`；kick 写 `KickReason.ADMIN`；`searchData` 用 SCAN 列 key
-- `GET /admin/system/audits` 只读分页（R10.4）；GET 不标 `@Audited`
+- save-aggregate 先内存校验再落库；`@Transactional` 包定义 + 子表替换
+- PUBLISHED/SCHEDULED 再保存只改编辑态并置 `pending_revision=1`，主状态不变（D-01；发布是任务 27）
+- 表达式自研 DSL 解析器做 AST 白名单；Aviator 只作锁死 Feature 的依赖，不吃 AND/in 原文
+- 属性函数缺失走 `NULL_ATTR`（比较一律 false）；布尔函数 hasTag / registerWithinDays / inCrowd 缺失直接 false
+- gray.type、action.scope/platform/actionType 校验后写回大写，避免混写丢掉动作或撞 CHECK
+- REWARD 保存只要求 prizeId；启用奖品校验留给发布（任务 27）
+- admin-app 生产装配 domain-task；portal-app 本任务不装配（任务 28）
 
 ## 改过的核心文件
 
-- `server/domain-identity/`：`AuditedAspect`、会话列表/踢人、审计查询、`AuditCleanScheduler`
-- `server/platform-kernel/`：`AuditOnce`
-- `server/platform-infra/`：`SaTokenDaoKeyValue.searchData` + `KeyValueStore.keysByPattern`
-- `.kiro/specs/platform-v2/tasks.md`（任务 25 勾选）
+- `server/domain-task/`：聚合保存、表达式沙箱、互斥组/人群包、admin 控制器
+- `server/admin-app/pom.xml`：domain-task 从 test scope 改为生产依赖
+- `.kiro/specs/platform-v2/tasks.md`（任务 26 勾选）
 
 ## 测试与验证
 
 - 命令与结果：`cd server; mvn -q -DskipITs test` **通过**（exit 0）
-- 矩阵覆盖：`AuditedAspectTest`（含不双写）、`AuditedPlacementArchTest`、`KickoutConsistencyIT`（failsafe）、`AuditCompletenessIT`（集成，CI）
-- 未跑项及原因：本机无 Docker，`AuditCompletenessIT` 留给 CI（未削弱断言，未用 H2 / Embedded Redis）
+- 矩阵覆盖：`ExpressionSandboxMaliciousTest`（M-01~M-15）、`TaskGraphAcyclicPropertyTest`、`TaskDefinitionAppServiceTest`、`TaskAggregateAtomicIT`（failsafe / CI）
+- 未跑项及原因：本机无 Docker，`TaskAggregateAtomicIT` 留给 CI（未削弱断言，未用 H2 / Embedded Redis）
 
 ## 已知问题（只写已证实）
 
-- 任务 25 PR #23 一轮评审 #24/#25 已修；测试 #21、运维 #22 只记账不修；禁止 merge
+- 任务 26 PR #28 一轮评审 #29 已修；测试 #26、运维 #27 只记账不修；禁止 merge
+- 任务 25 PR #23 一轮评审 #24/#25 已修；测试 #21、运维 #22 只记账不修
 - 任务 24 PR #18 一轮评审无必须修项；测试 #19、运维 #20 只记账不修
 - 任务 23 PR #14 一轮评审 #17 已修；测试 #15、运维 #16 只记账
 - 任务 22 PR #9 评审 #10/#11 已修，测试 #12 / 运维 #13 只记账；禁止 merge
@@ -46,8 +46,8 @@
 
 ## 尝试过但失败的方案
 
-- 过滤器里 `setTokenValueToStorage(raw)`：Sa-Token 上下文过滤器 `@Order(-104)` 更晚，存储绑定被 `SaTokenContextException` 吞掉；改为向下游暴露剥前缀 cookie
-- 用 `SaTokenDaoKeyValue` 在单测里 login 再搜会话：Sa-Token 缺 JSON 转换器（`未实现具体的 json 转换器`）；单测 login 仍用 `SaTokenDaoDefaultImpl`，`searchData` 单独测 Redis DAO
+- 用 Aviator 直接 compile AND/in 原文：Aviator 不认 `AND`，函数调用后的 `in` 也失败。白名单改由自研解析器执行。
+- `FEATURE_SET` 空集 + 把 AND 替换成 && 再交给 Aviator：`in` 列表仍无法稳定编译。
 
 ## 明确禁止下一会话做的事
 
@@ -58,11 +58,12 @@
 - 不要再创建或推送 `main`
 - 不要削弱 CSRF 双重提交断言
 - 不要用 REQUIRES_NEW 修登录失败落库（05-security §3.4）
-- 不要修任务 22 的 #12 #13、任务 23 的 #15 #16、任务 24 的 #19 #20、任务 25 的 #21 #22
+- 不要修任务 22 的 #12 #13、任务 23 的 #15 #16、任务 24 的 #19 #20、任务 25 的 #21 #22、任务 26 的 #26 #27
 - 不要从 `origin/master` 开新任务分支（夜间不合，必须叠任务链）
+- 不要做任务 28（可见性/领取），除非 27 已完整交付
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 任务 26：任务定义聚合与表达式引擎（叠在 `task/25-audit-session`）
-2. CI 绿且人类确认后 squash 合 `master`（PR #9 / #14 / #18 / #23）
-3. 任务 27：发布版本与定时发布
+1. 任务 27：发布版本与定时发布（叠在 `task/26-task-definition` / PR #28）
+2. CI 绿且人类确认后 squash 合 `master`（PR #9 / #14 / #18 / #23 / #28）
+3. 任务 28：可见性与领取
