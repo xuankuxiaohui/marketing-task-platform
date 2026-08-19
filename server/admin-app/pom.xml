@@ -56,7 +56,6 @@
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-task</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.mkt</groupId>

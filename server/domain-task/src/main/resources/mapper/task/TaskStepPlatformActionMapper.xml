@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskStepPlatformActionMapper">
+
+    <select id="selectByStepIds" resultType="com.mkt.task.entity.TaskStepPlatformActionEntity">
+        SELECT id, step_id, platform, action_type, params, button_text
+        FROM task_step_platform_action
+        WHERE step_id IN
+        <foreach collection="stepIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY id ASC
+    </select>
+
+    <delete id="deleteByStepIds">
+        DELETE FROM task_step_platform_action
+        WHERE step_id IN
+        <foreach collection="stepIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,2 @@
+# M-08 long overflow reject
+userLevel() > 9223372036854775808

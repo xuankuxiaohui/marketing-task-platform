@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskPlatformActionMapper">
+
+    <select id="selectByTaskId" resultType="com.mkt.task.entity.TaskPlatformActionEntity">
+        SELECT id, task_id, platform, action_type, params, button_text
+        FROM task_platform_action
+        WHERE task_id = #{taskId}
+        ORDER BY id ASC
+    </select>
+
+    <delete id="deleteByTaskId">
+        DELETE FROM task_platform_action WHERE task_id = #{taskId}
+    </delete>
+</mapper>

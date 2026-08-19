@@ -1,0 +1,2 @@
+# M-03 compile reject
+sysDate() > '2020-01-01'

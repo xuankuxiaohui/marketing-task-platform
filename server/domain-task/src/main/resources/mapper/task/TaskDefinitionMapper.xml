@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskDefinitionMapper">
+
+    <sql id="cols">
+        id, code, name, description, category, icon_url, badge_text, start_time, end_time,
+        sort_weight, status, version, schedule_publish_at, cycle_type, cron_expr,
+        special_start, special_end, mutex_group_id, gray_type, gray_ratio, gray_ab_group,
+        gray_crowd_id, gray_exclude_crowd_id, filter_expr, filter_allow_crowd_ids,
+        filter_exclude_crowd_ids, pending_revision, offline_at, deleted, created_by,
+        created_at, updated_at
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            deleted = 0
+            <if test="code != null and code != ''">
+                AND code = #{code}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectByCode" resultType="com.mkt.task.entity.TaskDefinitionEntity">
+        SELECT <include refid="cols"/>
+        FROM task_definition
+        WHERE code = #{code} AND deleted = 0
+    </select>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM task_definition
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.task.entity.TaskDefinitionEntity">
+        SELECT <include refid="cols"/>
+        FROM task_definition
+        <include refid="queryWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCycleTypesByMutexGroup" resultType="string">
+        SELECT DISTINCT cycle_type
+        FROM task_definition
+        WHERE mutex_group_id = #{mutexGroupId}
+          AND deleted = 0
+        <if test="excludeTaskId != null">
+            AND id &lt;&gt; #{excludeTaskId}
+        </if>
+    </select>
+
+    <select id="countByMutexGroup" resultType="int">
+        SELECT COUNT(*)
+        FROM task_definition
+        WHERE mutex_group_id = #{mutexGroupId} AND deleted = 0
+    </select>
+
+    <select id="countReferencingCrowd" resultType="int">
+        SELECT COUNT(*)
+        FROM task_definition
+        WHERE deleted = 0
+          AND (
+            gray_crowd_id = #{crowdId}
+            OR gray_exclude_crowd_id = #{crowdId}
+            OR JSON_CONTAINS(filter_allow_crowd_ids, CAST(#{crowdId} AS JSON))
+            OR JSON_CONTAINS(filter_exclude_crowd_ids, CAST(#{crowdId} AS JSON))
+          )
+    </select>
+</mapper>

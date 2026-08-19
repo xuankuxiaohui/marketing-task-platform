@@ -1,0 +1,2 @@
+# M-01 compile reject
+"".getClass().forName("java.lang.Runtime")

@@ -1,0 +1,2 @@
+# M-15 legal boundary, must accept
+hasTag('vip') AND (userLevel() >= 3 OR registerWithinDays(7))
