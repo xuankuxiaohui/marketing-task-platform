@@ -37,4 +37,16 @@ class SessionServiceTest {
         sessions.logoutClient(client);
         assertThat(sessions.clientSessionValid(clientRaw)).isFalse();
     }
+
+    @Test
+    void logoutAllInvalidatesEverySessionForTheAccount() {
+        String first = sessions.loginAdmin(7L, 5, null, "ops");
+        String second = sessions.loginAdmin(7L, 5, null, "ops");
+        sessions.logoutAllAdmin(7L);
+        assertThat(sessions.adminSessionValid(first.substring("admin:".length()))).isFalse();
+        assertThat(sessions.adminSessionValid(second.substring("admin:".length()))).isFalse();
+        String client = sessions.loginClient(9L, 3, null, "user_01");
+        sessions.logoutAllClient(9L);
+        assertThat(sessions.clientSessionValid(client.substring("client:".length()))).isFalse();
+    }
 }

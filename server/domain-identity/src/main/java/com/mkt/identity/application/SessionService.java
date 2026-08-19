@@ -36,6 +36,14 @@ public class SessionService {
         }
     }
 
+    public void logoutAllAdmin(long userId) {
+        StpAdmin.LOGIC.logout(userId);
+    }
+
+    public void logoutAllClient(long userId) {
+        StpClient.LOGIC.logout(userId);
+    }
+
     public void keepCurrentAdmin(long userId, String presentedToken) {
         keepCurrent(StpAdmin.LOGIC, userId, TokenPrefixes.unwrapAdmin(presentedToken));
     }

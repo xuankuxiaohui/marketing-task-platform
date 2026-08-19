@@ -58,6 +58,7 @@ design §2.4 / §2.6：
 | `MKT_REDIS_DATABASE` | 逻辑库。**MUST 为 `2`**。禁止默认 0（db0/db1 是共享机上其它应用） |
 | `MKT_SA_TOKEN_JWT_SECRET` 或 Sa-Token 会话密钥 | 按组件文档 |
 | `MKT_INIT_ADMIN_PASSWORD` | 仅首次写入超管哈希，之后可撤 |
+| `MKT_INTERNAL_APP_AES_KEY` | `sys_internal_app` secret 的 AES-256-GCM 主密钥（64 位 hex）；禁止明文落库 |
 | `MKT_FLYWAY_ENABLED` | portal 默认真空/false |
 | `SPRING_PROFILES_ACTIVE` | `prod` / `staging` / `local` |
 

@@ -16,5 +16,7 @@ class AuthErrorCodesTest {
         assertThat(AuthErrorCodes.ACCOUNT_DISABLED.httpStatus()).isEqualTo(403);
         assertThat(AuthErrorCodes.ROLE_BUILT_IN.code()).isEqualTo("auth.role.built-in");
         assertThat(AuthErrorCodes.ROLE_BUILT_IN.httpStatus()).isEqualTo(400);
+        assertThat(AuthErrorCodes.USER_SELF_PROTECTED.code()).isEqualTo("auth.user.self-protected");
+        assertThat(InternalAppErrorCodes.DUPLICATE.code()).isEqualTo("internal.app.duplicate");
     }
 }

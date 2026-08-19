@@ -31,4 +31,46 @@ public interface AdminUserMapper extends BaseMapper<AdminUserEntity> {
               AND p.code IS NOT NULL
             """)
     List<String> listPermissionCodes(@Param("userId") long userId);
+
+    @Select(
+            """
+            <script>
+            SELECT COUNT(*) FROM sys_admin_user u
+            <if test="roleId != null">
+              INNER JOIN sys_admin_user_role ur ON ur.admin_user_id = u.id AND ur.role_id = #{roleId}
+            </if>
+            WHERE u.deleted = 0
+            <if test="username != null">AND u.username LIKE CONCAT('%', #{username}, '%') ESCAPE '\\\\'</if>
+            <if test="nickname != null">AND u.nickname LIKE CONCAT('%', #{nickname}, '%') ESCAPE '\\\\'</if>
+            <if test="status != null">AND u.status = #{status}</if>
+            </script>
+            """)
+    long countPage(
+            @Param("username") String username,
+            @Param("nickname") String nickname,
+            @Param("status") String status,
+            @Param("roleId") Long roleId);
+
+    @Select(
+            """
+            <script>
+            SELECT u.* FROM sys_admin_user u
+            <if test="roleId != null">
+              INNER JOIN sys_admin_user_role ur ON ur.admin_user_id = u.id AND ur.role_id = #{roleId}
+            </if>
+            WHERE u.deleted = 0
+            <if test="username != null">AND u.username LIKE CONCAT('%', #{username}, '%') ESCAPE '\\\\'</if>
+            <if test="nickname != null">AND u.nickname LIKE CONCAT('%', #{nickname}, '%') ESCAPE '\\\\'</if>
+            <if test="status != null">AND u.status = #{status}</if>
+            ORDER BY u.id DESC
+            LIMIT #{limit} OFFSET #{offset}
+            </script>
+            """)
+    List<AdminUserEntity> listPage(
+            @Param("username") String username,
+            @Param("nickname") String nickname,
+            @Param("status") String status,
+            @Param("roleId") Long roleId,
+            @Param("offset") long offset,
+            @Param("limit") int limit);
 }

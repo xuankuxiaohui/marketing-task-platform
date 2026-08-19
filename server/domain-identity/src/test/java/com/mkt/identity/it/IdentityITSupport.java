@@ -4,27 +4,37 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
+import com.mkt.contract.PrizeSummary;
+import com.mkt.contract.RewardPort;
 import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.TaskReadPort;
+import com.mkt.contract.UserRewardSummary;
 import com.mkt.contract.UserRiskSummary;
 import com.mkt.identity.application.AdminAuthService;
+import com.mkt.identity.application.AdminUserAppService;
 import com.mkt.identity.application.AdminUserStore;
 import com.mkt.identity.application.AuditLogConsumer;
 import com.mkt.identity.application.AuthRateLimiter;
 import com.mkt.identity.application.CaptchaService;
 import com.mkt.identity.application.IdentityAuditAppender;
+import com.mkt.identity.application.InternalAppAppService;
+import com.mkt.identity.application.InternalAppSecretCipher;
 import com.mkt.identity.application.LoginAuditAppender;
 import com.mkt.identity.application.PasswordHasher;
 import com.mkt.identity.application.PortalAuthService;
+import com.mkt.identity.application.PortalUserAppService;
 import com.mkt.identity.application.PortalUserStore;
 import com.mkt.identity.application.RbacPermissionCache;
 import com.mkt.identity.application.RoleAppService;
 import com.mkt.identity.application.SessionService;
+import com.mkt.identity.application.UserAttributePortImpl;
 import com.mkt.identity.config.MybatisConfigService;
 import com.mkt.identity.config.SysConfigMapper;
 import com.mkt.identity.mapper.AdminUserMapper;
 import com.mkt.identity.mapper.AdminUserRoleMapper;
+import com.mkt.identity.mapper.InternalAppMapper;
 import com.mkt.identity.mapper.PermissionMapper;
 import com.mkt.identity.mapper.PortalUserMapper;
 import com.mkt.identity.mapper.RoleMapper;
@@ -68,6 +78,11 @@ public final class IdentityITSupport implements AutoCloseable {
     public final RoleAppService roles;
     public final RbacPermissionCache permissionCache;
     public final IdentityAuditAppender identityAudits;
+    public final AdminUserAppService adminUserApp;
+    public final PortalUserAppService portalUserApp;
+    public final InternalAppAppService internalApps;
+    public final UserAttributePortImpl userAttributes;
+    public final InternalAppSecretCipher secretCipher;
     public final org.springframework.transaction.PlatformTransactionManager txm;
     private final HikariDataSource dataSource;
 
@@ -86,6 +101,11 @@ public final class IdentityITSupport implements AutoCloseable {
             RoleAppService roles,
             RbacPermissionCache permissionCache,
             IdentityAuditAppender identityAudits,
+            AdminUserAppService adminUserApp,
+            PortalUserAppService portalUserApp,
+            InternalAppAppService internalApps,
+            UserAttributePortImpl userAttributes,
+            InternalAppSecretCipher secretCipher,
             org.springframework.transaction.PlatformTransactionManager txm,
             HikariDataSource dataSource) {
         this.clock = clock;
@@ -102,6 +122,11 @@ public final class IdentityITSupport implements AutoCloseable {
         this.roles = roles;
         this.permissionCache = permissionCache;
         this.identityAudits = identityAudits;
+        this.adminUserApp = adminUserApp;
+        this.portalUserApp = portalUserApp;
+        this.internalApps = internalApps;
+        this.userAttributes = userAttributes;
+        this.secretCipher = secretCipher;
         this.txm = txm;
         this.dataSource = dataSource;
     }
@@ -139,8 +164,11 @@ public final class IdentityITSupport implements AutoCloseable {
         PermissionMapper permissionMapper = sql.getMapper(PermissionMapper.class);
         RolePermissionMapper rolePermissionMapper = sql.getMapper(RolePermissionMapper.class);
         AdminUserRoleMapper adminUserRoleMapper = sql.getMapper(AdminUserRoleMapper.class);
+        PortalUserMapper portalUserMapper = sql.getMapper(PortalUserMapper.class);
+        InternalAppMapper internalAppMapper = sql.getMapper(InternalAppMapper.class);
+        TwoLevelPlatformCache platformCache = new TwoLevelPlatformCache(kv);
         RbacPermissionCache rbacCache =
-                new RbacPermissionCache(new TwoLevelPlatformCache(kv), adminUserMapper, roleMapper, permissionMapper);
+                new RbacPermissionCache(platformCache, adminUserMapper, roleMapper, permissionMapper);
         AdminUserStore adminUsers = new AdminUserStore(adminUserMapper, rbacCache);
         IdentityAuditAppender identityAudits = new IdentityAuditAppender(publisher);
         RoleAppService roleApp = TransactionalProxies.proxy(
@@ -153,7 +181,10 @@ public final class IdentityITSupport implements AutoCloseable {
                         identityAudits,
                         clock),
                 txm);
-        PortalUserStore portalUsers = new PortalUserStore(sql.getMapper(PortalUserMapper.class));
+        PortalUserStore portalUsers = new PortalUserStore(portalUserMapper);
+        UserAttributePortImpl userAttributes = new UserAttributePortImpl(portalUserMapper, platformCache);
+        InternalAppSecretCipher secretCipher =
+                new InternalAppSecretCipher("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
         MybatisConfigService configs = new MybatisConfigService(sql.getMapper(SysConfigMapper.class));
         PasswordHasher hasher = new PasswordHasher();
         CaptchaService captchas = new CaptchaService(kv, configs);
@@ -177,6 +208,48 @@ public final class IdentityITSupport implements AutoCloseable {
         PortalAuthService portalAuth = TransactionalProxies.proxy(
                 new PortalAuthService(portalUsers, captchas, rates, hasher, sessions, pass, publisher, configs, clock),
                 txm);
+        RewardPort rewards = new RewardPort() {
+            @Override
+            public com.mkt.contract.GrantResult grant(
+                    long prizeId,
+                    long userId,
+                    com.mkt.contract.GrantSource grantSource,
+                    String sourceId,
+                    com.mkt.contract.GrantContext ctx) {
+                throw new UnsupportedOperationException("reward stub");
+            }
+
+            @Override
+            public UserRewardSummary userSummary(long userId) {
+                return new UserRewardSummary(0L, new PrizeSummary(0L, 0L));
+            }
+        };
+        TaskReadPort taskReads = userId -> new com.mkt.contract.InstanceCounts(0L, 0L);
+        AdminUserAppService adminUserApp = TransactionalProxies.proxy(
+                new AdminUserAppService(
+                        adminUserMapper,
+                        adminUserRoleMapper,
+                        roleMapper,
+                        hasher,
+                        sessions,
+                        rbacCache,
+                        identityAudits,
+                        clock),
+                txm);
+        PortalUserAppService portalUserApp = TransactionalProxies.proxy(
+                new PortalUserAppService(
+                        portalUserMapper,
+                        hasher,
+                        sessions,
+                        userAttributes,
+                        rewards,
+                        pass,
+                        taskReads,
+                        identityAudits,
+                        clock),
+                txm);
+        InternalAppAppService internalAppApp = TransactionalProxies.proxy(
+                new InternalAppAppService(internalAppMapper, secretCipher, identityAudits, clock), txm);
         OutboxRelay relay = new OutboxRelay(
                 outbox, OutboxProducer.ADMIN, new PlatformLock(kv), clock, List.of(new AuditLogConsumer(jdbc, clock)));
         return new IdentityITSupport(
@@ -194,6 +267,11 @@ public final class IdentityITSupport implements AutoCloseable {
                 roleApp,
                 rbacCache,
                 identityAudits,
+                adminUserApp,
+                portalUserApp,
+                internalAppApp,
+                userAttributes,
+                secretCipher,
                 txm,
                 ds);
     }
@@ -213,6 +291,7 @@ public final class IdentityITSupport implements AutoCloseable {
             configuration.addMapper(PermissionMapper.class);
             configuration.addMapper(RolePermissionMapper.class);
             configuration.addMapper(AdminUserRoleMapper.class);
+            configuration.addMapper(InternalAppMapper.class);
             factoryBean.setConfiguration(configuration);
             GlobalConfig globalConfig = new GlobalConfig();
             GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
