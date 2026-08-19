@@ -6,12 +6,8 @@ import com.mkt.contract.GrantSource;
 import com.mkt.contract.PrizeSummary;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserRewardSummary;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
 
 /** Placeholder until domain-reward wires {@link RewardPort} (task 32). */
-@Component
-@ConditionalOnMissingBean(RewardPort.class)
 public class RewardPortStub implements RewardPort {
 
     @Override
