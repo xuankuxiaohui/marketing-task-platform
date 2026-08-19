@@ -104,4 +104,4 @@ pnpm --filter @mkt/shared gen:api
 
 - 分支只用 `task/<n>-<slug>` / `spike/<n>-<slug>` / `fix/<slug>` / `docs/<slug>`。**禁止** `feat/`、`develop/`
 - 提交：`feat(task): …` + `Refs: task-28, R13.7`
-- 不要 force-push `main`，不要提交 `spike/*/target`
+- 不要 force-push `master`，不要提交 `spike/*/target`

@@ -66,7 +66,7 @@ STATUS 与 `tasks.md` / 工作区代码不一致时：以代码和 git 为准，
 
 交接只交叉核对。人类说「继续」后再按层深读，不要通读 requirements / 整本 design / 全部 standards。`CHANGELOG-*` 不必读。读哪些 standards 以 `AGENTS.md`「动手前读什么」那张表为准：改 POM/模块只读 03；Java 读 01+03+06；写路径/鉴权/审计/会话/evict **只读 05**；HTTP 读 07+09；SQL 读 02；测试读 11；Git 读 08+04。步骤 / 对账 / 风控任务再读对应 `feasibility-*.md`。打开本节 `_设计：_` 列出的分册锚点（先查 `design.md` §0.2）。
 
-写代码前：已在 `task/<n>-<slug>` 则沿用；否则按 `docs/standards/08-git-workflow.md` 新建或切换。禁止 `feat/`、`develop/`。工作区有未提交 diff 时禁止切分支。未获人类明确要求时禁止 `git commit` / `push` / 合入 main。
+写代码前：已在 `task/<n>-<slug>` 则沿用；否则按 `docs/standards/08-git-workflow.md` 新建或切换。禁止 `feat/`、`develop/`。工作区有未提交 diff 时禁止切分支。未获人类明确要求时禁止 `git commit` / `push` / 合入 master。
 
 本机 PowerShell。跑 Maven 前：
 
