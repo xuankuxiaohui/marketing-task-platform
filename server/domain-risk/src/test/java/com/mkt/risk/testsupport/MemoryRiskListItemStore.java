@@ -1,6 +1,7 @@
 package com.mkt.risk.testsupport;
 
 import com.mkt.risk.application.RiskListItemStore;
+import com.mkt.risk.application.RiskListUk;
 import com.mkt.risk.entity.RiskListItemEntity;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,6 +25,21 @@ public final class MemoryRiskListItemStore implements RiskListItemStore {
                 .findFirst()
                 .map(this::copy)
                 .orElse(null);
+    }
+
+    @Override
+    public List<RiskListItemEntity> listByUks(List<RiskListUk> uks) {
+        if (uks == null || uks.isEmpty()) {
+            return List.of();
+        }
+        List<RiskListItemEntity> found = new ArrayList<>();
+        for (RiskListUk uk : uks) {
+            RiskListItemEntity row = getByUk(uk.dimension(), uk.listType(), uk.listValue());
+            if (row != null) {
+                found.add(row);
+            }
+        }
+        return found;
     }
 
     @Override

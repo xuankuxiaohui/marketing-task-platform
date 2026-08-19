@@ -1,13 +1,30 @@
 package com.mkt.infra.redis;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /** Narrow Redis/string facade so unit tests do not need a broker. */
 public interface KeyValueStore {
 
     String get(String key);
+
+    /** One round-trip when the backend supports MGET; default loops {@link #get}. */
+    default Map<String, String> getMany(List<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> values = new LinkedHashMap<>();
+        for (String key : keys) {
+            String value = get(key);
+            if (value != null) {
+                values.put(key, value);
+            }
+        }
+        return values;
+    }
 
     /** Persist without TTL (permanent {@code risk:list} projection, design §3.10). */
     void set(String key, String value);

@@ -13,7 +13,10 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.JsonNode;
 
-/** Writes {@code evt_event_log} with id = sys_outbox.id; PK conflict = success (design §6.4). */
+/**
+ * Writes {@code evt_event_log} with id = sys_outbox.id (design §6.4).
+ * Partitioned PK is (id, server_time), so a later retry is not a duplicate key; lookup by id first.
+ */
 public final class EvtEventLogWriter implements EventConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(EvtEventLogWriter.class);
@@ -44,6 +47,10 @@ public final class EvtEventLogWriter implements EventConsumer {
         String events = JsonUtil.toJson(List.of(item));
         Long userId = readLong(row.payload(), "userId");
         int simulated = Boolean.TRUE.equals(readBoolean(row.payload(), "simulated")) ? 1 : 0;
+        if (alreadyWritten(row.id())) {
+            log.info("evt_event_log duplicate treated as success id={}", row.id());
+            return;
+        }
         try {
             jdbc.update(
                     "INSERT INTO evt_event_log (id, source, event_code, user_id, events, batch_size, registered, simulated, server_time)"
@@ -58,6 +65,12 @@ public final class EvtEventLogWriter implements EventConsumer {
         } catch (DuplicateKeyException duplicate) {
             log.info("evt_event_log duplicate treated as success id={}", row.id());
         }
+    }
+
+    private boolean alreadyWritten(long id) {
+        Integer n = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM evt_event_log WHERE id = ?", Integer.class, id);
+        return n != null && n > 0;
     }
 
     private static Object parseProps(String payload) {

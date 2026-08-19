@@ -2,15 +2,21 @@ package com.mkt.risk.support;
 
 import com.mkt.contract.RiskListType;
 import com.mkt.infra.redis.KeyValueStore;
+import com.mkt.risk.application.RiskListItemStore;
+import com.mkt.risk.application.RiskListUk;
 import com.mkt.risk.convert.RiskTime;
 import com.mkt.risk.domain.ListEntry;
 import com.mkt.risk.domain.RiskDimension;
 import com.mkt.risk.domain.RiskListKeys;
-import com.mkt.risk.application.RiskListItemStore;
 import com.mkt.risk.entity.RiskListItemEntity;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -81,16 +87,76 @@ public class RiskListProjection {
         }
         Instant now = clock.instant();
         String key = RiskListKeys.of(dimension, listType, canonical);
-        String cached = redisGet(key);
+        return resolve(
+                dimension,
+                listType,
+                canonical,
+                redisGet(key),
+                now,
+                () -> listItemStore.getByUk(dimension.name(), listType.name(), canonical));
+    }
+
+    /**
+     * Same ghost / lost-window rules as {@link #lookup}, one Redis MGET + one DB IN.
+     */
+    public List<ListEntry> lookupMany(List<LookupKey> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return List.of();
+        }
+        Instant now = clock.instant();
+        List<PreparedLookup> prepared = new ArrayList<>(keys.size());
+        List<String> redisKeys = new ArrayList<>(keys.size());
+        List<RiskListUk> uks = new ArrayList<>(keys.size());
+        for (LookupKey key : keys) {
+            String canonical = RiskListImportParser.normalizeOrNull(key.dimension(), key.listValue());
+            if (canonical == null) {
+                continue;
+            }
+            String redisKey = RiskListKeys.of(key.dimension(), key.listType(), canonical);
+            prepared.add(new PreparedLookup(key.dimension(), key.listType(), canonical, redisKey));
+            redisKeys.add(redisKey);
+            uks.add(new RiskListUk(key.dimension().name(), key.listType().name(), canonical));
+        }
+        Map<String, String> cached = redisGetMany(redisKeys);
+        Map<String, RiskListItemEntity> rows = indexByUk(listItemStore.listByUks(uks));
+        List<ListEntry> entries = new ArrayList<>(prepared.size());
+        for (PreparedLookup item : prepared) {
+            ListEntry found = resolve(
+                    item.dimension(),
+                    item.listType(),
+                    item.canonical(),
+                    cached.get(item.redisKey()),
+                    now,
+                    () -> rows.get(ukIndex(item.dimension().name(), item.listType().name(), item.canonical())));
+            if (found != null) {
+                entries.add(found);
+            }
+        }
+        return entries;
+    }
+
+    public record LookupKey(RiskDimension dimension, RiskListType listType, String listValue) {}
+
+    private record PreparedLookup(
+            RiskDimension dimension, RiskListType listType, String canonical, String redisKey) {}
+
+    private ListEntry resolve(
+            RiskDimension dimension,
+            RiskListType listType,
+            String canonical,
+            String cached,
+            Instant now,
+            Supplier<RiskListItemEntity> db) {
+        String key = RiskListKeys.of(dimension, listType, canonical);
         if (cached != null && !expiredCache(cached, now)) {
-            RiskListItemEntity row = listItemStore.getByUk(dimension.name(), listType.name(), canonical);
+            RiskListItemEntity row = db.get();
             if (row == null || expired(row, now)) {
                 redisIgnore(() -> store.unlink(key));
                 return null;
             }
             return toEntry(row);
         }
-        RiskListItemEntity row = listItemStore.getByUk(dimension.name(), listType.name(), canonical);
+        RiskListItemEntity row = db.get();
         if (row == null || expired(row, now)) {
             if (cached != null) {
                 redisIgnore(() -> store.unlink(key));
@@ -108,6 +174,33 @@ public class RiskListProjection {
             log.warn("risk:list redis get failed, falling back to db key={}", key);
             return null;
         }
+    }
+
+    private Map<String, String> redisGetMany(List<String> keys) {
+        if (keys.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return store.getMany(keys);
+        } catch (RuntimeException ex) {
+            log.warn("risk:list redis mget failed, falling back to db size={}", keys.size());
+            return Map.of();
+        }
+    }
+
+    private static Map<String, RiskListItemEntity> indexByUk(List<RiskListItemEntity> rows) {
+        Map<String, RiskListItemEntity> indexed = new HashMap<>();
+        if (rows == null) {
+            return indexed;
+        }
+        for (RiskListItemEntity row : rows) {
+            indexed.put(ukIndex(row.getDimension(), row.getListType(), row.getListValue()), row);
+        }
+        return indexed;
+    }
+
+    private static String ukIndex(String dimension, String listType, String listValue) {
+        return dimension + '\0' + listType + '\0' + listValue;
     }
 
     private void redisIgnore(Runnable action) {

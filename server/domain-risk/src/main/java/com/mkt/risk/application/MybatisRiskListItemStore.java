@@ -21,6 +21,14 @@ public class MybatisRiskListItemStore implements RiskListItemStore {
     }
 
     @Override
+    public List<RiskListItemEntity> listByUks(List<RiskListUk> uks) {
+        if (uks == null || uks.isEmpty()) {
+            return List.of();
+        }
+        return mapper.listByUks(uks);
+    }
+
+    @Override
     public int insert(RiskListItemEntity entity) {
         return mapper.insert(entity);
     }
