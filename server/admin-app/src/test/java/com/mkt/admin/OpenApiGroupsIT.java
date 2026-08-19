@@ -7,8 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.web.client.RestClient;
 
-// OpenAPI JSON only; no DataSource. @SpringBootTest exclude replaces the
-// application.yml list, so DataSourceAutoConfiguration must be restated.
+// OpenAPI JSON only; no DataSource / Redis. @SpringBootTest exclude
+// replaces the application.yml list, so DataSource and Infra must be restated.
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties =
@@ -18,7 +18,8 @@ import org.springframework.web.client.RestClient;
                         + "com.mkt.tracking.TrackingAutoConfiguration,"
                         + "com.mkt.tracking.TrackingAdminAutoConfiguration,"
                         + "com.mkt.tracking.TrackingPortalAutoConfiguration,"
-                        + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration")
+                        + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
+                        + "com.mkt.infra.InfraAutoConfiguration")
 class OpenApiGroupsIT {
 
     @LocalServerPort
