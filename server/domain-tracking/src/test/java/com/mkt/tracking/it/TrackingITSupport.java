@@ -18,7 +18,10 @@ import com.mkt.tracking.application.EventLogStore;
 import com.mkt.tracking.application.EventMetadataStore;
 import com.mkt.tracking.application.MybatisEventLogStore;
 import com.mkt.tracking.application.MybatisEventMetadataStore;
+import com.mkt.tracking.application.TrackAuditAppender;
 import com.mkt.tracking.application.TrackBatchService;
+import com.mkt.tracking.application.TrackDebugQueryService;
+import com.mkt.tracking.application.TrackMetadataAppService;
 import com.mkt.tracking.mapper.EvtEventLogMapper;
 import com.mkt.tracking.mapper.EvtEventMetadataMapper;
 import com.mkt.tracking.support.TrackDropCounters;
@@ -29,6 +32,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.flywaydb.core.Flyway;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -49,6 +53,8 @@ public final class TrackingITSupport {
     public final EventMetadataStore metadata;
     public final TrackSettings settings;
     public final TrackDropCounters drops;
+    public final TrackMetadataAppService metadataApp;
+    public final TrackDebugQueryService debugQuery;
 
     private TrackingITSupport(
             MutableClock clock,
@@ -62,7 +68,9 @@ public final class TrackingITSupport {
             EventLogStore eventLogs,
             EventMetadataStore metadata,
             TrackSettings settings,
-            TrackDropCounters drops) {
+            TrackDropCounters drops,
+            TrackMetadataAppService metadataApp,
+            TrackDebugQueryService debugQuery) {
         this.clock = clock;
         this.jdbc = jdbc;
         this.outbox = outbox;
@@ -75,6 +83,8 @@ public final class TrackingITSupport {
         this.metadata = metadata;
         this.settings = settings;
         this.drops = drops;
+        this.metadataApp = metadataApp;
+        this.debugQuery = debugQuery;
     }
 
     public static MySQLContainer<?> mysql() {
@@ -107,8 +117,11 @@ public final class TrackingITSupport {
         EventMetadataStore metadata = new MybatisEventMetadataStore(sqlSession.getMapper(EvtEventMetadataMapper.class));
         TrackSettings settings = new TrackSettings();
         TrackDropCounters drops = new TrackDropCounters();
-        TrackBatchService batch = new TrackBatchService(
-                eventLogs, metadata, new SlidingWindowRateLimiter(kv, clock), settings, drops, clock);
+        SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(kv, clock);
+        TrackBatchService batch = new TrackBatchService(eventLogs, metadata, limiter, settings, drops, clock);
+        TrackAuditAppender audit = new TrackAuditAppender(publisher);
+        TrackMetadataAppService metadataApp = new TrackMetadataAppService(metadata, audit, clock);
+        TrackDebugQueryService debugQuery = new TrackDebugQueryService(eventLogs, limiter, settings);
         return new TrackingITSupport(
                 clock,
                 jdbc,
@@ -121,7 +134,9 @@ public final class TrackingITSupport {
                 eventLogs,
                 metadata,
                 settings,
-                drops);
+                drops,
+                metadataApp,
+                debugQuery);
     }
 
     private static SqlSessionFactory mybatis(javax.sql.DataSource dataSource) {
@@ -129,6 +144,8 @@ public final class TrackingITSupport {
             MybatisSqlSessionFactoryBean factoryBean = new MybatisSqlSessionFactoryBean();
             factoryBean.setDataSource(dataSource);
             factoryBean.setTransactionFactory(new SpringManagedTransactionFactory());
+            factoryBean.setMapperLocations(new PathMatchingResourcePatternResolver()
+                    .getResources("classpath*:mapper/tracking/*.xml"));
             factoryBean.setTypeAliasesPackage("com.mkt.tracking.entity");
             MybatisConfiguration configuration = new MybatisConfiguration();
             configuration.setMapUnderscoreToCamelCase(true);

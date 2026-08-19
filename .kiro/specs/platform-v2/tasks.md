@@ -373,9 +373,9 @@ _测试：§7.3 R28.1–R28.3；批量部分接受断言；业务回滚零 evt�
 
 ### 任务 20：domain-tracking 元数据与调试（编组 D）
 
-- [ ] `/admin/track/metadata` CRUD 与 `evt_event_metadata` 种子联动
-- [ ] 调试查询：编码 / 用户 / 来源 / 时间；抽样 `track.query.sample-ratio-percent` + 限流
-- [ ] 元数据变更审计
+- [x] `/admin/track/metadata` CRUD 与 `evt_event_metadata` 种子联动
+- [x] 调试查询：编码 / 用户 / 来源 / 时间；抽样 `track.query.sample-ratio-percent` + 限流
+- [x] 元数据变更审计
 
 _需求：R29_
 _设计：design §3.7.2、§4.7_

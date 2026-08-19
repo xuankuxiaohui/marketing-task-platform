@@ -1,8 +1,10 @@
 package com.mkt.tracking;
 
+import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.infra.ratelimit.SlidingWindowRateLimiter;
 import com.mkt.tracking.application.EventLogStore;
 import com.mkt.tracking.application.EventMetadataStore;
+import com.mkt.tracking.application.TrackAuditAppender;
 import com.mkt.tracking.application.TrackBatchService;
 import com.mkt.tracking.domain.DisabledEventPolicy;
 import com.mkt.tracking.domain.UnregisteredPolicy;
@@ -35,6 +37,8 @@ public class TrackingAutoConfiguration {
             @Value("${mkt.track.unregistered-policy:accept}") String unregisteredPolicy,
             @Value("${mkt.track.disabled-event-policy:drop-count}") String disabledEventPolicy,
             @Value("${mkt.track.rate-limit-per-minute:60}") int rateLimitPerMinute,
+            @Value("${mkt.track.query-sample-ratio-percent:1}") int querySampleRatioPercent,
+            @Value("${mkt.track.query-rate-limit-per-minute:60}") int queryRateLimitPerMinute,
             @Value("${mkt.track.retention-event-days:90}") int retentionEventDays) {
         TrackSettings settings = new TrackSettings();
         settings.setBatchMaxSize(batchMaxSize);
@@ -42,6 +46,8 @@ public class TrackingAutoConfiguration {
         settings.setUnregisteredPolicy(UnregisteredPolicy.fromConfig(unregisteredPolicy));
         settings.setDisabledEventPolicy(DisabledEventPolicy.fromConfig(disabledEventPolicy));
         settings.setRateLimitPerMinute(rateLimitPerMinute);
+        settings.setQuerySampleRatioPercent(querySampleRatioPercent);
+        settings.setQueryRateLimitPerMinute(queryRateLimitPerMinute);
         settings.setRetentionEventDays(retentionEventDays);
         return settings;
     }
@@ -50,6 +56,13 @@ public class TrackingAutoConfiguration {
     @ConditionalOnMissingBean
     TrackDropCounters trackDropCounters() {
         return new TrackDropCounters();
+    }
+
+    @Bean
+    @ConditionalOnBean(EventPublisher.class)
+    @ConditionalOnMissingBean
+    TrackAuditAppender trackAuditAppender(EventPublisher eventPublisher) {
+        return new TrackAuditAppender(eventPublisher);
     }
 
     @Bean
