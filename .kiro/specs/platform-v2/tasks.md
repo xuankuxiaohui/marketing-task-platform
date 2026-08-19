@@ -417,9 +417,9 @@ _测试：§7.3 R3.1、R5.1；InternalAppSecretIT_
 
 ### 任务 24：字典 / 配置 / 缓存管理（编组 E）
 
-- [ ] §4.3 字典类型 / 项 CRUD；停用类型两侧查空列表
-- [ ] 配置 CRUD；掩码项不回显；未带 value = 保持原值；配置旧值审计
-- [ ] 缓存 stats / evict；level 必填校验；三级粒度；`identity:session` 一律 400 `system.cache.session-forbidden`；`ad:position` evict 合法但无键（P0 未接线）
+- [x] §4.3 字典类型 / 项 CRUD；停用类型两侧查空列表
+- [x] 配置 CRUD；掩码项不回显；未带 value = 保持原值；配置旧值审计
+- [x] 缓存 stats / evict；level 必填校验；三级粒度；`identity:session` 一律 400 `system.cache.session-forbidden`；`ad:position` evict 合法但无键（P0 未接线）
 
 _需求：R7、R8、R9_
 _设计：design §4.3、§6.2、§6.5_
