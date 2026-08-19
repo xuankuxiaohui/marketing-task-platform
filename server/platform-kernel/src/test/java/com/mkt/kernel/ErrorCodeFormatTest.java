@@ -22,6 +22,7 @@ class ErrorCodeFormatTest {
                 "dict.entry.duplicate-value",
                 "config.value.unknown",
                 "cache.namespace.not-found",
+                "system.cache.session-forbidden",
                 "ad.position.not-found",
                 "signin.signin.duplicate-day",
                 "activity.activity.not-found"

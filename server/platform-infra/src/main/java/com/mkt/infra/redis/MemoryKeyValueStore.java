@@ -1,0 +1,93 @@
+package com.mkt.infra.redis;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+
+/** In-process stand-in for unit tests. Not Embedded Redis. */
+public final class MemoryKeyValueStore implements KeyValueStore {
+
+    private final Map<String, String> values = new ConcurrentHashMap<>();
+    private final Map<String, List<Consumer<String>>> subscribers = new ConcurrentHashMap<>();
+    private final Map<String, Thread> locks = new ConcurrentHashMap<>();
+    private volatile boolean available = true;
+
+    public void setAvailable(boolean available) {
+        this.available = available;
+    }
+
+    @Override
+    public String get(String key) {
+        requireAvailable();
+        return values.get(key);
+    }
+
+    @Override
+    public void set(String key, String value, Duration ttl) {
+        requireAvailable();
+        values.put(key, value);
+    }
+
+    @Override
+    public void unlink(String key) {
+        requireAvailable();
+        values.remove(key);
+    }
+
+    @Override
+    public void unlinkByPattern(String pattern) {
+        requireAvailable();
+        String prefix = pattern.endsWith("*") ? pattern.substring(0, pattern.length() - 1) : pattern;
+        values.keySet().removeIf(k -> k.startsWith(prefix));
+    }
+
+    @Override
+    public void publish(String channel, String payload) {
+        requireAvailable();
+        subscribers.getOrDefault(channel, List.of()).forEach(c -> c.accept(payload));
+    }
+
+    @Override
+    public AutoCloseable subscribe(String channel, Consumer<String> listener) {
+        subscribers.computeIfAbsent(channel, k -> new CopyOnWriteArrayList<>()).add(listener);
+        return () -> subscribers.getOrDefault(channel, List.of()).remove(listener);
+    }
+
+    @Override
+    public boolean setIfAbsent(String key, String value, Duration ttl) {
+        requireAvailable();
+        return values.putIfAbsent(key, value) == null;
+    }
+
+    @Override
+    public Long eval(String lua, List<String> keys, List<String> argv) {
+        requireAvailable();
+        throw new UnsupportedOperationException("Lua requires Redis");
+    }
+
+    @Override
+    public boolean tryLock(String key, Duration lease) {
+        requireAvailable();
+        return locks.putIfAbsent(key, Thread.currentThread()) == null;
+    }
+
+    @Override
+    public void unlock(String key) {
+        requireAvailable();
+        locks.remove(key, Thread.currentThread());
+    }
+
+    @Override
+    public boolean ping() {
+        return available;
+    }
+
+    private void requireAvailable() {
+        if (!available) {
+            throw new IllegalStateException("redis unavailable");
+        }
+    }
+}
