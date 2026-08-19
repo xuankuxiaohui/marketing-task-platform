@@ -8,14 +8,15 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–19**
-- 进行中：CI 修复分支 `bug/1-flyway-v1it`（PR #2 → main）。FlywayV1IT / OutboxIdempotentInsertIT / CaseHandleAuditIT / ListConcurrentDecisionIT（C-12）已绿且未回退。本轮修 `OpenApiGroupsIT`：无 DataSource，排除 risk/tracking 自动配置
+- 进行中：CI 修复分支 `bug/1-flyway-v1it`（PR #2 → main）。FlywayV1IT / OutboxIdempotentInsertIT / CaseHandleAuditIT / ListConcurrentDecisionIT（C-12）已绿且未回退。本轮修 `OpenApiGroupsIT`：`@SpringBootTest` 的 `spring.autoconfigure.exclude` 会整表覆盖 yml，已在两个 IT 的 exclude 里**追加** `DataSourceAutoConfiguration`，并保留 risk/tracking 排除
 - 下一步：等 PR #2 CI。不要做任务 20/21，除非人类明确要求
 - 代码实况：`domain-tracking` 已实现 `POST /api/common/track/batch`；服务端事件仍经 Outbox → `EvtEventLogWriter`。portal-app 已装配 `domain-tracking`。未做元数据 CRUD / 调试查询（任务 20）
 - Git：分支 `bug/1-flyway-v1it`（基于 `main` @ `90b6d85`）。未合 main / master
 
 ## 关键技术决策（本轮新发生的）
 
-- `OpenApiGroupsIT` 只断言三组 OpenAPI JSON，不需要风控/埋点/DB。用 `spring.autoconfigure.exclude` 排除 `RiskAutoConfiguration`、`RiskAdminAutoConfiguration`、`TrackingAutoConfiguration`、`TrackingAdminAutoConfiguration`、`TrackingPortalAutoConfiguration`
+- `@SpringBootTest(properties = "spring.autoconfigure.exclude=…")` 会**替换**而不是合并 `application.yml` 的 exclude。yml 里已有的 `DataSourceAutoConfiguration` 因此失效，Hikari 再装上后报 Failed to determine a suitable driver class
+- 两个 `OpenApiGroupsIT` 的 exclude 追加 `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`，保留现有 Risk/Tracking（含 Admin/Portal）排除
 - 未改三个 group 的断言（admin 仍不含 `/api/` `/internal/`），未改名单判定，未回退 Flyway/Outbox/C-12，未改 AutoConfiguration 实现
 
 ## 改过的核心文件
@@ -37,6 +38,7 @@
 - run 32252606577：`OpenApiGroupsIT` 因 Boot 4 `OnBean`+`ComponentScan` 起不来上下文
 - 随后去掉类级 OnBean 只留扫描：无 DataSource 仍扫进 `RiskHitLogMapper`，要 `sqlSessionFactory`
 - PersistenceScan `@Import` 在 Boot 4 OnBean 未成立时仍可能扫进 application store，Mapper 却没建出 → `MybatisRiskHitLogStore` 缺 `RiskHitLogMapper`
+- `@SpringBootTest` 的 `spring.autoconfigure.exclude` 覆盖 yml 同名列表，yml 里的 `DataSourceAutoConfiguration` 会被丢掉
 
 ## 尝试过但失败的方案
 
@@ -46,6 +48,7 @@
 - 未放宽 C-12 的 ROUNDS / DECISIONS / 仅 PASS/REJECT / 单轮 <5s，也未把 `Future.get` 调松当绿
 - 去掉类级 `@ConditionalOnBean(DataSource)`、扫描留在 AutoConfiguration：无 DataSource 仍注册 Mapper，OpenApiGroupsIT 要 sqlSessionFactory
 - `RiskAutoConfiguration` `@Import(RiskPersistenceScan)` 指望 OnBean 挡住扫描：Boot 4 OnBean 未成立时仍可能扫进 store、扫不出 mapper
+- 只排除 risk/tracking、不重写 DataSource 排除：`@SpringBootTest` exclude 覆盖 yml，Hikari 再装上后报无 driver class
 
 ## 明确禁止下一会话做的事
 
@@ -59,14 +62,15 @@
 - 不要用 H2 / Embedded Redis 让 IT 本地变绿
 - 不要合 main / master
 - 不要自审自合任务 18
-- 不要回退 05df7e0 / 3671389 / 120647e / 1987478 / 6d7ecd6 / a7e5ef6
+- 不要回退 05df7e0 / 3671389 / 120647e / 1987478 / 6d7ecd6 / a7e5ef6 / 4c0bd0e
 - 不要再给带 `@ComponentScan` 的配置类加类级 `@ConditionalOnBean`
 - 不要再改名单判定 / 批查
 - 不要回退 PersistenceScan 后再把扫描加回 AutoConfiguration
 - 不要削弱三个 OpenAPI group 断言（含 admin 不含 `/api/` `/internal/`）
+- 不要从 OpenApiGroupsIT 的 exclude 里拿掉 `DataSourceAutoConfiguration` 或 risk/tracking
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 等 PR #2 CI（`OpenApiGroupsIT` 排除 risk/tracking 后能起上下文）
+1. 等 PR #2 CI（`OpenApiGroupsIT` 排除 DataSource + risk/tracking 后能起上下文）
 2. 人类评审任务 18（风控判定链）
 3. 任务 20：domain-tracking 元数据与调试（人类明确要求后再做）

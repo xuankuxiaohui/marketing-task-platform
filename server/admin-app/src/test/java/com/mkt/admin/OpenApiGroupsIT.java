@@ -7,8 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.web.client.RestClient;
 
-// OpenAPI JSON only; no DataSource. Risk/tracking auto-config still scans
-// controllers/stores without mappers (Boot 4 OnBean + Import).
+// OpenAPI JSON only; no DataSource. @SpringBootTest exclude replaces the
+// application.yml list, so DataSourceAutoConfiguration must be restated.
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties =
@@ -17,7 +17,8 @@ import org.springframework.web.client.RestClient;
                         + "com.mkt.risk.RiskAdminAutoConfiguration,"
                         + "com.mkt.tracking.TrackingAutoConfiguration,"
                         + "com.mkt.tracking.TrackingAdminAutoConfiguration,"
-                        + "com.mkt.tracking.TrackingPortalAutoConfiguration")
+                        + "com.mkt.tracking.TrackingPortalAutoConfiguration,"
+                        + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration")
 class OpenApiGroupsIT {
 
     @LocalServerPort
