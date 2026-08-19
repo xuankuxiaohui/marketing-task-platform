@@ -10,7 +10,9 @@ class RiskAutoConfigurationTest {
 
     @Test
     void classDoesNotCombineOnBeanWithComponentScan() {
-        assertThat(RiskAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNotNull();
-        assertThat(RiskAutoConfiguration.class.getAnnotation(ConditionalOnBean.class)).isNull();
+        assertThat(RiskAutoConfiguration.class.getAnnotation(ConditionalOnBean.class)).isNotNull();
+        assertThat(RiskAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNull();
+        assertThat(RiskPersistenceScan.class.getAnnotation(ComponentScan.class)).isNotNull();
+        assertThat(RiskPersistenceScan.class.getAnnotation(ConditionalOnBean.class)).isNull();
     }
 }

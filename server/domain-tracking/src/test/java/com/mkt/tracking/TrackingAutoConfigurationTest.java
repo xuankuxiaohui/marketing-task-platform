@@ -10,7 +10,9 @@ class TrackingAutoConfigurationTest {
 
     @Test
     void classDoesNotCombineOnBeanWithComponentScan() {
-        assertThat(TrackingAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNotNull();
-        assertThat(TrackingAutoConfiguration.class.getAnnotation(ConditionalOnBean.class)).isNull();
+        assertThat(TrackingAutoConfiguration.class.getAnnotation(ConditionalOnBean.class)).isNotNull();
+        assertThat(TrackingAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNull();
+        assertThat(TrackingPersistenceScan.class.getAnnotation(ComponentScan.class)).isNotNull();
+        assertThat(TrackingPersistenceScan.class.getAnnotation(ConditionalOnBean.class)).isNull();
     }
 }
