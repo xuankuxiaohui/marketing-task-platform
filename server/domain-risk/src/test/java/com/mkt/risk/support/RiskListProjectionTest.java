@@ -57,6 +57,20 @@ class RiskListProjectionTest {
         assertThat(hit.listValue()).isEqualTo("7");
     }
 
+    @Test
+    void lookupManyMatchesSingleLookupForGhostAndHit() {
+        insert("USER", "BLACK", "8", null);
+        String ghost = RiskListKeys.of(RiskDimension.USER, RiskListType.BLACK, "9");
+        redis.set(ghost, RiskListKeys.PERMANENT);
+        var keys = java.util.List.of(
+                new RiskListProjection.LookupKey(RiskDimension.USER, RiskListType.BLACK, "8"),
+                new RiskListProjection.LookupKey(RiskDimension.USER, RiskListType.BLACK, "9"));
+        assertThat(projection.lookupMany(keys)).hasSize(1).first().extracting(ListEntry::listValue).isEqualTo("8");
+        assertThat(redis.get(ghost)).isNull();
+        assertThat(redis.get(RiskListKeys.of(RiskDimension.USER, RiskListType.BLACK, "8")))
+                .isEqualTo(RiskListKeys.PERMANENT);
+    }
+
     private void insert(String dim, String type, String value, LocalDateTime expireAt) {
         RiskListItemEntity e = new RiskListItemEntity();
         e.setDimension(dim);
