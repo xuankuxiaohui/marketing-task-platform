@@ -105,6 +105,35 @@ class EntityAccessTest {
         assertThat(c.getValueType()).isEqualTo("NUMBER");
         assertThat(c.getMasked()).isZero();
         assertThat(c.getStatus()).isEqualTo("ENABLED");
+        c.setRemark("r");
+        c.setCreatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        c.setUpdatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        assertThat(c.getRemark()).isEqualTo("r");
+        assertThat(c.maskedFlag()).isFalse();
+        assertThat(c.enabled()).isTrue();
+        DictTypeEntity type = new DictTypeEntity();
+        type.setId(5L);
+        type.setCode("province");
+        type.setName("省份");
+        type.setStatus("ENABLED");
+        type.setRemark(null);
+        type.setCreatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        type.setUpdatedAt(LocalDateTime.of(2026, 1, 1, 0, 0));
+        assertThat(type.enabled()).isTrue();
+        type.setStatus("DISABLED");
+        assertThat(type.enabled()).isFalse();
+        DictEntryEntity entry = new DictEntryEntity();
+        entry.setId(6L);
+        entry.setTypeId(5L);
+        entry.setLabel("广东");
+        entry.setValue("GD");
+        entry.setSort(1);
+        entry.setStatus("ENABLED");
+        entry.setRemark(null);
+        assertThat(entry.getValue()).isEqualTo("GD");
+        assertThat(entry.enabled()).isTrue();
+        entry.setStatus("DISABLED");
+        assertThat(entry.enabled()).isFalse();
     }
 
     @Test

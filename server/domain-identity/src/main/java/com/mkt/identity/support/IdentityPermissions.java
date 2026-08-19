@@ -26,6 +26,18 @@ public final class IdentityPermissions {
     public static final String INTERNAL_APP_QUERY = "identity:internal-app:query";
     public static final String INTERNAL_APP_ADD = "identity:internal-app:add";
     public static final String INTERNAL_APP_EDIT = "identity:internal-app:edit";
+    public static final String DICT_TYPE_QUERY = "system:dict-type:query";
+    public static final String DICT_TYPE_CREATE = "system:dict-type:create";
+    public static final String DICT_TYPE_UPDATE = "system:dict-type:update";
+    public static final String DICT_TYPE_DELETE = "system:dict-type:delete";
+    public static final String DICT_ENTRY_CREATE = "system:dict-entry:create";
+    public static final String DICT_ENTRY_UPDATE = "system:dict-entry:update";
+    public static final String DICT_ENTRY_DELETE = "system:dict-entry:delete";
+    public static final String CONFIG_QUERY = "system:config:query";
+    public static final String CONFIG_CREATE = "system:config:create";
+    public static final String CONFIG_UPDATE = "system:config:update";
+    public static final String CACHE_STATS = "system:cache:stats";
+    public static final String CACHE_EVICT = "system:cache:evict";
 
     private IdentityPermissions() {}
 }

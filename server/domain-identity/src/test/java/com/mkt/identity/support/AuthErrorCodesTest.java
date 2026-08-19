@@ -18,5 +18,8 @@ class AuthErrorCodesTest {
         assertThat(AuthErrorCodes.ROLE_BUILT_IN.httpStatus()).isEqualTo(400);
         assertThat(AuthErrorCodes.USER_SELF_PROTECTED.code()).isEqualTo("auth.user.self-protected");
         assertThat(InternalAppErrorCodes.DUPLICATE.code()).isEqualTo("internal.app.duplicate");
+        assertThat(SystemErrorCodes.DICT_ENTRY_DUPLICATE_VALUE.code()).isEqualTo("dict.entry.duplicate-value");
+        assertThat(SystemErrorCodes.CONFIG_TYPE_MISMATCH.code()).isEqualTo("config.value.type-mismatch");
+        assertThat(SystemErrorCodes.CACHE_NAMESPACE_UNKNOWN.code()).isEqualTo("cache.namespace.unknown");
     }
 }

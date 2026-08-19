@@ -20,10 +20,15 @@ public class IdentityAuditAppender {
     }
 
     public void append(String action, String aggregateType, String aggregateId, String result, String summary) {
+        append("identity", action, aggregateType, aggregateId, result, summary);
+    }
+
+    public void append(
+            String module, String action, String aggregateType, String aggregateId, String result, String summary) {
         UserPrincipal principal = UserContext.current().orElse(null);
         Long operatorId = principal == null ? null : principal.userId();
         String operatorName = principal == null ? "" : principal.username();
-        append(action, aggregateType, aggregateId, operatorId, operatorName, result, null, null, summary);
+        append(module, action, aggregateType, aggregateId, operatorId, operatorName, result, null, null, summary);
     }
 
     public void append(
@@ -36,8 +41,22 @@ public class IdentityAuditAppender {
             String ip,
             String userAgent,
             String summary) {
+        append("identity", action, aggregateType, aggregateId, operatorId, operatorName, result, ip, userAgent, summary);
+    }
+
+    public void append(
+            String module,
+            String action,
+            String aggregateType,
+            String aggregateId,
+            Long operatorId,
+            String operatorName,
+            String result,
+            String ip,
+            String userAgent,
+            String summary) {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("module", "identity");
+        payload.put("module", module == null || module.isBlank() ? "identity" : module);
         payload.put("action", action);
         payload.put("operatorId", operatorId);
         payload.put("operatorName", truncate(operatorName, 30));

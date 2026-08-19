@@ -5,16 +5,13 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
 
-@TableName("sys_config")
-public class SysConfigEntity {
+@TableName("sys_dict_type")
+public class DictTypeEntity {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String configKey;
-    private String configGroup;
-    private String configValue;
-    private String valueType;
-    private Integer masked;
+    private String code;
+    private String name;
     private String status;
     private String remark;
     private LocalDateTime createdAt;
@@ -28,44 +25,20 @@ public class SysConfigEntity {
         this.id = id;
     }
 
-    public String getConfigKey() {
-        return configKey;
+    public String getCode() {
+        return code;
     }
 
-    public void setConfigKey(String configKey) {
-        this.configKey = configKey;
+    public void setCode(String code) {
+        this.code = code;
     }
 
-    public String getConfigGroup() {
-        return configGroup;
+    public String getName() {
+        return name;
     }
 
-    public void setConfigGroup(String configGroup) {
-        this.configGroup = configGroup;
-    }
-
-    public String getConfigValue() {
-        return configValue;
-    }
-
-    public void setConfigValue(String configValue) {
-        this.configValue = configValue;
-    }
-
-    public String getValueType() {
-        return valueType;
-    }
-
-    public void setValueType(String valueType) {
-        this.valueType = valueType;
-    }
-
-    public Integer getMasked() {
-        return masked;
-    }
-
-    public void setMasked(Integer masked) {
-        this.masked = masked;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getStatus() {
@@ -98,10 +71,6 @@ public class SysConfigEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public boolean maskedFlag() {
-        return masked != null && masked == 1;
     }
 
     public boolean enabled() {
