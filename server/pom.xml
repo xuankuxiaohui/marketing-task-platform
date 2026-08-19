@@ -310,6 +310,7 @@
                                     <excludes>
                                         <exclude>com.mkt:*</exclude>
                                         <exclude>org.springframework.boot:*</exclude>
+                                        <exclude>org.springframework.security:spring-security-crypto</exclude>
                                         <exclude>org.redisson:redisson</exclude>
                                         <exclude>org.redisson:redisson-spring-boot-starter</exclude>
                                         <exclude>cn.dev33:sa-token-spring-boot4-starter</exclude>
@@ -323,6 +324,10 @@
                                         <exclude>net.jqwik:jqwik</exclude>
                                         <exclude>com.tngtech.archunit:archunit-junit5</exclude>
                                         <exclude>net.logstash.logback:logstash-logback-encoder</exclude>
+                                        <exclude>org.flywaydb:flyway-mysql</exclude>
+                                        <exclude>com.mysql:mysql-connector-j</exclude>
+                                        <exclude>org.testcontainers:testcontainers-junit-jupiter</exclude>
+                                        <exclude>org.testcontainers:testcontainers-mysql</exclude>
                                     </excludes>
                                     <includes>
                                         <include>*:*</include>
@@ -331,9 +336,6 @@
                                 <bannedDependencies>
                                     <searchTransitive>true</searchTransitive>
                                     <message>禁止反选型坐标（H2 / Hutool JSON·HTTP·DB / XXL-Job / Drools / Spring Cloud / RuoYi）</message>
-                                    <excludes>
-                                        <exclude>org.springframework.security:spring-security-crypto</exclude>
-                                    </excludes>
                                     <includes>
                                         <include>com.h2database:*</include>
                                         <include>cn.hutool:hutool-json</include>

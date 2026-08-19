@@ -289,11 +289,11 @@ _测试：ContractPurityArchTest；端口方法签名编译期锁定_
 
 ### 任务 13：platform-db V1 sys 基线（编组 C）
 
-- [ ] Flyway 仅 admin-app 执行（RL-09）；`validate` + 幂等 CI
-- [ ] V1：sys 12 表（含 `sys_internal_app`）字段级 DDL = design §3.2
-- [ ] `sys_outbox.producer`（`admin|portal`）+ `idx_producer_status_next`；`sys_audit_log.operator_id` 可空
-- [ ] 种子：超管角色；权限树 = §4.10 菜单 28 行；附录 A 52 键；字典 6 类（含 `portal_route` 8 条目，value 封闭表 = design §3.2.4）
-- [ ] 主键 / 时间 / 字符集 / 逻辑删除约定按 §3.1
+- [x] Flyway 仅 admin-app 执行（RL-09）；`validate` + 幂等 CI
+- [x] V1：sys 12 表（含 `sys_internal_app`）字段级 DDL = design §3.2
+- [x] `sys_outbox.producer`（`admin|portal`）+ `idx_producer_status_next`；`sys_audit_log.operator_id` 可空
+- [x] 种子：超管角色；权限树 = §4.10 菜单 28 行；附录 A 52 键；字典 6 类（含 `portal_route` 8 条目，value 封闭表 = design §3.2.4）
+- [x] 主键 / 时间 / 字符集 / 逻辑删除约定按 §3.1
 
 _需求：R1–R10、R15.2、附录 A/B_
 _设计：design §3.1、§3.2、§4.10、§6.9_
