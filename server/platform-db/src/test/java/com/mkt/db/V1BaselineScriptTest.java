@@ -18,7 +18,7 @@ class V1BaselineScriptTest {
     static void load() throws IOException {
         try (InputStream in = V1BaselineScriptTest.class.getResourceAsStream("/db/migration/V1__sys_baseline.sql")) {
             assertThat(in).isNotNull();
-            sql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            sql = new String(in.readAllBytes(), StandardCharsets.UTF_8).replace("\r\n", "\n");
         }
     }
 

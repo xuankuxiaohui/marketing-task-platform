@@ -301,10 +301,10 @@ _测试：FlywayV1IT（表数=12、种子行数断言、超管可登录所需最
 
 ### 任务 14：platform-db V2–V4 全量建表（编组 C）
 
-- [ ] V2 task 12 表、V3 rwd 7 + pnt 2（含分类种子 7 行、须对账三类 `recon_action_policy=REVIEW`）、V4 risk 4 + evt 2；合计 39 表
-- [ ] 全部 CHECK / 唯一约束 / 索引与 §3 一致（含 `next_retry_at`、`skip_reason`、`last_biz_no`）
-- [ ] risk 种子 R-a–R-f；`evt_event_metadata` 种子 = 附录 D 全量；`evt_event_log` 首月分区 `pYYYYMM`
-- [ ] `simulated` 列贯穿实例 / 发放 / 流水 / 命中 / 事件五表
+- [x] V2 task 12 表、V3 rwd 7 + pnt 2（含分类种子 7 行、须对账三类 `recon_action_policy=REVIEW`）、V4 risk 4 + evt 2；合计 39 表
+- [x] 全部 CHECK / 唯一约束 / 索引与 §3 一致（含 `next_retry_at`、`skip_reason`、`last_biz_no`）
+- [x] risk 种子 R-a–R-f；`evt_event_metadata` 种子 = 附录 D 全量；`evt_event_log` 首月分区 `pYYYYMM`
+- [x] `simulated` 列贯穿实例 / 发放 / 流水 / 命中 / 事件五表
 
 _需求：R11–R20、R25–R29、R24.5_
 _设计：design §3.1、§3.3–§3.7、§3.8_

@@ -28,6 +28,7 @@ class FlywayV1IT {
         Flyway flyway = Flyway.configure()
                 .dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())
                 .locations("classpath:db/migration")
+                .target("1")
                 .load();
 
         MigrateResult first = flyway.migrate();
