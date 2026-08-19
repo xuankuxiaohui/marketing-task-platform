@@ -82,6 +82,17 @@ class SessionAdminAppServiceTest {
     }
 
     @Test
+    void unfilteredListUsesTokenSearch() {
+        sessions.loginAdmin(11L, 5, "dev-a", "alice", "10.0.0.1");
+        PageData<SessionView> all = service.page(new SessionQuery(null, null, PageQuery.of(1, 20)));
+        assertThat(all.total()).isEqualTo(1);
+        assertThat(all.records().get(0).account()).isEqualTo("alice");
+        PageData<SessionView> typed =
+                service.page(new SessionQuery(AccountTypes.ADMIN, null, PageQuery.of(1, 20)));
+        assertThat(typed.total()).isEqualTo(1);
+    }
+
+    @Test
     void unknownAccountIsNotFoundAndBadTypeIsParamInvalid() {
         when(adminUsers.getByUsername("nobody")).thenReturn(null);
         assertThatThrownBy(() -> service.kick(new SessionKickCommand(AccountTypes.ADMIN, "nobody", null)))

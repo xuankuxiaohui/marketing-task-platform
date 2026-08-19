@@ -79,11 +79,17 @@ public final class RedissonKeyValueStore implements KeyValueStore {
 
     @Override
     public void unlinkByPattern(String pattern) {
-        List<String> keys = new ArrayList<>();
-        client.getKeys().getKeysByPattern(pattern).forEach(keys::add);
+        List<String> keys = keysByPattern(pattern);
         if (!keys.isEmpty()) {
             client.getKeys().delete(keys.toArray(String[]::new));
         }
+    }
+
+    @Override
+    public List<String> keysByPattern(String pattern) {
+        List<String> keys = new ArrayList<>();
+        client.getKeys().getKeysByPattern(pattern).forEach(keys::add);
+        return keys;
     }
 
     @Override

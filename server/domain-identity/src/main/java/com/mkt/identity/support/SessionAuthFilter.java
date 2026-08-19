@@ -13,6 +13,7 @@ import com.mkt.kernel.Result;
 import com.mkt.kernel.SessionErrorCodes;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
+import com.mkt.kernel.audit.AuditOnce;
 import com.mkt.kernel.json.JsonUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -143,6 +144,7 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             auditForbidden(downstream, response);
         } finally {
             UserContext.clear();
+            AuditOnce.clear();
         }
     }
 

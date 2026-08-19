@@ -61,6 +61,15 @@ class AuditedAspectTest {
     }
 
     @Test
+    void leftoverMarkFromPriorRequestDoesNotSkipThisWrite() throws Throwable {
+        AuditOnce.mark();
+        ProceedingJoinPoint joinPoint = joinPoint(new CacheEvictBody("dict"));
+        when(joinPoint.proceed()).thenReturn("ok");
+        aspect.around(joinPoint, audited("system", "cache-evict"));
+        assertThat(outbox.all()).hasSize(1);
+    }
+
+    @Test
     void alreadyAppendedPathDoesNotInsertSecondRow() throws Throwable {
         ProceedingJoinPoint joinPoint = joinPoint(new CacheEvictBody("dict"));
         when(joinPoint.proceed()).thenAnswer(invocation -> {

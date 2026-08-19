@@ -338,6 +338,9 @@ class SessionAuthFilterTest {
             ((HttpServletResponse) s).setStatus(403);
         });
         assertThat(audited.get()).isEqualTo("7:alice:GET:/admin/identity/roles:10.0.0.9");
+        com.mkt.kernel.audit.AuditOnce.mark();
+        filter.doFilter(req, new MockHttpServletResponse(), (r, s) -> {});
+        assertThat(com.mkt.kernel.audit.AuditOnce.written()).isFalse();
     }
 
     @Test

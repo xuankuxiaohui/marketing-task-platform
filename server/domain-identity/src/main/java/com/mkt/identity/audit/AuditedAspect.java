@@ -32,6 +32,7 @@ public class AuditedAspect {
 
     @Around("@annotation(audited)")
     public Object around(ProceedingJoinPoint joinPoint, Audited audited) throws Throwable {
+        AuditOnce.clear();
         long started = System.nanoTime();
         String summary = AuditSummaries.ofArgs(joinPoint.getArgs());
         try {

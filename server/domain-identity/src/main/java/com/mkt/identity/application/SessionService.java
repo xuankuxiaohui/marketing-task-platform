@@ -147,9 +147,11 @@ public class SessionService {
         if (tokens == null || tokens.isEmpty()) {
             return rows;
         }
+        String prefix = logic.splicingKeyTokenValue("");
         Set<String> seen = new LinkedHashSet<>();
         for (String token : tokens) {
-            Object loginId = logic.getLoginIdByToken(token);
+            String raw = unwrapSearchHit(prefix, token);
+            Object loginId = logic.getLoginIdByToken(raw);
             if (loginId == null) {
                 continue;
             }
@@ -182,6 +184,16 @@ public class SessionService {
             String deviceId = blankToNull(terminal.getDeviceId());
             rows.add(new SessionView(last4(raw), account, accountType, loginAt, lastActiveAt, blankToNull(ip), deviceId));
         }
+    }
+
+    private static String unwrapSearchHit(String prefix, String hit) {
+        if (hit == null) {
+            return "";
+        }
+        if (prefix != null && !prefix.isEmpty() && hit.startsWith(prefix)) {
+            return hit.substring(prefix.length());
+        }
+        return hit;
     }
 
     private static String last4(String token) {

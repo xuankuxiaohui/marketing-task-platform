@@ -1,6 +1,7 @@
 package com.mkt.infra.redis;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -79,10 +80,30 @@ public final class MemoryKeyValueStore implements KeyValueStore {
     @Override
     public void unlinkByPattern(String pattern) {
         requireAvailable();
-        String prefix = pattern.endsWith("*") ? pattern.substring(0, pattern.length() - 1) : pattern;
+        String prefix = prefixOf(pattern);
         values.keySet().removeIf(k -> k.startsWith(prefix));
         ttlSecondsByKey.keySet().removeIf(k -> k.startsWith(prefix));
         zsets.keySet().removeIf(k -> k.startsWith(prefix));
+    }
+
+    @Override
+    public List<String> keysByPattern(String pattern) {
+        requireAvailable();
+        String prefix = prefixOf(pattern);
+        List<String> keys = new ArrayList<>();
+        for (String key : values.keySet()) {
+            if (key.startsWith(prefix)) {
+                keys.add(key);
+            }
+        }
+        return keys;
+    }
+
+    private static String prefixOf(String pattern) {
+        if (pattern == null || pattern.isEmpty()) {
+            return "";
+        }
+        return pattern.endsWith("*") ? pattern.substring(0, pattern.length() - 1) : pattern;
     }
 
     @Override
