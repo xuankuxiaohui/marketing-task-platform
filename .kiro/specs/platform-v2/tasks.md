@@ -348,12 +348,12 @@ _测试：§7.3 R25.1–R25.2、§7.4 C-12_
 
 ### 任务 18：domain-risk 规则引擎与判定链（编组 D）
 
-- [ ] 实现 `RiskCheckPort.check`：不抛业务异常，返回 `RiskVerdict{action}`；`action ∈ {PASS, REJECT, SILENT_REJECT, MARK}`；冻结不经本端口（步骤推进由 task 域内查名单投影）
-- [ ] `REGISTER` / `LOGIN` 名单后直接 PASS，**不跑 R-a–R-f**（R26.3）；实现 `userSummary`（D-13）
-- [ ] `risk:cnt` 只服务 R-a/R-b（异步：`task.instance.complete` / `reward.grant.success` 消费）与 R-c/R-d（登录注册成功消费）与 R-f（判定点同步 ZADD）；窗口裁剪 = ZREMRANGEBYSCORE，计数 = ZCOUNT
-- [ ] R-e：只在 GRANT 且 `elapsedSeconds != null` 时比较阈值；同请求新建实例 / 非 TASK_STEP / simulated → 跳过；**不写 `risk:cnt`**
-- [ ] 命中留痕 REQUIRES_NEW + `risk.hit.recorded`；失败降级告警
-- [ ] `risk.fallback-policy` 异常降级（默认 allow）
+- [x] 实现 `RiskCheckPort.check`：不抛业务异常，返回 `RiskVerdict{action}`；`action ∈ {PASS, REJECT, SILENT_REJECT, MARK}`；冻结不经本端口（步骤推进由 task 域内查名单投影）
+- [x] `REGISTER` / `LOGIN` 名单后直接 PASS，**不跑 R-a–R-f**（R26.3）；实现 `userSummary`（D-13）
+- [x] `risk:cnt` 只服务 R-a/R-b（异步：`task.instance.complete` / `reward.grant.success` 消费）与 R-c/R-d（登录注册成功消费）与 R-f（判定点同步 ZADD）；窗口裁剪 = ZREMRANGEBYSCORE，计数 = ZCOUNT
+- [x] R-e：只在 GRANT 且 `elapsedSeconds != null` 时比较阈值；同请求新建实例 / 非 TASK_STEP / simulated → 跳过；**不写 `risk:cnt`**
+- [x] 命中留痕 REQUIRES_NEW + `risk.hit.recorded`；失败降级告警
+- [x] `risk.fallback-policy` 异常降级（默认 allow）
 
 _需求：R26_
 _设计：design §2.2.3 RiskCheckPort、§3.10、§5.9；[feasibility-risk.md](feasibility-risk.md)_

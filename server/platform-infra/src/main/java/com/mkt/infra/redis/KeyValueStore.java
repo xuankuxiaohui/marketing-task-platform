@@ -31,4 +31,11 @@ public interface KeyValueStore {
     void unlock(String key);
 
     boolean ping();
+
+    /** ZADD for {@code risk:cnt} sliding windows (design §3.10 / §5.9). */
+    void zadd(String key, double score, String member);
+
+    long zremrangeByScore(String key, double minInclusive, double maxInclusive);
+
+    long zcount(String key, double minInclusive, double maxInclusive);
 }

@@ -11,6 +11,8 @@ import com.mkt.risk.entity.RiskListItemEntity;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -20,6 +22,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 @Component
 public class RiskListProjection {
+
+    private static final Logger log = LoggerFactory.getLogger(RiskListProjection.class);
 
     private final KeyValueStore store;
     private final RiskListItemStore listItemStore;
@@ -54,20 +58,20 @@ public class RiskListProjection {
         RiskListItemEntity row = listItemStore.getByUk(dimension.name(), listType.name(), canonical);
         Instant now = clock.instant();
         if (row == null || expired(row, now)) {
-            store.unlink(key);
+            redisIgnore(() -> store.unlink(key));
             return;
         }
         Instant expireAt = RiskTime.toInstant(row.getExpireAt());
         if (expireAt == null) {
-            store.set(key, RiskListKeys.PERMANENT);
+            redisIgnore(() -> store.set(key, RiskListKeys.PERMANENT));
             return;
         }
         Duration ttl = Duration.between(now, expireAt);
         if (ttl.isZero() || ttl.isNegative()) {
-            store.unlink(key);
+            redisIgnore(() -> store.unlink(key));
             return;
         }
-        store.set(key, String.valueOf(expireAt.toEpochMilli()), ttl);
+        redisIgnore(() -> store.set(key, String.valueOf(expireAt.toEpochMilli()), ttl));
     }
 
     public ListEntry lookup(RiskDimension dimension, RiskListType listType, String listValue) {
@@ -77,11 +81,11 @@ public class RiskListProjection {
         }
         Instant now = clock.instant();
         String key = RiskListKeys.of(dimension, listType, canonical);
-        String cached = store.get(key);
+        String cached = redisGet(key);
         if (cached != null && !expiredCache(cached, now)) {
             RiskListItemEntity row = listItemStore.getByUk(dimension.name(), listType.name(), canonical);
             if (row == null || expired(row, now)) {
-                store.unlink(key);
+                redisIgnore(() -> store.unlink(key));
                 return null;
             }
             return toEntry(row);
@@ -89,12 +93,29 @@ public class RiskListProjection {
         RiskListItemEntity row = listItemStore.getByUk(dimension.name(), listType.name(), canonical);
         if (row == null || expired(row, now)) {
             if (cached != null) {
-                store.unlink(key);
+                redisIgnore(() -> store.unlink(key));
             }
             return null;
         }
         reconcile(dimension, listType, canonical);
         return toEntry(row);
+    }
+
+    private String redisGet(String key) {
+        try {
+            return store.get(key);
+        } catch (RuntimeException ex) {
+            log.warn("risk:list redis get failed, falling back to db key={}", key);
+            return null;
+        }
+    }
+
+    private void redisIgnore(Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException ex) {
+            log.warn("risk:list redis write skipped: {}", ex.toString());
+        }
     }
 
     private static boolean expired(RiskListItemEntity row, Instant now) {

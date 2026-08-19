@@ -7,12 +7,15 @@ import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.mkt.risk.application.MybatisRiskHandleLogStore;
 import com.mkt.risk.application.MybatisRiskHitLogStore;
 import com.mkt.risk.application.MybatisRiskListItemStore;
+import com.mkt.risk.application.MybatisRiskRuleConfigStore;
 import com.mkt.risk.application.RiskHandleLogStore;
 import com.mkt.risk.application.RiskHitLogStore;
 import com.mkt.risk.application.RiskListItemStore;
+import com.mkt.risk.application.RiskRuleConfigStore;
 import com.mkt.risk.mapper.RiskHandleLogMapper;
 import com.mkt.risk.mapper.RiskHitLogMapper;
 import com.mkt.risk.mapper.RiskListItemMapper;
+import com.mkt.risk.mapper.RiskRuleConfigMapper;
 import javax.sql.DataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
@@ -25,11 +28,17 @@ final class RiskMybatisStores {
     final RiskListItemStore lists;
     final RiskHitLogStore hits;
     final RiskHandleLogStore handles;
+    final RiskRuleConfigStore rules;
 
-    private RiskMybatisStores(RiskListItemStore lists, RiskHitLogStore hits, RiskHandleLogStore handles) {
+    private RiskMybatisStores(
+            RiskListItemStore lists,
+            RiskHitLogStore hits,
+            RiskHandleLogStore handles,
+            RiskRuleConfigStore rules) {
         this.lists = lists;
         this.hits = hits;
         this.handles = handles;
+        this.rules = rules;
     }
 
     static RiskMybatisStores create(DataSource dataSource) {
@@ -45,6 +54,7 @@ final class RiskMybatisStores {
             configuration.addMapper(RiskListItemMapper.class);
             configuration.addMapper(RiskHitLogMapper.class);
             configuration.addMapper(RiskHandleLogMapper.class);
+            configuration.addMapper(RiskRuleConfigMapper.class);
             factoryBean.setConfiguration(configuration);
             GlobalConfig globalConfig = new GlobalConfig();
             GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
@@ -59,7 +69,8 @@ final class RiskMybatisStores {
             return new RiskMybatisStores(
                     new MybatisRiskListItemStore(sqlSession.getMapper(RiskListItemMapper.class)),
                     new MybatisRiskHitLogStore(sqlSession.getMapper(RiskHitLogMapper.class)),
-                    new MybatisRiskHandleLogStore(sqlSession.getMapper(RiskHandleLogMapper.class)));
+                    new MybatisRiskHandleLogStore(sqlSession.getMapper(RiskHandleLogMapper.class)),
+                    new MybatisRiskRuleConfigStore(sqlSession.getMapper(RiskRuleConfigMapper.class)));
         } catch (Exception ex) {
             throw new IllegalStateException("risk mybatis factory", ex);
         }

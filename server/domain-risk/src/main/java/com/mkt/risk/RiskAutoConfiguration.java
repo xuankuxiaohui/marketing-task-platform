@@ -12,7 +12,7 @@ import org.springframework.context.annotation.ComponentScan;
 @AutoConfiguration
 @ConditionalOnBean(DataSource.class)
 @MapperScan("com.mkt.risk.mapper")
-@ComponentScan(basePackages = {"com.mkt.risk.controller.admin", "com.mkt.risk.application", "com.mkt.risk.support"})
+@ComponentScan(basePackages = {"com.mkt.risk.application", "com.mkt.risk.support"})
 public class RiskAutoConfiguration {
 
     @Bean
