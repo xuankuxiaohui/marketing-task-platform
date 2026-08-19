@@ -43,6 +43,7 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
         boolean anonymous = side == SessionSide.ADMIN
                 ? AnonymousPaths.adminAnonymous(method, path)
                 : AnonymousPaths.portalAnonymous(method, path);
+        boolean optional = side == SessionSide.PORTAL && AnonymousPaths.portalOptionalAuth(method, path);
         String presented = presentedToken(request);
         if (presented == null) {
             if (anonymous) {
@@ -60,8 +61,8 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             write(response, SessionErrorCodes.MISSING);
             return;
         }
-        if (anonymous) {
-            // Kicked / expired / invalid same-side cookies must not block login or captcha.
+        if (anonymous && !optional) {
+            // login/captcha/register: ignore kicked / expired / invalid same-side tokens
             chain.doFilter(request, response);
             return;
         }
@@ -69,18 +70,32 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
                 ? TokenPrefixes.unwrapAdmin(presented)
                 : TokenPrefixes.unwrapClient(presented);
         if (raw == null) {
+            if (optional) {
+                chain.doFilter(request, response);
+                return;
+            }
             write(response, side == SessionSide.ADMIN ? SessionErrorCodes.INVALID : SessionErrorCodes.MISSING);
             return;
         }
         if (!availability.available()) {
+            if (optional) {
+                chain.doFilter(request, response);
+                return;
+            }
             write(response, com.mkt.kernel.CommonErrorCodes.SERVER_ERROR);
             return;
         }
         StpLogic logic = side == SessionSide.ADMIN ? StpAdmin.LOGIC : StpClient.LOGIC;
         String loginType = logic.getLoginType();
-        KickReason kick = kickReasons.readAndDeleteQuiet(loginType, raw).orElse(null);
+        KickReason kick = optional
+                ? kickReasons.peekQuiet(loginType, raw).orElse(null)
+                : kickReasons.readAndDeleteQuiet(loginType, raw).orElse(null);
         Object loginId = logic.getLoginIdByToken(raw);
         String id = loginId == null ? null : String.valueOf(loginId);
+        if (optional && (kick != null || sessionGone(id))) {
+            chain.doFilter(request, response);
+            return;
+        }
         if (kick != null) {
             write(response, kickCode(kick));
             return;
@@ -107,13 +122,26 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             UserContext.set(new UserPrincipal(Long.parseLong(id), loginType, username));
             logic.updateLastActiveToNow(raw);
             renew(logic, raw);
-            if (side == SessionSide.ADMIN && AuthCookies.read(request, AuthCookies.SESSION) != null) {
-                AuthCookies.writeSession(response, presented);
-            }
+            slideAdminCookies(request, response, presented);
             chain.doFilter(request, response);
         } finally {
             UserContext.clear();
         }
+    }
+
+    private void slideAdminCookies(HttpServletRequest request, HttpServletResponse response, String presented) {
+        if (side != SessionSide.ADMIN || AuthCookies.read(request, AuthCookies.SESSION) == null) {
+            return;
+        }
+        AuthCookies.writeSession(response, presented);
+        String csrf = AuthCookies.read(request, AuthCookies.CSRF);
+        if (csrf != null) {
+            AuthCookies.writeCsrf(response, csrf);
+        }
+    }
+
+    private static boolean sessionGone(String id) {
+        return id == null || id.isBlank() || "null".equals(id) || "-4".equals(id) || "-5".equals(id);
     }
 
     private static void bindToken(StpLogic logic, String raw) {

@@ -40,11 +40,12 @@ class NamespaceIsolationIT {
             new PathCall("GET", "/api/common/points/balance"),
             new PathCall("GET", "/api/common/points/transactions"),
             new PathCall("GET", "/api/common/dict/province"),
-            new PathCall("POST", "/api/common/track/batch"));
+            new PathCall("POST", "/api/common/track/batch"),
+            new PathCall("GET", "/api/common/ad/positions/home"));
 
     @Test
     void adminTokenRejectedOnAllCommonEndpoints() throws Exception {
-        assertThat(COMMON).hasSize(20);
+        assertThat(COMMON).hasSize(21);
         MemoryKeyValueStore kv = new MemoryKeyValueStore();
         SessionAuthFilter filter =
                 new SessionAuthFilter(SessionSide.PORTAL, new KickReasonStore(kv), new SessionAvailability(kv));

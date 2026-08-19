@@ -48,6 +48,9 @@ class SessionAuthFilterTest {
         RecordingChain chain = new RecordingChain();
         filter.doFilter(request("POST", "/api/common/auth/login"), response, chain);
         assertThat(chain.called).isTrue();
+        RecordingChain batch = new RecordingChain();
+        filter.doFilter(request("POST", "/api/common/track/batch"), new MockHttpServletResponse(), batch);
+        assertThat(batch.called).isTrue();
     }
 
     @Test
@@ -149,7 +152,7 @@ class SessionAuthFilterTest {
         String token = new SessionService().loginAdmin(7L, 5, null, "alice");
         SessionAuthFilter filter = new SessionAuthFilter(SessionSide.ADMIN, kicks, availability);
         MockHttpServletRequest req = request("GET", "/admin/auth/profile");
-        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        req.setCookies(new Cookie(AuthCookies.SESSION, token), new Cookie(AuthCookies.CSRF, "csrf-keep"));
         MockHttpServletResponse response = new MockHttpServletResponse();
         RecordingChain chain = new RecordingChain();
         chain.assertDuring = () -> {
@@ -160,12 +163,125 @@ class SessionAuthFilterTest {
         filter.doFilter(req, response, chain);
         assertThat(chain.called).isTrue();
         assertThat(UserContext.current()).isEmpty();
-        String cookie = response.getHeaders("Set-Cookie").stream()
-                .filter(h -> h.startsWith(AuthCookies.SESSION + "="))
-                .findFirst()
-                .orElse("");
+        String cookie = setCookie(response, AuthCookies.SESSION);
         assertThat(cookie).contains("Max-Age=" + AuthCookies.MAX_AGE_SECONDS);
         assertThat(cookie).contains(token);
+        String csrf = setCookie(response, AuthCookies.CSRF);
+        assertThat(csrf).startsWith(AuthCookies.CSRF + "=csrf-keep;");
+        assertThat(csrf).contains("Max-Age=" + AuthCookies.MAX_AGE_SECONDS);
+        assertThat(csrf).doesNotContain("HttpOnly");
+        assertThat(response.getHeaders("Set-Cookie").stream().filter(h -> h.startsWith(AuthCookies.CSRF + "=")))
+                .hasSize(1);
+    }
+
+    @Test
+    void authenticatedAdminRequestWithoutCsrfCookieDoesNotIssueCsrf() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.ADMIN, kicks, availability);
+        MockHttpServletRequest req = request("GET", "/admin/auth/profile");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, new RecordingChain());
+        assertThat(setCookie(response, AuthCookies.SESSION)).contains(token);
+        assertThat(response.getHeaders("Set-Cookie").stream().anyMatch(h -> h.startsWith(AuthCookies.CSRF + "=")))
+                .isFalse();
+    }
+
+    @Test
+    void portalLoginWithValidTokenDoesNotBindUserContext() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginClient(9L, 3, null, "bob");
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        MockHttpServletRequest req = request("POST", "/api/common/auth/login");
+        req.addHeader("Authorization", "Bearer " + token);
+        RecordingChain chain = new RecordingChain();
+        chain.assertDuring = () -> assertThat(UserContext.current()).isEmpty();
+        filter.doFilter(req, new MockHttpServletResponse(), chain);
+        assertThat(chain.called).isTrue();
+    }
+
+    @Test
+    void optionalAuthValidTokenBindsUserContext() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginClient(88L, 3, null, "u88");
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        for (String[] call : new String[][] {
+            {"POST", "/api/common/track/batch"}, {"GET", "/api/common/ad/positions/home"}
+        }) {
+            MockHttpServletRequest req = request(call[0], call[1]);
+            req.addHeader("Authorization", "Bearer " + token);
+            RecordingChain chain = new RecordingChain();
+            chain.assertDuring = () -> {
+                assertThat(UserContext.require().userId()).isEqualTo(88L);
+                assertThat(UserContext.require().username()).isEqualTo("u88");
+                assertThat(UserContext.require().loginType()).isEqualTo(StpClient.TYPE);
+            };
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(req, response, chain);
+            assertThat(chain.called).as(call[1]).isTrue();
+            assertThat(response.getStatus()).as(call[1]).isEqualTo(200);
+            assertThat(UserContext.current()).isEmpty();
+        }
+    }
+
+    @Test
+    void optionalAuthKickedOrExpiredTokenPassesAnonymousWithout401() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        kicks.write(StpClient.TYPE, "kicked-tok", KickReason.CONCURRENT);
+        MockHttpServletRequest kicked = request("POST", "/api/common/track/batch");
+        kicked.addHeader("Authorization", "Bearer client:kicked-tok");
+        RecordingChain kickedChain = new RecordingChain();
+        kickedChain.assertDuring = () -> assertThat(UserContext.current()).isEmpty();
+        MockHttpServletResponse kickedResponse = new MockHttpServletResponse();
+        filter.doFilter(kicked, kickedResponse, kickedChain);
+        assertThat(kickedChain.called).isTrue();
+        assertThat(kickedResponse.getStatus()).isEqualTo(200);
+        assertThat(kicks.peek(StpClient.TYPE, "kicked-tok")).contains(KickReason.CONCURRENT);
+
+        String expired = new SessionService().loginClient(5L, 3, null, "gone");
+        new SessionService().logoutClient(expired);
+        MockHttpServletRequest expiredReq = request("GET", "/api/common/ad/positions/home");
+        expiredReq.addHeader("Authorization", "Bearer " + expired);
+        RecordingChain expiredChain = new RecordingChain();
+        expiredChain.assertDuring = () -> assertThat(UserContext.current()).isEmpty();
+        MockHttpServletResponse expiredResponse = new MockHttpServletResponse();
+        filter.doFilter(expiredReq, expiredResponse, expiredChain);
+        assertThat(expiredChain.called).isTrue();
+        assertThat(expiredResponse.getStatus()).isEqualTo(200);
+        assertThat(expiredResponse.getContentAsString()).doesNotContain("auth.session");
+    }
+
+    @Test
+    void optionalAuthKickedTokenDoesNotConsumeKickReason() throws Exception {
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        kicks.write(StpClient.TYPE, "tok", KickReason.CONCURRENT);
+        MockHttpServletRequest batch = request("POST", "/api/common/track/batch");
+        batch.addHeader("Authorization", "Bearer client:tok");
+        filter.doFilter(batch, new MockHttpServletResponse(), new RecordingChain());
+
+        MockHttpServletRequest required = request("GET", "/api/common/task/list");
+        required.addHeader("Authorization", "Bearer client:tok");
+        MockHttpServletResponse requiredResponse = new MockHttpServletResponse();
+        filter.doFilter(required, requiredResponse, unused());
+        assertThat(requiredResponse.getStatus()).isEqualTo(401);
+        assertThat(requiredResponse.getContentAsString()).contains("auth.session.kicked-concurrent");
+    }
+
+    @Test
+    void optionalAuthCrossTokenIs401() throws Exception {
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        for (String[] call : new String[][] {
+            {"POST", "/api/common/track/batch"}, {"GET", "/api/common/ad/positions/home"}
+        }) {
+            MockHttpServletRequest req = request(call[0], call[1]);
+            req.addHeader("Authorization", "Bearer admin:not-a-portal-token");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(req, response, unused());
+            assertThat(response.getStatus()).as(call[1]).isEqualTo(401);
+            assertThat(response.getContentAsString()).as(call[1]).contains("auth.session.missing");
+        }
     }
 
     @Test
@@ -182,6 +298,13 @@ class SessionAuthFilterTest {
                 }))
                 .isInstanceOf(ServletException.class);
         assertThat(UserContext.current()).isEmpty();
+    }
+
+    private static String setCookie(MockHttpServletResponse response, String name) {
+        return response.getHeaders("Set-Cookie").stream()
+                .filter(h -> h.startsWith(name + "="))
+                .findFirst()
+                .orElse("");
     }
 
     private static MockHttpServletRequest request(String method, String path) {

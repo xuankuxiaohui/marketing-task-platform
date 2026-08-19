@@ -24,5 +24,11 @@ class AnonymousPathsTest {
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/ad/positions/home")).isTrue();
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/task/list")).isFalse();
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/dict/province")).isFalse();
+        assertThat(AnonymousPaths.portalOptionalAuth("POST", "/api/common/track/batch")).isTrue();
+        assertThat(AnonymousPaths.portalOptionalAuth("GET", "/api/common/ad/positions/home")).isTrue();
+        assertThat(AnonymousPaths.portalOptionalAuth("POST", "/api/common/auth/login")).isFalse();
+        assertThat(AnonymousPaths.portalOptionalAuth("GET", "/api/common/captcha")).isFalse();
+        assertThat(AnonymousPaths.portalOptionalAuth("GET", "/api/common/auth/username-available")).isFalse();
+        assertThat(AnonymousPaths.portalOptionalAuth("POST", "/api/common/auth/register")).isFalse();
     }
 }
