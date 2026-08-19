@@ -16,6 +16,15 @@
           AND list_value = #{listValue}
     </select>
 
+    <select id="listByUks" resultType="com.mkt.risk.entity.RiskListItemEntity">
+        SELECT <include refid="cols"/>
+        FROM risk_list_item
+        WHERE (dimension, list_type, list_value) IN
+        <foreach collection="uks" item="uk" open="(" separator="," close=")">
+            (#{uk.dimension}, #{uk.listType}, #{uk.listValue})
+        </foreach>
+    </select>
+
     <sql id="queryWhere">
         <where>
             <if test="dimension != null and dimension != ''">

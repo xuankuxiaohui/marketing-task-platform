@@ -24,12 +24,13 @@ import com.mkt.risk.support.RiskCntWindow;
 import com.mkt.risk.support.RiskFallbackProbe;
 import com.mkt.risk.support.RiskFallbackSettings;
 import com.mkt.risk.support.RiskListProjection;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.time.Instant;
 import org.flywaydb.core.Flyway;
 import org.redisson.api.RedissonClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -55,6 +56,7 @@ public final class RiskITSupport implements AutoCloseable {
     public final RiskCntWindow cntWindow;
     public final RiskRuleConfigStore rules;
     private final RedissonClient redisson;
+    private final HikariDataSource dataSource;
 
     private RiskITSupport(
             MutableClock clock,
@@ -74,7 +76,8 @@ public final class RiskITSupport implements AutoCloseable {
             RiskCntConsumer cntConsumer,
             RiskCntWindow cntWindow,
             RiskRuleConfigStore rules,
-            RedissonClient redisson) {
+            RedissonClient redisson,
+            HikariDataSource dataSource) {
         this.clock = clock;
         this.jdbc = jdbc;
         this.kv = kv;
@@ -93,6 +96,7 @@ public final class RiskITSupport implements AutoCloseable {
         this.cntWindow = cntWindow;
         this.rules = rules;
         this.redisson = redisson;
+        this.dataSource = dataSource;
     }
 
     public static MySQLContainer<?> mysql() {
@@ -124,8 +128,14 @@ public final class RiskITSupport implements AutoCloseable {
                 .locations("classpath:db/migration")
                 .load()
                 .migrate();
-        DriverManagerDataSource ds =
-                new DriverManagerDataSource(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
+        HikariConfig hikari = new HikariConfig();
+        hikari.setJdbcUrl(mysql.getJdbcUrl());
+        hikari.setUsername(mysql.getUsername());
+        hikari.setPassword(mysql.getPassword());
+        hikari.setMaximumPoolSize(64);
+        hikari.setMinimumIdle(4);
+        hikari.setPoolName("risk-it");
+        HikariDataSource ds = new HikariDataSource(hikari);
         JdbcTemplate jdbc = new JdbcTemplate(ds);
         MutableClock clock = new MutableClock(now);
         JdbcOutboxStore outbox = new JdbcOutboxStore(jdbc);
@@ -172,13 +182,17 @@ public final class RiskITSupport implements AutoCloseable {
                 new RiskCntConsumer(cntWindow, clock),
                 cntWindow,
                 mybatis.rules,
-                redisson);
+                redisson,
+                ds);
     }
 
     @Override
     public void close() {
         if (redisson != null) {
             redisson.shutdown();
+        }
+        if (dataSource != null) {
+            dataSource.close();
         }
     }
 }
