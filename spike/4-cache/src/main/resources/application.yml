@@ -1,0 +1,10 @@
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:192.168.88.149}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:8whh6RCl8t6ilKHe8KM4}
+      database: ${REDIS_DATABASE:2}
+  cache:
+    type: redis
+    cache-names: dict

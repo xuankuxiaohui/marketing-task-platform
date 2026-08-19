@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Ban skipped tests (D-04)
+        run: bash ci/check-no-skip.sh
+      - name: compile + enforcer + surefire + failsafe
+        working-directory: server
+        run: mvn -B verify

@@ -22,3 +22,30 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+.DS_Store
+
+
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# local secrets / probe scripts
+.env
+.env.local
+.env.vm
+deploy/.env
+.tmp_*.py
+
+# Maven
+**/target/
+
+# jqwik local store
+.jqwik-database
+**/.jqwik-database
