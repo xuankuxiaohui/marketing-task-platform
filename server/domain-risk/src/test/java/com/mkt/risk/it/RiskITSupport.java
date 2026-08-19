@@ -1,5 +1,6 @@
 package com.mkt.risk.it;
 
+import com.mkt.contract.RiskCheckPort;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.infra.outbox.JdbcOutboxStore;
 import com.mkt.infra.outbox.OutboxProducer;
@@ -11,10 +12,17 @@ import com.mkt.infra.redis.RedissonKeyValueStore;
 import com.mkt.kernel.time.MutableClock;
 import com.mkt.risk.application.RiskAuditAppender;
 import com.mkt.risk.application.RiskCaseAppService;
+import com.mkt.risk.application.RiskCheckPortImpl;
+import com.mkt.risk.application.RiskCntConsumer;
 import com.mkt.risk.application.RiskHandleLogStore;
+import com.mkt.risk.application.RiskHitRecorder;
 import com.mkt.risk.application.RiskListAppService;
 import com.mkt.risk.application.RiskListItemStore;
+import com.mkt.risk.application.RiskRuleConfigStore;
 import com.mkt.risk.support.ListLookup;
+import com.mkt.risk.support.RiskCntWindow;
+import com.mkt.risk.support.RiskFallbackProbe;
+import com.mkt.risk.support.RiskFallbackSettings;
 import com.mkt.risk.support.RiskListProjection;
 import java.time.Instant;
 import org.flywaydb.core.Flyway;
@@ -40,6 +48,12 @@ public final class RiskITSupport implements AutoCloseable {
     public final RiskListProjection projection;
     public final RiskListItemStore listStore;
     public final RiskHandleLogStore handleStore;
+    public final RiskCheckPort port;
+    public final RiskFallbackSettings fallbackSettings;
+    public final RiskFallbackProbe fallbackProbe;
+    public final RiskCntConsumer cntConsumer;
+    public final RiskCntWindow cntWindow;
+    public final RiskRuleConfigStore rules;
     private final RedissonClient redisson;
 
     private RiskITSupport(
@@ -54,6 +68,12 @@ public final class RiskITSupport implements AutoCloseable {
             RiskListProjection projection,
             RiskListItemStore listStore,
             RiskHandleLogStore handleStore,
+            RiskCheckPort port,
+            RiskFallbackSettings fallbackSettings,
+            RiskFallbackProbe fallbackProbe,
+            RiskCntConsumer cntConsumer,
+            RiskCntWindow cntWindow,
+            RiskRuleConfigStore rules,
             RedissonClient redisson) {
         this.clock = clock;
         this.jdbc = jdbc;
@@ -66,6 +86,12 @@ public final class RiskITSupport implements AutoCloseable {
         this.projection = projection;
         this.listStore = listStore;
         this.handleStore = handleStore;
+        this.port = port;
+        this.fallbackSettings = fallbackSettings;
+        this.fallbackProbe = fallbackProbe;
+        this.cntConsumer = cntConsumer;
+        this.cntWindow = cntWindow;
+        this.rules = rules;
         this.redisson = redisson;
     }
 
@@ -113,6 +139,21 @@ public final class RiskITSupport implements AutoCloseable {
         RiskCaseAppService cases =
                 new RiskCaseAppService(mybatis.hits, handleStore, listStore, projection, audit, clock);
         DataSourceTransactionManager txm = new DataSourceTransactionManager(ds);
+        ListLookup lookup = new ListLookup(projection, clock);
+        RiskFallbackSettings fallbackSettings = new RiskFallbackSettings();
+        RiskFallbackProbe fallbackProbe = new RiskFallbackProbe();
+        RiskHitRecorder recorder = new RiskHitRecorder(mybatis.hits, publisher, clock, fallbackProbe, txm);
+        RiskCntWindow cntWindow = new RiskCntWindow(kv);
+        RiskCheckPort port = new RiskCheckPortImpl(
+                lookup,
+                mybatis.rules,
+                cntWindow,
+                recorder,
+                mybatis.hits,
+                listStore,
+                fallbackSettings,
+                fallbackProbe,
+                clock);
         return new RiskITSupport(
                 clock,
                 jdbc,
@@ -121,10 +162,16 @@ public final class RiskITSupport implements AutoCloseable {
                 new TransactionTemplate(txm),
                 lists,
                 cases,
-                new ListLookup(projection, clock),
+                lookup,
                 projection,
                 listStore,
                 handleStore,
+                port,
+                fallbackSettings,
+                fallbackProbe,
+                new RiskCntConsumer(cntWindow, clock),
+                cntWindow,
+                mybatis.rules,
                 redisson);
     }
 

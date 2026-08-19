@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 public final class MemoryKeyValueStore implements KeyValueStore {
 
     private final Map<String, String> values = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Double>> zsets = new ConcurrentHashMap<>();
     private final Map<String, List<Consumer<String>>> subscribers = new ConcurrentHashMap<>();
     private final Map<String, Thread> locks = new ConcurrentHashMap<>();
     private volatile boolean available = true;
@@ -41,6 +42,7 @@ public final class MemoryKeyValueStore implements KeyValueStore {
     public void unlink(String key) {
         requireAvailable();
         values.remove(key);
+        zsets.remove(key);
     }
 
     @Override
@@ -48,6 +50,7 @@ public final class MemoryKeyValueStore implements KeyValueStore {
         requireAvailable();
         String prefix = pattern.endsWith("*") ? pattern.substring(0, pattern.length() - 1) : pattern;
         values.keySet().removeIf(k -> k.startsWith(prefix));
+        zsets.keySet().removeIf(k -> k.startsWith(prefix));
     }
 
     @Override
@@ -89,6 +92,46 @@ public final class MemoryKeyValueStore implements KeyValueStore {
     @Override
     public boolean ping() {
         return available;
+    }
+
+    @Override
+    public void zadd(String key, double score, String member) {
+        requireAvailable();
+        zsets.computeIfAbsent(key, ignored -> new ConcurrentHashMap<>()).put(member, score);
+    }
+
+    @Override
+    public long zremrangeByScore(String key, double minInclusive, double maxInclusive) {
+        requireAvailable();
+        Map<String, Double> members = zsets.get(key);
+        if (members == null || members.isEmpty()) {
+            return 0L;
+        }
+        long removed = 0L;
+        for (var iterator = members.entrySet().iterator(); iterator.hasNext(); ) {
+            double score = iterator.next().getValue();
+            if (score >= minInclusive && score <= maxInclusive) {
+                iterator.remove();
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    @Override
+    public long zcount(String key, double minInclusive, double maxInclusive) {
+        requireAvailable();
+        Map<String, Double> members = zsets.get(key);
+        if (members == null || members.isEmpty()) {
+            return 0L;
+        }
+        long count = 0L;
+        for (double score : members.values()) {
+            if (score >= minInclusive && score <= maxInclusive) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void requireAvailable() {

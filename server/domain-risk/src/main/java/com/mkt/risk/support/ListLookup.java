@@ -6,6 +6,7 @@ import com.mkt.contract.RiskSubject;
 import com.mkt.risk.domain.ListDecision;
 import com.mkt.risk.domain.ListDecisionEngine;
 import com.mkt.risk.domain.ListEntry;
+import com.mkt.risk.domain.ListSegmentOutcome;
 import com.mkt.risk.domain.RiskDimension;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -25,8 +26,12 @@ public class ListLookup {
     }
 
     public ListDecision decide(RiskScene scene, RiskSubject subject) {
+        return evaluate(scene, subject).decision();
+    }
+
+    public ListSegmentOutcome evaluate(RiskScene scene, RiskSubject subject) {
         RiskSubject normalized = canonicalize(subject);
-        return ListDecisionEngine.decide(scene, normalized, snapshot(normalized), clock.instant());
+        return ListDecisionEngine.evaluate(scene, normalized, snapshot(normalized), clock.instant());
     }
 
     private static RiskSubject canonicalize(RiskSubject subject) {

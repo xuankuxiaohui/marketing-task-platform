@@ -39,7 +39,7 @@ design §6.5 机械规则，编码层再写一次：
 1. **MUST** 经 `EventPublisher.append("audit.log", …)` 与业务同事务写入 Outbox，Relay 异步落 `sys_audit_log`。**MUST NOT** 在请求线程里直接 insert 审计表。
 2. 成功、业务失败、异常抛出都记（R10 属性 1）。事务回滚则无审计行。
 3. Sa-Token 拦截器阶段的 403（R2.3）**MUST** 仍能落审计：用过滤器 / 拦截器后置补 `audit.log`，不能只靠方法上的 `@Audited`。
-4. `REQUIRES_NEW` 仅 design §5.6.2 发放可重试失败留痕这一处例外，评审不得误杀，也不得在别处滥用。
+4. `REQUIRES_NEW` 只允许这两处：design §5.6.2 发放可重试失败留痕；design §5.9 命中 `risk_hit_log` + `risk.hit.recorded`（主事务回滚不丢命中）。评审不得误杀，也不得在别处滥用。
 
 ## 4. 会话与缓存
 

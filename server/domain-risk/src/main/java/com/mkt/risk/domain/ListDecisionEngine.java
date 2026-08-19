@@ -16,6 +16,11 @@ public final class ListDecisionEngine {
     }
 
     public static ListDecision decide(RiskScene scene, RiskSubject subject, List<ListEntry> entries, Instant now) {
+        return evaluate(scene, subject, entries, now).decision();
+    }
+
+    public static ListSegmentOutcome evaluate(
+            RiskScene scene, RiskSubject subject, List<ListEntry> entries, Instant now) {
         Objects.requireNonNull(scene, "scene");
         Objects.requireNonNull(subject, "subject");
         Objects.requireNonNull(now, "now");
@@ -24,23 +29,23 @@ public final class ListDecisionEngine {
                 .toList();
 
         if (userBlack(live, subject) && (scene == RiskScene.CLAIM || scene == RiskScene.GRANT)) {
-            return ListDecision.REJECT;
+            return ListSegmentOutcome.reject("USER:BLACK", String.valueOf(subject.userId()));
         }
         if (userBlackDenyLogin(live, subject) && scene == RiskScene.LOGIN) {
-            return ListDecision.REJECT;
+            return ListSegmentOutcome.reject("USER:BLACK", String.valueOf(subject.userId()));
         }
         if (matches(live, RiskDimension.IP, RiskListType.BLACK, subject.ip())
                 && (scene == RiskScene.REGISTER || scene == RiskScene.LOGIN)) {
-            return ListDecision.REJECT;
+            return ListSegmentOutcome.reject("IP:BLACK", subject.ip());
         }
         if (matches(live, RiskDimension.DEVICE, RiskListType.BLACK, subject.deviceId())
                 && (scene == RiskScene.REGISTER || scene == RiskScene.LOGIN)) {
-            return ListDecision.REJECT;
+            return ListSegmentOutcome.reject("DEVICE:BLACK", subject.deviceId());
         }
         if (userWhite(live, subject)) {
-            return ListDecision.SKIP_RULES;
+            return ListSegmentOutcome.of(ListDecision.SKIP_RULES);
         }
-        return ListDecision.PASS;
+        return ListSegmentOutcome.of(ListDecision.PASS);
     }
 
     private static boolean userBlack(List<ListEntry> live, RiskSubject subject) {

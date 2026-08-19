@@ -48,6 +48,15 @@ class RiskListProjectionTest {
         assertThat(redis.get(RiskListKeys.of(RiskDimension.USER, RiskListType.BLACK, "3"))).isNull();
     }
 
+    @Test
+    void lookupUsesDbWhenRedisIsDown() {
+        insert("USER", "BLACK", "7", null);
+        redis.setAvailable(false);
+        ListEntry hit = projection.lookup(RiskDimension.USER, RiskListType.BLACK, "7");
+        assertThat(hit).isNotNull();
+        assertThat(hit.listValue()).isEqualTo("7");
+    }
+
     private void insert(String dim, String type, String value, LocalDateTime expireAt) {
         RiskListItemEntity e = new RiskListItemEntity();
         e.setDimension(dim);

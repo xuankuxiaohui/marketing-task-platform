@@ -101,6 +101,25 @@ public final class RedissonKeyValueStore implements KeyValueStore {
         }
     }
 
+    @Override
+    public void zadd(String key, double score, String member) {
+        client.getScoredSortedSet(key, StringCodec.INSTANCE).add(score, member);
+    }
+
+    @Override
+    public long zremrangeByScore(String key, double minInclusive, double maxInclusive) {
+        int removed = client.getScoredSortedSet(key, StringCodec.INSTANCE)
+                .removeRangeByScore(minInclusive, true, maxInclusive, true);
+        return removed;
+    }
+
+    @Override
+    public long zcount(String key, double minInclusive, double maxInclusive) {
+        int counted = client.getScoredSortedSet(key, StringCodec.INSTANCE)
+                .count(minInclusive, true, maxInclusive, true);
+        return counted;
+    }
+
     private RTopic topic(String channel) {
         return client.getTopic(channel, StringCodec.INSTANCE);
     }
