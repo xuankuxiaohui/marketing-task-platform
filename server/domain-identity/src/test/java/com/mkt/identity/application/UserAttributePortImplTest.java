@@ -35,14 +35,14 @@ class UserAttributePortImplTest {
 
     @Test
     void attributesUsesCacheAndLockAndGetDoesNot() {
-        PortalUserEntity entity = live(7L, "ENABLED", 0, "GD", "3", "ORG1", List.of("a"));
+        PortalUserEntity entity = live(7L, "ENABLED", 0, "GD", "3", "org-north_01", List.of("a"));
         when(users.selectById(7L)).thenReturn(entity);
         UserAttributes first = port.attributes(7L);
         UserAttributes second = port.attributes(7L);
         assertThat(first.accountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(first.province()).isEqualTo("GD");
         assertThat(first.userLevel()).isEqualTo(3);
-        assertThat(first.orgId()).isNull();
+        assertThat(first.orgId()).isEqualTo("org-north_01");
         assertThat(first.tags()).containsExactly("a");
         assertThat(second).isEqualTo(first);
         verify(users, Mockito.times(1)).selectById(7L);
@@ -65,14 +65,14 @@ class UserAttributePortImplTest {
         when(users.selectById(1L)).thenReturn(null);
         assertThat(port.attributes(1L).accountStatus()).isEqualTo(AccountStatus.NOT_FOUND);
 
-        when(users.selectById(2L)).thenReturn(live(2L, "ENABLED", 1, null, null, null, List.of()));
+        when(users.selectById(2L)).thenReturn(live(2L, "DISABLED", 1, null, null, null, List.of()));
         assertThat(port.attributes(2L).accountStatus()).isEqualTo(AccountStatus.DELETED);
 
         when(users.selectById(3L)).thenReturn(live(3L, "DISABLED", 0, null, "x", "9", List.of()));
         UserAttributes disabled = port.attributes(3L);
         assertThat(disabled.accountStatus()).isEqualTo(AccountStatus.DISABLED);
         assertThat(disabled.userLevel()).isNull();
-        assertThat(disabled.orgId()).isEqualTo(9L);
+        assertThat(disabled.orgId()).isEqualTo("9");
 
         when(users.selectById(4L)).thenReturn(live(4L, "ENABLED", 0, "GD", "1", "10", List.of()));
         assertThat(port.attributes(4L).accountStatus()).isEqualTo(AccountStatus.ACTIVE);

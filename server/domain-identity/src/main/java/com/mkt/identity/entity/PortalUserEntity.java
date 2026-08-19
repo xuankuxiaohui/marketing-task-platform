@@ -1,6 +1,8 @@
 package com.mkt.identity.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
@@ -13,10 +15,15 @@ public class PortalUserEntity {
     private String username;
     private String nickname;
     private String passwordHash;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String province;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String userLevel;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String userRole;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String tags;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String orgId;
     private String status;
     private Integer deleted;

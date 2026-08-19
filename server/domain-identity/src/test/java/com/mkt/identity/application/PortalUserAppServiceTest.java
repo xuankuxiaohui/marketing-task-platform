@@ -80,13 +80,15 @@ class PortalUserAppServiceTest {
         when(users.selectById(5L)).thenReturn(user);
         when(users.updateById(any(PortalUserEntity.class))).thenReturn(1);
         cache.put(CacheNamespace.IDENTITY_USER_ATTR, "5", "stale");
-        service.updateProfile(5L, new PortalUserProfileCommand("GD", "2", "vip", List.of("hot", "new"), "42"));
+        service.updateProfile(
+                5L, new PortalUserProfileCommand("GD", "2", "vip", List.of("hot", "new"), "org-north_01"));
         assertThat(user.getProvince()).isEqualTo("GD");
         assertThat(user.getUserLevel()).isEqualTo("2");
         assertThat(user.getTags()).isEqualTo(JsonUtil.toJson(List.of("hot", "new")));
-        assertThat(user.getOrgId()).isEqualTo("42");
+        assertThat(user.getOrgId()).isEqualTo("org-north_01");
         service.updateProfile(5L, new PortalUserProfileCommand("BJ", "3", null, List.of("only"), null));
         assertThat(JsonUtil.fromJson(user.getTags(), List.class)).containsExactly("only");
+        assertThat(user.getUserRole()).isNull();
         assertThat(user.getOrgId()).isNull();
         TransactionSynchronizationManager.getSynchronizations()
                 .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);

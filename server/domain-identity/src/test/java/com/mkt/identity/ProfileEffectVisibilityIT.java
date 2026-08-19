@@ -47,13 +47,22 @@ class ProfileEffectVisibilityIT {
             assertThat(after.userLevel()).isEqualTo(2);
             assertThat(after.userRole()).isEqualTo("vip");
             assertThat(after.tags()).containsExactly("hot");
-            assertThat(after.orgId()).isEqualTo(88L);
+            assertThat(after.orgId()).isEqualTo("88");
 
             env.portalUserApp.updateProfile(
                     30L, new PortalUserProfileCommand("SH", "3", "vip", List.of("only"), "88"));
             UserAttributes replaced = env.userAttributes.attributes(30L);
             assertThat(replaced.tags()).containsExactly("only");
             assertThat(replaced.province()).isEqualTo("SH");
+
+            env.portalUserApp.updateProfile(
+                    30L, new PortalUserProfileCommand("GD", null, null, List.of(), null));
+            UserAttributes cleared = env.userAttributes.attributes(30L);
+            assertThat(cleared.province()).isEqualTo("GD");
+            assertThat(cleared.userLevel()).isNull();
+            assertThat(cleared.userRole()).isNull();
+            assertThat(cleared.orgId()).isNull();
+            assertThat(cleared.tags()).isEmpty();
         }
     }
 }

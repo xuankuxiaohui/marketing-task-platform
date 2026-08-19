@@ -55,15 +55,11 @@ public final class UserAttributeConvert {
         return AccountStatus.ACTIVE;
     }
 
-    static Long parseOrgId(String raw) {
+    static String parseOrgId(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
-        try {
-            return Long.valueOf(raw.trim());
-        } catch (NumberFormatException ex) {
-            return null;
-        }
+        return raw.trim();
     }
 
     static Integer parseUserLevel(String raw) {

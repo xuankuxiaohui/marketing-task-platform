@@ -125,6 +125,7 @@ public class AdminUserAppService {
     public void update(long id, AdminUserUpdateCommand command) {
         AdminUserEntity existing = requireActive(id);
         List<Long> roleIds = uniqueRoleIds(command.roleIds());
+        rejectStrippingSeedBuiltIn(existing, roleIds);
         existing.setNickname(command.nickname().trim());
         existing.setUpdatedAt(IdentityTime.toUtc(clock.instant()));
         users.updateById(existing);
@@ -141,7 +142,7 @@ public class AdminUserAppService {
     @Transactional
     public void disable(long id) {
         AdminUserEntity existing = requireActive(id);
-        rejectProtected(id);
+        rejectProtected(existing);
         existing.setStatus(UserStatuses.DISABLED);
         existing.setUpdatedAt(IdentityTime.toUtc(clock.instant()));
         users.updateById(existing);
@@ -157,7 +158,7 @@ public class AdminUserAppService {
     @Transactional
     public void enable(long id) {
         AdminUserEntity existing = requireActive(id);
-        rejectProtected(id);
+        rejectProtected(existing);
         existing.setStatus(UserStatuses.ENABLED);
         existing.setUpdatedAt(IdentityTime.toUtc(clock.instant()));
         users.updateById(existing);
@@ -191,7 +192,7 @@ public class AdminUserAppService {
     @Transactional
     public void delete(long id) {
         AdminUserEntity existing = requireActive(id);
-        rejectProtected(id);
+        rejectProtected(existing);
         existing.setDeleted(1);
         existing.setUpdatedAt(IdentityTime.toUtc(clock.instant()));
         users.updateById(existing);
@@ -213,14 +214,31 @@ public class AdminUserAppService {
         return existing;
     }
 
-    private void rejectProtected(long id) {
+    private void rejectProtected(AdminUserEntity existing) {
         UserPrincipal principal = UserContext.current().orElse(null);
-        if (principal != null && principal.userId() != null && principal.userId() == id) {
+        if (principal != null && principal.userId() != null && principal.userId().equals(existing.getId())) {
             throw new BusinessException(AuthErrorCodes.USER_SELF_PROTECTED);
         }
-        if (roles.countEnabledBuiltInByUserId(id) > 0) {
+        if (isSeedAdmin(existing) || roles.countEnabledBuiltInByUserId(existing.getId()) > 0) {
             throw new BusinessException(AuthErrorCodes.USER_SELF_PROTECTED);
         }
+    }
+
+    private void rejectStrippingSeedBuiltIn(AdminUserEntity existing, List<Long> roleIds) {
+        if (!isSeedAdmin(existing)) {
+            return;
+        }
+        for (Long roleId : roleIds) {
+            RoleEntity role = roles.selectById(roleId);
+            if (role != null && role.builtInFlag()) {
+                return;
+            }
+        }
+        throw new BusinessException(AuthErrorCodes.USER_SELF_PROTECTED);
+    }
+
+    private static boolean isSeedAdmin(AdminUserEntity existing) {
+        return "admin".equals(existing.getUsername());
     }
 
     private List<Long> uniqueRoleIds(List<Long> raw) {

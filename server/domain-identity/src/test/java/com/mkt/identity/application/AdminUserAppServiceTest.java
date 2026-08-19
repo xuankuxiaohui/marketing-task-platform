@@ -152,6 +152,37 @@ class AdminUserAppServiceTest {
     }
 
     @Test
+    void seedAdminCannotBeStrippedThenDeleted() {
+        AdminUserEntity seed = liveUser(1L, "admin");
+        when(users.selectById(1L)).thenReturn(seed);
+        RoleEntity ops = new RoleEntity();
+        ops.setId(2L);
+        ops.setBuiltIn(0);
+        when(roles.selectById(2L)).thenReturn(ops);
+        assertThatThrownBy(() -> service.update(1L, new AdminUserUpdateCommand("超管", List.of(2L))))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.USER_SELF_PROTECTED);
+        verify(users, never()).updateById(any(AdminUserEntity.class));
+
+        when(roles.countEnabledBuiltInByUserId(1L)).thenReturn(0);
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.USER_SELF_PROTECTED);
+        verify(sessions, never()).logoutAllAdmin(1L);
+
+        RoleEntity superAdmin = new RoleEntity();
+        superAdmin.setId(1L);
+        superAdmin.setBuiltIn(1);
+        when(roles.selectById(1L)).thenReturn(superAdmin);
+        when(users.updateById(any(AdminUserEntity.class))).thenReturn(1);
+        service.update(1L, new AdminUserUpdateCommand("超级管理员", List.of(1L)));
+        verify(userRoles).deleteByUserId(1L);
+        verify(userRoles).insert(1L, 1L);
+    }
+
+    @Test
     void weakPasswordRejected() {
         assertThatThrownBy(() -> service.create(new AdminUserCreateCommand("ops_b", "运营", "weak", List.of())))
                 .isInstanceOf(BusinessException.class)
