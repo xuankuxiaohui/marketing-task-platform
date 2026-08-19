@@ -8,7 +8,7 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–19**
-- 进行中：CI 修复分支 `bug/1-flyway-v1it`（PR #2 → main）。FlywayV1IT / OutboxIdempotentInsertIT / CaseHandleAuditIT / ListConcurrentDecisionIT（C-12）已绿且未回退。本轮修 `OpenApiGroupsIT`：`InfraAutoConfiguration.redissonClient()` 无条件建客户端，CI 无 Redis 时 Connection refused。两个 IT 的 `spring.autoconfigure.exclude` **追加** `com.mkt.infra.InfraAutoConfiguration`，并保留 risk/tracking/DataSource 排除
+- 进行中：CI 修复分支 `bug/1-flyway-v1it`（PR #2 → main）。FlywayV1IT / Outbox / CaseHandleAudit / C-12 已绿。`OpenApiGroupsIT` 一次写齐：完整 exclude（risk/tracking/DataSource/Infra）+ 显式 `springdoc.api-docs.path`（admin=`/admin/v3/api-docs`，portal=`/api/v3/api-docs`），避免 yaml 落到 `/v3` 踩 RL-08
 - 下一步：等 PR #2 CI。不要做任务 20/21，除非人类明确要求
 - 代码实况：`domain-tracking` 已实现 `POST /api/common/track/batch`；服务端事件仍经 Outbox → `EvtEventLogWriter`。portal-app 已装配 `domain-tracking`。未做元数据 CRUD / 调试查询（任务 20）
 - Git：分支 `bug/1-flyway-v1it`（基于 `main` @ `90b6d85`）。未合 main / master
@@ -17,8 +17,8 @@
 
 - `@SpringBootTest(properties = "spring.autoconfigure.exclude=…")` 会**替换**而不是合并 `application.yml` 的 exclude
 - `InfraAutoConfiguration.redissonClient()` 无条件创建 RedissonClient（生产装配不改）；OpenAPI IT 不需要 Redis，在测试 exclude 里排除整个 Infra 装配
-- 两个 `OpenApiGroupsIT` 的 exclude 追加 `com.mkt.infra.InfraAutoConfiguration`，保留 Risk/Tracking（含 Admin/Portal）与 `DataSourceAutoConfiguration`
-- 未改三个 group 的断言，未改生产 Infra，未回退 Flyway/Outbox/C-12
+- 两个 `OpenApiGroupsIT` 的 `@SpringBootTest` properties 一次写齐：完整 exclude + `springdoc.api-docs.path` + `swagger-ui.enabled=false`。springdoc 3.1 yaml 映射是 `{path}.yaml/{group}`，path 缺省则 `/v3/api-docs.yaml/{group}` 踩 RL-08
+- 未改三个 group 的断言，未改生产 Infra / NamespacePrefixes，未回退 Flyway/Outbox/C-12
 
 ## 改过的核心文件
 
@@ -41,6 +41,7 @@
 - PersistenceScan `@Import` 在 Boot 4 OnBean 未成立时仍可能扫进 application store，Mapper 却没建出 → `MybatisRiskHitLogStore` 缺 `RiskHitLogMapper`
 - `@SpringBootTest` 的 `spring.autoconfigure.exclude` 覆盖 yml 同名列表，yml 里的 `DataSourceAutoConfiguration` 会被丢掉
 - `InfraAutoConfiguration.redissonClient()` 无条件建客户端；OpenAPI IT 排除 DataSource 后仍会连 127.0.0.1:6379
+- run 32259660327：上下文已 Started，RL-08 因 `/v3/api-docs.yaml/{group}`（测试未吃到 yml 里的 springdoc path）
 
 ## 尝试过但失败的方案
 
@@ -52,6 +53,7 @@
 - `RiskAutoConfiguration` `@Import(RiskPersistenceScan)` 指望 OnBean 挡住扫描：Boot 4 OnBean 未成立时仍可能扫进 store、扫不出 mapper
 - 只排除 risk/tracking、不重写 DataSource 排除：`@SpringBootTest` exclude 覆盖 yml，Hikari 再装上后报无 driver class
 - 只排除 risk/tracking/DataSource、不排除 Infra：RedissonClient 连 127.0.0.1:6379 Connection refused
+- 排除 Infra 后仍不写 `springdoc.api-docs.path`：yaml 默认 `/v3/api-docs.yaml/{group}` 踩 RL-08
 
 ## 明确禁止下一会话做的事
 
@@ -70,11 +72,11 @@
 - 不要再改名单判定 / 批查
 - 不要回退 PersistenceScan 后再把扫描加回 AutoConfiguration
 - 不要削弱三个 OpenAPI group 断言（含 admin 不含 `/api/` `/internal/`）
-- 不要从 OpenApiGroupsIT 的 exclude 里拿掉 `DataSourceAutoConfiguration`、risk/tracking 或 `InfraAutoConfiguration`
+- 不要从 OpenApiGroupsIT 的 properties 里拿掉完整 exclude 或 `springdoc.api-docs.path`
 - 不要改生产 `InfraAutoConfiguration`（含给 `redissonClient()` 加条件）来让 OpenAPI IT 变绿
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 等 PR #2 CI（`OpenApiGroupsIT` 排除 Infra + DataSource + risk/tracking 后能起上下文）
+1. 等 PR #2 CI（`OpenApiGroupsIT` 完整 exclude + 显式 springdoc path 后过 RL-08 与三组 JSON）
 2. 人类评审任务 18（风控判定链）
 3. 任务 20：domain-tracking 元数据与调试（人类明确要求后再做）

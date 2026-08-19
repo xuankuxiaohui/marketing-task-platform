@@ -7,19 +7,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.web.client.RestClient;
 
-// OpenAPI JSON only; no DataSource / Redis. @SpringBootTest exclude
-// replaces the application.yml list, so DataSource and Infra must be restated.
+// OpenAPI JSON only. @SpringBootTest properties replace yml exclude, so
+// restated in full. springdoc path must be explicit so yaml maps under /admin.
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties =
-                "spring.autoconfigure.exclude="
-                        + "com.mkt.risk.RiskAutoConfiguration,"
-                        + "com.mkt.risk.RiskAdminAutoConfiguration,"
-                        + "com.mkt.tracking.TrackingAutoConfiguration,"
-                        + "com.mkt.tracking.TrackingAdminAutoConfiguration,"
-                        + "com.mkt.tracking.TrackingPortalAutoConfiguration,"
-                        + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
-                        + "com.mkt.infra.InfraAutoConfiguration")
+        properties = {
+            "spring.autoconfigure.exclude="
+                    + "com.mkt.risk.RiskAutoConfiguration,"
+                    + "com.mkt.risk.RiskAdminAutoConfiguration,"
+                    + "com.mkt.tracking.TrackingAutoConfiguration,"
+                    + "com.mkt.tracking.TrackingAdminAutoConfiguration,"
+                    + "com.mkt.tracking.TrackingPortalAutoConfiguration,"
+                    + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
+                    + "com.mkt.infra.InfraAutoConfiguration",
+            "springdoc.api-docs.path=/admin/v3/api-docs",
+            "springdoc.swagger-ui.enabled=false"
+        })
 class OpenApiGroupsIT {
 
     @LocalServerPort
