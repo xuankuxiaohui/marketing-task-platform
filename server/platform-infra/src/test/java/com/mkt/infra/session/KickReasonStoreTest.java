@@ -1,6 +1,7 @@
 package com.mkt.infra.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import org.junit.jupiter.api.Test;
@@ -19,5 +20,8 @@ class KickReasonStoreTest {
         reasons.write("admin", "tok-2", KickReason.ADMIN);
         assertThat(reasons.readAndDelete("admin", "tok-2").orElseThrow().code())
                 .isEqualTo("auth.session.kicked-admin");
+        store.setAvailable(false);
+        assertThat(reasons.readAndDeleteQuiet("admin", "x")).isEmpty();
+        assertThatThrownBy(() -> KickReason.fromCode("nope")).isInstanceOf(IllegalArgumentException.class);
     }
 }

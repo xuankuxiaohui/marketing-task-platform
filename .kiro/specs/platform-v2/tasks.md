@@ -324,12 +324,12 @@ _测试：CacheEvictBroadcastIT、RateLimitLuaIT、DegradeMatrixIT（Redis pause
 
 ### 任务 16：platform-infra Outbox（编组 C）
 
-- [ ] `EventPublisher.append` 断言当前事务，否则抛 `IllegalStateException`；写入 `producer` = 本应用
-- [ ] Relay 双应用分锁（`outbox:relay:admin` / `portal`）；**SELECT 必须带 `producer=:self`**（D-11）
-- [ ] 消费者注册表 = §6.4 路由表（含 R-a/R-b/R-c/R-d 的 `risk:cnt`）；声明了消费方向而 Bean 缺失 → 不 DELETE，重试 + 告警
-- [ ] 退避 10s–30m；5 次后 DEAD
-- [ ] `evt_event_log` 写入 id 复用 `sys_outbox.id`；主键冲突当成功
-- [ ] 测试基建 `awaitOutboxDrain`
+- [x] `EventPublisher.append` 断言当前事务，否则抛 `IllegalStateException`；写入 `producer` = 本应用
+- [x] Relay 双应用分锁（`outbox:relay:admin` / `portal`）；**SELECT 必须带 `producer=:self`**（D-11）
+- [x] 消费者注册表 = §6.4 路由表（含 R-a/R-b/R-c/R-d 的 `risk:cnt`）；声明了消费方向而 Bean 缺失 → 不 DELETE，重试 + 告警
+- [x] 退避 10s–30m；5 次后 DEAD
+- [x] `evt_event_log` 写入 id 复用 `sys_outbox.id`；主键冲突当成功
+- [x] 测试基建 `awaitOutboxDrain`
 
 _需求：R10.3、R28.8、R28.9_
 _设计：design §3.2.7、§6.4_

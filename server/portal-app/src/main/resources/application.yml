@@ -3,6 +3,14 @@ spring:
     name: portal-app
   flyway:
     enabled: false
+  datasource:
+    url: ${MKT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/mkt_platform?characterEncoding=utf8&connectionTimeZone=UTC}
+    username: ${MKT_DATASOURCE_USERNAME:mkt}
+    password: ${MKT_DATASOURCE_PASSWORD:}
+
+mkt:
+  outbox:
+    producer: portal
 
 springdoc:
   api-docs:
