@@ -4,5 +4,5 @@ package com.mkt.identity.support;
 @FunctionalInterface
 public interface ForbiddenAuditSink {
 
-    void onForbidden(long userId, String username, String method, String path);
+    void onForbidden(long userId, String username, String method, String path, String ip, String userAgent);
 }

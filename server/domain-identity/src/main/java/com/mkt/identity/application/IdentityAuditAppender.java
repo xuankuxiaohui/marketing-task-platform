@@ -9,10 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
-/**
- * Writes {@code audit.log} in the business transaction (R2.7 / R10.3).
- * TODO(task-25): drop once {@code @Audited} AOP is the only writer.
- */
+/** Outbox writer for identity RBAC mutations (R2.7). */
 @Component
 public class IdentityAuditAppender {
 

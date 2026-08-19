@@ -20,7 +20,8 @@ public class AdminForbiddenAudit implements ForbiddenAuditSink {
     }
 
     @Override
-    public void onForbidden(long userId, String username, String method, String path) {
+    public void onForbidden(
+            long userId, String username, String method, String path, String ip, String userAgent) {
         Map<String, String> summary = new LinkedHashMap<>();
         summary.put("method", method == null ? "" : method);
         summary.put("path", path == null ? "" : path);
@@ -31,8 +32,8 @@ public class AdminForbiddenAudit implements ForbiddenAuditSink {
                 userId,
                 username,
                 "FAILURE",
-                null,
-                null,
+                ip,
+                userAgent,
                 JsonUtil.toJson(summary)));
     }
 }
