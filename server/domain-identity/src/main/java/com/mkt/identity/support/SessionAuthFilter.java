@@ -1,5 +1,6 @@
 package com.mkt.identity.support;
 
+import cn.dev33.satoken.exception.SaTokenContextException;
 import cn.dev33.satoken.stp.StpLogic;
 import com.mkt.identity.domain.TokenPrefixes;
 import com.mkt.infra.degrade.SessionAvailability;
@@ -59,14 +60,15 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             write(response, SessionErrorCodes.MISSING);
             return;
         }
+        if (anonymous) {
+            // Kicked / expired / invalid same-side cookies must not block login or captcha.
+            chain.doFilter(request, response);
+            return;
+        }
         String raw = side == SessionSide.ADMIN
                 ? TokenPrefixes.unwrapAdmin(presented)
                 : TokenPrefixes.unwrapClient(presented);
         if (raw == null) {
-            if (anonymous) {
-                chain.doFilter(request, response);
-                return;
-            }
             write(response, side == SessionSide.ADMIN ? SessionErrorCodes.INVALID : SessionErrorCodes.MISSING);
             return;
         }
@@ -96,16 +98,38 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             return;
         }
         if (id == null || id.isBlank() || "null".equals(id)) {
-            if (anonymous) {
-                chain.doFilter(request, response);
-                return;
-            }
             write(response, side == SessionSide.ADMIN ? SessionErrorCodes.INVALID : SessionErrorCodes.EXPIRED);
             return;
         }
-        logic.setTokenValueToStorage(raw);
-        UserContext.set(new UserPrincipal(Long.parseLong(id), loginType, id));
-        chain.doFilter(request, response);
+        try {
+            bindToken(logic, raw);
+            String username = SessionUsernames.read(logic, raw, id);
+            UserContext.set(new UserPrincipal(Long.parseLong(id), loginType, username));
+            logic.updateLastActiveToNow(raw);
+            renew(logic, raw);
+            if (side == SessionSide.ADMIN && AuthCookies.read(request, AuthCookies.SESSION) != null) {
+                AuthCookies.writeSession(response, presented);
+            }
+            chain.doFilter(request, response);
+        } finally {
+            UserContext.clear();
+        }
+    }
+
+    private static void bindToken(StpLogic logic, String raw) {
+        try {
+            logic.setTokenValueToStorage(raw);
+        } catch (SaTokenContextException ignored) {
+            // no Sa servlet context; UserContext is the request principal
+        }
+    }
+
+    private static void renew(StpLogic logic, String raw) {
+        long timeout = logic.getConfigOrGlobal().getTimeout();
+        if (timeout <= 0) {
+            timeout = AuthCookies.MAX_AGE_SECONDS;
+        }
+        logic.renewTimeout(raw, timeout);
     }
 
     private String presentedToken(HttpServletRequest request) {

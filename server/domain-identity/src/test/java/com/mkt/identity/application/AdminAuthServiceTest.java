@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +17,8 @@ import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
 import com.mkt.identity.command.AdminLoginCommand;
 import com.mkt.identity.command.ChangePasswordCommand;
+import com.mkt.identity.convert.IdentityTime;
+import com.mkt.identity.domain.LoginLock;
 import com.mkt.identity.entity.AdminUserEntity;
 import com.mkt.identity.support.AuthErrorCodes;
 import com.mkt.infra.outbox.EventPublisher;
@@ -24,14 +27,17 @@ import com.mkt.infra.outbox.OutboxProducer;
 import com.mkt.infra.ratelimit.SlidingWindowRateLimiter;
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.kernel.BusinessException;
+import com.mkt.kernel.json.JsonUtil;
 import com.mkt.kernel.time.MutableClock;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import tools.jackson.databind.JsonNode;
 
 class AdminAuthServiceTest {
 
@@ -82,6 +88,9 @@ class AdminAuthServiceTest {
         assertThat(issued.body().roles()).contains("super-admin");
         verify(users).markLoginSuccess(eq(1L), any());
         assertThat(outbox.all()).hasSize(1);
+        JsonNode payload = JsonUtil.readTree(outbox.all().get(0).payload());
+        assertThat(payload.get("operatorId").asLong()).isEqualTo(1L);
+        assertThat(payload.get("result").asString()).isEqualTo("SUCCESS");
     }
 
     @Test
@@ -125,6 +134,61 @@ class AdminAuthServiceTest {
         service.changePassword(9L, new ChangePasswordCommand("OldPass12!x", "NewPass12!x"), first.token());
         verify(users).updatePassword(eq(9L), anyString());
         assertThat(new SessionService().adminSessionValid(first.token().substring("admin:".length()))).isTrue();
+    }
+
+    @Test
+    void failedLoginAuditHasNullOperatorIdAndJsonSummary() {
+        AdminUserEntity user = user(1L, hasher.hash("Abcdef12!x"));
+        when(users.getByUsername("alice")).thenReturn(user);
+        assertThatThrownBy(() -> service.login(
+                        new AdminLoginCommand("alice", "wrongpass1!", "cid", "code", null),
+                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                .isInstanceOf(BusinessException.class);
+        JsonNode payload = JsonUtil.readTree(outbox.all().get(0).payload());
+        assertThat(payload.get("operatorId").isNull()).isTrue();
+        assertThat(payload.get("result").asString()).isEqualTo("FAILURE");
+        assertThat(payload.get("operatorName").asString()).isEqualTo("alice");
+        JsonNode summary = JsonUtil.readTree(payload.get("requestSummary").asString());
+        assertThat(summary.get("username").asString()).isEqualTo("alice");
+    }
+
+    @Test
+    void lockedAccountDoesNotConsumeCaptcha() {
+        AdminUserEntity user = user(1L, hasher.hash("Abcdef12!x"));
+        user.setFailedAttempts(5);
+        user.setLockedUntil(IdentityTime.toUtc(clock.instant().plusSeconds(60)));
+        when(users.getByUsername("alice")).thenReturn(user);
+        doThrow(new BusinessException(AuthErrorCodes.CAPTCHA_INVALID))
+                .when(captchas)
+                .consume(anyString(), anyString(), anyString());
+        assertThatThrownBy(() -> service.login(
+                        new AdminLoginCommand("alice", "wrongpass1!", "cid", "bad", null),
+                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.LOGIN_LOCKED);
+        verify(captchas, never()).consume(anyString(), anyString(), anyString());
+        JsonNode payload = JsonUtil.readTree(outbox.all().get(0).payload());
+        assertThat(payload.get("operatorId").isNull()).isTrue();
+    }
+
+    @Test
+    void lockExpiryZerosAttemptsAndDoesNotImmediatelyRelock() {
+        AdminUserEntity user = user(1L, hasher.hash("Abcdef12!x"));
+        user.setFailedAttempts(5);
+        user.setLockedUntil(IdentityTime.toUtc(clock.instant().minusSeconds(1)));
+        when(users.getByUsername("alice")).thenReturn(user);
+        assertThatThrownBy(() -> service.login(
+                        new AdminLoginCommand("alice", "wrongpass1!", "cid", "code", null),
+                        new AuthAttemptContext("10.0.0.1", "ua", null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
+        ArgumentCaptor<LoginLock.State> captor = ArgumentCaptor.forClass(LoginLock.State.class);
+        verify(users).saveLock(eq(1L), captor.capture());
+        LoginLock.State saved = captor.getValue();
+        assertThat(saved.failedAttempts()).isEqualTo(1);
+        assertThat(saved.locked(clock.instant())).isFalse();
     }
 
     private static AdminUserEntity user(long id, String hash) {

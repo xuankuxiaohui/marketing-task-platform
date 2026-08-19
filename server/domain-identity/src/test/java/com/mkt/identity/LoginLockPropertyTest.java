@@ -3,6 +3,7 @@ package com.mkt.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.mkt.identity.domain.LoginLock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ import net.jqwik.api.Combinators;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
+import net.jqwik.api.constraints.IntRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,40 @@ class LoginLockPropertyTest {
                 assertThat(state.locked(now)).isFalse();
             }
         }
+    }
+
+    @Property(tries = 200)
+    void lockExpiryZerosAttemptsAndDoesNotImmediatelyRelock(
+            @ForAll @IntRange(min = 0, max = 4) int failuresWhileLocked,
+            @ForAll @IntRange(min = 0, max = 3) int failuresAfterUnlock) {
+        Instant now = NOW;
+        LoginLock.State state = LoginLock.idle();
+        for (int i = 0; i < LoginLock.THRESHOLD; i++) {
+            state = LoginLock.onFailure(state, now);
+        }
+        assertThat(state.locked(now)).isTrue();
+        for (int i = 0; i < failuresWhileLocked; i++) {
+            Instant during = now.plus(Duration.ofMinutes(i + 1));
+            LoginLock.State next = LoginLock.onFailure(state, during);
+            assertThat(next).isEqualTo(state);
+            assertThat(next.locked(during)).isTrue();
+        }
+        Instant expired = now.plus(LoginLock.LOCK_DURATION);
+        assertThat(state.locked(expired)).isFalse();
+        LoginLock.State first = LoginLock.onFailure(state, expired);
+        assertThat(first.locked(expired)).isFalse();
+        assertThat(first.failedAttempts()).isEqualTo(1);
+        state = first;
+        for (int i = 0; i < failuresAfterUnlock; i++) {
+            Instant later = expired.plusSeconds(i + 1L);
+            state = LoginLock.onFailure(state, later);
+            assertThat(state.failedAttempts()).isEqualTo(2 + i);
+            assertThat(state.locked(later)).isFalse();
+        }
+        log.debug(
+                "lockExpiry zeros attempts whileLocked={} afterUnlock={}",
+                failuresWhileLocked,
+                failuresAfterUnlock);
     }
 
     @Provide

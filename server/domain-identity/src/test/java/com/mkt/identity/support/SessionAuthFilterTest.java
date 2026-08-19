@@ -1,7 +1,11 @@
 package com.mkt.identity.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cn.dev33.satoken.SaManager;
+import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
+import com.mkt.identity.application.SessionService;
 import com.mkt.infra.degrade.SessionAvailability;
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.infra.session.KickReason;
@@ -10,6 +14,7 @@ import com.mkt.infra.session.StpAdmin;
 import com.mkt.infra.session.StpClient;
 import com.mkt.kernel.UserContext;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -91,6 +96,94 @@ class SessionAuthFilterTest {
         assertThat(response.getContentAsString()).contains("auth.session.invalid");
     }
 
+    @Test
+    void adminAnonymousWithKickedCookieStillPasses() throws Exception {
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.ADMIN, kicks, availability);
+        kicks.write(StpAdmin.TYPE, "tok", KickReason.ADMIN);
+        MockHttpServletRequest login = request("POST", "/admin/auth/login");
+        login.setCookies(new Cookie(AuthCookies.SESSION, "admin:tok"));
+        RecordingChain loginChain = new RecordingChain();
+        MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+        filter.doFilter(login, loginResponse, loginChain);
+        assertThat(loginChain.called).isTrue();
+        assertThat(loginResponse.getStatus()).isEqualTo(200);
+
+        MockHttpServletRequest captcha = request("GET", "/admin/captcha");
+        captcha.setCookies(new Cookie(AuthCookies.SESSION, "admin:tok"));
+        RecordingChain captchaChain = new RecordingChain();
+        MockHttpServletResponse captchaResponse = new MockHttpServletResponse();
+        filter.doFilter(captcha, captchaResponse, captchaChain);
+        assertThat(captchaChain.called).isTrue();
+        assertThat(captchaResponse.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void portalAnonymousWithKickedTokenStillPasses() throws Exception {
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        kicks.write(StpClient.TYPE, "tok", KickReason.CONCURRENT);
+        MockHttpServletRequest req = request("POST", "/api/common/auth/login");
+        req.addHeader("Authorization", "Bearer client:tok");
+        RecordingChain chain = new RecordingChain();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, chain);
+        assertThat(chain.called).isTrue();
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        MockHttpServletRequest captcha = request("GET", "/api/common/captcha");
+        captcha.addHeader("Authorization", "Bearer client:tok");
+        RecordingChain captchaChain = new RecordingChain();
+        MockHttpServletResponse captchaResponse = new MockHttpServletResponse();
+        filter.doFilter(captcha, captchaResponse, captchaChain);
+        assertThat(captchaChain.called).isTrue();
+
+        MockHttpServletRequest available = request("GET", "/api/common/auth/username-available");
+        available.addHeader("Authorization", "Bearer client:tok");
+        RecordingChain availableChain = new RecordingChain();
+        filter.doFilter(available, new MockHttpServletResponse(), availableChain);
+        assertThat(availableChain.called).isTrue();
+    }
+
+    @Test
+    void authenticatedRequestSetsUsernameClearsContextAndRenewsCookie() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.ADMIN, kicks, availability);
+        MockHttpServletRequest req = request("GET", "/admin/auth/profile");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        RecordingChain chain = new RecordingChain();
+        chain.assertDuring = () -> {
+            assertThat(UserContext.require().userId()).isEqualTo(7L);
+            assertThat(UserContext.require().username()).isEqualTo("alice");
+            assertThat(UserContext.require().username()).isNotEqualTo("7");
+        };
+        filter.doFilter(req, response, chain);
+        assertThat(chain.called).isTrue();
+        assertThat(UserContext.current()).isEmpty();
+        String cookie = response.getHeaders("Set-Cookie").stream()
+                .filter(h -> h.startsWith(AuthCookies.SESSION + "="))
+                .findFirst()
+                .orElse("");
+        assertThat(cookie).contains("Max-Age=" + AuthCookies.MAX_AGE_SECONDS);
+        assertThat(cookie).contains(token);
+    }
+
+    @Test
+    void filterClearsUserContextWhenChainThrows() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.ADMIN, kicks, availability);
+        MockHttpServletRequest req = request("GET", "/admin/auth/profile");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        assertThatThrownBy(() -> filter.doFilter(req, response, (r, s) -> {
+                    assertThat(UserContext.require().username()).isEqualTo("alice");
+                    throw new ServletException("boom");
+                }))
+                .isInstanceOf(ServletException.class);
+        assertThat(UserContext.current()).isEmpty();
+    }
+
     private static MockHttpServletRequest request(String method, String path) {
         MockHttpServletRequest req = new MockHttpServletRequest(method, path);
         req.setRequestURI(path);
@@ -105,10 +198,14 @@ class SessionAuthFilterTest {
 
     private static final class RecordingChain implements FilterChain {
         boolean called;
+        Runnable assertDuring;
 
         @Override
         public void doFilter(jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response) {
             called = true;
+            if (assertDuring != null) {
+                assertDuring.run();
+            }
         }
     }
 }

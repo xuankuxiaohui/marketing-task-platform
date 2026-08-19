@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
+import com.mkt.identity.support.SessionUsernames;
+import com.mkt.infra.session.StpAdmin;
+import com.mkt.infra.session.StpClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,16 +21,20 @@ class SessionServiceTest {
 
     @Test
     void adminAndClientTokensAreIsolated() {
-        String admin = sessions.loginAdmin(11L, 5, null);
-        String client = sessions.loginClient(11L, 3, null);
+        String admin = sessions.loginAdmin(11L, 5, null, "alice");
+        String client = sessions.loginClient(11L, 3, null, "bob_01");
         assertThat(admin).startsWith("admin:");
         assertThat(client).startsWith("client:");
-        assertThat(sessions.adminSessionValid(admin.substring("admin:".length()))).isTrue();
-        assertThat(sessions.clientSessionValid(client.substring("client:".length()))).isTrue();
+        String adminRaw = admin.substring("admin:".length());
+        String clientRaw = client.substring("client:".length());
+        assertThat(sessions.adminSessionValid(adminRaw)).isTrue();
+        assertThat(sessions.clientSessionValid(clientRaw)).isTrue();
+        assertThat(SessionUsernames.read(StpAdmin.LOGIC, adminRaw, "11")).isEqualTo("alice");
+        assertThat(SessionUsernames.read(StpClient.LOGIC, clientRaw, "11")).isEqualTo("bob_01");
         assertThat(sessions.adminSessionValid(client.substring("client:".length()))).isFalse();
         sessions.logoutAdmin(admin);
-        assertThat(sessions.adminSessionValid(admin.substring("admin:".length()))).isFalse();
+        assertThat(sessions.adminSessionValid(adminRaw)).isFalse();
         sessions.logoutClient(client);
-        assertThat(sessions.clientSessionValid(client.substring("client:".length()))).isFalse();
+        assertThat(sessions.clientSessionValid(clientRaw)).isFalse();
     }
 }

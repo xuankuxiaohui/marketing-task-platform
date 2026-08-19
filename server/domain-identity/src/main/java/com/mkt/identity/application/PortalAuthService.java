@@ -114,7 +114,7 @@ public class PortalAuthService {
         users.updateNickname(entity.getId(), nickname);
         entity.setNickname(nickname);
         int max = configs.getInt(AuthConfigKeys.PORTAL_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_PORTAL_MAX_CONCURRENT);
-        String token = sessions.loginClient(entity.getId(), max, deviceId);
+        String token = sessions.loginClient(entity.getId(), max, deviceId, username);
         users.markLoginSuccess(entity.getId(), now);
         appendEvent(EventCodes.AUTH_REGISTER_SUCCESS, entity.getId(), context.ip(), deviceId);
         return new PortalAuthResponse(token, entity.getId(), nickname);
@@ -124,28 +124,30 @@ public class PortalAuthService {
     public PortalAuthResponse login(PortalLoginCommand command, AuthAttemptContext context) {
         String username = Usernames.normalize(command.username());
         rateLimiter.assertLogin(context.ip(), username);
-        captchas.consume(CAPTCHA_REALM, command.captchaId(), command.captchaCode());
         Instant now = clock.instant();
         PortalUserEntity user = username == null ? null : users.getByUsername(username);
+        if (user != null) {
+            LoginLock.State lock = lockOf(user);
+            if (lock.locked(now)) {
+                throw locked(lock, now);
+            }
+        }
+        captchas.consume(CAPTCHA_REALM, command.captchaId(), command.captchaCode());
         String deviceId = DeviceIds.normalizeOrNull(context.deviceId());
         Long subjectId = user == null ? null : user.getId();
         rejectIfBlocked(RiskScene.LOGIN, subjectId, context.ip(), deviceId, AuthErrorCodes.RISK_BLOCKED_LOGIN);
         if (user == null) {
             throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
         }
-        LoginLock.State lock = LoginLock.of(
-                user.getFailedAttempts() == null ? 0 : user.getFailedAttempts(),
-                IdentityTime.toInstant(user.getLockedUntil()));
+        LoginLock.State lock = lockOf(user);
         if (lock.locked(now)) {
-            throw new BusinessException(
-                    AuthErrorCodes.LOGIN_LOCKED, "账号已锁定，请" + lock.remainingMinutes(now) + "分钟后重试");
+            throw locked(lock, now);
         }
         if (!hasher.matches(command.password(), user.getPasswordHash())) {
             LoginLock.State next = LoginLock.onFailure(lock, now);
             users.saveLock(user.getId(), next);
             if (next.locked(now)) {
-                throw new BusinessException(
-                        AuthErrorCodes.LOGIN_LOCKED, "账号已锁定，请" + next.remainingMinutes(now) + "分钟后重试");
+                throw locked(next, now);
             }
             throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
         }
@@ -153,7 +155,7 @@ public class PortalAuthService {
             throw new BusinessException(AuthErrorCodes.ACCOUNT_DISABLED);
         }
         int max = configs.getInt(AuthConfigKeys.PORTAL_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_PORTAL_MAX_CONCURRENT);
-        String token = sessions.loginClient(user.getId(), max, deviceId);
+        String token = sessions.loginClient(user.getId(), max, deviceId, user.getUsername());
         users.markLoginSuccess(user.getId(), now);
         appendEvent(EventCodes.AUTH_LOGIN_SUCCESS, user.getId(), context.ip(), deviceId);
         return new PortalAuthResponse(token, user.getId(), user.getNickname());
@@ -169,6 +171,17 @@ public class PortalAuthService {
         if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
             throw new BusinessException(blocked);
         }
+    }
+
+    private static LoginLock.State lockOf(PortalUserEntity user) {
+        return LoginLock.of(
+                user.getFailedAttempts() == null ? 0 : user.getFailedAttempts(),
+                IdentityTime.toInstant(user.getLockedUntil()));
+    }
+
+    private static BusinessException locked(LoginLock.State lock, Instant now) {
+        return new BusinessException(
+                AuthErrorCodes.LOGIN_LOCKED, "账号已锁定，请" + lock.remainingMinutes(now) + "分钟后重试");
     }
 
     private void appendEvent(String eventCode, long userId, String ip, String deviceId) {

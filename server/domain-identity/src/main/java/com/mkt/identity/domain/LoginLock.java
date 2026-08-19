@@ -48,7 +48,9 @@ public final class LoginLock {
         if (current.locked(now)) {
             return current;
         }
-        int next = current.failedAttempts() + 1;
+        // R1.3: lock expiry zeros the counter; the next failure starts from 1, not 6.
+        int previous = current.lockedUntil() == null ? current.failedAttempts() : 0;
+        int next = previous + 1;
         if (next >= THRESHOLD) {
             return new State(next, now.plus(LOCK_DURATION));
         }

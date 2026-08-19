@@ -3,6 +3,7 @@ package com.mkt.identity.application;
 import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.parameter.SaLoginParameter;
 import com.mkt.identity.domain.TokenPrefixes;
+import com.mkt.identity.support.SessionUsernames;
 import com.mkt.infra.session.StpAdmin;
 import com.mkt.infra.session.StpClient;
 import java.util.List;
@@ -11,13 +12,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class SessionService {
 
-    public String loginAdmin(long userId, int maxConcurrent, String deviceId) {
-        String raw = login(StpAdmin.LOGIC, userId, maxConcurrent, deviceId);
+    public String loginAdmin(long userId, int maxConcurrent, String deviceId, String username) {
+        String raw = login(StpAdmin.LOGIC, userId, maxConcurrent, deviceId, username);
         return TokenPrefixes.wrapAdmin(raw);
     }
 
-    public String loginClient(long userId, int maxConcurrent, String deviceId) {
-        String raw = login(StpClient.LOGIC, userId, maxConcurrent, deviceId);
+    public String loginClient(long userId, int maxConcurrent, String deviceId, String username) {
+        String raw = login(StpClient.LOGIC, userId, maxConcurrent, deviceId, username);
         return TokenPrefixes.wrapClient(raw);
     }
 
@@ -51,7 +52,7 @@ public class SessionService {
         return valid(StpClient.LOGIC, rawToken);
     }
 
-    private static String login(StpLogic logic, long userId, int maxConcurrent, String deviceId) {
+    private static String login(StpLogic logic, long userId, int maxConcurrent, String deviceId, String username) {
         SaLoginParameter parameter = new SaLoginParameter()
                 .setIsConcurrent(true)
                 .setIsShare(false)
@@ -59,7 +60,10 @@ public class SessionService {
         if (deviceId != null && !deviceId.isBlank()) {
             parameter.setDeviceId(deviceId);
         }
-        return logic.createLoginSession(userId, parameter);
+        SessionUsernames.attach(parameter, username);
+        String raw = logic.createLoginSession(userId, parameter);
+        SessionUsernames.write(logic, userId, username);
+        return raw;
     }
 
     private static void keepCurrent(StpLogic logic, long userId, String currentRaw) {

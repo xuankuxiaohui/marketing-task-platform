@@ -6,6 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.dev33.satoken.SaManager;
@@ -15,7 +18,9 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskSubject;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.identity.command.PortalLoginCommand;
 import com.mkt.identity.command.PortalRegisterCommand;
+import com.mkt.identity.convert.IdentityTime;
 import com.mkt.identity.entity.PortalUserEntity;
 import com.mkt.identity.support.AuthErrorCodes;
 import com.mkt.infra.outbox.EventPublisher;
@@ -125,6 +130,29 @@ class PortalAuthServiceTest {
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.RISK_BLOCKED_LOGIN);
         service.logout(ok.token());
+    }
+
+    @Test
+    void lockedAccountDoesNotConsumeCaptcha() {
+        PortalUserEntity user = new PortalUserEntity();
+        user.setId(7L);
+        user.setUsername("bob_01");
+        user.setPasswordHash(new PasswordHasher().hash("abcdefg1"));
+        user.setStatus("ENABLED");
+        user.setDeleted(0);
+        user.setFailedAttempts(5);
+        user.setLockedUntil(IdentityTime.toUtc(clock.instant().plusSeconds(60)));
+        when(users.getByUsername("bob_01")).thenReturn(user);
+        doThrow(new BusinessException(AuthErrorCodes.CAPTCHA_INVALID))
+                .when(captchas)
+                .consume(anyString(), anyString(), anyString());
+        assertThatThrownBy(() -> service.login(
+                        new PortalLoginCommand("bob_01", "wrong", "cid", "bad"),
+                        new AuthAttemptContext("10.0.0.2", "ua", null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.LOGIN_LOCKED);
+        verify(captchas, never()).consume(anyString(), anyString(), anyString());
     }
 
     @Test

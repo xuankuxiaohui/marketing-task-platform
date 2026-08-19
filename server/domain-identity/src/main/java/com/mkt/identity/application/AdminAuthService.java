@@ -14,9 +14,12 @@ import com.mkt.identity.support.AuthConfigKeys;
 import com.mkt.identity.support.AuthErrorCodes;
 import com.mkt.identity.support.CsrfTokens;
 import com.mkt.kernel.BusinessException;
+import com.mkt.kernel.json.JsonUtil;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,12 +62,20 @@ public class AdminAuthService {
         rateLimiter.assertLogin(context.ip(), username);
         Instant now = clock.instant();
         AdminUserEntity user = username == null ? null : users.getByUsername(username);
+        if (user != null) {
+            LoginLock.State lock = lockOf(user);
+            if (lock.locked(now)) {
+                auditFailure(command, context, username);
+                throw locked(lock, now);
+            }
+        }
         try {
             captchas.consume(CAPTCHA_REALM, command.captchaId(), command.captchaCode());
             AdminLoginResponse body = authenticate(user, command.password(), now);
             String csrf = CsrfTokens.create();
             int max = configs.getInt(AuthConfigKeys.ADMIN_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_ADMIN_MAX_CONCURRENT);
-            String token = sessions.loginAdmin(user.getId(), max, DeviceIds.normalizeOrNull(command.deviceId()));
+            String token = sessions.loginAdmin(
+                    user.getId(), max, DeviceIds.normalizeOrNull(command.deviceId()), user.getUsername());
             users.markLoginSuccess(user.getId(), now);
             audits.append(
                     "login",
@@ -85,22 +96,33 @@ public class AdminAuthService {
                     token,
                     csrf);
         } catch (BusinessException ex) {
-            audits.append(
-                    "login",
-                    user == null ? null : user.getId(),
-                    submittedName(command.username()),
-                    "FAILURE",
-                    context.ip(),
-                    context.userAgent(),
-                    summary(username));
+            auditFailure(command, context, username);
             throw ex;
         }
+    }
+
+    private void auditFailure(AdminLoginCommand command, AuthAttemptContext context, String username) {
+        audits.append(
+                "login",
+                null,
+                submittedName(command.username()),
+                "FAILURE",
+                context.ip(),
+                context.userAgent(),
+                summary(username));
     }
 
     @Transactional
     public void logout(long userId, String username, String presentedToken, AuthAttemptContext context) {
         sessions.logoutAdmin(presentedToken);
-        audits.append("logout", userId, username, "SUCCESS", context.ip(), context.userAgent(), "{}");
+        audits.append(
+                "logout",
+                userId,
+                username,
+                "SUCCESS",
+                context.ip(),
+                context.userAgent(),
+                JsonUtil.toJson(Map.of()));
     }
 
     @Transactional
@@ -114,26 +136,23 @@ public class AdminAuthService {
         }
         users.updatePassword(userId, hasher.hash(command.newPassword()));
         sessions.keepCurrentAdmin(userId, presentedToken);
-        audits.append("password", userId, user.getUsername(), "SUCCESS", null, null, "{\"action\":\"change-password\"}");
+        audits.append(
+                "password", userId, user.getUsername(), "SUCCESS", null, null, summaryAction("change-password"));
     }
 
     private AdminLoginResponse authenticate(AdminUserEntity user, String password, Instant now) {
         if (user == null) {
             throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
         }
-        LoginLock.State lock = LoginLock.of(
-                user.getFailedAttempts() == null ? 0 : user.getFailedAttempts(),
-                IdentityTime.toInstant(user.getLockedUntil()));
+        LoginLock.State lock = lockOf(user);
         if (lock.locked(now)) {
-            throw new BusinessException(
-                    AuthErrorCodes.LOGIN_LOCKED, "账号已锁定，请" + lock.remainingMinutes(now) + "分钟后重试");
+            throw locked(lock, now);
         }
         if (!hasher.matches(password, user.getPasswordHash())) {
             LoginLock.State next = LoginLock.onFailure(lock, now);
             users.saveLock(user.getId(), next);
             if (next.locked(now)) {
-                throw new BusinessException(
-                        AuthErrorCodes.LOGIN_LOCKED, "账号已锁定，请" + next.remainingMinutes(now) + "分钟后重试");
+                throw locked(next, now);
             }
             throw new BusinessException(AuthErrorCodes.LOGIN_INVALID_CREDENTIAL);
         }
@@ -151,6 +170,17 @@ public class AdminAuthService {
                 "");
     }
 
+    private static LoginLock.State lockOf(AdminUserEntity user) {
+        return LoginLock.of(
+                user.getFailedAttempts() == null ? 0 : user.getFailedAttempts(),
+                IdentityTime.toInstant(user.getLockedUntil()));
+    }
+
+    private static BusinessException locked(LoginLock.State lock, Instant now) {
+        return new BusinessException(
+                AuthErrorCodes.LOGIN_LOCKED, "账号已锁定，请" + lock.remainingMinutes(now) + "分钟后重试");
+    }
+
     private static String submittedName(String username) {
         if (username == null) {
             return "";
@@ -159,7 +189,15 @@ public class AdminAuthService {
     }
 
     private static String summary(String username) {
-        return "{\"username\":\"" + (username == null ? "" : username) + "\"}";
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("username", username == null ? "" : username);
+        return JsonUtil.toJson(body);
+    }
+
+    private static String summaryAction(String action) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("action", action);
+        return JsonUtil.toJson(body);
     }
 
     public record IssuedAdminSession(AdminLoginResponse body, String token, String csrfToken) {}
