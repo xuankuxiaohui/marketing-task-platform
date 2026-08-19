@@ -23,7 +23,7 @@
 | Redisson | 4.6.1（手动 `RedissonClient`） | 1 | 采用 | spike/1-redisson/REPORT.md | Lua 必须 `StringCodec`。starter 可解析，任务 15 继续手动装配 |
 | Sa-Token | spring-boot4-starter + redis-template **1.45.0** | 2 | 采用 | spike/2-sa-token/REPORT.md | 双 StpLogic 不要注册成两个 Bean |
 | MyBatis-Plus | spring-boot4-starter **3.5.17** | 3 | 采用 | spike/3-mybatis-plus/REPORT.md | 对 LAN MySQL 8.0.25 |
-| Spring Cache + Caffeine + Redis | Boot BOM | 4 | 采用 | spike/4-cache/REPORT.md | `PUBLISH cache:evict` 跨连接可达 |
+| Spring Cache + Caffeine + Redis | Boot BOM + `com.github.ben-manes.caffeine:caffeine` | 4 / 15 | 采用 | spike/4-cache/REPORT.md | `PUBLISH cache:evict`；任务 15 封装 `PlatformCache` |
 | springdoc-openapi | starter-webmvc-ui **3.1.0** | 5 | 采用 | spike/5-springdoc/REPORT.md | Boot 4 用 RestClient 测分组 |
 | AviatorScript | **5.4.3** | 6 | 采用 | spike/6-aviator/REPORT.md | P99<1ms 通过 |
 | Hutool | core + crypto **5.8.47** | 7 | 采用 | spike/7-hutool/REPORT.md | HMAC 在 crypto；禁 hutool-json |

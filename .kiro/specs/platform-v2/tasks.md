@@ -312,11 +312,11 @@ _测试：FlywayFullIT（CREATE TABLE=39、关键唯一约束存在、分区存�
 
 ### 任务 15：platform-infra 缓存锁限流（编组 C）
 
-- [ ] `PlatformCache` 接口；实现 = Spring Cache + Caffeine L1 + Redis L2 + `PUBLISH cache:evict`
-- [ ] 命名空间注册表 = R9.1 全量（含 `identity:user-attr`）；`ad:position` **只登记占位**（stats=0/N/A，evict 空操作），禁止广告读写；接线归任务 48
-- [ ] afterCommit evict + `cache:evict` 广播
-- [ ] 锁键族 `lock:*` / `sched:*` / `rwd-claim`；统一 Lua 滑窗限流（登录 IP + 账号双桶）
-- [ ] kick-reason 键（D-02）；§6.8 降级矩阵按行实现（会话拒绝、限流放行、nonce 拒绝）
+- [x] `PlatformCache` 接口；实现 = Spring Cache + Caffeine L1 + Redis L2 + `PUBLISH cache:evict`
+- [x] 命名空间注册表 = R9.1 全量（含 `identity:user-attr`）；`ad:position` **只登记占位**（stats=0/N/A，evict 空操作），禁止广告读写；接线归任务 48
+- [x] afterCommit evict + `cache:evict` 广播
+- [x] 锁键族 `lock:*` / `sched:*` / `rwd-claim`；统一 Lua 滑窗限流（登录 IP + 账号双桶）
+- [x] kick-reason 键（D-02）；§6.8 降级矩阵按行实现（会话拒绝、限流放行、nonce 拒绝）
 
 _需求：R7.4、R8.3、R9、R1.11、NFR 可用性 3–4_
 _设计：design §3.10、§6.2、§6.3、§6.8_

@@ -28,6 +28,7 @@ public final class ErrorSegments {
             Map.entry("dict", Set.of("dict", "entry")),
             Map.entry("config", Set.of("config", "value")),
             Map.entry("cache", Set.of("cache", "namespace")),
+            Map.entry("system", Set.of("cache")),
             Map.entry(
                     "task",
                     Set.of(
