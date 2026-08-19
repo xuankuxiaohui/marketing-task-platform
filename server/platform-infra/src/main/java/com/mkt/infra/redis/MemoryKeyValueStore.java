@@ -26,6 +26,12 @@ public final class MemoryKeyValueStore implements KeyValueStore {
     }
 
     @Override
+    public void set(String key, String value) {
+        requireAvailable();
+        values.put(key, value);
+    }
+
+    @Override
     public void set(String key, String value, Duration ttl) {
         requireAvailable();
         values.put(key, value);

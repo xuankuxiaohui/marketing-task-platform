@@ -337,10 +337,10 @@ _测试：OutboxRollbackIT、OutboxRelayRetryIT、OutboxIdempotentInsertIT_
 
 ### 任务 17：domain-risk 名单域（编组 D）
 
-- [ ] `risk_list_item` 管理端点 + 批量导入；维度 user / IP / device
-- [ ] `risk:list` Redis 投影同步；黑优先、时效过滤
-- [ ] 命中查询 `GET /admin/risk/hits` + 处置端点（解封 / 加白 / 备注）写 `risk_handle_log`
-- [ ] 名单变更审计；§7.3 R27.1 `CaseHandleAuditIT`
+- [x] `risk_list_item` 管理端点 + 批量导入；维度 user / IP / device
+- [x] `risk:list` Redis 投影同步；黑优先、时效过滤
+- [x] 命中查询 `GET /admin/risk/hits` + 处置端点（解封 / 加白 / 备注）写 `risk_handle_log`
+- [x] 名单变更审计；§7.3 R27.1 `CaseHandleAuditIT`
 
 _需求：R25、R27_
 _设计：design §3.6、§4.6、§5.9 名单段；[feasibility-risk.md](feasibility-risk.md)_
