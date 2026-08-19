@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.risk.mapper.RiskHitLogMapper">
+
+    <sql id="cols">
+        id, hit_type, rule_code, user_id, dimension_value, context,
+        hit_value, threshold, action_result, simulated, occurred_at, created_at
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="ruleCode != null and ruleCode != ''">
+                AND rule_code = #{ruleCode}
+            </if>
+            <if test="hitType != null and hitType != ''">
+                AND hit_type = #{hitType}
+            </if>
+            <if test="dimensionValue != null and dimensionValue != ''">
+                AND dimension_value = #{dimensionValue}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="actionResult != null and actionResult != ''">
+                AND action_result = #{actionResult}
+            </if>
+            <if test="from != null">
+                AND created_at &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND created_at &lt;= #{to}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM risk_hit_log
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectListByQuery" resultType="com.mkt.risk.entity.RiskHitLogEntity">
+        SELECT <include refid="cols"/>
+        FROM risk_hit_log
+        <include refid="queryWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

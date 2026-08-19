@@ -9,6 +9,9 @@ public interface KeyValueStore {
 
     String get(String key);
 
+    /** Persist without TTL (permanent {@code risk:list} projection, design §3.10). */
+    void set(String key, String value);
+
     void set(String key, String value, Duration ttl);
 
     void unlink(String key);

@@ -26,6 +26,11 @@ public final class RedissonKeyValueStore implements KeyValueStore {
     }
 
     @Override
+    public void set(String key, String value) {
+        client.getBucket(key, StringCodec.INSTANCE).set(value);
+    }
+
+    @Override
     public void set(String key, String value, Duration ttl) {
         client.getBucket(key, StringCodec.INSTANCE).set(value, ttl);
     }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.risk.mapper.RiskListItemMapper">
+
+    <sql id="cols">
+        id, dimension, list_type, list_value, reason, deny_login,
+        effective_at, expire_at, operator_id, remark, created_at
+    </sql>
+
+    <select id="getByUk" resultType="com.mkt.risk.entity.RiskListItemEntity">
+        SELECT <include refid="cols"/>
+        FROM risk_list_item
+        WHERE dimension = #{dimension}
+          AND list_type = #{listType}
+          AND list_value = #{listValue}
+    </select>
+
+    <sql id="queryWhere">
+        <where>
+            <if test="dimension != null and dimension != ''">
+                AND dimension = #{dimension}
+            </if>
+            <if test="listType != null and listType != ''">
+                AND list_type = #{listType}
+            </if>
+            <if test="listValue != null and listValue != ''">
+                AND list_value = #{listValue}
+            </if>
+            <if test="from != null">
+                AND created_at &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND created_at &lt;= #{to}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM risk_list_item
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="listByQuery" resultType="com.mkt.risk.entity.RiskListItemEntity">
+        SELECT <include refid="cols"/>
+        FROM risk_list_item
+        <include refid="queryWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>
