@@ -79,7 +79,11 @@ public class AdminAuthService {
             String csrf = CsrfTokens.create();
             int max = configs.getInt(AuthConfigKeys.ADMIN_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_ADMIN_MAX_CONCURRENT);
             String token = sessions.loginAdmin(
-                    user.getId(), max, DeviceIds.normalizeOrNull(command.deviceId()), user.getUsername());
+                    user.getId(),
+                    max,
+                    DeviceIds.normalizeOrNull(command.deviceId()),
+                    user.getUsername(),
+                    context.ip());
             users.markLoginSuccess(user.getId(), now);
             audits.append(
                     "login",

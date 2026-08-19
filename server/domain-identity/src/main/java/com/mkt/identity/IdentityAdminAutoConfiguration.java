@@ -5,21 +5,31 @@ import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.mkt.identity.application.AdminAuthService;
 import com.mkt.identity.application.AdminUserStore;
+import com.mkt.identity.application.IdentityAuditAppender;
+import com.mkt.identity.audit.AuditedAspect;
+import com.mkt.identity.config.ConfigService;
+import com.mkt.identity.schedule.AuditCleanScheduler;
 import com.mkt.identity.support.AdminStpInterface;
 import com.mkt.identity.support.CsrfFilter;
 import com.mkt.identity.support.ForbiddenAuditSink;
 import com.mkt.identity.support.SessionAuthFilter;
 import com.mkt.identity.support.SessionSide;
 import com.mkt.infra.degrade.SessionAvailability;
+import com.mkt.infra.lock.PlatformLock;
 import com.mkt.infra.session.KickReasonStore;
 import com.mkt.infra.session.StpAdmin;
+import java.time.Clock;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.core.Ordered;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -27,6 +37,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @ConditionalOnClass(name = "com.mkt.admin.AdminApplication")
 @ConditionalOnBean(AdminAuthService.class)
 @ComponentScan(basePackages = "com.mkt.identity.controller.admin")
+@EnableAspectJAutoProxy
 public class IdentityAdminAutoConfiguration {
 
     @Bean
@@ -64,5 +75,19 @@ public class IdentityAdminAutoConfiguration {
         bean.setOrder(Ordered.HIGHEST_PRECEDENCE + 3);
         bean.addUrlPatterns("/*");
         return bean;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    AuditedAspect auditedAspect(IdentityAuditAppender audits, PlatformTransactionManager transactionManager) {
+        return new AuditedAspect(audits, transactionManager);
+    }
+
+    @Bean
+    @ConditionalOnBean({JdbcTemplate.class, PlatformLock.class, ConfigService.class})
+    @ConditionalOnMissingBean
+    AuditCleanScheduler auditCleanScheduler(
+            JdbcTemplate jdbcTemplate, PlatformLock platformLock, ConfigService configService, Clock clock) {
+        return new AuditCleanScheduler(jdbcTemplate, platformLock, configService, clock);
     }
 }

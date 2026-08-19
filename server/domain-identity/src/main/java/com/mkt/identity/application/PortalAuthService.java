@@ -114,7 +114,7 @@ public class PortalAuthService {
         users.updateNickname(entity.getId(), nickname);
         entity.setNickname(nickname);
         int max = configs.getInt(AuthConfigKeys.PORTAL_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_PORTAL_MAX_CONCURRENT);
-        String token = sessions.loginClient(entity.getId(), max, deviceId, username);
+        String token = sessions.loginClient(entity.getId(), max, deviceId, username, context.ip());
         users.markLoginSuccess(entity.getId(), now);
         appendEvent(EventCodes.AUTH_REGISTER_SUCCESS, entity.getId(), context.ip(), deviceId);
         return new PortalAuthResponse(token, entity.getId(), nickname);
@@ -161,7 +161,7 @@ public class PortalAuthService {
                 throw new BusinessException(AuthErrorCodes.ACCOUNT_DISABLED);
             }
             int max = configs.getInt(AuthConfigKeys.PORTAL_MAX_CONCURRENT, AuthConfigKeys.DEFAULT_PORTAL_MAX_CONCURRENT);
-            String token = sessions.loginClient(user.getId(), max, deviceId, user.getUsername());
+            String token = sessions.loginClient(user.getId(), max, deviceId, user.getUsername(), context.ip());
             users.markLoginSuccess(user.getId(), now);
             appendEvent(EventCodes.AUTH_LOGIN_SUCCESS, user.getId(), context.ip(), deviceId);
             return AuthAttempt.ok(new PortalAuthResponse(token, user.getId(), user.getNickname()));

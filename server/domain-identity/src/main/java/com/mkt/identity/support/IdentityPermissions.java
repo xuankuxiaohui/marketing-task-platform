@@ -23,6 +23,8 @@ public final class IdentityPermissions {
     public static final String PORTAL_USER_DISABLE = "identity:portal-user:disable";
     public static final String PORTAL_USER_RESET_PASSWORD = "identity:portal-user:reset-password";
     public static final String PORTAL_USER_DELETE = "identity:portal-user:delete";
+    public static final String SESSION_QUERY = "identity:session:query";
+    public static final String SESSION_KICK = "identity:session:kick";
     public static final String INTERNAL_APP_QUERY = "identity:internal-app:query";
     public static final String INTERNAL_APP_ADD = "identity:internal-app:add";
     public static final String INTERNAL_APP_EDIT = "identity:internal-app:edit";
@@ -38,6 +40,7 @@ public final class IdentityPermissions {
     public static final String CONFIG_UPDATE = "system:config:update";
     public static final String CACHE_STATS = "system:cache:stats";
     public static final String CACHE_EVICT = "system:cache:evict";
+    public static final String AUDIT_QUERY = "system:audit:query";
 
     private IdentityPermissions() {}
 }

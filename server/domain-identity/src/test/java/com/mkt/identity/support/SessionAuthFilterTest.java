@@ -79,6 +79,21 @@ class SessionAuthFilterTest {
     }
 
     @Test
+    void portalAdminKickOnRealTokenIs401KickedAdmin() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        SessionService sessions = new SessionService(kicks);
+        String token = sessions.loginClient(3L, 3, null, "bob_01");
+        sessions.kickAllClient(3L);
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        MockHttpServletRequest req = request("GET", "/api/common/auth/profile");
+        req.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, unused());
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("auth.session.kicked-admin");
+    }
+
+    @Test
     void portalKickReasonIsConcurrent() throws Exception {
         SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
         kicks.write(StpClient.TYPE, "tok", KickReason.CONCURRENT);

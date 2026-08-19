@@ -43,6 +43,7 @@ public class AdminAuthController {
     }
 
     @PostMapping("/login")
+    @Audited(module = "auth", action = "login")
     @Operation(summary = "后台登录")
     public Result<AdminLoginResponse> login(
             @Valid @RequestBody AdminLoginCommand command,

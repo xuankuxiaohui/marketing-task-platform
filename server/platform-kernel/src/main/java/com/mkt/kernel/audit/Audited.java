@@ -6,7 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a non-GET {@code /admin/**} write. AOP wiring is task 25 (design §6.5).
+ * Marks a non-GET {@code /admin/**} write. AOP writes {@code audit.log} unless already marked
+ * ({@link AuditOnce}). GET and {@code /api/common/**} / {@code /internal/**} MUST NOT use this
+ * (design §6.5 / 05-security §3).
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

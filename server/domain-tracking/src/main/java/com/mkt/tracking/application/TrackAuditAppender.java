@@ -4,13 +4,14 @@ import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
+import com.mkt.kernel.audit.AuditOnce;
 import com.mkt.tracking.support.TrackOperator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Writes {@code audit.log} in the business transaction (R29.4 / R10.3).
- * TODO(task-25): drop this once {@code @Audited} AOP is the only writer.
+ * Marks {@link AuditOnce} so {@code @Audited} AOP does not insert a second row.
  */
 public class TrackAuditAppender {
 
@@ -31,6 +32,7 @@ public class TrackAuditAppender {
         payload.put("result", "SUCCESS");
         payload.put("requestSummary", truncate(summary, 2000));
         eventPublisher.append(EventCodes.AUDIT_LOG, aggregateType, aggregateId, payload);
+        AuditOnce.mark();
     }
 
     private static String truncate(String value, int max) {
