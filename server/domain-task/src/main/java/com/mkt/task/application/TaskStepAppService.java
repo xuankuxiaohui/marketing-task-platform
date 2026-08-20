@@ -1,13 +1,11 @@
 package com.mkt.task.application;
 
-import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskScene;
-import com.mkt.contract.RiskSubject;
-import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.RiskListType;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
+import com.mkt.contract.UserRiskSummary;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
@@ -38,6 +36,7 @@ import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -101,23 +100,23 @@ public class TaskStepAppService {
         this.engine = new StepEngine(instances, reports, events, clock, settings, rewards);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskClickResponse click(
             long instanceId, String stepCode, long userId, String ip, String deviceId, String platform) {
         TaskInstanceEntity instance = instances.getById(instanceId);
         if (instance == null || instance.getUserId() == null || instance.getUserId() != userId) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
-        rejectIfFrozen(userId, ip, deviceId, TaskErrorCodes.INSTANCE_FROZEN);
+        rejectIfFrozen(userId, TaskErrorCodes.INSTANCE_FROZEN);
         TaskInstanceStepEntity step = requireStep(instanceId, stepCode);
         StepAdvanceResult result = engine.click(instance, step, snapshotOf(instance), attrs(userId), crowds(userId));
         return toClick(result, platform);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskCallbackResponse callback(InternalCallbackCommand command) {
         TaskInstanceEntity instance = locate(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
-        rejectIfFrozen(instance.getUserId(), "0.0.0.0", null, TaskErrorCodes.ACCOUNT_RESTRICTED);
+        rejectIfFrozen(instance.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
         TaskInstanceStepEntity step = requireStep(instance.getId(), command.stepCode());
         StepAdvanceResult result = engine.callback(
                 instance, step, snapshotOf(instance), attrs(instance.getUserId()), crowds(instance.getUserId()), command.bizNo());
@@ -127,7 +126,7 @@ public class TaskStepAppService {
                 fresh.getId(), after.getStepCode(), after.getStatus(), fresh.getStatus());
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskProgressResponse progress(InternalProgressCommand command) {
         if (command.reportId() == null || command.reportId().isBlank()) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
@@ -136,7 +135,7 @@ public class TaskStepAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
         TaskInstanceEntity instance = locate(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
-        rejectIfFrozen(instance.getUserId(), "0.0.0.0", null, TaskErrorCodes.ACCOUNT_RESTRICTED);
+        rejectIfFrozen(instance.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
         TaskInstanceStepEntity step = requireStep(instance.getId(), command.stepCode());
         StepAdvanceResult result = engine.progress(
                 instance,
@@ -185,15 +184,18 @@ public class TaskStepAppService {
         return step;
     }
 
-    private void rejectIfFrozen(long userId, String ip, String deviceId, TaskErrorCodes code) {
-        if (risk == null) {
-            return;
-        }
-        String resolvedIp = ip == null || ip.isBlank() ? "0.0.0.0" : ip;
-        RiskVerdict verdict = risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null));
-        if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
+    private void rejectIfFrozen(long userId, TaskErrorCodes code) {
+        if (blacklisted(userId)) {
             throw new BusinessException(code);
         }
+    }
+
+    private boolean blacklisted(long userId) {
+        if (risk == null) {
+            return false;
+        }
+        UserRiskSummary summary = risk.userSummary(userId);
+        return summary != null && summary.listStatus().contains(RiskListType.BLACK);
     }
 
     private SnapshotContent snapshotOf(TaskInstanceEntity instance) {
