@@ -21,6 +21,7 @@ import org.springframework.web.client.RestClient;
                     + "com.mkt.identity.IdentityAutoConfiguration,"
                     + "com.mkt.identity.IdentityAdminAutoConfiguration,"
                     + "com.mkt.identity.IdentityPortalAutoConfiguration,"
+                    + "com.mkt.identity.IdentityAdminSupportAutoConfiguration,"
                     + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
                     + "com.mkt.infra.InfraAutoConfiguration",
             "springdoc.api-docs.path=/admin/v3/api-docs",
