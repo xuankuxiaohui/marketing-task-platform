@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.PntTransactionMapper">
+
+    <select id="countExpireByBizId" resultType="long">
+        SELECT COUNT(*) FROM pnt_transaction
+        WHERE type = 'EXPIRE' AND biz_id = #{bizId}
+    </select>
+
+    <select id="listExpireDue" resultType="com.mkt.reward.entity.PntTransactionEntity">
+        SELECT t.id, t.user_id, t.type, t.amount, t.balance_after, t.biz_source, t.biz_id,
+               t.expire_at, t.remark, t.simulated, t.created_at
+        FROM pnt_transaction t
+        WHERE t.type = 'EARN'
+          AND t.expire_at IS NOT NULL
+          AND t.expire_at &lt;= #{now}
+          AND NOT EXISTS (
+            SELECT 1 FROM pnt_transaction x
+            WHERE x.type = 'EXPIRE' AND x.biz_id = CAST(t.id AS CHAR)
+          )
+        ORDER BY t.expire_at ASC, t.id ASC
+        LIMIT #{limit}
+    </select>
+
+    <sql id="TxFilter">
+        <where>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="type != null">AND type = #{type}</if>
+            <if test="from != null">AND created_at &gt;= #{from}</if>
+            <if test="to != null">AND created_at &lt; #{to}</if>
+        </where>
+    </sql>
+
+    <select id="selectCountFiltered" resultType="long">
+        SELECT COUNT(*) FROM pnt_transaction
+        <include refid="TxFilter"/>
+    </select>
+
+    <select id="selectPageFiltered" resultType="com.mkt.reward.entity.PntTransactionEntity">
+        SELECT id, user_id, type, amount, balance_after, biz_source, biz_id,
+               expire_at, remark, simulated, created_at
+        FROM pnt_transaction
+        <include refid="TxFilter"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

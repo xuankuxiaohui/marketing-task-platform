@@ -22,11 +22,13 @@ import com.mkt.reward.application.FulfillmentService;
 import com.mkt.reward.application.GrantAppService;
 import com.mkt.reward.application.GrantFailureLedger;
 import com.mkt.reward.application.MybatisGrantRecordStore;
+import com.mkt.reward.application.MybatisPointsStore;
 import com.mkt.reward.application.MybatisPrizeCategoryStore;
 import com.mkt.reward.application.MybatisPrizeStore;
 import com.mkt.reward.application.MybatisReconBatchStore;
 import com.mkt.reward.application.MybatisReconItemStore;
 import com.mkt.reward.application.MybatisStockLogStore;
+import com.mkt.reward.application.PointsAppService;
 import com.mkt.reward.application.PrizeAppService;
 import com.mkt.reward.application.PrizeCategoryAppService;
 import com.mkt.reward.application.PrizeStockService;
@@ -35,6 +37,8 @@ import com.mkt.reward.application.SnapshotPrizeScanner;
 import com.mkt.reward.command.PrizeConfirmCommand;
 import com.mkt.reward.command.PrizeSaveCommand;
 import com.mkt.reward.mapper.GrantRecordMapper;
+import com.mkt.reward.mapper.PntAccountMapper;
+import com.mkt.reward.mapper.PntTransactionMapper;
 import com.mkt.reward.mapper.PrizeCategoryMapper;
 import com.mkt.reward.mapper.PrizeMapper;
 import com.mkt.reward.mapper.ReconBatchMapper;
@@ -74,6 +78,7 @@ final class RewardITSupport implements AutoCloseable {
     final FulfillmentService fulfillment;
     final ReconAppService recon;
     final RecordingPointsPort points;
+    final PointsAppService pointsLedger;
     final ItRisk risk;
     final Clock clock;
     final RewardRuntimeSettings runtime;
@@ -112,6 +117,9 @@ final class RewardITSupport implements AutoCloseable {
         runtime = new RewardRuntimeSettings();
         GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, txm);
         points = new RecordingPointsPort();
+        MybatisPointsStore pointsStore = new MybatisPointsStore(
+                sql.getMapper(PntAccountMapper.class), sql.getMapper(PntTransactionMapper.class));
+        pointsLedger = new PointsAppService(pointsStore, txm, clock);
         fulfillment = new FulfillmentService(points, grants, prizeStore, categoryStore, events, runtime, clock);
         risk = new ItRisk();
         grant = new GrantAppService(
@@ -252,6 +260,8 @@ final class RewardITSupport implements AutoCloseable {
         configuration.addMapper(GrantRecordMapper.class);
         configuration.addMapper(ReconBatchMapper.class);
         configuration.addMapper(ReconItemMapper.class);
+        configuration.addMapper(PntAccountMapper.class);
+        configuration.addMapper(PntTransactionMapper.class);
         factoryBean.setConfiguration(configuration);
         GlobalConfig globalConfig = new GlobalConfig();
         GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();

@@ -83,4 +83,6 @@ public interface GrantRecordMapper extends BaseMapper<GrantRecordEntity> {
             @Param("prizeId") Long prizeId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    long countByUserStatus(@Param("userId") long userId, @Param("status") String status);
 }

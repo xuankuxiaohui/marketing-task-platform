@@ -2,9 +2,11 @@ package com.mkt.reward;
 
 import com.mkt.contract.RewardPort;
 import com.mkt.reward.application.GrantAppService;
+import com.mkt.reward.application.GrantRecordStore;
+import com.mkt.reward.application.PointsAppService;
 import com.mkt.reward.application.PrizeStore;
 import com.mkt.reward.points.PointsPort;
-import com.mkt.reward.points.PointsPortStub;
+import com.mkt.reward.points.PointsPortImpl;
 import com.mkt.reward.port.RewardPortImpl;
 import com.mkt.reward.support.RewardGrantSettings;
 import com.mkt.reward.support.RewardRuntimeSettings;
@@ -40,13 +42,14 @@ public class RewardAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(PointsPort.class)
-    PointsPort pointsPortStub() {
-        return new PointsPortStub();
+    PointsPort pointsPort(PointsAppService points) {
+        return new PointsPortImpl(points);
     }
 
     @Bean
     @ConditionalOnMissingBean(RewardPort.class)
-    RewardPort rewardPort(GrantAppService grants, PrizeStore prizes) {
-        return new RewardPortImpl(grants, prizes);
+    RewardPort rewardPort(
+            GrantAppService grants, PrizeStore prizes, PointsAppService points, GrantRecordStore records) {
+        return new RewardPortImpl(grants, prizes, points, records);
     }
 }

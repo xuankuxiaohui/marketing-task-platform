@@ -145,4 +145,9 @@ public class MybatisGrantRecordStore implements GrantRecordStore {
             String categoryCode, Long prizeId, LocalDateTime from, LocalDateTime to) {
         return mapper.sumSpend(categoryCode, prizeId, from, to);
     }
+
+    @Override
+    public long countByUserStatus(long userId, String status) {
+        return mapper.countByUserStatus(userId, status);
+    }
 }

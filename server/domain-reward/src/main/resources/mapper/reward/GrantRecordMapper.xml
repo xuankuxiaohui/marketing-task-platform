@@ -237,4 +237,9 @@
         GROUP BY category_code
         ORDER BY category_code ASC
     </select>
+
+    <select id="countByUserStatus" resultType="long">
+        SELECT COUNT(*) FROM rwd_grant_record
+        WHERE user_id = #{userId} AND status = #{status}
+    </select>
 </mapper>

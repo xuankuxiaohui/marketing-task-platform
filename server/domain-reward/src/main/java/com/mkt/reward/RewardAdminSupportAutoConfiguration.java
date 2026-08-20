@@ -5,9 +5,11 @@ import com.mkt.reward.application.ClaimAppService;
 import com.mkt.reward.application.FulfillmentService;
 import com.mkt.reward.application.GrantAppService;
 import com.mkt.reward.application.GrantStepResumer;
+import com.mkt.reward.application.PointsAppService;
 import com.mkt.reward.schedule.ClaimTimeoutScheduler;
 import com.mkt.reward.schedule.FulfillRetryScheduler;
 import com.mkt.reward.schedule.GrantRetryScheduler;
+import com.mkt.reward.schedule.PointsExpireScheduler;
 import com.mkt.reward.schedule.PrizeExpireScheduler;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
@@ -49,5 +51,12 @@ public class RewardAdminSupportAutoConfiguration {
     @ConditionalOnMissingBean
     FulfillRetryScheduler fulfillRetryScheduler(FulfillmentService fulfillment, PlatformLock locks, Clock clock) {
         return new FulfillRetryScheduler(fulfillment, locks, clock);
+    }
+
+    @Bean
+    @ConditionalOnBean({PointsAppService.class, PlatformLock.class})
+    @ConditionalOnMissingBean
+    PointsExpireScheduler pointsExpireScheduler(PointsAppService points, PlatformLock locks, Clock clock) {
+        return new PointsExpireScheduler(points, locks, clock);
     }
 }

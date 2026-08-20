@@ -402,6 +402,17 @@ public final class MemoryGrantRecordStore implements GrantRecordStore {
         return views;
     }
 
+    @Override
+    public long countByUserStatus(long userId, String status) {
+        long n = 0;
+        for (GrantRecordEntity row : rows.values()) {
+            if (row.getUserId() != null && row.getUserId() == userId && status.equals(row.getStatus())) {
+                n++;
+            }
+        }
+        return n;
+    }
+
     private static boolean pending(GrantRecordEntity row) {
         return GrantRecordStatuses.WON.equals(row.getStatus())
                 || GrantRecordStatuses.CLAIMING.equals(row.getStatus())

@@ -551,10 +551,10 @@ _测试：§7.3 R19.1–R19.2、R35.1、R37.1–R37.3、§7.4 C-6/C-7；对账 2
 
 ### 任务 35：积分域（编组 G）
 
-- [ ] 实现 `PointsPort.earn`；账户 `INSERT IGNORE` 懒创建
-- [ ] 实现 `RewardPort.userSummary`（D-13：余额 + 奖品 won/granted 计数）
-- [ ] 流水轧平；adjust 端点；过期调度 6 批量 5000（`EXPIRE.biz_id` 反指 EARN）
-- [ ] C 端 points 端点组
+- [x] 实现 `PointsPort.earn`；账户 `INSERT IGNORE` 懒创建
+- [x] 实现 `RewardPort.userSummary`（D-13：余额 + 奖品 won/granted 计数）
+- [x] 流水轧平；adjust 端点；过期调度 6 批量 5000（`EXPIRE.biz_id` 反指 EARN）
+- [x] C 端 points 端点组
 
 _需求：R20_
 _设计：design §3.5、§4.5、§4.9.3、§5.8、§6.7-6_

@@ -59,4 +59,6 @@ public interface GrantRecordStore {
     long countPortalPrizes(long userId, boolean pendingOnly);
 
     List<SpendRowView> sumSpend(String categoryCode, Long prizeId, LocalDateTime from, LocalDateTime to);
+
+    long countByUserStatus(long userId, String status);
 }
