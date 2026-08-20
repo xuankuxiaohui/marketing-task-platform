@@ -641,9 +641,9 @@ _测试：类型 diff CI 红灯样例一条_
 
 ### 任务 40：ScenarioMatrixIT 场景矩阵全量（编组 I）
 
-- [ ] feasibility §2 的 scenario01–23 落地；场景号 → 期望行为映射常量
-- [ ] REWARD 分支接真实 `RewardPort`
-- [ ] 场景 24（定时发布恰一）归任务 41；禁止再出现 scenario25
+- [x] feasibility §2 的 scenario01–23 落地；场景号 → 期望行为映射常量
+- [x] REWARD 分支接真实 `RewardPort`
+- [x] 场景 24（定时发布恰一）归任务 41；禁止再出现 scenario25
 
 _需求：R14、R18_
 _设计：design §7.5、feasibility §2_
