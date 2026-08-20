@@ -30,6 +30,10 @@ public interface TaskDefinitionStore {
 
     int countInProgressInstances(long taskId);
 
+    List<TaskDefinitionEntity> listPublished();
+
+    List<Long> listIdsByMutexGroup(long mutexGroupId);
+
     int casPublish(
             long id,
             String expectedStatus,

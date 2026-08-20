@@ -39,6 +39,10 @@ public interface TaskDefinitionMapper extends BaseMapper<TaskDefinitionEntity> {
 
     int countInProgressInstances(@Param("taskId") long taskId);
 
+    List<TaskDefinitionEntity> selectPublished();
+
+    List<Long> selectIdsByMutexGroup(@Param("mutexGroupId") long mutexGroupId);
+
     int casPublish(
             @Param("id") long id,
             @Param("expectedStatus") String expectedStatus,

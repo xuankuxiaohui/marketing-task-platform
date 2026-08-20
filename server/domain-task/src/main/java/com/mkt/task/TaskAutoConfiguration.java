@@ -1,10 +1,14 @@
 package com.mkt.task;
 
 import com.mkt.contract.RewardPort;
+import com.mkt.contract.TaskReadPort;
 import com.mkt.task.application.PrizeEnabledLookup;
+import com.mkt.task.application.TaskInstanceStore;
+import com.mkt.task.application.TaskReadPortImpl;
 import com.mkt.task.support.TaskSettings;
 import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +19,7 @@ import org.springframework.context.annotation.Import;
  * {@code @ConditionalOnBean(DataSource)} without pairing {@code @ComponentScan}.
  */
 @AutoConfiguration
+@AutoConfigureBefore(name = "com.mkt.identity.IdentityAutoConfiguration")
 @ConditionalOnBean(DataSource.class)
 @Import(TaskPersistenceScan.class)
 public class TaskAutoConfiguration {
@@ -29,5 +34,10 @@ public class TaskAutoConfiguration {
     @ConditionalOnMissingBean(PrizeEnabledLookup.class)
     PrizeEnabledLookup prizeEnabledLookup(RewardPort rewardPort) {
         return rewardPort::prizeEnabled;
+    }
+
+    @Bean
+    TaskReadPort taskReadPort(TaskInstanceStore instances) {
+        return new TaskReadPortImpl(instances);
     }
 }

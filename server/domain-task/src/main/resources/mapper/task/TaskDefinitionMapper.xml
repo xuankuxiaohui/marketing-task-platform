@@ -102,6 +102,19 @@
         WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
     </select>
 
+    <select id="selectPublished" resultType="com.mkt.task.entity.TaskDefinitionEntity">
+        SELECT <include refid="cols"/>
+        FROM task_definition
+        WHERE deleted = 0 AND status = 'PUBLISHED'
+        ORDER BY sort_weight ASC, id ASC
+    </select>
+
+    <select id="selectIdsByMutexGroup" resultType="long">
+        SELECT id
+        FROM task_definition
+        WHERE mutex_group_id = #{mutexGroupId} AND deleted = 0
+    </select>
+
     <update id="casPublish">
         UPDATE task_definition
         SET status = 'PUBLISHED',

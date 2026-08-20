@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskInstanceStepMapper">
+
+    <sql id="cols">
+        id, instance_id, step_code, seq, type, status, progress_current, version, activated_at,
+        completed_at, skip_reason, last_biz_no, created_at
+    </sql>
+
+    <select id="selectByInstanceId" resultType="com.mkt.task.entity.TaskInstanceStepEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance_step
+        WHERE instance_id = #{instanceId}
+        ORDER BY seq ASC, id ASC
+    </select>
+
+    <update id="activate">
+        UPDATE task_instance_step
+        SET status = 'ACTIVE',
+            activated_at = #{activatedAt}
+        WHERE id = #{id} AND status = 'INACTIVE'
+    </update>
+
+    <update id="complete">
+        UPDATE task_instance_step
+        SET status = 'COMPLETED',
+            completed_at = #{completedAt},
+            version = version + 1
+        WHERE id = #{id} AND status = 'ACTIVE'
+    </update>
+</mapper>

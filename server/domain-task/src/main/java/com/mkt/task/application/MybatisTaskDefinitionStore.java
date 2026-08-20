@@ -76,6 +76,16 @@ public class MybatisTaskDefinitionStore implements TaskDefinitionStore {
     }
 
     @Override
+    public List<TaskDefinitionEntity> listPublished() {
+        return mapper.selectPublished();
+    }
+
+    @Override
+    public List<Long> listIdsByMutexGroup(long mutexGroupId) {
+        return mapper.selectIdsByMutexGroup(mutexGroupId);
+    }
+
+    @Override
     public int casPublish(
             long id,
             String expectedStatus,

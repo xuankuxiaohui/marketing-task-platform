@@ -112,6 +112,25 @@ public final class MemoryTaskDefinitionStore implements TaskDefinitionStore {
         return inFlight.getOrDefault(taskId, 0);
     }
 
+    @Override
+    public List<TaskDefinitionEntity> listPublished() {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag() && "PUBLISHED".equals(row.getStatus()))
+                .sorted(Comparator.comparing((TaskDefinitionEntity row) -> row.getSortWeight() == null ? 0 : row.getSortWeight())
+                        .thenComparing(TaskDefinitionEntity::getId))
+                .toList();
+    }
+
+    @Override
+    public List<Long> listIdsByMutexGroup(long mutexGroupId) {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag()
+                        && row.getMutexGroupId() != null
+                        && row.getMutexGroupId() == mutexGroupId)
+                .map(TaskDefinitionEntity::getId)
+                .toList();
+    }
+
     public final java.util.Map<Long, Integer> inFlight = new ConcurrentHashMap<>();
 
     public int liveCount() {

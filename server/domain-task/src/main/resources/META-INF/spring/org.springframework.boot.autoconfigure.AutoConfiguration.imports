@@ -1,3 +1,4 @@
 com.mkt.task.TaskAutoConfiguration
 com.mkt.task.TaskAdminAutoConfiguration
 com.mkt.task.TaskAdminSupportAutoConfiguration
+com.mkt.task.TaskPortalAutoConfiguration

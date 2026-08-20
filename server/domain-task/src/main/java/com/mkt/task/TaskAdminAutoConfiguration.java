@@ -6,7 +6,6 @@ import org.springframework.context.annotation.ComponentScan;
 
 /**
  * Admin controllers only when admin-app is on the classpath (03 §6.1).
- * Portal does not assemble domain-task in this task (C 端接线见任务 28).
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.admin.AdminApplication")

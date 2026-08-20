@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskInstanceMapper">
+
+    <sql id="cols">
+        id, task_id, task_code, version, snapshot_id, user_id, cycle_key, status, abandon_source,
+        abandoned_at, expire_at, started_at, completed_at, cost_seconds, simulated, created_at, updated_at
+    </sql>
+
+    <select id="selectByUserTaskCycle" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND cycle_key = #{cycleKey}
+    </select>
+
+    <select id="selectByUser" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="selectInProgressByUser" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE user_id = #{userId} AND status = 'IN_PROGRESS'
+    </select>
+
+    <sql id="mineWhere">
+        WHERE user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="categoryTaskIds != null and categoryTaskIds.size() &gt; 0">
+            AND task_id IN
+            <foreach collection="categoryTaskIds" item="tid" open="(" separator="," close=")">
+                #{tid}
+            </foreach>
+        </if>
+    </sql>
+
+    <select id="selectByUserAndStatus" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        <include refid="mineWhere"/>
+        ORDER BY started_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserAndStatus" resultType="long">
+        SELECT COUNT(*)
+        FROM task_instance
+        <include refid="mineWhere"/>
+    </select>
+
+    <select id="countToday" resultType="int">
+        SELECT COUNT(*)
+        FROM task_instance
+        WHERE user_id = #{userId}
+          AND created_at &gt;= #{from}
+          AND created_at &lt; #{to}
+    </select>
+
+    <select id="existsInProgress" resultType="int">
+        SELECT CASE WHEN EXISTS (
+            SELECT 1
+            FROM task_instance
+            WHERE user_id = #{userId}
+              AND status = 'IN_PROGRESS'
+              AND task_id IN
+              <foreach collection="taskIds" item="tid" open="(" separator="," close=")">
+                  #{tid}
+              </foreach>
+              <if test="cycleKey != null">
+                  AND cycle_key = #{cycleKey}
+              </if>
+        ) THEN 1 ELSE 0 END
+    </select>
+
+    <select id="countInProgress" resultType="long">
+        SELECT COUNT(*)
+        FROM task_instance
+        WHERE user_id = #{userId} AND status = 'IN_PROGRESS'
+    </select>
+
+    <select id="countHistory" resultType="long">
+        SELECT COUNT(*)
+        FROM task_instance
+        WHERE user_id = #{userId} AND status IN ('COMPLETED', 'ABANDONED', 'EXPIRED')
+    </select>
+
+    <update id="completeInstance">
+        UPDATE task_instance
+        SET status = 'COMPLETED',
+            completed_at = #{completedAt},
+            cost_seconds = #{costSeconds}
+        WHERE id = #{id} AND status = 'IN_PROGRESS'
+    </update>
+</mapper>

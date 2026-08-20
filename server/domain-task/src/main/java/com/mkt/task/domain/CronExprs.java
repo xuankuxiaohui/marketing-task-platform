@@ -1,5 +1,7 @@
 package com.mkt.task.domain;
 
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +29,92 @@ public final class CronExprs {
         }
         return minIntervalSeconds(minutes, hours) >= 3600;
     }
+
+    public static ZonedDateTime lastAtOrBefore(String expr, ZonedDateTime now) {
+        ParsedCron parsed = parse(expr);
+        if (parsed == null || now == null) {
+            return null;
+        }
+        ZonedDateTime cursor = now.truncatedTo(ChronoUnit.MINUTES);
+        int limit = 366 * 24 * 60;
+        for (int i = 0; i < limit; i++) {
+            if (!cursor.isAfter(now) && matches(parsed, cursor)) {
+                return cursor;
+            }
+            cursor = cursor.minusMinutes(1);
+        }
+        return null;
+    }
+
+    public static ZonedDateTime nextAfter(String expr, ZonedDateTime now) {
+        ParsedCron parsed = parse(expr);
+        if (parsed == null || now == null) {
+            return null;
+        }
+        ZonedDateTime cursor = now.truncatedTo(ChronoUnit.MINUTES).plusMinutes(1);
+        int limit = 366 * 24 * 60;
+        for (int i = 0; i < limit; i++) {
+            if (matches(parsed, cursor)) {
+                return cursor;
+            }
+            cursor = cursor.plusMinutes(1);
+        }
+        return null;
+    }
+
+    private static ParsedCron parse(String expr) {
+        if (expr == null || expr.isBlank()) {
+            return null;
+        }
+        String[] fields = expr.trim().split("\\s+");
+        if (fields.length != 5) {
+            return null;
+        }
+        int[] minutes = expand(fields[0], 0, 59);
+        int[] hours = expand(fields[1], 0, 23);
+        int[] days = expand(fields[2], 1, 31);
+        int[] months = expand(fields[3], 1, 12);
+        int[] weeks = expandWeek(fields[4]);
+        if (minutes == null || hours == null || days == null || months == null || weeks == null) {
+            return null;
+        }
+        return new ParsedCron(minutes, hours, days, months, weeks);
+    }
+
+    private static boolean matches(ParsedCron parsed, ZonedDateTime time) {
+        if (!contains(parsed.minutes, time.getMinute()) || !contains(parsed.hours, time.getHour())) {
+            return false;
+        }
+        if (!contains(parsed.months, time.getMonthValue())) {
+            return false;
+        }
+        boolean dayStar = parsed.days.length == 31;
+        boolean weekStar = parsed.weeks.length >= 7;
+        boolean dayHit = contains(parsed.days, time.getDayOfMonth());
+        int dow = time.getDayOfWeek().getValue() % 7;
+        boolean weekHit = contains(parsed.weeks, dow) || (dow == 0 && contains(parsed.weeks, 7));
+        if (dayStar && weekStar) {
+            return true;
+        }
+        if (dayStar) {
+            return weekHit;
+        }
+        if (weekStar) {
+            return dayHit;
+        }
+        return dayHit || weekHit;
+    }
+
+    private static boolean contains(int[] values, int expected) {
+        for (int value : values) {
+            if (value == expected) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private record ParsedCron(int[] minutes, int[] hours, int[] days, int[] months, int[] weeks) {}
 
     private static int minIntervalSeconds(int[] minutes, int[] hours) {
         List<Integer> times = new ArrayList<>();
