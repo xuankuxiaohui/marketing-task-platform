@@ -562,9 +562,9 @@ _测试：§7.3 R20.1–R20.2、§7.4 C-8_
 
 ### 任务 36：admin 前端骨架（编组 H）
 
-- [ ] vue-pure-admin-thin：动态路由 + 权限指令；菜单种子 = §4.10
-- [ ] OpenAPI 类型生成管线（消费任务 11 两应用导出的 admin/portal/internal JSON，**不用** spike/5）
-- [ ] 登录页 + 工作台空壳
+- [x] vue-pure-admin-thin：动态路由 + 权限指令；菜单种子 = §4.10
+- [x] OpenAPI 类型生成管线（消费任务 11 两应用导出的 admin/portal/internal JSON，**不用** spike/5）
+- [x] 登录页 + 工作台空壳
 
 _需求：R1、R2_
 _设计：design §2.7.2、§4.10、§7.9_

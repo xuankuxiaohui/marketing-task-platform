@@ -49,3 +49,11 @@ deploy/.env
 # jqwik local store
 .jqwik-database
 **/.jqwik-database
+
+# Frontend
+node_modules/
+web/**/dist/
+web/**/coverage/
+web/**/.eslintcache
+web/**/*.tsbuildinfo
+web/**/.vite/
