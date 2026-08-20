@@ -65,6 +65,14 @@ public class TaskDefinitionAdminController {
         return Result.ok(appService.page(query));
     }
 
+    @GetMapping("/schedule-failures")
+    @SaCheckPermission(TaskPermissions.DEFINITION_QUERY)
+    @Operation(summary = "定时发布失败记录", description = "权限 task:definition:query；过滤审计 schedule-publish-failure")
+    public Result<PageData<ScheduleFailureView>> scheduleFailures(
+            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer pageSize) {
+        return Result.ok(publishes.scheduleFailures(PageQuery.of(page, pageSize)));
+    }
+
     @GetMapping("/{id}")
     @SaCheckPermission(TaskPermissions.DEFINITION_QUERY)
     @Operation(summary = "任务定义聚合详情", description = "权限 task:definition:query")
@@ -105,14 +113,6 @@ public class TaskDefinitionAdminController {
     public Result<OkResponse> delete(@PathVariable long id) {
         appService.delete(id);
         return Result.ok(OkResponse.yes());
-    }
-
-    @GetMapping("/schedule-failures")
-    @SaCheckPermission(TaskPermissions.DEFINITION_QUERY)
-    @Operation(summary = "定时发布失败记录", description = "权限 task:definition:query；过滤审计 schedule-publish-failure")
-    public Result<PageData<ScheduleFailureView>> scheduleFailures(
-            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer pageSize) {
-        return Result.ok(publishes.scheduleFailures(PageQuery.of(page, pageSize)));
     }
 
     @PostMapping("/{id}/publish")

@@ -134,10 +134,14 @@ public class ConfigAppService {
             if (raw == null || raw.isBlank()) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "配置值不能为空");
             }
-            if (!ConfigValueTypes.matches(valueType, raw)) {
-                throw new BusinessException(SystemErrorCodes.CONFIG_TYPE_MISMATCH);
+            boolean maskSentinel =
+                    existing.maskedFlag() && ConfigMasks.DISPLAY.equals(raw);
+            if (!maskSentinel) {
+                if (!ConfigValueTypes.matches(valueType, raw)) {
+                    throw new BusinessException(SystemErrorCodes.CONFIG_TYPE_MISMATCH);
+                }
+                existing.setConfigValue(raw);
             }
-            existing.setConfigValue(raw);
         }
         existing.setUpdatedAt(IdentityTime.toUtc(clock.instant()));
         configs.updateById(existing);

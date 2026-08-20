@@ -250,6 +250,11 @@ public final class IdentityITSupport implements AutoCloseable {
             public UserRewardSummary userSummary(long userId) {
                 return new UserRewardSummary(0L, new PrizeSummary(0L, 0L));
             }
+
+            @Override
+            public boolean prizeEnabled(long prizeId) {
+                return false;
+            }
         };
         TaskReadPort taskReads = userId -> new com.mkt.contract.InstanceCounts(0L, 0L);
         AdminUserAppService adminUserApp = TransactionalProxies.proxy(

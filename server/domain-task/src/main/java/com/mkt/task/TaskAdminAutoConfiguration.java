@@ -1,37 +1,14 @@
 package com.mkt.task;
 
-import com.mkt.infra.lock.PlatformLock;
-import com.mkt.task.application.TaskPublishAppService;
-import com.mkt.task.schedule.PublishScanScheduler;
-import com.mkt.task.support.AlertWebhook;
-import java.time.Clock;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
- * Admin controllers + publish-scan scheduler only when admin-app is on the classpath (03 §6.1).
+ * Admin controllers only when admin-app is on the classpath (03 §6.1).
  * Portal does not assemble domain-task in this task (C 端接线见任务 28).
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.admin.AdminApplication")
 @ComponentScan(basePackages = "com.mkt.task.controller.admin")
-public class TaskAdminAutoConfiguration {
-
-    @Bean
-    @ConditionalOnMissingBean
-    AlertWebhook alertWebhook(@Value("${mkt.alert.webhook-url:}") String url) {
-        return new AlertWebhook(url);
-    }
-
-    @Bean
-    @ConditionalOnBean({TaskPublishAppService.class, PlatformLock.class})
-    @ConditionalOnMissingBean
-    PublishScanScheduler publishScanScheduler(TaskPublishAppService publishes, PlatformLock locks, Clock clock) {
-        return new PublishScanScheduler(publishes, locks, clock);
-    }
-}
+public class TaskAdminAutoConfiguration {}

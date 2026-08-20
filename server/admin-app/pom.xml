@@ -48,7 +48,7 @@
             <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- test-only: ArchUnit classpath must see every domain (design §7.6). Not production assembly. -->
+        <!-- Production: identity / task / risk / tracking. domain-reward is test-scoped until task 32. -->
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-identity</artifactId>

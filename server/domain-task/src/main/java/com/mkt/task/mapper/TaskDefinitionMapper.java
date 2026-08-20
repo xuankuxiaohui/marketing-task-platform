@@ -38,4 +38,12 @@ public interface TaskDefinitionMapper extends BaseMapper<TaskDefinitionEntity> {
             @Param("now") java.time.LocalDateTime now, @Param("limit") int limit);
 
     int countInProgressInstances(@Param("taskId") long taskId);
+
+    int casPublish(
+            @Param("id") long id,
+            @Param("expectedStatus") String expectedStatus,
+            @Param("expectedVersion") int expectedVersion,
+            @Param("expectedPending") int expectedPending,
+            @Param("nextVersion") int nextVersion,
+            @Param("updatedAt") java.time.LocalDateTime updatedAt);
 }

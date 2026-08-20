@@ -268,11 +268,11 @@ _测试：故意违规类失败、合规类通过；ClockDirectCallArchTest_
 - [x] `Clock` Bean + 测试用 `MutableClock`（D-03）
 - [x] traceId 入口过滤：读 `X-Trace-Id` 或生成，写 MDC / 响应头 / 响应体
 - [x] 错误码格式断言：`<域>.<场景>.<原因>`
-- [x] 两应用 `GroupedOpenApi` 三分组（admin / portal / internal）能导出 JSON；任务 36 消费本导出，**禁止**锁死 spike/5 的 JSON
+- [x] 两应用 `GroupedOpenApi` 三分组（admin / portal / internal）能导出 JSON；任务 36 消费**两应用**导出，**禁止**锁死 spike/5 的 JSON（本任务只测分组隔离与 yml 路径，不启两应用）
 
 _需求：附录 C；NFR 可观测性 2_
 _设计：design §2.2.1、§2.9、§3.9、§6.6、§7.2_
-_测试：ResultJsonIT、ErrorCodeFormatTest、MutableClockTest、TraceIdFilterIT_
+_测试：ResultJsonIT、ErrorCodeFormatTest、MutableClockTest、TraceIdFilterIT、OpenApiGroupsIT（kernel 分组隔离，不是 gen:api 源）、OpenApiGroupsConfigurationTest、两应用 SpringdocNamespacePathTest（生产 yml 属性 equals）_
 
 ### 任务 12：platform-contract 跨域契约（编组 C）
 
@@ -451,10 +451,10 @@ _测试：§7.3 R11.1–R11.2、§7.7_
 
 ### 任务 27：发布版本与定时发布（编组 F）
 
-- [ ] D-01 修订草稿：单套编辑态 + `pending_revision`；SCHEDULED 修订不 +version 不落快照
-- [ ] publish / 批量 / 影响面两段确认 / 版本对比
-- [ ] SCHEDULED + `early=true`：手动提前发布 → PUBLISHED + 快照 + version+1（R12.1）；`early` 缺省只清修订
-- [ ] 调度 1 定时发布；失败列表端点 + 审计 `schedule-publish-failure`
+- [x] D-01 修订草稿：单套编辑态 + `pending_revision`；SCHEDULED 修订不 +version 不落快照
+- [x] publish / 批量 / 影响面两段确认 / 版本对比
+- [x] SCHEDULED + `early=true`：手动提前发布 → PUBLISHED + 快照 + version+1（R12.1）；`early` 缺省只清修订
+- [x] 调度 1 定时发布；失败列表端点 + 审计 `schedule-publish-failure`
 
 _需求：R12_
 _设计：design §3.3.1、§4.4、§6.7-1_

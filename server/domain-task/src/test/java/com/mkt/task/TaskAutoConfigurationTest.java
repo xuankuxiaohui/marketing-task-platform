@@ -14,5 +14,9 @@ class TaskAutoConfigurationTest {
         assertThat(TaskAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNull();
         assertThat(TaskPersistenceScan.class.getAnnotation(ComponentScan.class)).isNotNull();
         assertThat(TaskPersistenceScan.class.getAnnotation(ConditionalOnBean.class)).isNull();
+        assertThat(TaskAdminAutoConfiguration.class.getAnnotation(ConditionalOnBean.class)).isNull();
+        assertThat(TaskAdminAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNotNull();
+        assertThat(TaskAdminSupportAutoConfiguration.class.getAnnotation(ComponentScan.class)).isNull();
+        assertThat(TaskAdminSupportAutoConfiguration.class.getAnnotation(ConditionalOnBean.class)).isNull();
     }
 }

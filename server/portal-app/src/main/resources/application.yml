@@ -4,7 +4,7 @@ spring:
   flyway:
     enabled: false
   datasource:
-    url: ${MKT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/mkt_platform?characterEncoding=utf8&connectionTimeZone=UTC}
+    url: ${MKT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/mkt_platform?characterEncoding=utf8mb4&connectionTimeZone=UTC}
     username: ${MKT_DATASOURCE_USERNAME:mkt}
     password: ${MKT_DATASOURCE_PASSWORD:}
 

@@ -117,4 +117,31 @@ public final class MemoryTaskDefinitionStore implements TaskDefinitionStore {
     public int liveCount() {
         return (int) rows.values().stream().filter(row -> !row.deletedFlag()).count();
     }
+
+    @Override
+    public int casPublish(
+            long id,
+            String expectedStatus,
+            int expectedVersion,
+            int expectedPending,
+            int nextVersion,
+            java.time.LocalDateTime updatedAt) {
+        TaskDefinitionEntity row = rows.get(id);
+        if (row == null || row.deletedFlag()) {
+            return 0;
+        }
+        int pending = row.getPendingRevision() == null ? 0 : row.getPendingRevision();
+        int version = row.getVersion() == null ? 0 : row.getVersion();
+        if (!expectedStatus.equals(row.getStatus())
+                || version != expectedVersion
+                || pending != expectedPending) {
+            return 0;
+        }
+        row.setStatus("PUBLISHED");
+        row.setVersion(nextVersion);
+        row.setPendingRevision(0);
+        row.setSchedulePublishAt(null);
+        row.setUpdatedAt(updatedAt);
+        return 1;
+    }
 }

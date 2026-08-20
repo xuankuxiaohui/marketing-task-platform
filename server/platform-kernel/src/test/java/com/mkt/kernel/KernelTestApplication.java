@@ -42,4 +42,24 @@ public class KernelTestApplication {
             return Result.ok();
         }
     }
+
+    @RestController
+    @RequestMapping("/api/kernel-probe")
+    static class PortalProbeController {
+
+        @GetMapping("/ok")
+        Result<String> ok() {
+            return Result.ok("portal");
+        }
+    }
+
+    @RestController
+    @RequestMapping("/internal/kernel-probe")
+    static class InternalProbeController {
+
+        @GetMapping("/ok")
+        Result<String> ok() {
+            return Result.ok("internal");
+        }
+    }
 }

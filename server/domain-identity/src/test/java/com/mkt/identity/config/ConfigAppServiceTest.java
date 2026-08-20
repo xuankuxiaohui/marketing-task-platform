@@ -123,6 +123,30 @@ class ConfigAppServiceTest {
     }
 
     @Test
+    void maskedDisplaySentinelKeepsStoredValue() {
+        SysConfigEntity existing = new SysConfigEntity();
+        existing.setId(3L);
+        existing.setConfigKey("secret.token");
+        existing.setConfigGroup("sec");
+        existing.setConfigValue("plain-secret");
+        existing.setValueType("STRING");
+        existing.setMasked(1);
+        existing.setStatus("ENABLED");
+        when(mapper.getByKey("secret.token")).thenReturn(existing);
+        when(mapper.updateById(any(SysConfigEntity.class))).thenReturn(1);
+
+        service.update(
+                "secret.token",
+                JsonUtil.fromJson("{\"status\":\"DISABLED\",\"value\":\"******\"}", ConfigUpdateCommand.class));
+        assertThat(existing.getConfigValue()).isEqualTo("plain-secret");
+        assertThat(existing.getStatus()).isEqualTo("DISABLED");
+
+        JsonNode next = JsonUtil.readTree("\"rotated\"");
+        service.update("secret.token", new ConfigUpdateCommand(null, null, null, null, null, next));
+        assertThat(existing.getConfigValue()).isEqualTo("rotated");
+    }
+
+    @Test
     void updateEvictsConfigCache() {
         SysConfigEntity existing = new SysConfigEntity();
         existing.setId(2L);

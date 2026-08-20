@@ -1,5 +1,7 @@
 package com.mkt.task;
 
+import com.mkt.contract.RewardPort;
+import com.mkt.task.application.PrizeEnabledLookup;
 import com.mkt.task.support.TaskSettings;
 import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -21,5 +23,11 @@ public class TaskAutoConfiguration {
     @ConditionalOnMissingBean
     TaskSettings taskSettings() {
         return new TaskSettings();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PrizeEnabledLookup.class)
+    PrizeEnabledLookup prizeEnabledLookup(RewardPort rewardPort) {
+        return rewardPort::prizeEnabled;
     }
 }

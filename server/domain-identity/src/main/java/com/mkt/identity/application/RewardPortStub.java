@@ -19,4 +19,9 @@ public class RewardPortStub implements RewardPort {
     public UserRewardSummary userSummary(long userId) {
         return new UserRewardSummary(0L, new PrizeSummary(0L, 0L));
     }
+
+    @Override
+    public boolean prizeEnabled(long prizeId) {
+        return false;
+    }
 }

@@ -62,7 +62,7 @@ packages/shared/src/openapi/*.ts    （生成物）
 apps/admin、apps/client 只 import 生成类型
 ```
 
-1. **MUST** 生成命令写入 `package.json`：`pnpm --filter @mkt/shared gen:api`。
+1. **MUST** 生成命令写入 `package.json`：`pnpm --filter @mkt/shared gen:api`。JSON **MUST** 来自两应用命名空间（`/admin/v3/api-docs/{group}`、`/api/v3/api-docs/{group}`），**MUST NOT** 用 `KernelTestApplication` 冒烟导出。任务 36 落地 `web/` 之前，本命令不是当前 PR 门禁。
 2. **MUST NOT** 手改生成文件。改契约先改后端 + 规格，再生成。
 3. CI **MUST** 在下列变更后跑 `gen:api` 并 `git diff --exit-code`（与 04 §10、11 §10 同一条）：
    - 后端 `controller` / `command` / `query` / `response` / `ErrorCode` / springdoc 分组

@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
-import com.mkt.task.application.JdbcPrizeEnabledLookup;
+import com.mkt.task.testsupport.MemoryPrizeEnabledLookup;
 import com.mkt.task.application.MybatisTaskChildStore;
 import com.mkt.task.application.MybatisTaskCrowdStore;
 import com.mkt.task.application.MybatisTaskDefinitionStore;
@@ -82,7 +82,7 @@ final class PublishITSupport implements AutoCloseable {
                 new MybatisTaskMutexGroupStore(sql.getMapper(TaskMutexGroupMapper.class)),
                 new MybatisTaskVersionSnapshotStore(sql.getMapper(TaskVersionSnapshotMapper.class)),
                 defs,
-                new JdbcPrizeEnabledLookup(jdbc),
+                new MemoryPrizeEnabledLookup(),
                 clock,
                 null,
                 null,
@@ -116,6 +116,30 @@ final class PublishITSupport implements AutoCloseable {
                         new TaskStepCommand("go_page", "浏览", 1, "PASSIVE", null, null),
                         new TaskStepCommand("click", "点击", 2, "CLICK", null, null)),
                 List.of(new TaskTransitionCommand("go_page", "click", null, 0)),
+                List.of());
+    }
+
+    static TaskDefinitionSaveCommand emptySteps(String code) {
+        return new TaskDefinitionSaveCommand(
+                null,
+                code,
+                "空步骤",
+                null,
+                "daily",
+                null,
+                null,
+                null,
+                null,
+                0,
+                "NONE",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(),
                 List.of());
     }
 

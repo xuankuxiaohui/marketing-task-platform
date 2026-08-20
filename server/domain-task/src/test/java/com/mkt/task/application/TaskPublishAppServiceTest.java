@@ -225,15 +225,43 @@ class TaskPublishAppServiceTest {
     @Test
     void batchPublishIsPerTaskAtomic() {
         long good1 = defs.saveAggregate(legal("batch_ok1")).id();
-        long bad = defs.saveAggregate(disconnected("batch_bad")).id();
+        long empty = defs.saveAggregate(emptySteps("batch_empty")).id();
+        long expr = defs.saveAggregate(legal("batch_expr")).id();
+        definitions.getById(expr).setFilterExpr("eval(1)");
+        long window = defs.saveAggregate(legal("batch_window")).id();
+        definitions.getById(window).setStartTime(java.time.LocalDateTime.of(2026, 8, 20, 0, 0));
+        definitions.getById(window).setEndTime(java.time.LocalDateTime.of(2026, 8, 19, 0, 0));
+        long mutexA = defs.saveAggregate(legal("batch_mx_a")).id();
+        long mutexB = defs.saveAggregate(legal("batch_mx_b")).id();
+        definitions.getById(mutexA).setMutexGroupId(9L);
+        definitions.getById(mutexA).setCycleType("WEEKLY");
+        definitions.getById(mutexB).setMutexGroupId(9L);
+        definitions.getById(mutexB).setCycleType("DAILY");
+        long late = defs.saveAggregate(legal("batch_late")).id();
+        definitions.getById(late).setEndTime(java.time.LocalDateTime.of(2026, 8, 21, 0, 0));
+        definitions.getById(late).setSchedulePublishAt(java.time.LocalDateTime.of(2026, 8, 22, 0, 0));
         long good2 = defs.saveAggregate(legal("batch_ok2")).id();
-        List<BatchItemResponse> results = publishes.batchPublish(List.of(good1, bad, good2));
-        assertThat(results).extracting(BatchItemResponse::success).containsExactly(true, false, true);
-        assertThat(results.get(1).errorCode()).isEqualTo(TaskErrorCodes.PUBLISH_VALIDATE_FAILED.code());
-        assertThat(definitions.getById(good1).getStatus()).isEqualTo("PUBLISHED");
-        assertThat(definitions.getById(bad).getStatus()).isEqualTo("DRAFT");
-        assertThat(definitions.getById(good2).getStatus()).isEqualTo("PUBLISHED");
-        assertThat(snapshots.listByTaskId(bad)).isEmpty();
+        long good3 = defs.saveAggregate(legal("batch_ok3")).id();
+        long good4 = defs.saveAggregate(legal("batch_ok4")).id();
+        long good5 = defs.saveAggregate(legal("batch_ok5")).id();
+
+        List<Long> ids = List.of(good1, empty, expr, window, mutexB, late, good2, good3, good4, good5);
+        List<BatchItemResponse> results = publishes.batchPublish(ids);
+        assertThat(results).hasSize(10);
+        assertThat(results.get(0).success()).isTrue();
+        assertThat(results.get(1).success()).isFalse();
+        assertThat(results.get(2).success()).isFalse();
+        assertThat(results.get(3).success()).isFalse();
+        assertThat(results.get(4).success()).isFalse();
+        assertThat(results.get(5).success()).isFalse();
+        assertThat(results.subList(6, 10)).allMatch(BatchItemResponse::success);
+        assertThat(definitions.getById(empty).getStatus()).isEqualTo("DRAFT");
+        assertThat(definitions.getById(expr).getVersion()).isZero();
+        assertThat(snapshots.listByTaskId(window)).isEmpty();
+        assertThat(snapshots.listByTaskId(mutexB)).isEmpty();
+        assertThat(snapshots.listByTaskId(late)).isEmpty();
+        assertThat(definitions.getById(good5).getStatus()).isEqualTo("PUBLISHED");
+        assertThat(definitions.getById(good5).getVersion()).isEqualTo(1);
     }
 
     @Test
@@ -282,6 +310,20 @@ class TaskPublishAppServiceTest {
         assertThat(audits.checkErrors.get(0))
                 .extracting(e -> e.reason())
                 .contains("存在不可达或死锁步骤");
+        int again = publishes.scanDue();
+        assertThat(again).isZero();
+        assertThat(audits.reasons).hasSize(1);
+    }
+
+    @Test
+    void scheduledPendingPreviewUsesScheduledHint() {
+        long id = defs.saveAggregate(legal("sched_hint")).id();
+        publishes.schedule(id, new ScheduleCommand(Instant.parse("2026-08-20T00:00:00Z")));
+        defs.saveAggregate(withName(legal("sched_hint"), id, "定时修订"));
+        PublishResponse preview = publishes.publish(id, new PublishCommand(false, null));
+        assertThat(preview.requiresConfirm()).isTrue();
+        assertThat(preview.message()).isEqualTo(PublishResponse.SCHEDULED_REVISION_HINT);
+        assertThat(preview.message()).doesNotContain("存量实例");
     }
 
     @Test
@@ -323,6 +365,10 @@ class TaskPublishAppServiceTest {
                         new TaskStepCommand("go_page", "浏览", 1, "PASSIVE", null, null),
                         new TaskStepCommand("click", "点击", 2, "CLICK", null, null)),
                 List.of(new TaskTransitionCommand("go_page", "click", null, 0)));
+    }
+
+    private static TaskDefinitionSaveCommand emptySteps(String code) {
+        return withSteps(code, List.of(), List.of());
     }
 
     private static TaskDefinitionSaveCommand disconnected(String code) {

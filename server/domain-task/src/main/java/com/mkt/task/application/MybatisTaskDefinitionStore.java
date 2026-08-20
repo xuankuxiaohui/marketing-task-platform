@@ -74,4 +74,15 @@ public class MybatisTaskDefinitionStore implements TaskDefinitionStore {
     public int countInProgressInstances(long taskId) {
         return mapper.countInProgressInstances(taskId);
     }
+
+    @Override
+    public int casPublish(
+            long id,
+            String expectedStatus,
+            int expectedVersion,
+            int expectedPending,
+            int nextVersion,
+            java.time.LocalDateTime updatedAt) {
+        return mapper.casPublish(id, expectedStatus, expectedVersion, expectedPending, nextVersion, updatedAt);
+    }
 }

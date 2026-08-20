@@ -101,4 +101,18 @@
         FROM task_instance
         WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
     </select>
+
+    <update id="casPublish">
+        UPDATE task_definition
+        SET status = 'PUBLISHED',
+            version = #{nextVersion},
+            pending_revision = 0,
+            schedule_publish_at = NULL,
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+          AND deleted = 0
+          AND status = #{expectedStatus}
+          AND version = #{expectedVersion}
+          AND pending_revision = #{expectedPending}
+    </update>
 </mapper>

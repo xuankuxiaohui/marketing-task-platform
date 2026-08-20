@@ -29,4 +29,12 @@ public interface TaskDefinitionStore {
     List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit);
 
     int countInProgressInstances(long taskId);
+
+    int casPublish(
+            long id,
+            String expectedStatus,
+            int expectedVersion,
+            int expectedPending,
+            int nextVersion,
+            java.time.LocalDateTime updatedAt);
 }

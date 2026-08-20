@@ -14,7 +14,7 @@
 
 ## 2. 短命分支
 
-从最新 `master` 拉出，合入后删除。
+默认从最新 `master` 拉出，合入后删除。P0 任务链在 `master` 尚未合入前置时，后继任务从上一任务分支叠出（见 `PROJECT_STATUS.md` / `AGENTS.md`），不要从过期 `origin/master` 另开导致丢前置。
 
 ```text
 task/<n>-<slug>     对应 tasks.md 任务号，如 task/28-claim-start、task/37.1-admin-system
@@ -43,7 +43,7 @@ docs/<slug>         仅规格或 docs/standards
 3. 描述里写：任务号、触及的需求/设计条款、测试怎么跑。
 4. 合入方式：**squash merge**，保持 `master` 线性。
 5. 门禁见 04 §10。开发会话在 PR 上做两轮分开的代码评审，有问题开 issue 并直接修；不要等人签字。主分支健康检查由每 3 小时定时任务做，不挡开发。
-6. 契约变更（Controller / Command / Response / ErrorCode）**MUST** 同 PR 提交 `packages/shared` 生成物。
+6. 契约变更（Controller / Command / Response / ErrorCode）：任务 36 落地 `web/` 之后 **MUST** 同 PR 提交 `packages/shared` 生成物。此前不要求该目录。
 
 ## 5. 保护与 CODEOWNERS
 

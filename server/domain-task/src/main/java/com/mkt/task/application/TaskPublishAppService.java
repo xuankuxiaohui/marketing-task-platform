@@ -50,6 +50,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -68,6 +70,7 @@ public class TaskPublishAppService {
     private static final Logger log = LoggerFactory.getLogger(TaskPublishAppService.class);
     private static final int SCAN_BATCH = 100;
     static final String SCHEDULE_FAILURE_ACTION = "schedule-publish-failure";
+    private final ConcurrentHashMap<Long, String> lastFailureFingerprint = new ConcurrentHashMap<>();
 
     private final TaskDefinitionStore definitions;
     private final TaskMutexGroupStore mutexGroups;
@@ -161,12 +164,12 @@ public class TaskPublishAppService {
         }
         String status = entity.getStatus();
         if (DefinitionStatuses.DRAFT.equals(status)) {
-            rejectIfInvalid(entity, false);
-            freezeToPublished(entity, false);
+            rejectIfInvalid(entity);
+            requireCas(freezeToPublished(entity, false));
         } else if (DefinitionStatuses.SCHEDULED.equals(status)) {
             if (cmd.earlyTrue()) {
-                rejectIfInvalid(entity, true);
-                freezeToPublished(entity, false);
+                rejectIfInvalid(entity);
+                requireCas(freezeToPublished(entity, false));
             } else {
                 entity.setPendingRevision(0);
                 entity.setUpdatedAt(nowUtc());
@@ -176,8 +179,8 @@ public class TaskPublishAppService {
             if (!pending(entity)) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "无待发布修订");
             }
-            rejectIfInvalid(entity, false);
-            freezeToPublished(entity, true);
+            rejectIfInvalid(entity);
+            requireCas(freezeToPublished(entity, true));
         } else {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "当前状态不可发布");
         }
@@ -198,7 +201,7 @@ public class TaskPublishAppService {
             throw validateFailed(List.of(new PublishCheckError("schedule", "定时发布时间必须晚于当前时间")));
         }
         entity.setSchedulePublishAt(publishAt);
-        rejectIfInvalid(entity, true);
+        rejectIfInvalid(entity);
         entity.setStatus(DefinitionStatuses.SCHEDULED);
         entity.setPendingRevision(0);
         entity.setUpdatedAt(nowUtc());
@@ -287,8 +290,8 @@ public class TaskPublishAppService {
         return new VersionDiffResponse(
                 diffByKey(indexSteps(leftContent.steps()), indexSteps(rightContent.steps())),
                 diffByKey(indexEdges(leftContent.transitions()), indexEdges(rightContent.transitions())),
-                diffByKey(indexFilter(leftContent.filter()), indexFilter(rightContent.filter())),
-                diffByKey(indexGray(leftContent.gray()), indexGray(rightContent.gray())),
+                asObject(diffByKey(indexFilter(leftContent.filter()), indexFilter(rightContent.filter()))),
+                asObject(diffByKey(indexGray(leftContent.gray()), indexGray(rightContent.gray()))),
                 diffByKey(indexActions(leftContent.actions()), indexActions(rightContent.actions())));
     }
 
@@ -329,8 +332,10 @@ public class TaskPublishAppService {
         int published = 0;
         for (TaskDefinitionEntity row : due) {
             try {
-                runInTx(() -> publishDue(row.getId()));
-                published++;
+                if (runInTx(() -> publishDue(row.getId()))) {
+                    lastFailureFingerprint.remove(row.getId());
+                    published++;
+                }
             } catch (BusinessException ex) {
                 recordScheduleFailure(row, ex.getMessage(), checkErrorsOf(ex.data()));
             } catch (RuntimeException ex) {
@@ -345,32 +350,39 @@ public class TaskPublishAppService {
     }
 
     @Transactional
-    public void publishDue(long id) {
+    public boolean publishDue(long id) {
         TaskDefinitionEntity entity = definitions.getByIdForUpdate(id);
         if (entity == null || entity.deletedFlag()) {
-            return;
+            return false;
         }
         if (!DefinitionStatuses.SCHEDULED.equals(entity.getStatus())) {
-            return;
+            return false;
         }
         LocalDateTime now = nowUtc();
         if (entity.getSchedulePublishAt() == null || entity.getSchedulePublishAt().isAfter(now)) {
-            return;
+            return false;
         }
-        rejectIfInvalid(entity, true);
-        freezeToPublished(entity, false);
+        rejectIfInvalid(entity);
+        return freezeToPublished(entity, false);
     }
 
-    private void freezeToPublished(TaskDefinitionEntity entity, boolean stayPublished) {
+    private boolean freezeToPublished(TaskDefinitionEntity entity, boolean stayPublished) {
         LocalDateTime now = nowUtc();
-        int nextVersion = versionOf(entity) + 1;
+        String expectedStatus = entity.getStatus();
+        int expectedVersion = versionOf(entity);
+        int expectedPending = pending(entity) ? 1 : 0;
+        int nextVersion = expectedVersion + 1;
         insertSnapshot(entity, nextVersion, now);
+        int rows = definitions.casPublish(
+                entity.getId(), expectedStatus, expectedVersion, expectedPending, nextVersion, now);
+        if (rows == 0) {
+            return false;
+        }
         entity.setVersion(nextVersion);
         entity.setStatus(DefinitionStatuses.PUBLISHED);
         entity.setPendingRevision(0);
         entity.setSchedulePublishAt(null);
         entity.setUpdatedAt(now);
-        definitions.update(entity);
         evictPublishedIndex();
         cacheSnapshot(entity.getId(), nextVersion);
         if (stayPublished) {
@@ -378,6 +390,7 @@ public class TaskPublishAppService {
         } else {
             log.info("published task, taskId={}, version={}", entity.getId(), nextVersion);
         }
+        return true;
     }
 
     private void insertSnapshot(TaskDefinitionEntity entity, int version, LocalDateTime now) {
@@ -410,14 +423,14 @@ public class TaskPublishAppService {
         }
     }
 
-    private void rejectIfInvalid(TaskDefinitionEntity entity, boolean scheduled) {
-        List<PublishCheckError> errors = checkPublish(entity, scheduled);
+    private void rejectIfInvalid(TaskDefinitionEntity entity) {
+        List<PublishCheckError> errors = checkPublish(entity);
         if (!errors.isEmpty()) {
             throw validateFailed(errors);
         }
     }
 
-    private List<PublishCheckError> checkPublish(TaskDefinitionEntity entity, boolean scheduled) {
+    private List<PublishCheckError> checkPublish(TaskDefinitionEntity entity) {
         List<PublishCheckError> errors = new ArrayList<>();
         TaskDefinitionAggregateResponse view = definitionsApp.get(entity.getId());
         List<TaskStepCommand> steps = view.steps() == null ? List.of() : view.steps();
@@ -462,11 +475,17 @@ public class TaskPublishAppService {
                 && !entity.getStartTime().isBefore(entity.getEndTime())) {
             errors.add(new PublishCheckError("time-window", "开始必须早于结束"));
         }
-        if (scheduled
-                && entity.getSchedulePublishAt() != null
+        if (entity.getSchedulePublishAt() != null
                 && entity.getEndTime() != null
                 && !entity.getSchedulePublishAt().isBefore(entity.getEndTime())) {
             errors.add(new PublishCheckError("schedule", "定时发布时间必须早于时间窗结束"));
+        }
+        if (entity.getMutexGroupId() != null) {
+            List<String> types = definitions.cycleTypesInMutexGroup(entity.getMutexGroupId(), null);
+            long distinct = types.stream().distinct().count();
+            if (distinct > 1) {
+                errors.add(new PublishCheckError("mutex", "互斥组内周期类型不一致"));
+            }
         }
         return errors;
     }
@@ -506,6 +525,11 @@ public class TaskPublishAppService {
         String message = reason == null || reason.isBlank()
                 ? TaskErrorCodes.PUBLISH_VALIDATE_FAILED.message()
                 : reason;
+        String fingerprint = failureAuditText(message, checkErrors);
+        String previous = lastFailureFingerprint.put(row.getId(), fingerprint);
+        if (fingerprint.equals(previous)) {
+            return;
+        }
         try {
             runInTx(() -> {
                 TaskAuditAppender appender = audits();
@@ -537,12 +561,19 @@ public class TaskPublishAppService {
     }
 
     private void runInTx(Runnable action) {
+        runInTx(() -> {
+            action.run();
+            return true;
+        });
+    }
+
+    private boolean runInTx(BooleanSupplier action) {
         TransactionTemplate template = tx();
         if (template != null) {
-            template.executeWithoutResult(status -> action.run());
-            return;
+            Boolean result = template.execute(status -> action.getAsBoolean());
+            return Boolean.TRUE.equals(result);
         }
-        action.run();
+        return action.getAsBoolean();
     }
 
     private PlatformCache cache() {
@@ -636,6 +667,12 @@ public class TaskPublishAppService {
         return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
     }
 
+    private static void requireCas(boolean applied) {
+        if (!applied) {
+            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "发布冲突，请重试");
+        }
+    }
+
     private static boolean pending(TaskDefinitionEntity entity) {
         return entity.getPendingRevision() != null && entity.getPendingRevision() == 1;
     }
@@ -699,6 +736,14 @@ public class TaskPublishAppService {
             String key = action.scope() + "|" + action.platform()
                     + (action.stepCode() == null ? "" : "|" + action.stepCode());
             map.put(key, action);
+        }
+        return map;
+    }
+
+    private static Map<String, DiffEntry> asObject(List<DiffEntry> entries) {
+        Map<String, DiffEntry> map = new LinkedHashMap<>();
+        for (DiffEntry entry : entries) {
+            map.put(entry.key(), entry);
         }
         return map;
     }

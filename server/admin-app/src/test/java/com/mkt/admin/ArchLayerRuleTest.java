@@ -12,6 +12,7 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -133,6 +134,29 @@ class ArchLayerRuleTest {
                 .dependOnClassesThat()
                 .resideInAPackage("com.mkt.admin");
         legalStaysClean.check(fixtures);
+    }
+
+    @Test
+    void rl03_taskSourcesDoNotNameForeignTables() throws IOException {
+        Path root = serverRoot().resolve("domain-task/src/main");
+        List<String> hits = new ArrayList<>();
+        try (var walk = Files.walk(root)) {
+            walk.filter(path -> {
+                        String name = path.toString();
+                        return name.endsWith(".java") || name.endsWith(".xml");
+                    })
+                    .forEach(path -> {
+                        try {
+                            String text = Files.readString(path);
+                            if (text.contains("rwd_") || text.contains("pnt_") || text.contains("sys_portal_user")) {
+                                hits.add(root.relativize(path).toString());
+                            }
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    });
+        }
+        assertThat(hits).isEmpty();
     }
 
     @Test

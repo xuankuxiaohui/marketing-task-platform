@@ -81,7 +81,7 @@ C 端 **MUST NOT** 展示风控规则编号、灰度未命中原因（R34.6）�
 
 ## 9. 限流与验证码
 
-1. 登录/注册/验证码/用户名可用性：IP + 账号桶。超限 429 + `Retry-After`。
+1. 登录/注册/验证码/用户名可用性：IP + 账号桶。超限 429 + `Retry-After`。IP 取 `HttpServletRequest.getRemoteAddr()`；反代须改写对端地址，应用 **MUST NOT** 解析 `X-Forwarded-For`。
 2. 限流 Redis 故障 fail-open，但必须打 `mkt.degrade` + 告警（10 §8）。
 3. 验证码错误按 R32.2 刷新，答案不进日志。
 

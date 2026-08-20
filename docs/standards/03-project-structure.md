@@ -18,7 +18,7 @@
 
 ## 2. 仓库根布局
 
-design §1.3 冻结。**MUST** 按此创建，禁止另起顶层业务目录。
+design §1.3 冻结。**MUST** 按此创建，禁止另起顶层业务目录。`web/` 在任务 36 创建；此前仓库无该树不算违反本布局。
 
 ```text
 marketing-task-platform/
@@ -132,14 +132,20 @@ com.mkt.<domain>/
 
 ## 6. 应用模块
 
-### 6.1 组件扫描
+### 6.1 组件扫描与自动配置
 
-```text
-admin-app  扫描：com.mkt.** 中 controller.admin + 非 controller 的服务/Mapper
-portal-app 扫描：com.mkt.** 中 controller.portal + controller.internal + 非 controller
-```
+应用启动类 **MUST NOT** 扫描 `com.mkt`。域通过 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 装配；admin / portal 面用 `@ConditionalOnClass(AdminApplication|PortalApplication)` 分面扫描 `controller.admin` / `controller.portal`。
 
 启动时 **MUST** 断言：已注册映射全部落在本应用前缀（RL-08）。
+
+`@ConditionalOnBean` / `@ConditionalOnMissingBean` 走 Spring 的 `REGISTER_BEAN` 阶段（[ConfigurationPhase](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/annotation/ConfigurationCondition.ConfigurationPhase.html)），只看见**当时已经处理完**的 Bean 定义。官方约束：
+
+1. **MUST** 只把这两个注解用在自动配置的 `@Bean` 方法上（[Creating Your Own Auto-configuration · Bean Conditions](https://docs.spring.io/spring-boot/reference/features/developing-auto-configuration.html#features.developing-auto-configuration.condition-annotations.bean-conditions)）。自动配置保证在用户 `@Bean` 之后加载。
+2. **MUST NOT** 写在被扫描的 `@Component` / `@Service` / `@Repository` / `@Configuration` 上（[ConditionalOnMissingBean javadoc](https://docs.spring.io/spring-boot/4.1.0/api/java/org/springframework/boot/autoconfigure/condition/ConditionalOnMissingBean.html)：*strongly recommended to use this condition on auto-configuration classes only*）。扫描发生得早，条件要么永远当成「还没有」、要么在依赖 Bean 登记前就否决。
+3. **MUST NOT** 在带 `@ComponentScan` 的类上再写 `@ConditionalOnBean` / `@ConditionalOnMissingBean`（类级或同级 `@Bean` 方法都不行）。Spring Framework 6.2+（Boot 4 用的 Framework 7）**直接失败**：[6.2 Release Notes](https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-6.2-Release-Notes) — *We now fail hard if you use `@ComponentScan` with a `REGISTER_BEAN` condition (such as Spring Boot's `@ConditionalOnBean`)*。
+4. **MUST NOT** 让自动配置类被组件扫描扫到，也 **MUST NOT** 在自动配置类上为了找业务类开 `@ComponentScan`（[Locating Auto-configuration Candidates](https://docs.spring.io/spring-boot/reference/features/developing-auto-configuration.html#features.developing-auto-configuration.locating-auto-configuration-candidates)：用 `@Import`，不要扫）。本仓库需要扫 Controller 时：一个类只负责 `@ComponentScan`，带 `OnBean`/`OnMissingBean` 的 `@Bean` 放到**另一个**无扫描的 `*SupportAutoConfiguration`。
+
+替身端口（如 `RewardPort` 在 reward 未装配前）**MUST** 用无 `@Component` 的类 + 自动配置上 `@Bean` `@ConditionalOnMissingBean(ThePort.class)`，**MUST NOT** 给替身加 `@Service`。
 
 允许前缀：
 
@@ -197,12 +203,15 @@ web/
 |------|------|------|
 | 单元 / 属性 / 架构 | 各模块 `src/test/java` | `*Test` / `*PropertyTest` / `*ArchTest` |
 | 集成 | 各模块或 app 模块 | `*IT` |
+| OpenAPI 三分组隔离测试 | `platform-kernel`（`KernelTestApplication`） | `OpenApiGroupsIT` |
 | 基类 `BaseIntegrationTest` | kernel test-jar | — |
 | 前端单测 | `apps/*/src/**/*.spec.ts` | Vitest |
 | E2E | `web/e2e` 或 `apps/*/e2e` | Playwright |
 | 压测 | 仓库 `perf/` | k6 |
 
 测试 **MUST NOT** 依赖开发者本机已手工安装的 MySQL/Redis；用 Testcontainers（NFR 可维护性 3）。本机无 Docker 时集成测试允许在 CI 跑，不得用 H2「近似 MySQL」替代（JSON / CHECK / 分区行为不同）。IT 镜像 Redis 7 与现网共享 6.0.8 的口径见 [11-testing.md](11-testing.md) / [14-deployment.md](14-deployment.md)。
+
+OpenAPI 三分组**隔离测试** **MUST NOT** 用 admin-app / portal-app 的 `@SpringBootTest` 再写 `spring.autoconfigure.exclude`。两应用 `springdoc.api-docs.path` 由各 app `SpringdocNamespacePathTest` 解析生产 yml 属性后 equals。任务 36 / `gen:api` 仍打两应用命名空间 URL，见 [07-api-design.md](07-api-design.md) §2，**MUST NOT** 用 kernel 冒烟 JSON。
 
 ## 9. 资源与禁止项
 
@@ -247,3 +256,5 @@ web/
 - [ ] SQL 变更只在 platform-db
 - [ ] 前端新页面对齐菜单种子或规格新增条款
 - [ ] 未引入反选型组件（RuoYi、Spring Cloud、XXL-Job、Drools…）
+- [ ] 未在 admin-app / portal-app 为 OpenAPI 导出维护 AutoConfiguration exclude
+- [ ] `@ConditionalOnBean` / `@ConditionalOnMissingBean` 未写在被扫描的 `@Component` 上，也未与 `@ComponentScan` 同级

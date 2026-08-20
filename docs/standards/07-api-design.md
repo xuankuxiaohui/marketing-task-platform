@@ -38,8 +38,10 @@
 1. **MUST** 先改 design §4（或任务中的契约表），再写 Controller。禁止代码先于契约。
 2. **MUST** 用 springdoc 导出 OpenAPI 3，分组 `admin` / `portal` / `internal`（design §4.1）。
 3. **MUST** 生产关闭 Swagger UI（`springdoc.swagger-ui.enabled=false`）。CI 导出 JSON 不受影响。
-4. **MUST** 前端类型由导出 JSON 生成（[13-frontend-engineering.md](13-frontend-engineering.md)）。
+4. **MUST** 前端类型由**两应用**导出的 JSON 生成（[13-frontend-engineering.md](13-frontend-engineering.md)）。导出 URL：admin=`/admin/v3/api-docs/{group}`，portal=`/api/v3/api-docs/{group}`（`group` = `admin` / `portal` / `internal`）。**MUST NOT** 用 `KernelTestApplication` 的 `/v3/api-docs`（只有 probe，无业务 API）。
 5. 注解 **MUST** 写清 summary、错误码、权限码。用 `@Tag` 按域分组。
+6. **MUST** 三分组隔离**测试**在 `platform-kernel`（`KernelTestApplication` + `OpenApiGroupsIT`）。**MUST NOT** 起 admin-app / portal-app 再维护 `spring.autoconfigure.exclude`；新 `*AutoConfiguration` 不得为此改 OpenAPI 测试。
+7. **MUST** 两应用 `springdoc.api-docs.path` 落在本应用命名空间（admin=`/admin/v3/api-docs`，portal=`/api/v3/api-docs`），由各 app 的 `SpringdocNamespacePathTest` 解析生产 yml 属性后 equals。默认 `/v3/api-docs` 违反 RL-08。
 
 ## 3. 命名空间
 
