@@ -462,12 +462,12 @@ _测试：§7.3 R12.1–R12.3_
 
 ### 任务 28：可见性与领取（编组 F）
 
-- [ ] §5.3 分桶：md5 前 8 字节大端 `remainderUnsigned` + 3 组标准测试向量
-- [ ] §5.5 校验链：`UserAttributePort.lockAndGet`（账号非 ACTIVE → 403）→ 幂等短路 → 可见性 → 风控 → 互斥 → 每日上限
-- [ ] INSERT 前计算 `expire_at`（R14.10）并 append `task.instance.start`
-- [ ] 实现 `TaskReadPort.instanceCounts`；灰度 CROWD = 允许包 AND NOT 排除包（`gray_exclude_crowd_id`）
-- [ ] 过滤 / 灰度 / 列表经 `UserAttributePort.attributes`（任务 23）；属性缺失按 §5.10 空值哨兵；**禁止**本域 `SELECT`/`FOR UPDATE` `sys_portal_user`
-- [ ] C 端列表 / 详情三分渲染；OFFLINE 兜底 200 + 状态；一次性任务放弃后再领返回终态实例
+- [x] §5.3 分桶：md5 前 8 字节大端 `remainderUnsigned` + 3 组标准测试向量
+- [x] §5.5 校验链：`UserAttributePort.lockAndGet`（账号非 ACTIVE → 403）→ 幂等短路 → 可见性 → 风控 → 互斥 → 每日上限
+- [x] INSERT 前计算 `expire_at`（R14.10）并 append `task.instance.start`
+- [x] 实现 `TaskReadPort.instanceCounts`；灰度 CROWD = 允许包 AND NOT 排除包（`gray_exclude_crowd_id`）
+- [x] 过滤 / 灰度 / 列表经 `UserAttributePort.attributes`（任务 23）；属性缺失按 §5.10 空值哨兵；**禁止**本域 `SELECT`/`FOR UPDATE` `sys_portal_user`
+- [x] C 端列表 / 详情三分渲染；OFFLINE 兜底 200 + 状态；一次性任务放弃后再领返回终态实例
 
 _需求：R13、R34_
 _设计：design §2.2.3 UserAttributePort、§4.9.2、§5.3、§5.5、§5.10_
