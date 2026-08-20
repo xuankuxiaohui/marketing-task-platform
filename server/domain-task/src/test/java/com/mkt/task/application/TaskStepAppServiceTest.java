@@ -4,16 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mkt.contract.AccountStatus;
 import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
+import com.mkt.contract.RiskListType;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskVerdict;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
+import com.mkt.contract.UserRiskSummary;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
@@ -49,6 +54,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 class TaskStepAppServiceTest {
 
@@ -109,6 +116,32 @@ class TaskStepAppServiceTest {
     }
 
     @Test
+    void writePathsUseReadCommitted() throws Exception {
+        assertThat(TaskStepAppService.class
+                        .getMethod(
+                                "click",
+                                long.class,
+                                String.class,
+                                long.class,
+                                String.class,
+                                String.class,
+                                String.class)
+                        .getAnnotation(Transactional.class)
+                        .isolation())
+                .isEqualTo(Isolation.READ_COMMITTED);
+        assertThat(TaskStepAppService.class
+                        .getMethod("callback", InternalCallbackCommand.class)
+                        .getAnnotation(Transactional.class)
+                        .isolation())
+                .isEqualTo(Isolation.READ_COMMITTED);
+        assertThat(TaskStepAppService.class
+                        .getMethod("progress", InternalProgressCommand.class)
+                        .getAnnotation(Transactional.class)
+                        .isolation())
+                .isEqualTo(Isolation.READ_COMMITTED);
+    }
+
+    @Test
     void clickAdvancesAndReturnsNextStep() {
         long taskId = publish(
                 "clk",
@@ -148,12 +181,15 @@ class TaskStepAppServiceTest {
     void clickFrozenIs403() {
         long taskId = publish("frz", List.of(new TaskStepCommand("a", "A", 1, "CLICK", null, null)), List.of());
         TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
-        when(risk.check(eq(RiskScene.CLAIM), any())).thenReturn(new RiskVerdict(RiskAction.REJECT));
+        clearInvocations(risk);
+        when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(1L, List.of(RiskListType.BLACK)));
         assertThatThrownBy(() -> steps.click(started.instanceId(), "a", 9L, "203.0.113.1", "dev", "WEB"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(TaskErrorCodes.INSTANCE_FROZEN);
         assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        verify(risk).userSummary(9L);
+        verify(risk, never()).check(any(), any());
     }
 
     @Test
@@ -174,11 +210,14 @@ class TaskStepAppServiceTest {
     void callbackFrozenIsAccountRestricted() {
         long taskId = publish("cbf", List.of(new TaskStepCommand("cb", "CB", 1, "CALLBACK", null, null)), List.of());
         claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
-        when(risk.check(eq(RiskScene.CLAIM), any())).thenReturn(new RiskVerdict(RiskAction.SILENT_REJECT));
+        clearInvocations(risk);
+        when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(1L, List.of(RiskListType.BLACK)));
         assertThatThrownBy(() -> steps.callback(new InternalCallbackCommand(null, 9L, "cbf", "NONE", "cb", null)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(TaskErrorCodes.ACCOUNT_RESTRICTED);
+        verify(risk).userSummary(9L);
+        verify(risk, never()).check(any(), any());
     }
 
     @Test

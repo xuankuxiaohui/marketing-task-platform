@@ -37,6 +37,7 @@ import com.mkt.task.response.CurrentStepView;
 import com.mkt.task.response.TaskStartResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -47,6 +48,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -130,7 +132,7 @@ public class TaskClaimAppService {
         this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewards);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskStartResponse start(long taskId, long userId, String ip, String deviceId, String platform) {
         if (users == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
@@ -212,7 +214,10 @@ public class TaskClaimAppService {
         row.setCreatedAt(TaskTime.toUtc(now));
         try {
             instances.insert(row);
-        } catch (DuplicateKeyException ex) {
+        } catch (RuntimeException ex) {
+            if (!duplicateKey(ex)) {
+                throw ex;
+            }
             TaskInstanceEntity winner = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey);
             if (winner != null) {
                 return new Inserted(winner, false);
@@ -220,6 +225,16 @@ public class TaskClaimAppService {
             throw ex;
         }
         return new Inserted(row, true);
+    }
+
+    private static boolean duplicateKey(Throwable ex) {
+        while (ex != null) {
+            if (ex instanceof DuplicateKeyException || ex instanceof SQLIntegrityConstraintViolationException) {
+                return true;
+            }
+            ex = ex.getCause();
+        }
+        return false;
     }
 
     private record Inserted(TaskInstanceEntity row, boolean created) {}
