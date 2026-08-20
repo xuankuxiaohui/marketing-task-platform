@@ -43,6 +43,7 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class ClaimAppServiceTest {
@@ -110,6 +111,15 @@ class ClaimAppServiceTest {
         grants.update(row);
         ClaimResponse response = claims.claim(recordId, 9L);
         assertThat(response.status()).isEqualTo(GrantRecordStatuses.GRANTED);
+    }
+
+    @Test
+    void claimKeepsExpireFlipWhenBusinessExceptionLeaves() throws Exception {
+        Transactional tx = ClaimAppService.class
+                .getMethod("claim", long.class, long.class)
+                .getAnnotation(Transactional.class);
+        assertThat(tx).isNotNull();
+        assertThat(tx.noRollbackFor()).contains(BusinessException.class);
     }
 
     @Test

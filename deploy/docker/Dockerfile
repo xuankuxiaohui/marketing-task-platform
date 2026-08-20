@@ -1,5 +1,6 @@
-# Layered runtime image (12-Factor V / 14-deployment §4). Build context = module target/.
-# ARG JAR_FILE is the Boot fat jar (admin-app-*.jar or portal-app-*-exec.jar).
+# Layered runtime image (12-Factor V / 14-deployment §4).
+# Compose bake resolves dockerfile from the build context; context is the repo root.
+# ARG JAR_FILE is the Boot fat jar path (admin-app-*.jar or portal-app-*-exec.jar).
 ARG JDK_IMAGE=eclipse-temurin:26-jre-noble
 
 FROM ${JDK_IMAGE} AS extract

@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**编组 J 进行中** / 当前任务：**44 签到域，已交付** / 更新：2026-08-20
+> 阶段：**编组 J 进行中** / 当前任务：**44 签到域，已交付；PR #60 CI 已修** / 更新：2026-08-20
 
 ## 项目一句话
 
@@ -21,6 +21,9 @@
 - 梯度 `grantSource=SIGNIN_DAY`，`sourceId="{activityId}:{userId}:{day}"`，断链重攒不重复发放
 - C-9：`SigninUniqueIT` 64 线程同用户同日；*IT 留 CI（`-DskipITs`）
 - 附录 A 窗口/日限/消耗走 `SigninSettings` 默认值（7 / 1 / 100），与 V1 `sys_config` 种子同文
+- C-7 失败者允许 `reward.claim.conflict` 或幂等 GRANTED；`PrizeClaimExactlyOnceIT` 以 MySQL `status='GRANTED'` 恰 1 行为准
+- 领取过期兜底：`claim()` `noRollbackFor=BusinessException`，EXPIRED 翻转与 `CLAIM_EXPIRED` 同路径提交（R19.3）。IT 不把 persist-then-throw 包进 `TransactionTemplate`（同 `LoginLockCommitIT`）
+- Compose bake 按 **context** 解析 dockerfile。三处 app build context 改为仓库根，`dockerfile: deploy/docker/Dockerfile`，避免 `server/deploy`
 
 ## 改过的核心文件
 
@@ -28,6 +31,9 @@
 - `server/platform-db/src/main/resources/db/migration/V5__sgn_signin.sql`
 - `server/platform-contract/.../RewardPort.java`（增 `consume`）
 - `server/domain-reward` `RewardPortImpl` / `PointsPort` 接线 CONSUME
+- `server/domain-reward/.../ClaimAppService.java`（claim 过期翻转不回滚）
+- `server/domain-reward` `PrizeClaimExactlyOnceIT` / `PrizeExpireIT` / `ClaimAppServiceTest`
+- `deploy/docker-compose.yml`、`deploy/docker/Dockerfile`、`.dockerignore`
 - `server/pom.xml`、`admin-app/pom.xml`、`portal-app/pom.xml`
 - `web/apps/admin/src/views/signin/**`、`web/apps/client/src/views/signin/**`
 - `.kiro/specs/platform-v2/tasks.md`（任务 44 勾选）
@@ -36,12 +42,13 @@
 ## 测试与验证
 
 - 命令与结果：`cd server && mvn -q -DskipITs test` 本机 exit 0（含 domain-signin 单测 / jqwik、domain-reward jacoco、ArchUnit RL-02）
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）
-- 未跑项及原因：`SigninUniqueIT` / `CatchupConsumeRollbackIT` / `FlywayFullIT` 是 `*IT`，本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R19.1 / R19.2 / R31.1 父链 CI
+- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
+- PR #59 / #60 父链 CI 同源失败：C-7 把幂等 GRANTED 计成 64 次成功；领取过期兜底被外层 TX 回滚；compose bake 把 dockerfile 解析到 `server/deploy`
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转

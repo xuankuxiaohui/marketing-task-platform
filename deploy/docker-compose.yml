@@ -78,10 +78,10 @@ services:
 
   admin-app:
     build:
-      context: ../server/admin-app/target
-      dockerfile: ../../deploy/docker/Dockerfile
+      context: ..
+      dockerfile: deploy/docker/Dockerfile
       args:
-        JAR_FILE: admin-app-0.1.0-SNAPSHOT.jar
+        JAR_FILE: server/admin-app/target/admin-app-0.1.0-SNAPSHOT.jar
     environment:
       <<: *app-env
       SERVER_PORT: "8080"
@@ -106,10 +106,10 @@ services:
 
   portal-app-1:
     build:
-      context: ../server/portal-app/target
-      dockerfile: ../../deploy/docker/Dockerfile
+      context: ..
+      dockerfile: deploy/docker/Dockerfile
       args:
-        JAR_FILE: portal-app-0.1.0-SNAPSHOT-exec.jar
+        JAR_FILE: server/portal-app/target/portal-app-0.1.0-SNAPSHOT-exec.jar
     environment:
       <<: *app-env
       SERVER_PORT: "8081"
@@ -134,10 +134,10 @@ services:
 
   portal-app-2:
     build:
-      context: ../server/portal-app/target
-      dockerfile: ../../deploy/docker/Dockerfile
+      context: ..
+      dockerfile: deploy/docker/Dockerfile
       args:
-        JAR_FILE: portal-app-0.1.0-SNAPSHOT-exec.jar
+        JAR_FILE: server/portal-app/target/portal-app-0.1.0-SNAPSHOT-exec.jar
     environment:
       <<: *app-env
       SERVER_PORT: "8081"

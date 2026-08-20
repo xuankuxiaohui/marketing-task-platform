@@ -1,0 +1,11 @@
+*
+!deploy
+!deploy/docker
+!deploy/docker/Dockerfile
+!server
+!server/admin-app
+!server/admin-app/target
+!server/admin-app/target/*.jar
+!server/portal-app
+!server/portal-app/target
+!server/portal-app/target/*.jar

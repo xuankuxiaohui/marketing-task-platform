@@ -35,7 +35,7 @@ class PrizeExpireIT {
                             prizeId, 9L, GrantSource.TASK_STEP, "step-ex", GrantContext.defaults()))
                     .recordId();
             clock.setInstant(clock.instant().plus(Duration.ofHours(2)));
-            assertThatThrownBy(() -> env.tx.executeWithoutResult(status -> env.claims.claim(recordId, 9L)))
+            assertThatThrownBy(() -> env.claims.claim(recordId, 9L))
                     .isInstanceOf(BusinessException.class)
                     .extracting(ex -> ((BusinessException) ex).errorCode())
                     .isEqualTo(RewardErrorCodes.CLAIM_EXPIRED);
@@ -58,7 +58,7 @@ class PrizeExpireIT {
             String flipped = env.jdbc.queryForObject(
                     "SELECT status FROM rwd_grant_record WHERE id=?", String.class, recordId);
             assertThat(flipped).isEqualTo("EXPIRED");
-            assertThatThrownBy(() -> env.tx.executeWithoutResult(status -> env.claims.claim(recordId, 9L)))
+            assertThatThrownBy(() -> env.claims.claim(recordId, 9L))
                     .isInstanceOf(BusinessException.class)
                     .extracting(ex -> ((BusinessException) ex).errorCode())
                     .isEqualTo(RewardErrorCodes.CLAIM_EXPIRED);

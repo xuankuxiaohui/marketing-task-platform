@@ -65,7 +65,7 @@ public class ClaimAppService {
         this.clock = clock;
     }
 
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = BusinessException.class)
     public ClaimResponse claim(long recordId, long userId) {
         GrantRecordEntity row = grants.getById(recordId);
         if (row == null || row.getUserId() == null || row.getUserId() != userId) {
