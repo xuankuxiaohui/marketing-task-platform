@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.GrantRecordMapper">
+
+    <select id="countActiveByUserPrize" resultType="long">
+        SELECT COUNT(*) FROM rwd_grant_record
+        WHERE user_id = #{userId}
+          AND prize_id = #{prizeId}
+          AND status IN ('GRANTED', 'WON', 'CLAIMING', 'RETRY_PENDING')
+          <if test="from != null">AND created_at &gt;= #{from}</if>
+    </select>
+
+    <update id="markPermanentFailed">
+        UPDATE rwd_grant_record
+        SET status = 'PERMANENT_FAILED'
+        WHERE id = #{id}
+          AND status IN ('GRANTED', 'WON', 'CLAIMING', 'RETRY_PENDING', 'PENDING')
+    </update>
+</mapper>

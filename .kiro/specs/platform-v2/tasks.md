@@ -510,13 +510,13 @@ _测试：§7.3 R16.1–R16.4、R14.4_
 
 ### 任务 32：奖品配置与库存（编组 G）
 
-- [ ] 奖品分类 CRUD；内置 7 类种子；内置不可删
-- [ ] 分类 `reconActionPolicy`：`REVIEW`|`AUTO`；须对账内置三类（支付宝红包/微信红包/话费）种子 = `REVIEW`；启用后仍可改
-- [ ] 奖品 CRUD / 停用二次确认 / enable / `stock-replenish`；分类决定目标/履约/成本算法
-- [ ] 奖品 `reconActionPolicy` 可空（空 = 继承分类）；启用后仍可改（运营策略，不冻结）
-- [ ] `unitCostFen` / `faceFen` / `points` 按分类校验
-- [ ] §5.7 库存原子扣减；限领 = READ COMMITTED + 库存行锁内 COUNT
-- [ ] `rwd_stock_log` 扣减 / 回补留痕
+- [x] 奖品分类 CRUD；内置 7 类种子；内置不可删
+- [x] 分类 `reconActionPolicy`：`REVIEW`|`AUTO`；须对账内置三类（支付宝红包/微信红包/话费）种子 = `REVIEW`；启用后仍可改
+- [x] 奖品 CRUD / 停用二次确认 / enable / `stock-replenish`；分类决定目标/履约/成本算法
+- [x] 奖品 `reconActionPolicy` 可空（空 = 继承分类）；启用后仍可改（运营策略，不冻结）
+- [x] `unitCostFen` / `faceFen` / `points` 按分类校验
+- [x] §5.7 库存原子扣减；限领 = READ COMMITTED + 库存行锁内 COUNT
+- [x] `rwd_stock_log` 扣减 / 回补留痕
 
 _需求：R17、R37.7_
 _设计：design §3.4、§4.5、§5.7、§5.11 有效政策_
