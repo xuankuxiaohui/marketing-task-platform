@@ -81,6 +81,30 @@ class ExpiredFinalityIT {
     }
 
     @Test
+    void schedulerFlipThenAllEntriesRejected() throws Exception {
+        try (ClaimITSupport env =
+                new ClaimITSupport(MYSQL, ClaimITSupport.activeUsers(), ClaimITSupport.passRisk(), null)) {
+            long taskId = env.publishLegal("exp_sched");
+            TaskStartResponse started =
+                    env.tx.execute(status -> env.claims.start(taskId, 9L, "203.0.113.1", null, "WEB"));
+            LocalDateTime past = LocalDateTime.ofInstant(env.clock.instant().minusSeconds(1), java.time.ZoneOffset.UTC);
+            env.jdbc.update("UPDATE task_instance SET expire_at = ? WHERE id = ?", past, started.instanceId());
+            assertThat(env.instanceAdmin.expireDue()).isEqualTo(1);
+            String status = env.jdbc.queryForObject(
+                    "SELECT status FROM task_instance WHERE id = ?", String.class, started.instanceId());
+            assertThat(status).isEqualTo(InstanceStatuses.EXPIRED);
+            assertThatThrownBy(() -> env.tx.executeWithoutResult(
+                            status1 -> env.steps.click(started.instanceId(), "click", 9L, "203.0.113.1", null, "WEB")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(ex -> ((BusinessException) ex).errorCode())
+                    .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
+            assertThat(env.jdbc.queryForObject(
+                            "SELECT status FROM task_instance WHERE id = ?", String.class, started.instanceId()))
+                    .isEqualTo(InstanceStatuses.EXPIRED);
+        }
+    }
+
+    @Test
     void expiredStatusRejectsClick() throws Exception {
         try (ClaimITSupport env =
                 new ClaimITSupport(MYSQL, ClaimITSupport.activeUsers(), ClaimITSupport.passRisk(), null)) {

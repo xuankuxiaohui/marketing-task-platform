@@ -7,13 +7,16 @@ import com.mkt.kernel.PageData;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.UserContext;
 import com.mkt.task.application.TaskClaimAppService;
+import com.mkt.task.application.TaskInstanceAppService;
 import com.mkt.task.application.TaskPortalAppService;
 import com.mkt.task.application.TaskStepAppService;
+import com.mkt.task.response.InstanceAbandonResponse;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskClickResponse;
 import com.mkt.task.response.TaskDetailResponse;
 import com.mkt.task.response.TaskStartResponse;
+import com.mkt.task.support.ClientPlatformResolver;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,20 +39,26 @@ public class TaskPortalController {
     private final TaskPortalAppService portal;
     private final TaskClaimAppService claims;
     private final TaskStepAppService steps;
+    private final TaskInstanceAppService instances;
     private final SlidingWindowRateLimiter limiter;
     private final TaskSettings settings;
+    private final ClientPlatformResolver platforms;
 
     public TaskPortalController(
             TaskPortalAppService portal,
             TaskClaimAppService claims,
             TaskStepAppService steps,
+            TaskInstanceAppService instances,
             ObjectProvider<SlidingWindowRateLimiter> limiter,
-            TaskSettings settings) {
+            TaskSettings settings,
+            ClientPlatformResolver platforms) {
         this.portal = portal;
         this.claims = claims;
         this.steps = steps;
+        this.instances = instances;
         this.limiter = limiter.getIfAvailable();
         this.settings = settings;
+        this.platforms = platforms;
     }
 
     @GetMapping("/list")
@@ -79,7 +88,7 @@ public class TaskPortalController {
             @PathVariable long taskId,
             @RequestHeader(value = "X-Client-Platform", required = false) String platform) {
         long userId = UserContext.require().userId();
-        return Result.ok(portal.detail(taskId, userId, platform));
+        return Result.ok(portal.detail(taskId, userId, platforms.resolve(platform)));
     }
 
     @PostMapping("/{taskId}/start")
@@ -97,7 +106,7 @@ public class TaskPortalController {
         }
         String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
         String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
-        return Result.ok(claims.start(taskId, userId, ip, device, platform));
+        return Result.ok(claims.start(taskId, userId, ip, device, platforms.resolve(platform)));
     }
 
     @PostMapping("/instances/{instanceId}/steps/{stepCode}/click")
@@ -111,6 +120,18 @@ public class TaskPortalController {
         long userId = UserContext.require().userId();
         String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
         String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
-        return Result.ok(steps.click(instanceId, stepCode, userId, ip, device, platform));
+        return Result.ok(steps.click(instanceId, stepCode, userId, ip, device, platforms.resolve(platform)));
+    }
+
+    @PostMapping("/instances/{instanceId}/abandon")
+    @Operation(summary = "用户放弃进行中任务")
+    public Result<InstanceAbandonResponse> abandon(
+            @PathVariable long instanceId,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
+            HttpServletRequest request) {
+        long userId = UserContext.require().userId();
+        String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
+        String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
+        return Result.ok(instances.abandonUser(instanceId, userId, ip, device));
     }
 }

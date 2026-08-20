@@ -500,7 +500,7 @@ public final class StepEngine {
         return instances.getStep(instanceId, stepCode);
     }
 
-    static boolean expired(TaskInstanceEntity instance, Instant now) {
+    public static boolean expired(TaskInstanceEntity instance, Instant now) {
         if (InstanceStatuses.EXPIRED.equals(instance.getStatus())) {
             return true;
         }

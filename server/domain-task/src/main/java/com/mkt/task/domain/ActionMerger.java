@@ -6,7 +6,7 @@ import java.util.Map;
 
 /**
  * Platform action fallback (design §4.9.2 / R16.2):
- * step+platform → task+platform → step+WEB → task+WEB → null.
+ * step+platform → task+platform → step+WEB → task+WEB → NONE placeholder.
  * {@code NONE} is a hit and stops fallback.
  */
 public final class ActionMerger {
@@ -37,7 +37,12 @@ public final class ActionMerger {
                 return hit;
             }
         }
-        return null;
+        return nonePlaceholder(stepCode, resolved);
+    }
+
+    /** NONE placeholder: a hit that stops fallback (R16.2). */
+    public static TaskActionCommand nonePlaceholder(String stepCode, String platform) {
+        return new TaskActionCommand(SCOPE_TASK, stepCode, Platforms.normalize(platform), NONE, Map.of(), null);
     }
 
     private static TaskActionCommand find(

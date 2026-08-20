@@ -1,8 +1,10 @@
 package com.mkt.task;
 
 import com.mkt.infra.lock.PlatformLock;
+import com.mkt.task.application.TaskInstanceAppService;
 import com.mkt.task.application.TaskProgressReportStore;
 import com.mkt.task.application.TaskPublishAppService;
+import com.mkt.task.schedule.InstanceExpireScheduler;
 import com.mkt.task.schedule.ProgressCleanScheduler;
 import com.mkt.task.schedule.PublishScanScheduler;
 import com.mkt.task.support.AlertWebhook;
@@ -38,5 +40,13 @@ public class TaskAdminSupportAutoConfiguration {
     ProgressCleanScheduler progressCleanScheduler(
             TaskProgressReportStore reports, PlatformLock locks, Clock clock) {
         return new ProgressCleanScheduler(reports, locks, clock);
+    }
+
+    @Bean
+    @ConditionalOnBean({TaskInstanceAppService.class, PlatformLock.class})
+    @ConditionalOnMissingBean
+    InstanceExpireScheduler instanceExpireScheduler(
+            TaskInstanceAppService instances, PlatformLock locks, Clock clock) {
+        return new InstanceExpireScheduler(instances, locks, clock);
     }
 }

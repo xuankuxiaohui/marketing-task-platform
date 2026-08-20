@@ -20,6 +20,8 @@ public final class TaskPermissions {
     public static final String CROWD_CREATE = "task:crowd:create";
     public static final String CROWD_UPDATE = "task:crowd:update";
     public static final String CROWD_DELETE = "task:crowd:delete";
+    public static final String INSTANCE_QUERY = "task:instance:query";
+    public static final String INSTANCE_ABANDON = "task:instance:abandon";
 
     private TaskPermissions() {}
 }

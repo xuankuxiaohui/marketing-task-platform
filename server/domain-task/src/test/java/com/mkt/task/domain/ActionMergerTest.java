@@ -19,4 +19,11 @@ class ActionMergerTest {
         assertThat(merged.actionType()).isEqualTo(ActionMerger.NONE);
         assertThat(ActionMerger.merge(List.of(web), "click", "IOS").actionType()).isEqualTo("LINK");
     }
+
+    @Test
+    void missReturnsNonePlaceholder() {
+        TaskActionCommand merged = ActionMerger.merge(List.of(), "click", "IOS");
+        assertThat(merged.actionType()).isEqualTo(ActionMerger.NONE);
+        assertThat(merged.platform()).isEqualTo("IOS");
+    }
 }

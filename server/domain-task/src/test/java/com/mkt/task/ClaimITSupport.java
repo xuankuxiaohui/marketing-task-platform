@@ -20,10 +20,12 @@ import com.mkt.task.application.MybatisTaskCrowdStore;
 import com.mkt.task.application.MybatisTaskDefinitionStore;
 import com.mkt.task.application.MybatisTaskInstanceStore;
 import com.mkt.task.application.MybatisTaskMutexGroupStore;
+import com.mkt.task.application.JdbcInstanceEventStore;
 import com.mkt.task.application.MybatisTaskProgressReportStore;
 import com.mkt.task.application.MybatisTaskVersionSnapshotStore;
 import com.mkt.task.application.TaskClaimAppService;
 import com.mkt.task.application.TaskDefinitionAppService;
+import com.mkt.task.application.TaskInstanceAppService;
 import com.mkt.task.application.TaskPortalAppService;
 import com.mkt.task.application.TaskPublishAppService;
 import com.mkt.task.application.TaskStepAppService;
@@ -73,6 +75,7 @@ final class ClaimITSupport implements AutoCloseable {
     final TaskClaimAppService claims;
     final TaskStepAppService steps;
     final TaskPortalAppService portal;
+    final TaskInstanceAppService instanceAdmin;
     final TransactionTemplate tx;
     final EventPublisher publisher;
     final MemoryRewardPort rewards = new MemoryRewardPort();
@@ -152,6 +155,14 @@ final class ClaimITSupport implements AutoCloseable {
                 clock,
                 settings);
         portal = new TaskPortalAppService(definitions, snapshots, instances, crowds, users, risk, clock);
+        instanceAdmin = new TaskInstanceAppService(
+                instances,
+                snapshots,
+                new JdbcInstanceEventStore(jdbc),
+                this.publisher,
+                risk,
+                clock,
+                tx);
         UserContext.set(new UserPrincipal(1L, "admin", "op"));
     }
 

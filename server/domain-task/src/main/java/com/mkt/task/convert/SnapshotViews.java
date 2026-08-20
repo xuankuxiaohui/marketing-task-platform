@@ -47,9 +47,6 @@ public final class SnapshotViews {
             return null;
         }
         TaskActionCommand merged = ActionMerger.merge(snapshot.actions(), stepCode, platform);
-        if (merged == null) {
-            return null;
-        }
         return new PlatformActionView(merged.actionType(), ActionMerger.params(merged), merged.buttonText());
     }
 

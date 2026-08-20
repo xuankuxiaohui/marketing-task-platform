@@ -23,4 +23,20 @@ class ExpireAtCalculatorTest {
         Instant expireAt = ExpireAtCalculator.compute(null, null, null, now, 7);
         assertThat(expireAt).isEqualTo(Instant.parse("2026-08-26T00:00:00Z"));
     }
+
+    @Test
+    void nullWindowUsesOfflineWhenPresent() {
+        Instant now = Instant.parse("2026-08-19T00:00:00Z");
+        Instant offline = Instant.parse("2026-08-20T00:00:00Z");
+        Instant expireAt = ExpireAtCalculator.compute(null, offline, null, now, 7);
+        assertThat(expireAt).isEqualTo(Instant.parse("2026-08-27T00:00:00Z"));
+    }
+
+    @Test
+    void nullOfflineAndWindowUsesCycleEnd() {
+        Instant now = Instant.parse("2026-08-19T00:00:00Z");
+        Instant cycleEnd = Instant.parse("2026-08-19T15:59:59.999Z");
+        Instant expireAt = ExpireAtCalculator.compute(null, null, cycleEnd, now, 7);
+        assertThat(expireAt).isEqualTo(Instant.parse("2026-08-26T15:59:59.999Z"));
+    }
 }
