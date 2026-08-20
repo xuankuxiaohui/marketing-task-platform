@@ -39,4 +39,16 @@ public interface TaskInstanceStore {
     int activateStep(long id, LocalDateTime activatedAt);
 
     int completeStep(long id, LocalDateTime completedAt);
+
+    TaskInstanceStepEntity getStep(long instanceId, String stepCode);
+
+    TaskInstanceStepEntity getStepById(long id);
+
+    int completeStepCas(long id, int version, LocalDateTime completedAt, Integer progressCurrent);
+
+    int skipStepCas(long id, int version, LocalDateTime completedAt, String skipReason);
+
+    int addProgressCas(long id, int version, int progressCurrent);
+
+    int updateLastBizNo(long id, String lastBizNo);
 }

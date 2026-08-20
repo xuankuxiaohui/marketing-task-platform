@@ -16,6 +16,8 @@ import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
 import com.mkt.task.application.TaskClaimAppService;
 import com.mkt.task.application.TaskPortalAppService;
+import com.mkt.task.application.TaskStepAppService;
+import com.mkt.task.response.TaskClickResponse;
 import com.mkt.task.response.TaskStartResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
@@ -31,6 +33,7 @@ class TaskPortalControllerTest {
 
     private TaskPortalAppService portal;
     private TaskClaimAppService claims;
+    private TaskStepAppService steps;
     private SlidingWindowRateLimiter limiter;
     private TaskPortalController controller;
 
@@ -38,11 +41,12 @@ class TaskPortalControllerTest {
     void setUp() {
         portal = mock(TaskPortalAppService.class);
         claims = mock(TaskClaimAppService.class);
+        steps = mock(TaskStepAppService.class);
         limiter = mock(SlidingWindowRateLimiter.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<SlidingWindowRateLimiter> limiterProvider = mock(ObjectProvider.class);
         when(limiterProvider.getIfAvailable()).thenReturn(limiter);
-        controller = new TaskPortalController(portal, claims, limiterProvider, new TaskSettings());
+        controller = new TaskPortalController(portal, claims, steps, limiterProvider, new TaskSettings());
         UserContext.set(new UserPrincipal(9L, "client", "u9"));
     }
 
@@ -75,5 +79,14 @@ class TaskPortalControllerTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(TaskErrorCodes.CLAIM_RATE_LIMITED);
+    }
+
+    @Test
+    void clickDelegatesToStepService() {
+        when(steps.click(anyLong(), anyString(), anyLong(), anyString(), any(), any()))
+                .thenReturn(new TaskClickResponse(3L, "COMPLETED", "IN_PROGRESS", null, List.of()));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("203.0.113.9");
+        assertThat(controller.click(3L, "a", null, "WEB", request).data().stepStatus()).isEqualTo("COMPLETED");
     }
 }

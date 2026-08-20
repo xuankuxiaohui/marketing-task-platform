@@ -8,8 +8,10 @@ import com.mkt.kernel.Result;
 import com.mkt.kernel.UserContext;
 import com.mkt.task.application.TaskClaimAppService;
 import com.mkt.task.application.TaskPortalAppService;
+import com.mkt.task.application.TaskStepAppService;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskCardView;
+import com.mkt.task.response.TaskClickResponse;
 import com.mkt.task.response.TaskDetailResponse;
 import com.mkt.task.response.TaskStartResponse;
 import com.mkt.task.support.TaskErrorCodes;
@@ -33,16 +35,19 @@ public class TaskPortalController {
 
     private final TaskPortalAppService portal;
     private final TaskClaimAppService claims;
+    private final TaskStepAppService steps;
     private final SlidingWindowRateLimiter limiter;
     private final TaskSettings settings;
 
     public TaskPortalController(
             TaskPortalAppService portal,
             TaskClaimAppService claims,
+            TaskStepAppService steps,
             ObjectProvider<SlidingWindowRateLimiter> limiter,
             TaskSettings settings) {
         this.portal = portal;
         this.claims = claims;
+        this.steps = steps;
         this.limiter = limiter.getIfAvailable();
         this.settings = settings;
     }
@@ -93,5 +98,19 @@ public class TaskPortalController {
         String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
         String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
         return Result.ok(claims.start(taskId, userId, ip, device, platform));
+    }
+
+    @PostMapping("/instances/{instanceId}/steps/{stepCode}/click")
+    @Operation(summary = "完成点击步骤")
+    public Result<TaskClickResponse> click(
+            @PathVariable long instanceId,
+            @PathVariable String stepCode,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
+            @RequestHeader(value = "X-Client-Platform", required = false) String platform,
+            HttpServletRequest request) {
+        long userId = UserContext.require().userId();
+        String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
+        String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
+        return Result.ok(steps.click(instanceId, stepCode, userId, ip, device, platform));
     }
 }

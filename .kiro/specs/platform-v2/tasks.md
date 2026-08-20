@@ -475,12 +475,12 @@ _测试：§7.3 R13.1–R13.4、R5.1、§7.4 C-1_
 
 ### 任务 29：步骤引擎（编组 F）
 
-- [ ] 四入口前置检查 + 完成 CAS + 级联（含 REWARD 三分支）
-- [ ] 已完成步骤重复 click/callback → 200 幂等；乱序/INACTIVE → 400 `state-mismatch`；progress 重试耗尽 → 400 `task.progress.processing`
-- [ ] REWARD 单测用 `RewardPort` 测试替身；真实现在任务 40 闭环
-- [ ] 进度去重表 `(instance, step, reportId)` 唯一约束同事务
-- [ ] 调度 7 `sched:progress-clean`（7 天前，分批 5000）
-- [ ] 发出 `task.step.complete` / `task.instance.complete`
+- [x] 四入口前置检查 + 完成 CAS + 级联（含 REWARD 三分支）
+- [x] 已完成步骤重复 click/callback → 200 幂等；乱序/INACTIVE → 400 `state-mismatch`；progress 重试耗尽 → 400 `task.progress.processing`
+- [x] REWARD 单测用 `RewardPort` 测试替身；真实现在任务 40 闭环
+- [x] 进度去重表 `(instance, step, reportId)` 唯一约束同事务
+- [x] 调度 7 `sched:progress-clean`（7 天前，分批 5000）
+- [x] 发出 `task.step.complete` / `task.instance.complete`
 
 _需求：R14_
 _设计：design §3.3.7–8、§4.8、§4.9、§5.1、§5.2_

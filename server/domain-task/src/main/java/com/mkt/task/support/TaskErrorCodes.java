@@ -23,7 +23,15 @@ public enum TaskErrorCodes implements ErrorCode {
     CLAIM_DAILY_LIMIT("task.claim.daily-limit", 400, "今日领取次数已达上限"),
     CLAIM_RATE_LIMITED("task.claim.rate-limited", 429, "操作过于频繁，请稍后重试"),
     RISK_BLOCKED_GENERIC("risk.blocked.generic", 403, "暂时无法参与"),
-    ACCOUNT_DISABLED("auth.account.disabled", 403, "账号已停用");
+    ACCOUNT_DISABLED("auth.account.disabled", 403, "账号已停用"),
+    STEP_STATE_MISMATCH("task.step.state-mismatch", 400, "步骤状态不符"),
+    STEP_PROCESSING("task.step.processing", 400, "处理中，请稍后重试"),
+    STEP_NOT_FOUND("task.step.not-found", 404, "步骤不存在"),
+    PROGRESS_PROCESSING("task.progress.processing", 400, "处理中，请稍后重试"),
+    INSTANCE_NOT_FOUND("task.instance.not-found", 404, "任务实例不存在"),
+    INSTANCE_FROZEN("task.instance.frozen", 403, "账号受限"),
+    INSTANCE_EXPIRED("task.instance.expired", 400, "任务已过期"),
+    ACCOUNT_RESTRICTED("risk.blocked.account-restricted", 400, "账号受限");
 
     private final String code;
     private final int httpStatus;

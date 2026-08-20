@@ -6,6 +6,7 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskSubject;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.event.EventCodes;
@@ -73,6 +74,7 @@ public class TaskClaimAppService {
             ObjectProvider<UserAttributePort> users,
             ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<EventPublisher> events,
+            ObjectProvider<RewardPort> rewards,
             Clock clock,
             TaskSettings settings) {
         this(
@@ -84,6 +86,7 @@ public class TaskClaimAppService {
                 users.getIfAvailable(),
                 risk.getIfAvailable(),
                 events.getIfAvailable(),
+                rewards.getIfAvailable(),
                 clock,
                 settings);
     }
@@ -99,6 +102,21 @@ public class TaskClaimAppService {
             EventPublisher events,
             Clock clock,
             TaskSettings settings) {
+        this(definitions, snapshots, instances, crowds, mutexGroups, users, risk, events, null, clock, settings);
+    }
+
+    public TaskClaimAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskMutexGroupStore mutexGroups,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            EventPublisher events,
+            RewardPort rewards,
+            Clock clock,
+            TaskSettings settings) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -109,7 +127,7 @@ public class TaskClaimAppService {
         this.events = events;
         this.clock = clock;
         this.settings = settings;
-        this.enter = new ClaimEnterEngine(instances, events, clock, settings);
+        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewards);
     }
 
     @Transactional

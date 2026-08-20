@@ -102,4 +102,34 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
     public int completeStep(long id, LocalDateTime completedAt) {
         return steps.complete(id, completedAt);
     }
+
+    @Override
+    public TaskInstanceStepEntity getStep(long instanceId, String stepCode) {
+        return steps.selectByInstanceAndCode(instanceId, stepCode);
+    }
+
+    @Override
+    public TaskInstanceStepEntity getStepById(long id) {
+        return steps.selectById(id);
+    }
+
+    @Override
+    public int completeStepCas(long id, int version, LocalDateTime completedAt, Integer progressCurrent) {
+        return steps.completeCas(id, version, completedAt, progressCurrent);
+    }
+
+    @Override
+    public int skipStepCas(long id, int version, LocalDateTime completedAt, String skipReason) {
+        return steps.skipCas(id, version, completedAt, skipReason);
+    }
+
+    @Override
+    public int addProgressCas(long id, int version, int progressCurrent) {
+        return steps.addProgressCas(id, version, progressCurrent);
+    }
+
+    @Override
+    public int updateLastBizNo(long id, String lastBizNo) {
+        return steps.updateLastBizNo(id, lastBizNo);
+    }
 }

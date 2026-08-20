@@ -15,6 +15,12 @@
         ORDER BY seq ASC, id ASC
     </select>
 
+    <select id="selectByInstanceAndCode" resultType="com.mkt.task.entity.TaskInstanceStepEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance_step
+        WHERE instance_id = #{instanceId} AND step_code = #{stepCode}
+    </select>
+
     <update id="activate">
         UPDATE task_instance_step
         SET status = 'ACTIVE',
@@ -28,5 +34,38 @@
             completed_at = #{completedAt},
             version = version + 1
         WHERE id = #{id} AND status = 'ACTIVE'
+    </update>
+
+    <update id="completeCas">
+        UPDATE task_instance_step
+        SET status = 'COMPLETED',
+            completed_at = #{completedAt},
+            version = version + 1
+            <if test="progressCurrent != null">
+                , progress_current = #{progressCurrent}
+            </if>
+        WHERE id = #{id} AND version = #{version} AND status = 'ACTIVE'
+    </update>
+
+    <update id="skipCas">
+        UPDATE task_instance_step
+        SET status = 'SKIPPED',
+            skip_reason = #{skipReason},
+            completed_at = #{completedAt},
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status = 'ACTIVE'
+    </update>
+
+    <update id="addProgressCas">
+        UPDATE task_instance_step
+        SET progress_current = #{progressCurrent},
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status = 'ACTIVE'
+    </update>
+
+    <update id="updateLastBizNo">
+        UPDATE task_instance_step
+        SET last_biz_no = #{lastBizNo}
+        WHERE id = #{id}
     </update>
 </mapper>

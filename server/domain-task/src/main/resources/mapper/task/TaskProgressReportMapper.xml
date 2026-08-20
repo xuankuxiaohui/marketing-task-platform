@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskProgressReportMapper">
+
+    <sql id="cols">
+        id, instance_id, step_code, report_id, value, created_at
+    </sql>
+
+    <select id="selectByDedup" resultType="com.mkt.task.entity.TaskProgressReportEntity">
+        SELECT <include refid="cols"/>
+        FROM task_progress_report
+        WHERE instance_id = #{instanceId} AND step_code = #{stepCode} AND report_id = #{reportId}
+    </select>
+
+    <delete id="deleteBefore">
+        DELETE FROM task_progress_report
+        WHERE created_at &lt; #{cutoff}
+        LIMIT #{limit}
+    </delete>
+</mapper>
