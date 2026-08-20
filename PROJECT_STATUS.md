@@ -23,9 +23,10 @@
 - 附录 A 窗口/日限/消耗走 `SigninSettings` 默认值（7 / 1 / 100），与 V1 `sys_config` 种子同文
 - C-7 失败者允许 `reward.claim.conflict` 或幂等 GRANTED；`PrizeClaimExactlyOnceIT` 以 MySQL `status='GRANTED'` 恰 1 行为准
 - 领取过期兜底：`claim()` `noRollbackFor=BusinessException`，EXPIRED 翻转与 `CLAIM_EXPIRED` 同路径提交（R19.3）。IT 不把 persist-then-throw 包进 `TransactionTemplate`（同 `LoginLockCommitIT`）
-- Compose bake 按 **context** 解析 dockerfile。三处 app build context 改为仓库根，`dockerfile: deploy/docker/Dockerfile`
 - 名单写路径要 `UserContext` 操作者（`RiskOperator.requireUserId`）。`RiskRejectIdempotentIT` 与 `ListExpiryIT` / `ListConcurrentDecisionIT` / `CaseHandleAuditIT` 同模式；`RiskITSupport.start` 也落操作者，避免后续 IT 漏设
+- Compose bake 按 **context** 解析 dockerfile。三处 app build context 改为仓库根，`dockerfile: deploy/docker/Dockerfile`
 - 容器默认堆是 cgroup 的 25%。1G limit 下 admin-app 启动即死，compose 在 ~15s 报 unhealthy。镜像/编排设 `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0`，app limit 1536M；JRE 装 fontconfig + fonts-dejavu-core（EasyCaptcha）；`HOME=/app`。smoke/e2e 失败 dump admin-app 日志
+- JDBC `characterEncoding` 必须是 Java 字符集 `UTF-8`。Connector/J 不认 `utf8mb4`（Flyway `SQLException: Unsupported character encoding 'utf8mb4'`）。库/表/mysqld 仍用 utf8mb4。compose 注入 `MKT_DATASOURCE_URL`，admin/portal 默认 URL 与 `.env.example` 同步改
 
 ## 改过的核心文件
 
@@ -37,7 +38,9 @@
 - `server/domain-reward` `PrizeClaimExactlyOnceIT` / `PrizeExpireIT` / `ClaimAppServiceTest`
 - `server/domain-risk` `RiskRejectIdempotentIT` / `RiskITSupport`
 - `deploy/docker-compose.yml`、`deploy/docker/Dockerfile`、`.dockerignore`
+- `deploy/.env.example`（JDBC `characterEncoding=UTF-8`）
 - `ci/deploy-smoke.sh`、`ci/e2e-compose.sh`
+- `server/admin-app` / `portal-app` `application.yml`（JDBC URL）
 - `server/admin-app` `DeployComposeTest`
 - `server/pom.xml`、`admin-app/pom.xml`、`portal-app/pom.xml`
 - `web/apps/admin/src/views/signin/**`、`web/apps/client/src/views/signin/**`
@@ -46,14 +49,14 @@
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test` 本机 exit 0（含 domain-signin 单测 / jqwik、domain-reward jacoco、ArchUnit RL-02、DeployComposeTest）
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R13.4 操作者上下文、R31.1 compose 启动
-- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；无 Docker，admin-app 崩溃栈等 CI dump
+- 命令与结果：`cd server && mvn -q -DskipITs test` 此前本机 exit 0；本轮只跑 `DeployComposeTest` 锁 JDBC UTF-8
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R13.4 操作者上下文、R31.1 compose 启动 / JDBC 编码
+- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；无 Docker，admin-app Flyway 栈等 CI dump
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
-- PR #60 `ccc0902` 后新失败：`RiskRejectIdempotentIT` `lists.add` 无 `UserContext`（reward IT 修好后 fail-fast 才跑到 domain-risk）；e2e/deploy-smoke bake 已过，`mkt-admin-app-1` 启动后 ~15s unhealthy（无容器日志）。本会话按同模式补操作者，并修堆/字体/失败 dump
+- PR #60 `ce32356` 后 e2e/deploy-smoke：`mkt-admin-app-1` Flyway `SQLException: Unsupported character encoding 'utf8mb4'`（JDBC `characterEncoding` 不能用 MySQL 字符集名）。本会话扫 JDBC/datasource URL 与 compose env，改为 `UTF-8`
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
@@ -99,6 +102,7 @@
 - 不要跑 P1 C-10 / C-11（归 45 / 48）
 - 不要建 P1 域 activity / ad
 - 不要把 `SIGNIN_DAY` sourceId 改成仅 recordId（断链重攒会重复发放）
+- 不要把 JDBC `characterEncoding` 写成 `utf8mb4`（库/表字符集仍是 utf8mb4）
 
 ## 下一步开发顺序（最多 3 步）
 

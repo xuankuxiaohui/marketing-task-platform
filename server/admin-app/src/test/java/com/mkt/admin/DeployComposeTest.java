@@ -32,6 +32,8 @@ class DeployComposeTest {
         assertThat(compose).contains("limits:");
         assertThat(compose).contains("JAVA_TOOL_OPTIONS");
         assertThat(compose).contains("MaxRAMPercentage");
+        assertThat(compose).contains("MKT_DATASOURCE_URL: ${MKT_DATASOURCE_URL}");
+        assertThat(compose).doesNotContain("characterEncoding=utf8mb4");
         String dockerfile = read("deploy/docker/Dockerfile");
         assertThat(dockerfile).contains("fontconfig");
         assertThat(dockerfile).contains("fonts-dejavu-core");
@@ -90,6 +92,8 @@ class DeployComposeTest {
         assertThat(example).contains("MKT_INTERNAL_APP_AES_KEY=");
         assertThat(example).contains("MKT_INIT_ADMIN_PASSWORD=");
         assertThat(example).doesNotContain("192.168.88.149");
+        assertThat(example).contains("characterEncoding=UTF-8");
+        assertThat(example).doesNotContain("characterEncoding=utf8mb4");
         for (String line : example.split("\n")) {
             if (line.isBlank() || line.startsWith("#") || !line.contains("=")) {
                 continue;
@@ -111,8 +115,12 @@ class DeployComposeTest {
         assertThat(adminYml).contains("MKT_FLYWAY_USER");
         assertThat(adminYml).contains("probes:");
         assertThat(adminYml).contains("include: health,prometheus");
+        assertThat(adminYml).contains("characterEncoding=UTF-8");
+        assertThat(adminYml).doesNotContain("characterEncoding=utf8mb4");
         assertThat(portalYml).contains("enabled: ${MKT_FLYWAY_ENABLED:false}");
         assertThat(portalYml).contains("include: health,prometheus");
+        assertThat(portalYml).contains("characterEncoding=UTF-8");
+        assertThat(portalYml).doesNotContain("characterEncoding=utf8mb4");
         assertThat(Files.isRegularFile(repoRoot().resolve("deploy/R31-go-live-checklist.md"))).isTrue();
         assertThat(Files.isRegularFile(repoRoot().resolve("deploy/backup/backup.sh"))).isTrue();
         assertThat(Files.isRegularFile(repoRoot().resolve("deploy/backup/restore.sh"))).isTrue();

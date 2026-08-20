@@ -7,7 +7,7 @@ spring:
     user: ${MKT_FLYWAY_USER:${MKT_DATASOURCE_USERNAME:mkt}}
     password: ${MKT_FLYWAY_PASSWORD:${MKT_DATASOURCE_PASSWORD:}}
   datasource:
-    url: ${MKT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/mkt_platform?characterEncoding=utf8mb4&connectionTimeZone=UTC}
+    url: ${MKT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/mkt_platform?characterEncoding=UTF-8&connectionTimeZone=UTC}
     username: ${MKT_DATASOURCE_USERNAME:mkt}
     password: ${MKT_DATASOURCE_PASSWORD:}
 
