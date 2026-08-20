@@ -1,8 +1,8 @@
 ---
 name: task-execute
 description: >
-  0→1 施工循环：每题一个 task/<n>-<slug> 分支，从上一题 tip（已合则从 origin/master）开出。
-  禁止合/推/强推 master。编组 F 做到任务 31 停。任务 29 起一题一分支。
+  0→1 施工循环：组内每题一个 task/<n>-<slug> 分支。一组做完写交接、提交、清会话，
+  再执行本技能开下一组（先建新分支）。禁止合/推/强推 master。不要等人说继续。
   Use when implementing the next platform-v2 task or continuing from PROJECT_STATUS.md.
 ---
 
@@ -14,38 +14,56 @@ description: >
 
 **禁止 merge master。禁止 push master。禁止 force-push master。** 人类点名合入除外。
 
-## 当前链（以 git 为准）
+交接文档就是当前分支的 `PROJECT_STATUS.md`（整页重写，不要另起一份）。
 
-- 唯一长期分支是 `master`。任务 22–28 已合（#36 → `d7a02eb`）。
-- **任务 29 起：一题一个新分支 `task/<n>-<slug>`。**
-- 上一题未合：从上一题分支 tip 开（叠链，方便带上未合代码）。
-- 上一题已合 master：从 `origin/master` 开，不要复用旧分支接着写。
-- 不要回到 `task/27-*` / `task/28-*` 上写 29+。不要为 22–26 再推旧 PR。
-- 编组 F 最后一题是任务 31。做完 31 停，等「继续」。不要做 32+。
+## 编组（tasks.md）
 
-## 循环
+| 编组 | 任务 | 停组后下一组 |
+|------|------|--------------|
+| A Spike | 1–8 | B |
+| B 骨架 | 9–11 | C |
+| C 契约/库/基建 | 12–16 | D |
+| D 风控+埋点 | 17–20 | E |
+| E identity | 21–25 | F |
+| F task | 26–31 | G |
+| G reward+points | 32–35 | H |
+| H 双前端 | 36–39 | I |
+| I 闭环/E2E | 见 tasks.md | J |
+| J 其余 | 见 tasks.md | 勾完停 |
 
-1. 新开本任务分支 `task/<n>-<slug>`（基线见上）。只做 `tasks.md` 该节未勾选项。
-2. 实现后跑：`cd server && mvn -q -DskipITs test`。红了就修到绿。禁止 H2 / Embedded Redis 假绿。
-3. 勾选 `tasks.md` 该节，整页重写 `PROJECT_STATUS.md`（当前题、分支名、已叠哪些、未合 master）。
-4. commit + push 本任务分支。开 **本任务** 的 PR 到 master（不合）。不要把下一题写进本分支。
-5. 立刻开下一题的新分支，叠在本任务 tip 上（本任务未合时）。
-6. 禁止 merge / push / force-push `master`。
-7. 不要每题做两轮代码评审。测试/运维只开 GitHub issue，不修、不挡下一题。编译/单测红必须修到绿。
-8. 做到任务 31 停。`PROJECT_STATUS` 写成「编组 F 待验收」。不要做 32+。
-9. 会话/grok 上下文 ≥260k：清会话再执行本技能。
+## 组内：一题一分支
+
+1. 新开 `task/<n>-<slug>`。上一题未合：从上一题 tip 开。上一题已合 master：从 `origin/master` 开。
+2. 只做本节未勾选项。实现后：`cd server && mvn -q -DskipITs test`，红了修到绿。禁止 H2 / Embedded Redis 假绿。
+3. 勾选 `tasks.md` 该节，整页重写 `PROJECT_STATUS.md`（当前题、分支、已叠哪些、未合 master）。
+4. commit + push 本任务分支。开 **本任务** PR 到 master（不合）。不要把下一题写进本分支。
+5. 组内还有下一题：立刻从本 tip 开下一题新分支，继续做。不要等人。
+6. 不要每题做两轮代码评审。测试/运维只开 GitHub issue，不修、不挡下一题。编译/单测红必须修。
+7. 禁止 merge / push / force-push `master`。
+
+## 一组做完：交接 → 提交 → 清上下文 → 再跑本技能
+
+当前编组最后一题勾完并 push/PR 之后，**不要停等「继续」**：
+
+1. **更新交接文档**：整页重写 `PROJECT_STATUS.md`：阶段写成「编组 X 待验收 / 下一组 Y 第 N 题」；写清已勾任务、链尖分支、未合 master 的 PR、硬停止、下一组第一题。
+2. **提交代码**：把交接文档和本组收尾一并 commit + push 当前链尖。
+3. **清空上下文**：不要 `--continue`。关掉本 grok 会话，新开会话。
+4. **重新执行本技能**：新会话第一件事读本文件 + `PROJECT_STATUS.md`。
+5. **下一组开发前创建新分支**：`task/<下一组第一题号>-<slug>`，从本组链尖 tip 开（本组未合时）。然后做下一组第一题，组内循环回到上面。
+
+一直做到 `tasks.md` 勾完。会话/grok 上下文 ≥260k 也按第 3–4 步清会话再执行本技能（即使还在组内）。
 
 聊天一行摘要：当前任务号、分支、单测绿/红、停没停。
 
-## 开工顺序（现在）
+## 现在（以 git 为准）
 
-- 29：`task/29-step-engine`，从 `origin/master`（已含 28）。
-- 30：`task/30-internal-callback`，从 29 tip。
-- 31：`task/31-instance-admin`，从 30 tip。然后停。
+- master 含 22–28（#36）。29–32 在未合链上（#38–#42）。
+- 当前编组 **G（32–35）**。32 已勾。组内继续 33→34→35（各开新分支）。
+- 35 做完：交接写成编组 G 待验收 / 下一组 H 任务 36，commit，清会话，再跑本技能，开 `task/36-*` 做编组 H。不要在 35 上停等。
 
 ## 动手前读什么
 
-读当前分支 STATUS、tasks 本节、design 锚点、矩阵该任务行、`AGENTS.md`。写路径/鉴权/审计/会话/evict **只读 05-security**。允许 commit / push / 开本任务 PR。**禁止合 master。**
+读当前分支 STATUS（交接）、tasks 本节、design 锚点、矩阵该任务行、`AGENTS.md`。写路径/鉴权/审计/会话/evict **只读 05-security**。允许 commit / push / 开本任务 PR。**禁止合 master。**
 
 本机 Linux VM：
 
@@ -60,7 +78,7 @@ git author：`xuankuxiaohui` + GitHub `users.noreply`。禁止写入带手机号
 
 ## 一次只做一个任务
 
-只实现本节勾选项。做完再开下一题的新分支。
+只实现本节勾选项。组内做完立刻下一题新分支。组界按「一组做完」五步。
 
 ## 嘴硬验收
 
@@ -68,4 +86,4 @@ git author：`xuankuxiaohui` + GitHub `users.noreply`。禁止写入带手机号
 
 ## 【卡点打断】
 
-规格互斥、前置缺失、连续两轮测试失败且根因不明、密钥将进 git、准备削弱断言。编组 F 做完 31 必须停。
+规格互斥、前置缺失、连续两轮测试失败且根因不明、密钥将进 git、准备削弱断言。不要因为「没人点头合 master」或「编组做完」而停下一组。
