@@ -173,6 +173,29 @@ public class TaskStepAppService {
         return row;
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void resumeAfterGrant(String sourceId) {
+        if (sourceId == null || sourceId.isBlank()) {
+            return;
+        }
+        long stepId;
+        try {
+            stepId = Long.parseLong(sourceId.trim());
+        } catch (NumberFormatException ex) {
+            return;
+        }
+        TaskInstanceStepEntity step = instances.getStepById(stepId);
+        if (step == null) {
+            return;
+        }
+        TaskInstanceEntity instance = instances.getById(step.getInstanceId());
+        if (instance == null) {
+            return;
+        }
+        engine.resumeFromReward(
+                instance, step, snapshotOf(instance), attrs(instance.getUserId()), crowds(instance.getUserId()));
+    }
+
     private TaskInstanceStepEntity requireStep(long instanceId, String stepCode) {
         if (stepCode == null || stepCode.isBlank()) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);

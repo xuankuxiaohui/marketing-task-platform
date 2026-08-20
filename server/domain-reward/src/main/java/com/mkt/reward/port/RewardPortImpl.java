@@ -6,22 +6,25 @@ import com.mkt.contract.GrantSource;
 import com.mkt.contract.PrizeSummary;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserRewardSummary;
+import com.mkt.reward.application.GrantAppService;
 import com.mkt.reward.application.PrizeStore;
 import com.mkt.reward.domain.PrizeStatuses;
 import com.mkt.reward.entity.PrizeEntity;
 
-/** RewardPort: prizeEnabled in task 32; grant/userSummary in 33/35. */
+/** RewardPort: grant in task 33; userSummary remains task 35. */
 public class RewardPortImpl implements RewardPort {
 
+    private final GrantAppService grants;
     private final PrizeStore prizes;
 
-    public RewardPortImpl(PrizeStore prizes) {
+    public RewardPortImpl(GrantAppService grants, PrizeStore prizes) {
+        this.grants = grants;
         this.prizes = prizes;
     }
 
     @Override
     public GrantResult grant(long prizeId, long userId, GrantSource grantSource, String sourceId, GrantContext ctx) {
-        throw new UnsupportedOperationException("RewardPort.grant is task 33");
+        return grants.grant(prizeId, userId, grantSource, sourceId, ctx);
     }
 
     @Override

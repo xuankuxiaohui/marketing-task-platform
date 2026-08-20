@@ -316,6 +316,30 @@ public final class StepEngine {
         }
     }
 
+    /**
+     * Retry/scheduler path: CAS-complete an ACTIVE REWARD step and continue cascade.
+     * Terminal instances keep the grant but are not revived (R14.10).
+     */
+    public void resumeFromReward(
+            TaskInstanceEntity instance,
+            TaskInstanceStepEntity step,
+            SnapshotContent snapshot,
+            UserAttributes attrs,
+            CrowdResolver crowds) {
+        if (instance == null || step == null) {
+            return;
+        }
+        if (InstanceStatuses.terminal(instance.getStatus())) {
+            return;
+        }
+        if (!StepStatuses.ACTIVE.equals(step.getStatus())) {
+            return;
+        }
+        Instant now = clock.instant();
+        holdComplete(instance, step, now, null);
+        cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>());
+    }
+
     private boolean grantReward(
             TaskInstanceEntity instance,
             TaskInstanceStepEntity step,

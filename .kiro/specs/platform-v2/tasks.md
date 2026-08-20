@@ -524,12 +524,12 @@ _测试：§7.3 R17.1–R17.3、§7.4 C-4/C-5_
 
 ### 任务 33：发放引擎（编组 G）
 
-- [ ] 实现 `RewardPort.grant`；领取七态全量迁移表
-- [ ] 规则链首步：`UserAttributePort.attributes` 非 ACTIVE → `USER_INVALID`；地域/等级/标签同一份属性，禁止直查用户表
-- [ ] 进入 GRANTED 时 `startFulfillment`：INSTANT 同事务到账（POINTS 调任务 35 的 `PointsPort.earn`）；ASYNC 记 SENDING；写入 costFen/faceFen/recon_status
-- [ ] 可重试失败：REQUIRES_NEW 先留痕（含 `reward.grant.failed` Outbox）再回滚主事务；`next_retry_at`；RETRY_PENDING 不短路
-- [ ] 成功后按 sourceId 反查步骤 → CAS 完成 → 续级联；终态实例权益保留不复活
-- [ ] 规则链尾接 `RiskCheckPort`；调度 3 + retry / manual-grant 端点
+- [x] 实现 `RewardPort.grant`；领取七态全量迁移表
+- [x] 规则链首步：`UserAttributePort.attributes` 非 ACTIVE → `USER_INVALID`；地域/等级/标签同一份属性，禁止直查用户表
+- [x] 进入 GRANTED 时 `startFulfillment`：INSTANT 同事务到账（POINTS 调任务 35 的 `PointsPort.earn`）；ASYNC 记 SENDING；写入 costFen/faceFen/recon_status
+- [x] 可重试失败：REQUIRES_NEW 先留痕（含 `reward.grant.failed` Outbox）再回滚主事务；`next_retry_at`；RETRY_PENDING 不短路
+- [x] 成功后按 sourceId 反查步骤 → CAS 完成 → 续级联；终态实例权益保留不复活
+- [x] 规则链尾接 `RiskCheckPort`；调度 3 + retry / manual-grant 端点
 
 _需求：R18_
 _设计：design §2.2.3、§3.4.2、§4.5、§5.6、§6.7-3、D-12_

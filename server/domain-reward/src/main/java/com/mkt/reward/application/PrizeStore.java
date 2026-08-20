@@ -7,6 +7,9 @@ public interface PrizeStore {
 
     PrizeEntity getById(long id);
 
+    /** Includes logically deleted rows so grant can emit PRIZE_DELETED. */
+    PrizeEntity getByIdIncludingDeleted(long id);
+
     PrizeEntity getByCode(String code);
 
     int insert(PrizeEntity entity);

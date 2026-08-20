@@ -48,7 +48,7 @@
             <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Production: identity / task / reward / risk / tracking. portal-app still omits domain-reward. -->
+        <!-- Production: identity / task / reward / risk / tracking. -->
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-identity</artifactId>

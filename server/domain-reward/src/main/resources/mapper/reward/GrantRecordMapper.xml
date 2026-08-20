@@ -17,4 +17,51 @@
         WHERE id = #{id}
           AND status IN ('GRANTED', 'WON', 'CLAIMING', 'RETRY_PENDING', 'PENDING')
     </update>
+
+    <select id="selectByIdempotent" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE grant_source = #{grantSource}
+          AND source_id = #{sourceId}
+          AND prize_id = #{prizeId}
+        LIMIT 1
+    </select>
+
+    <update id="updateIfStatus">
+        UPDATE rwd_grant_record
+        SET prize_code = #{row.prizeCode},
+            category_code = #{row.categoryCode},
+            face_fen = #{row.faceFen},
+            cost_fen = #{row.costFen},
+            recon_status = #{row.reconStatus},
+            status = #{row.status},
+            fulfillment_status = #{row.fulfillmentStatus},
+            fulfillment_ref = #{row.fulfillmentRef},
+            fail_reason = #{row.failReason},
+            retry_count = #{row.retryCount},
+            next_retry_at = #{row.nextRetryAt},
+            next_fulfill_retry_at = #{row.nextFulfillRetryAt},
+            expire_at = #{row.expireAt},
+            granted_at = #{row.grantedAt},
+            fulfilled_at = #{row.fulfilledAt},
+            simulated = #{row.simulated},
+            updated_at = #{row.updatedAt}
+        WHERE id = #{row.id}
+          AND status = #{expectedStatus}
+    </update>
+
+    <update id="updateFulfillmentRef">
+        UPDATE rwd_grant_record
+        SET fulfillment_ref = #{fulfillmentRef}
+        WHERE id = #{id}
+          AND fulfillment_ref IS NULL
+    </update>
+
+    <select id="listDueRetry" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status = 'RETRY_PENDING'
+          AND next_retry_at &lt;= #{now}
+          AND (expire_at IS NULL OR expire_at &gt; #{now})
+        ORDER BY next_retry_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
 </mapper>

@@ -7,7 +7,7 @@ import com.mkt.contract.PrizeSummary;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserRewardSummary;
 
-/** Placeholder until portal-app assembles domain-reward (task 40). grant is task 33. */
+/** Placeholder when domain-reward is not on the classpath. */
 public class RewardPortStub implements RewardPort {
 
     @Override

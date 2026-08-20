@@ -21,6 +21,7 @@ public final class GrantRecordStatuses {
     public static final String FULFILL_FAILED = "FULFILL_FAILED";
 
     public static final String RECON_NONE = "NONE";
+    public static final String RECON_PENDING = "PENDING";
 
     private GrantRecordStatuses() {}
 }

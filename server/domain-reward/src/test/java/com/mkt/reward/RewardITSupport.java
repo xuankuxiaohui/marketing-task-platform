@@ -4,6 +4,21 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
+import com.mkt.contract.AccountStatus;
+import com.mkt.contract.RiskAction;
+import com.mkt.contract.RiskCheckPort;
+import com.mkt.contract.RiskScene;
+import com.mkt.contract.RiskSubject;
+import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.UserAttributePort;
+import com.mkt.contract.UserAttributes;
+import com.mkt.contract.UserRiskSummary;
+import com.mkt.infra.outbox.EventPublisher;
+import com.mkt.infra.outbox.MemoryOutboxStore;
+import com.mkt.infra.outbox.OutboxProducer;
+import com.mkt.reward.application.FulfillmentService;
+import com.mkt.reward.application.GrantAppService;
+import com.mkt.reward.application.GrantFailureLedger;
 import com.mkt.reward.application.MybatisGrantRecordStore;
 import com.mkt.reward.application.MybatisPrizeCategoryStore;
 import com.mkt.reward.application.MybatisPrizeStore;
@@ -18,6 +33,8 @@ import com.mkt.reward.mapper.GrantRecordMapper;
 import com.mkt.reward.mapper.PrizeCategoryMapper;
 import com.mkt.reward.mapper.PrizeMapper;
 import com.mkt.reward.mapper.StockLogMapper;
+import com.mkt.reward.support.RewardGrantSettings;
+import com.mkt.reward.testsupport.RecordingPointsPort;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
@@ -44,6 +61,9 @@ final class RewardITSupport implements AutoCloseable {
     final PrizeAppService prizes;
     final PrizeCategoryAppService categories;
     final PrizeStockService stock;
+    final GrantAppService grant;
+    final RecordingPointsPort points;
+    final ItRisk risk;
     final Clock clock;
 
     RewardITSupport(MySQLContainer<?> mysql) throws Exception {
@@ -73,6 +93,74 @@ final class RewardITSupport implements AutoCloseable {
         DataSourceTransactionManager txm = new DataSourceTransactionManager(dataSource);
         tx = new TransactionTemplate(txm);
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
+        EventPublisher events = new EventPublisher(new MemoryOutboxStore(clock), OutboxProducer.PORTAL);
+        RewardGrantSettings settings = new RewardGrantSettings();
+        GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, txm);
+        points = new RecordingPointsPort();
+        FulfillmentService fulfillment = new FulfillmentService(points, grants, events, clock);
+        risk = new ItRisk();
+        grant = new GrantAppService(
+                prizeStore,
+                categoryStore,
+                grants,
+                logs,
+                new ItUsers(),
+                risk,
+                events,
+                ledger,
+                fulfillment,
+                null,
+                clock);
+    }
+
+    long enablePoints(String code, int totalStock, int pointsAmount) {
+        var created = tx.execute(status -> prizes.create(new PrizeSaveCommand(
+                code,
+                code,
+                null,
+                null,
+                "POINTS",
+                Map.of("points", pointsAmount),
+                null,
+                totalStock,
+                0,
+                0,
+                null,
+                null,
+                null,
+                "AUTO",
+                null,
+                null,
+                null,
+                null)));
+        tx.executeWithoutResult(status -> prizes.enable(created.id(), new PrizeConfirmCommand(true)));
+        return created.id();
+    }
+
+    static final class ItUsers implements UserAttributePort {
+        @Override
+        public UserAttributes attributes(long userId) {
+            return new UserAttributes("GD", "user", "1", 1, java.util.List.of(), Instant.EPOCH, AccountStatus.ACTIVE);
+        }
+
+        @Override
+        public UserAttributes lockAndGet(long userId) {
+            return attributes(userId);
+        }
+    }
+
+    static final class ItRisk implements RiskCheckPort {
+        volatile boolean reject;
+
+        @Override
+        public RiskVerdict check(RiskScene scene, RiskSubject subject) {
+            return new RiskVerdict(reject ? RiskAction.REJECT : RiskAction.PASS);
+        }
+
+        @Override
+        public UserRiskSummary userSummary(long userId) {
+            return new UserRiskSummary(0L, java.util.List.of());
+        }
     }
 
     long enableAlipay(String code, int totalStock, int dailyLimit, int totalLimit, int faceFen) {

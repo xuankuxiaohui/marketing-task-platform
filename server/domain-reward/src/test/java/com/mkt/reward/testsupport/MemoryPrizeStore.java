@@ -24,6 +24,11 @@ public final class MemoryPrizeStore implements PrizeStore {
     }
 
     @Override
+    public PrizeEntity getByIdIncludingDeleted(long id) {
+        return rows.get(id);
+    }
+
+    @Override
     public PrizeEntity getByCode(String code) {
         return rows.values().stream()
                 .filter(row -> !row.deletedFlag() && code.equals(row.getCode()))

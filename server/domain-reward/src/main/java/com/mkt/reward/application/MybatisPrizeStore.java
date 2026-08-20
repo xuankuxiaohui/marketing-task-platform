@@ -24,6 +24,11 @@ public class MybatisPrizeStore implements PrizeStore {
     }
 
     @Override
+    public PrizeEntity getByIdIncludingDeleted(long id) {
+        return mapper.selectById(id);
+    }
+
+    @Override
     public PrizeEntity getByCode(String code) {
         return mapper.selectByCode(code);
     }

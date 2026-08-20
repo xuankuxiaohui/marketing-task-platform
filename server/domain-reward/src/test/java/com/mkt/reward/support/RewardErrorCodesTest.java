@@ -11,7 +11,7 @@ class RewardErrorCodesTest {
     void allCodesAreValid() {
         for (RewardErrorCodes code : RewardErrorCodes.values()) {
             assertThat(ErrorCodeFormat.isValid(code.code())).isTrue();
-            assertThat(code.httpStatus()).isEqualTo(400);
+            assertThat(code.httpStatus()).isIn(400, 403);
             assertThat(code.message()).isNotBlank();
         }
     }

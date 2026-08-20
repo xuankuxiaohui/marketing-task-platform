@@ -16,6 +16,9 @@ public final class RewardPermissions {
     public static final String PRIZE_DISABLE = "reward:prize:disable";
     public static final String PRIZE_ENABLE = "reward:prize:enable";
     public static final String PRIZE_STOCK_REPLENISH = "reward:prize:stock-replenish";
+    public static final String RECORD_QUERY = "reward:record:query";
+    public static final String RECORD_RETRY = "reward:record:retry";
+    public static final String RECORD_MANUAL_GRANT = "reward:record:manual-grant";
 
     private RewardPermissions() {}
 }

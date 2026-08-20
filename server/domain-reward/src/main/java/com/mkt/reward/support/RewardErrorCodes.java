@@ -17,7 +17,11 @@ public enum RewardErrorCodes implements ErrorCode {
     PRIZE_REFERENCED_BY_SNAPSHOT("reward.prize.referenced-by-snapshot", 400, "奖品已被在线版本快照引用，不可删除"),
     PRIZE_DISABLED("reward.prize.disabled", 400, "奖品已停用"),
     STOCK_INSUFFICIENT("reward.stock.insufficient", 400, "库存不足"),
-    CLAIM_LIMIT_EXCEEDED("reward.claim.limit-exceeded", 400, "领取次数已达上限");
+    CLAIM_LIMIT_EXCEEDED("reward.claim.limit-exceeded", 400, "领取次数已达上限"),
+    GRANT_NOT_RETRYABLE("reward.grant.not-retryable", 400, "该发放记录不可重试"),
+    GRANT_COMBO_INVALID("reward.grant.combo-invalid", 400, "不满足领取条件"),
+    RISK_BLOCKED_GENERIC("risk.blocked.generic", 403, "暂时无法参与"),
+    RISK_BLOCKED_ACCOUNT("risk.blocked.account-restricted", 400, "账号受限");
 
     private final String code;
     private final int httpStatus;

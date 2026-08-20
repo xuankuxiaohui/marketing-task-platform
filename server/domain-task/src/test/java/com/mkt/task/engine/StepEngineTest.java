@@ -267,6 +267,31 @@ class StepEngineTest {
     }
 
     @Test
+    void resumeFromRewardCompletesActiveStep() {
+        TaskInstanceEntity instance = insertInstance();
+        rewards.behavior = MemoryRewardPort.Behavior.RETRYABLE;
+        engine.enter(instance, singleReward(), attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "r");
+        assertThat(step.getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        engine.resumeFromReward(instance, step, singleReward(), attrs(), null);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+    }
+
+    @Test
+    void resumeFromRewardDoesNotReviveExpiredInstance() {
+        TaskInstanceEntity instance = insertInstance();
+        rewards.behavior = MemoryRewardPort.Behavior.RETRYABLE;
+        engine.enter(instance, singleReward(), attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "r");
+        instance.setStatus(InstanceStatuses.EXPIRED);
+        store.rows.put(instance.getId(), instance);
+        engine.resumeFromReward(instance, step, singleReward(), attrs(), null);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.EXPIRED);
+    }
+
+    @Test
     void rewardPermanentSkipsAndCompletesInstance() {
         TaskInstanceEntity instance = insertInstance();
         rewards.behavior = MemoryRewardPort.Behavior.PERMANENT;
