@@ -6,12 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
+import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.command.PublishCommand;
 import com.mkt.task.command.ScheduleCommand;
 import com.mkt.task.command.TaskDefinitionSaveCommand;
 import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.command.TaskTransitionCommand;
 import com.mkt.task.response.BatchItemResponse;
+import com.mkt.task.response.PublishCheckError;
 import com.mkt.task.response.PublishCheckResponse;
 import com.mkt.task.response.PublishResponse;
 import com.mkt.task.support.AlertWebhook;
@@ -23,11 +25,13 @@ import com.mkt.task.testsupport.MemoryTaskCrowdStore;
 import com.mkt.task.testsupport.MemoryTaskDefinitionStore;
 import com.mkt.task.testsupport.MemoryTaskMutexGroupStore;
 import com.mkt.task.testsupport.MemoryTaskVersionSnapshotStore;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -273,6 +277,31 @@ class TaskPublishAppServiceTest {
         assertThat(definitions.getById(fail).getVersion()).isZero();
         assertThat(snapshots.listByTaskId(fail)).isEmpty();
         assertThat(audits.reasons).isNotEmpty();
+        assertThat(audits.checkErrors).isNotEmpty();
+        assertThat(audits.checkErrors.get(0)).extracting(e -> e.item()).contains("reachability");
+        assertThat(audits.checkErrors.get(0))
+                .extracting(e -> e.reason())
+                .contains("存在不可达或死锁步骤");
+    }
+
+    @Test
+    void scheduleFailureViewReadsCheckErrorsFromAuditSummary() {
+        String summary = JsonUtil.toJson(Map.of(
+                "taskId",
+                9,
+                "code",
+                "due_bad",
+                "reason",
+                "发布校验失败",
+                "checkErrors",
+                List.of(Map.of("item", "reachability", "reason", "存在不可达或死锁步骤"))));
+        var view = TaskPublishAppService.failureView(
+                1L, summary, "发布校验失败", Timestamp.from(Instant.parse("2026-08-19T00:00:00Z")));
+        assertThat(view.taskId()).isEqualTo(9L);
+        assertThat(view.taskCode()).isEqualTo("due_bad");
+        assertThat(view.reason()).contains("reachability");
+        assertThat(view.reason()).contains("存在不可达或死锁步骤");
+        assertThat(view.reason()).isNotEqualTo("发布校验失败");
     }
 
     @Test
@@ -365,6 +394,7 @@ class TaskPublishAppServiceTest {
 
     private static final class CapturingAudit extends TaskAuditAppender {
         private final List<String> reasons = new ArrayList<>();
+        private final List<List<PublishCheckError>> checkErrors = new ArrayList<>();
 
         private CapturingAudit() {
             super(null);
@@ -372,7 +402,14 @@ class TaskPublishAppServiceTest {
 
         @Override
         public void schedulePublishFailure(long taskId, String code, String reason) {
+            schedulePublishFailure(taskId, code, reason, List.of());
+        }
+
+        @Override
+        public void schedulePublishFailure(
+                long taskId, String code, String reason, List<PublishCheckError> errors) {
             reasons.add(taskId + ":" + reason);
+            checkErrors.add(errors == null ? List.of() : List.copyOf(errors));
         }
     }
 }

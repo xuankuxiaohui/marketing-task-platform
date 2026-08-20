@@ -311,7 +311,7 @@ public class TaskPublishAppService {
                 ORDER BY created_at DESC, id DESC
                 LIMIT ? OFFSET ?
                 """,
-                (rs, rowNum) -> toFailureView(
+                (rs, rowNum) -> failureView(
                         rs.getLong("id"),
                         rs.getString("request_summary"),
                         rs.getString("error_message"),
@@ -332,10 +332,13 @@ public class TaskPublishAppService {
                 runInTx(() -> publishDue(row.getId()));
                 published++;
             } catch (BusinessException ex) {
-                recordScheduleFailure(row, ex.getMessage());
+                recordScheduleFailure(row, ex.getMessage(), checkErrorsOf(ex.data()));
             } catch (RuntimeException ex) {
                 log.error("sched:publish-scan failed, taskId={}", row.getId(), ex);
-                recordScheduleFailure(row, ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage());
+                recordScheduleFailure(
+                        row,
+                        ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage(),
+                        List.of());
             }
         }
         return published;
@@ -498,13 +501,16 @@ public class TaskPublishAppService {
         return out;
     }
 
-    private void recordScheduleFailure(TaskDefinitionEntity row, String reason) {
-        String message = reason == null || reason.isBlank() ? TaskErrorCodes.PUBLISH_VALIDATE_FAILED.message() : reason;
+    private void recordScheduleFailure(
+            TaskDefinitionEntity row, String reason, List<PublishCheckError> checkErrors) {
+        String message = reason == null || reason.isBlank()
+                ? TaskErrorCodes.PUBLISH_VALIDATE_FAILED.message()
+                : reason;
         try {
             runInTx(() -> {
                 TaskAuditAppender appender = audits();
                 if (appender != null) {
-                    appender.schedulePublishFailure(row.getId(), row.getCode(), message);
+                    appender.schedulePublishFailure(row.getId(), row.getCode(), message, checkErrors);
                 }
             });
         } catch (RuntimeException ex) {
@@ -512,8 +518,22 @@ public class TaskPublishAppService {
         }
         AlertWebhook webhook = alerts();
         if (webhook != null) {
-            webhook.notifySchedulePublishFailure(row.getId(), row.getCode(), message);
+            webhook.notifySchedulePublishFailure(row.getId(), row.getCode(), failureAuditText(message, checkErrors));
         }
+    }
+
+    private static List<PublishCheckError> checkErrorsOf(Object data) {
+        if (data instanceof PublishCheckResponse check && check.checkErrors() != null) {
+            return List.copyOf(check.checkErrors());
+        }
+        return List.of();
+    }
+
+    private static String failureAuditText(String reason, List<PublishCheckError> checkErrors) {
+        if (checkErrors != null && !checkErrors.isEmpty()) {
+            return JsonUtil.toJson(checkErrors);
+        }
+        return reason;
     }
 
     private void runInTx(Runnable action) {
@@ -560,9 +580,10 @@ public class TaskPublishAppService {
         return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
     }
 
-    private ScheduleFailureView toFailureView(long id, String summary, String error, Timestamp created) {
+    static ScheduleFailureView failureView(long id, String summary, String error, Timestamp created) {
         Long taskId = null;
         String code = null;
+        String reason = error;
         if (summary != null && !summary.isBlank()) {
             try {
                 JsonNode node = JsonUtil.readTree(summary);
@@ -572,12 +593,16 @@ public class TaskPublishAppService {
                 if (node.get("code") != null && !node.get("code").isNull()) {
                     code = node.get("code").asString();
                 }
+                JsonNode checkErrors = node.get("checkErrors");
+                if (checkErrors != null && checkErrors.isArray() && checkErrors.size() > 0) {
+                    reason = JsonUtil.toJson(checkErrors);
+                }
             } catch (RuntimeException ignored) {
                 // keep raw error
             }
         }
         Instant at = created == null ? null : created.toInstant();
-        return new ScheduleFailureView(id, taskId, code, error, at);
+        return new ScheduleFailureView(id, taskId, code, reason, at);
     }
 
     private void evictPublishedIndex() {
