@@ -34,9 +34,7 @@ import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -98,7 +96,6 @@ public class TaskPortalAppService {
         UserAttributes attrs = users.attributes(userId);
         Instant now = clock.instant();
         List<TaskDefinitionEntity> published = definitions.listPublished();
-        Map<Long, TaskInstanceEntity> inProgress = inProgressByTask(userId);
         List<TaskCardView> cards = new ArrayList<>();
         for (TaskDefinitionEntity definition : published) {
             SnapshotContent snapshot = snapshotOf(definition);
@@ -115,14 +112,13 @@ public class TaskPortalAppService {
                     TaskTime.toInstant(definition.getSpecialEnd()),
                     now);
             TaskInstanceEntity current = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey);
-            TaskInstanceEntity overlay = inProgress.get(definition.getId());
             boolean inProgressThisCycle =
-                    overlay != null && cycleKey.equals(overlay.getCycleKey());
+                    current != null && InstanceStatuses.IN_PROGRESS.equals(current.getStatus());
             VisibilityResult visibility = visibility(definition, snapshot, userId, attrs, now);
             if (!visibility.visible() && !inProgressThisCycle) {
                 continue;
             }
-            String userStatus = userStatus(current, overlay, cycleKey);
+            String userStatus = current == null ? InstanceStatuses.NOT_STARTED : current.getStatus();
             cards.add(toCard(definition, snapshot, userStatus));
         }
         PageQuery query = PageQuery.of(page, pageSize);
@@ -145,13 +141,7 @@ public class TaskPortalAppService {
                 TaskTime.toInstant(definition.getSpecialEnd()),
                 now);
         TaskInstanceEntity current = instances.getByUserTaskCycle(userId, taskId, cycleKey);
-        TaskInstanceEntity inProgress = null;
-        for (TaskInstanceEntity row : instances.listInProgressByUser(userId)) {
-            if (taskId == row.getTaskId()) {
-                inProgress = row;
-                break;
-            }
-        }
+        TaskInstanceEntity inProgress = pickInProgress(taskId, userId, cycleKey);
         if (inProgress != null) {
             return inProgressDetail(inProgress, platform);
         }
@@ -296,23 +286,20 @@ public class TaskPortalAppService {
         return summary != null && summary.listStatus().contains(RiskListType.BLACK);
     }
 
-    private Map<Long, TaskInstanceEntity> inProgressByTask(long userId) {
-        Map<Long, TaskInstanceEntity> map = new HashMap<>();
+    private TaskInstanceEntity pickInProgress(long taskId, long userId, String cycleKey) {
+        TaskInstanceEntity fallback = null;
         for (TaskInstanceEntity row : instances.listInProgressByUser(userId)) {
-            map.put(row.getTaskId(), row);
+            if (taskId != row.getTaskId()) {
+                continue;
+            }
+            if (cycleKey.equals(row.getCycleKey())) {
+                return row;
+            }
+            if (fallback == null) {
+                fallback = row;
+            }
         }
-        return map;
-    }
-
-    private static String userStatus(
-            TaskInstanceEntity current, TaskInstanceEntity overlay, String cycleKey) {
-        if (overlay != null && cycleKey.equals(overlay.getCycleKey())) {
-            return InstanceStatuses.IN_PROGRESS;
-        }
-        if (current == null) {
-            return InstanceStatuses.NOT_STARTED;
-        }
-        return current.getStatus();
+        return fallback;
     }
 
     private static TaskCardView toCard(TaskDefinitionEntity definition, SnapshotContent snapshot, String userStatus) {

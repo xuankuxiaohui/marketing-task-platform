@@ -135,6 +135,19 @@ class TaskPortalAppServiceTest {
     }
 
     @Test
+    void currentCycleInProgressSurvivesGrayMissWhenPriorCycleAlsoOpen() {
+        long taskId = publishDaily("daily_g", new TaskGrayCommand("RATIO", 0, null, null, null));
+        long snapshotId = snapshots.listByTaskId(taskId).get(0).getId();
+        instances.insert(inProgressAt(taskId, snapshotId, "20260818"));
+        TaskInstanceEntity today = inProgressAt(taskId, snapshotId, "20260819");
+        instances.insert(today);
+        PageData<TaskCardView> page = service.list(9L, null, 1, 20);
+        assertThat(page.records()).hasSize(1);
+        assertThat(page.records().get(0).userStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(service.detail(taskId, 9L, "WEB").instanceId()).isEqualTo(today.getId());
+    }
+
+    @Test
     void missingProvinceFilterHidesTask() {
         long taskId = publishFiltered("prov", "province() = 'BJ'");
         when(users.attributes(9L))
@@ -198,14 +211,61 @@ class TaskPortalAppServiceTest {
         return entity.getId();
     }
 
+    private long publishDaily(String code, TaskGrayCommand gray) {
+        TaskDefinitionEntity entity = new TaskDefinitionEntity();
+        entity.setCode(code);
+        entity.setName(code);
+        entity.setStatus("PUBLISHED");
+        entity.setVersion(1);
+        entity.setCycleType("DAILY");
+        entity.setGrayType(gray.type());
+        entity.setSortWeight(1);
+        entity.setDeleted(0);
+        definitions.insert(entity);
+        SnapshotContent content = new SnapshotContent(
+                code,
+                code,
+                "desc",
+                "daily",
+                null,
+                null,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2027-01-01T00:00:00Z"),
+                1,
+                "DAILY",
+                null,
+                null,
+                null,
+                null,
+                gray,
+                new TaskFilterCommand(null, List.of(), List.of()),
+                List.of(
+                        new TaskStepCommand("go", "浏览", 1, "PASSIVE", null, null),
+                        new TaskStepCommand("click", "点击", 2, "CLICK", null, null)),
+                List.of(new TaskTransitionCommand("go", "click", null, 0)),
+                List.of());
+        TaskVersionSnapshotEntity snap = new TaskVersionSnapshotEntity();
+        snap.setTaskId(entity.getId());
+        snap.setVersion(1);
+        snap.setContent(JsonUtil.toJson(content));
+        snap.setPublishedAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        snap.setPublishedBy(1L);
+        snapshots.insert(snap);
+        return entity.getId();
+    }
+
     private TaskInstanceEntity inProgress(long taskId, long snapshotId) {
+        return inProgressAt(taskId, snapshotId, "NONE");
+    }
+
+    private TaskInstanceEntity inProgressAt(long taskId, long snapshotId, String cycleKey) {
         TaskInstanceEntity row = new TaskInstanceEntity();
         row.setTaskId(taskId);
         row.setTaskCode("hidden");
         row.setVersion(1);
         row.setSnapshotId(snapshotId);
         row.setUserId(9L);
-        row.setCycleKey("NONE");
+        row.setCycleKey(cycleKey);
         row.setStatus(InstanceStatuses.IN_PROGRESS);
         row.setExpireAt(LocalDateTime.ofInstant(NOW.plusSeconds(86400), ZoneOffset.UTC));
         row.setStartedAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
