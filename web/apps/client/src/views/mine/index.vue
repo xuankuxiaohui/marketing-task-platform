@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Badge, Cell, CellGroup, NavBar, showConfirmDialog, showFailToast } from "vant";
+import { Badge, Cell, CellGroup, NavBar, showConfirmDialog } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchMineTasks } from "@/api/task";
 import { zhCN } from "@/locales/zh-CN";
@@ -62,8 +62,9 @@ onMounted(() => {
       <Cell
         :title="zhCN.mine.signin"
         :label="zhCN.mine.signinHint"
+        is-link
         data-testid="entry-signin"
-        @click="showFailToast(zhCN.mine.signinHint)"
+        @click="router.push('/signin')"
       />
     </CellGroup>
     <CellGroup inset class="mine-actions">

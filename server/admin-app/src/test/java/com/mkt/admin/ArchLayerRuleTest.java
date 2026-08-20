@@ -21,11 +21,21 @@ import org.junit.jupiter.api.Test;
 class ArchLayerRuleTest {
 
     private static final String[] DOMAINS = {
-        "domain-identity", "domain-task", "domain-reward", "domain-risk", "domain-tracking"
+        "domain-identity",
+        "domain-task",
+        "domain-reward",
+        "domain-risk",
+        "domain-tracking",
+        "domain-signin"
     };
 
     private static final String[] DOMAIN_PACKAGES = {
-        "com.mkt.identity..", "com.mkt.task..", "com.mkt.reward..", "com.mkt.risk..", "com.mkt.tracking.."
+        "com.mkt.identity..",
+        "com.mkt.task..",
+        "com.mkt.reward..",
+        "com.mkt.risk..",
+        "com.mkt.tracking..",
+        "com.mkt.signin.."
     };
 
     @Test
@@ -105,7 +115,11 @@ class ArchLayerRuleTest {
             "com.mkt.tracking.mapper..",
             "com.mkt.tracking.entity..",
             "com.mkt.tracking.application..",
-            "com.mkt.tracking.domain.."
+            "com.mkt.tracking.domain..",
+            "com.mkt.signin.mapper..",
+            "com.mkt.signin.entity..",
+            "com.mkt.signin.application..",
+            "com.mkt.signin.domain.."
         };
         for (String domain : DOMAIN_PACKAGES) {
             String prefix = domain.substring(0, domain.length() - 2);

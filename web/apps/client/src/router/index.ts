@@ -76,6 +76,12 @@ const router = createRouter({
           component: () => import("@/views/mine/MinePointsPage.vue"),
           meta: { title: zhCN.mine.pointsDetail },
         },
+        {
+          path: "signin",
+          name: "SigninPage",
+          component: () => import("@/views/signin/index.vue"),
+          meta: { title: zhCN.signin.title },
+        },
       ],
     },
   ],

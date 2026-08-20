@@ -252,6 +252,11 @@ public final class IdentityITSupport implements AutoCloseable {
             public boolean prizeEnabled(long prizeId) {
                 return false;
             }
+
+            @Override
+            public long consume(long userId, int points, String sourceType, String sourceId, String remark) {
+                throw new UnsupportedOperationException("reward stub");
+            }
         };
         PortalAuthService portalAuth = TransactionalProxies.proxy(
                 new PortalAuthService(

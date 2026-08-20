@@ -24,8 +24,17 @@ class PortSignatureTest {
                 GrantContext.class);
         assertSignature(RewardPort.class, "userSummary", UserRewardSummary.class, long.class);
         assertSignature(RewardPort.class, "prizeEnabled", boolean.class, long.class);
+        assertSignature(
+                RewardPort.class,
+                "consume",
+                long.class,
+                long.class,
+                int.class,
+                String.class,
+                String.class,
+                String.class);
         assertThat(declaredMethods(RewardPort.class))
-                .containsExactlyInAnyOrder("grant", "userSummary", "prizeEnabled");
+                .containsExactlyInAnyOrder("grant", "userSummary", "prizeEnabled", "consume");
     }
 
     @Test

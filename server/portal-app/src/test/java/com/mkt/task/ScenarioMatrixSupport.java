@@ -429,6 +429,14 @@ final class ScenarioMatrixSupport implements AutoCloseable {
             }
             return delegate.earn(userId, amount, expireAt, sourceType, sourceId);
         }
+
+        @Override
+        public long consume(long userId, int amount, String sourceType, String sourceId, String remark) {
+            if (timeout) {
+                throw new RuntimeException("grant timeout");
+            }
+            return delegate.consume(userId, amount, sourceType, sourceId, remark);
+        }
     }
 
     private static SqlSessionTemplate sqlSession(DataSource dataSource) throws Exception {

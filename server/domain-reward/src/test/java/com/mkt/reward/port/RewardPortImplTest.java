@@ -1,6 +1,7 @@
 package com.mkt.reward.port;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,9 @@ class RewardPortImplTest {
         assertThat(port.prizeEnabled(enabled.getId())).isTrue();
         assertThat(port.prizeEnabled(draft.getId())).isFalse();
         assertThat(port.prizeEnabled(99L)).isFalse();
+        assertThat(port.consume(1L, 0, "SIGNIN", "x", "noop")).isZero();
+        assertThatThrownBy(() -> port.consume(1L, 10, "SIGNIN", "c", "catchup"))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -90,5 +94,7 @@ class RewardPortImplTest {
         assertThat(summary.prizeSummary().won()).isEqualTo(1L);
         assertThat(summary.prizeSummary().granted()).isEqualTo(1L);
         assertThat(port.userSummary(99L).pointsBalance()).isZero();
+        assertThat(port.consume(5L, 0, "SIGNIN", "x", "noop")).isEqualTo(40L);
+        assertThat(port.consume(5L, 10, "SIGNIN", "c", "catchup")).isEqualTo(30L);
     }
 }

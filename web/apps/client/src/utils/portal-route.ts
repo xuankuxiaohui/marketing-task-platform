@@ -21,7 +21,7 @@ export function resolvePortalRoute(
     case "password":
       return "/mine/password";
     case "signin":
-      return undefined;
+      return "/signin";
     default:
       return undefined;
   }

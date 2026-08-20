@@ -10,7 +10,7 @@ describe("resolvePortalRoute", () => {
     expect(resolvePortalRoute("prize-list")).toBe("/mine/prizes");
     expect(resolvePortalRoute("points")).toBe("/mine/points");
     expect(resolvePortalRoute("password")).toBe("/mine/password");
-    expect(resolvePortalRoute("signin")).toBeUndefined();
+    expect(resolvePortalRoute("signin")).toBe("/signin");
     expect(resolvePortalRoute("unknown")).toBeUndefined();
   });
 });

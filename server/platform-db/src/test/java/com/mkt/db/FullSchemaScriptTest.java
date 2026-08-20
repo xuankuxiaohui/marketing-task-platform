@@ -17,6 +17,7 @@ class FullSchemaScriptTest {
     private static String v2;
     private static String v3;
     private static String v4;
+    private static String v5;
     private static String all;
 
     @BeforeAll
@@ -24,6 +25,7 @@ class FullSchemaScriptTest {
         v2 = loadSql("V2__task_core.sql");
         v3 = loadSql("V3__reward_points.sql");
         v4 = loadSql("V4__risk_tracking.sql");
+        v5 = loadSql("V5__sgn_signin.sql");
         all = v2 + "\n" + v3 + "\n" + v4 + "\n" + loadSql("V1__sys_baseline.sql");
     }
 
@@ -58,6 +60,20 @@ class FullSchemaScriptTest {
                         "risk_list_item", "risk_rule_config", "risk_hit_log", "risk_handle_log");
         assertThat(tableNames(v4, "evt_")).containsExactlyInAnyOrder("evt_event_log", "evt_event_metadata");
         assertThat(tableNames(all, "")).hasSize(39);
+    }
+
+    @Test
+    void v5CreatesThreeSgnTablesWithoutTouchingV1ToV4() {
+        assertThat(tableNames(v5, "sgn_"))
+                .containsExactlyInAnyOrder("sgn_activity", "sgn_activity_snapshot", "sgn_record");
+        assertThat(v5).contains("UNIQUE KEY uk_activity_user_date (activity_id, user_id, sign_date)");
+        assertThat(v5).contains("UNIQUE KEY uk_activity_version (activity_id, version)");
+        assertThat(v5).contains("CHECK (source IN ('CHECKIN','CATCHUP'))");
+        assertThat(v5).contains("signin:config:query");
+        assertThat(v5).contains("signin:record:query");
+        assertThat(v5).contains("utf8mb4_0900_ai_ci");
+        assertThat(v5.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4).doesNotContain("CREATE TABLE sgn_");
     }
 
     @Test

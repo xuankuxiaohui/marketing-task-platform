@@ -31,6 +31,7 @@ async function mountMine() {
       { path: "/mine", component: MinePage },
       { path: "/mine/tasks", component: { template: "<div />" } },
       { path: "/mine/profile", component: { template: "<div />" } },
+      { path: "/signin", component: { template: "<div />" } },
       { path: "/login", component: { template: "<div />" } },
     ],
   });
@@ -64,6 +65,7 @@ describe("MinePage", () => {
     expect(wrapper.get('[data-testid="entry-tasks"]').text()).toContain(zhCN.mine.tasks);
     expect(wrapper.get('[data-testid="entry-prizes"]').text()).toContain(zhCN.mine.prizes);
     expect(wrapper.get('[data-testid="entry-points"]').text()).toContain(zhCN.mine.pointsDetail);
+    expect(wrapper.get('[data-testid="entry-signin"]').text()).toContain(zhCN.mine.signin);
     expect(wrapper.get('[data-testid="entry-password"]').text()).toContain(zhCN.mine.password);
     expect(wrapper.get('[data-testid="entry-logout"]').text()).toContain(zhCN.mine.logout);
   });

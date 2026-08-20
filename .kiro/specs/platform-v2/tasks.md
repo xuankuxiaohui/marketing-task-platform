@@ -684,13 +684,13 @@ _测试：两条旅程绿；k6 门槛不破_
 
 ### 任务 44：签到域（编组 J，P1）
 
-- [ ] 父 POM 加 `domain-signin`；ArchUnit RL-02 域名单扩包；**禁止**打进 V1–V4
-- [ ] V5：`sgn_activity` / `sgn_activity_snapshot` / `sgn_record`（uk(`activity_id`,`user_id`,`sign_date`)）
-- [ ] 管理端 + §4.9 signin 端点组
-- [ ] 连签自然日 UTC+8；事实源 = `sgn_record`（含补签）
-- [ ] 补签与积分 `CONSUME` 同事务；窗口 / 日限 / 消耗读附录 A
-- [ ] `SIGNIN_DAY` 发放复用 `RewardPort`；每档 `sourceId` 不重复（断链重攒不重复发放）
-- [ ] §7.4 C-9（本任务交付，不在任务 41）
+- [x] 父 POM 加 `domain-signin`；ArchUnit RL-02 域名单扩包；**禁止**打进 V1–V4
+- [x] V5：`sgn_activity` / `sgn_activity_snapshot` / `sgn_record`（uk(`activity_id`,`user_id`,`sign_date`)）
+- [x] 管理端 + §4.9 signin 端点组
+- [x] 连签自然日 UTC+8；事实源 = `sgn_record`（含补签）
+- [x] 补签与积分 `CONSUME` 同事务；窗口 / 日限 / 消耗读附录 A
+- [x] `SIGNIN_DAY` 发放复用 `RewardPort`；每档 `sourceId` 不重复（断链重攒不重复发放）
+- [x] §7.4 C-9（本任务交付，不在任务 41）
 
 _需求：R21、R36_
 _设计：design §3.11、§2.9 sgn_ 前缀、§5.6 复用_

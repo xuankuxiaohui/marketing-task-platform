@@ -53,4 +53,9 @@ public final class MemoryRewardPort implements RewardPort {
     public boolean prizeEnabled(long prizeId) {
         return true;
     }
+
+    @Override
+    public long consume(long userId, int points, String sourceType, String sourceId, String remark) {
+        return 0L;
+    }
 }

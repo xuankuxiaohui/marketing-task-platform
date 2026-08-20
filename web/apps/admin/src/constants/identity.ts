@@ -105,6 +105,14 @@ export const PERMS = {
   TRACK_META_UPDATE: "track:metadata:update",
   TRACK_META_DELETE: "track:metadata:delete",
   TRACK_EVENT_QUERY: "track:event:query",
+  SIGNIN_CONFIG_QUERY: "signin:config:query",
+  SIGNIN_CONFIG_CREATE: "signin:config:create",
+  SIGNIN_CONFIG_UPDATE: "signin:config:update",
+  SIGNIN_CONFIG_DELETE: "signin:config:delete",
+  SIGNIN_CONFIG_PUBLISH: "signin:config:publish",
+  SIGNIN_CONFIG_SCHEDULE: "signin:config:schedule",
+  SIGNIN_CONFIG_OFFLINE: "signin:config:offline",
+  SIGNIN_RECORD_QUERY: "signin:record:query",
 } as const;
 
 export const CONFIG_VALUE_TYPES = ["STRING", "NUMBER", "BOOL", "JSON"] as const;

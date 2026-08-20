@@ -24,4 +24,9 @@ public class RewardPortStub implements RewardPort {
     public boolean prizeEnabled(long prizeId) {
         return false;
     }
+
+    @Override
+    public long consume(long userId, int points, String sourceType, String sourceId, String remark) {
+        throw new UnsupportedOperationException("RewardPort is not assembled");
+    }
 }

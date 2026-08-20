@@ -19,5 +19,7 @@ class PointsPortImplTest {
         long txId = port.earn(9L, 12, Instant.EPOCH, "TASK_STEP", "s-1");
         assertThat(txId).isPositive();
         assertThat(service.balanceOrZero(9L)).isEqualTo(12L);
+        assertThat(port.consume(9L, 4, "SIGNIN", "c-1", "catchup")).isEqualTo(8L);
+        assertThat(service.balanceOrZero(9L)).isEqualTo(8L);
     }
 }

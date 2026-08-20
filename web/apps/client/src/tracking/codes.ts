@@ -11,6 +11,9 @@ export const TRACK = {
   REWARD_CLAIM_CLICK: "reward.claim.click",
   REWARD_LIST_VIEW: "reward.list.view",
   POINTS_PAGE_VIEW: "points.page.view",
+  SIGNIN_PAGE_VIEW: "signin.page.view",
+  SIGNIN_SIGN_CLICK: "signin.sign.click",
+  SIGNIN_CATCHUP_CLICK: "signin.catchup.click",
 } as const;
 
 export type TrackCode = (typeof TRACK)[keyof typeof TRACK];

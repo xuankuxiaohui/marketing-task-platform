@@ -52,4 +52,15 @@ public class RewardPortImpl implements RewardPort {
         PrizeEntity prize = prizes.getById(prizeId);
         return prize != null && PrizeStatuses.ENABLED.equals(prize.getStatus()) && !prize.deletedFlag();
     }
+
+    @Override
+    public long consume(long userId, int pointsAmount, String sourceType, String sourceId, String remark) {
+        if (pointsAmount == 0) {
+            return points == null ? 0L : points.balanceOrZero(userId);
+        }
+        if (points == null) {
+            throw new UnsupportedOperationException("points ledger is not assembled");
+        }
+        return points.consume(userId, pointsAmount, sourceType, sourceId, remark);
+    }
 }

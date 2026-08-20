@@ -7,14 +7,14 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 /**
- * Task 41: P0 C-1~C-8 / C-12 already live in domain *IT; P1 C-9/C-10/C-11 must not exist yet.
+ * Task 41/44: P0 C-1~C-8 / C-12 live; C-9 delivered with domain-signin; C-10/C-11 still later.
  */
 class P0ConcurrencyBoundaryTest {
 
     @Test
-    void p1ConcurrencyModulesAreAbsent() {
+    void p1ConcurrencyModulesMatchTaskBoundary() {
         Path server = serverRoot();
-        assertThat(server.resolve("domain-signin")).doesNotExist();
+        assertThat(server.resolve("domain-signin")).exists();
         assertThat(server.resolve("domain-activity")).doesNotExist();
         assertThat(server.resolve("domain-ad")).doesNotExist();
         assertThat(Files.isRegularFile(server.resolve("domain-task/src/test/java/com/mkt/task/InstanceUniquenessIT.java")))
@@ -43,7 +43,7 @@ class P0ConcurrencyBoundaryTest {
                         server.resolve("domain-risk/src/test/java/com/mkt/risk/ListConcurrentDecisionIT.java")))
                 .isTrue();
         assertThat(Files.isRegularFile(server.resolve("domain-signin/src/test/java/com/mkt/signin/SigninUniqueIT.java")))
-                .isFalse();
+                .isTrue();
         assertThat(Files.isRegularFile(
                         server.resolve("domain-activity/src/test/java/com/mkt/activity/ActivityQuotaIT.java")))
                 .isFalse();

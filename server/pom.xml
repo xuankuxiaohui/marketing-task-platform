@@ -28,6 +28,7 @@
         <module>domain-reward</module>
         <module>domain-risk</module>
         <module>domain-tracking</module>
+        <module>domain-signin</module>
         <module>admin-app</module>
         <module>portal-app</module>
     </modules>
@@ -105,6 +106,11 @@
             <dependency>
                 <groupId>com.mkt</groupId>
                 <artifactId>domain-tracking</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mkt</groupId>
+                <artifactId>domain-signin</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -83,6 +83,10 @@
             <groupId>com.mkt</groupId>
             <artifactId>domain-tracking</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-signin</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

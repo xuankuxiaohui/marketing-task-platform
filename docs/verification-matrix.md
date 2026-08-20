@@ -108,9 +108,9 @@
 
 | 任务 | 需求 | 正确性属性 | 测试类 | 状态 |
 |------|------|------------|--------|------|
-| 44 | R21.1 | 签到唯一 | `signin SigninUniqueIT`（C-9） | 占位 · P0 完成后填充 |
-| 44 | R36.1 | 日历状态一致 | `web SigninCalendarStateTest` | 占位 · P0 完成后填充 |
-| 44 | R21 / R36 | 签到 H5 页（补签 / 断链 / 跨月） | （待补 Vitest 点位） | 占位 · P0 完成后填充 |
+| 44 | R21.1 | 签到唯一 | `signin SigninUniqueIT`（C-9） | 已交付 · 64 线程同用户同日 |
+| 44 | R36.1 | 日历状态一致 | `web SigninCalendarStateTest` | 已交付 · `signin-calendar-state.spec.ts` |
+| 44 | R21 / R36 | 签到 H5 页（补签 / 断链 / 跨月） | `SigninPage.spec.ts` | 已交付 · 日历格子走后端四态 |
 | 45 | R22.1 | 活动限量 | `activity ActivityQuotaIT`（C-10） | 占位 · P0 完成后填充 |
 | 45 | R22 | 活动页 + 富文本消毒验收 | （待补） | 占位 · P0 完成后填充 |
 | 46 | R23.1 | 聚合幂等 | `metrics AggregationIdempotentIT` | 占位 · P0 完成后填充 |

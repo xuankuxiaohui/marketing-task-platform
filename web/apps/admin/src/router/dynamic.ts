@@ -101,4 +101,6 @@ export const MENU_SEED_COMPONENTS = [
   "risk/case/index",
   "track/metadata/index",
   "track/event/index",
+  "signin/activity/index",
+  "signin/record/index",
 ] as const;
