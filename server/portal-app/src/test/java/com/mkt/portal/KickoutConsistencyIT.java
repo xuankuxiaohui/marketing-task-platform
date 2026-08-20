@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * R6.1: kick on instance A is 401 on instance B for the same token (shared session store).
+ * Design §6.1: kick-reason is read-once; first 401 is kicked-admin, later 401s may be expired.
  */
 class KickoutConsistencyIT {
 
@@ -39,11 +40,13 @@ class KickoutConsistencyIT {
 
         MockHttpServletResponse afterA = new MockHttpServletResponse();
         instanceA.doFilter(bearerGet(token), afterA, new MockFilterChain());
+        assertThat(afterA.getStatus()).isEqualTo(401);
+        assertThat(afterA.getContentAsString()).contains("auth.session.kicked-admin");
+
         MockHttpServletResponse afterB = new MockHttpServletResponse();
         instanceB.doFilter(bearerGet(token), afterB, new MockFilterChain());
-        assertThat(afterA.getStatus()).isEqualTo(401);
         assertThat(afterB.getStatus()).isEqualTo(401);
-        assertThat(afterB.getContentAsString()).contains("auth.session.kicked-admin");
+
         MockHttpServletResponse replay = new MockHttpServletResponse();
         instanceB.doFilter(bearerGet(token), replay, new MockFilterChain());
         assertThat(replay.getStatus()).isEqualTo(401);
