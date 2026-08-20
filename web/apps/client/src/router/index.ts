@@ -67,14 +67,14 @@ const router = createRouter({
         {
           path: "mine/prizes",
           name: "MinePrizesPage",
-          component: () => import("@/views/mine/EmptyListPage.vue"),
-          meta: { title: zhCN.mine.prizes, emptyKind: "prizes" },
+          component: () => import("@/views/mine/MinePrizesPage.vue"),
+          meta: { title: zhCN.mine.prizes },
         },
         {
           path: "mine/points",
           name: "MinePointsPage",
-          component: () => import("@/views/mine/EmptyListPage.vue"),
-          meta: { title: zhCN.mine.pointsDetail, emptyKind: "points" },
+          component: () => import("@/views/mine/MinePointsPage.vue"),
+          meta: { title: zhCN.mine.pointsDetail },
         },
       ],
     },

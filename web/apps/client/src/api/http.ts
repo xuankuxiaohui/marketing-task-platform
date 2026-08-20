@@ -13,6 +13,7 @@ const SKIP_UNAUTHORIZED = [
   "/api/common/auth/register",
   "/api/common/captcha",
   "/api/common/auth/username-available",
+  "/api/common/track/batch",
 ];
 
 export type UnauthorizedPayload = {

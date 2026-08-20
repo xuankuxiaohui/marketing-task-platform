@@ -14,6 +14,7 @@ describe("portal http", () => {
     expect(shouldSkipUnauthorized("/api/common/auth/register")).toBe(true);
     expect(shouldSkipUnauthorized("/api/common/captcha")).toBe(true);
     expect(shouldSkipUnauthorized("/api/common/auth/username-available")).toBe(true);
+    expect(shouldSkipUnauthorized("/api/common/track/batch")).toBe(true);
     expect(shouldSkipUnauthorized("/api/common/auth/profile")).toBe(false);
   });
 

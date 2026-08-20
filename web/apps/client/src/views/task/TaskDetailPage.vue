@@ -15,6 +15,7 @@ import {
 import FallbackImage from "@/components/FallbackImage.vue";
 import TaskTimeline from "@/components/TaskTimeline.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { TRACK, track } from "@/tracking";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 import { formatRewardPreview } from "@/utils/reward-preview";
 import { actionHref, actionRouteName, stepActionUi } from "@/utils/step-action";
@@ -30,6 +31,7 @@ const detail = ref<TaskDetailView | null>(null);
 const loading = ref(false);
 const acting = ref(false);
 const waitingConfirm = ref(false);
+const viewed = ref(false);
 
 const taskId = computed(() => Number(route.params.taskId));
 const status = computed(() => detail.value?.status);
@@ -54,6 +56,10 @@ async function load(): Promise<void> {
       return;
     }
     detail.value = result.data;
+    if (!viewed.value) {
+      viewed.value = true;
+      track(TRACK.TASK_DETAIL_VIEW, { taskId: taskId.value });
+    }
     if (result.data.status !== "IN_PROGRESS") {
       waitingConfirm.value = false;
     }
@@ -103,6 +109,7 @@ function showReward(items?: RewardFeedbackView[] | null): void {
 }
 
 async function onClaim(): Promise<void> {
+  track(TRACK.TASK_START_CLICK, { taskId: taskId.value });
   acting.value = true;
   try {
     const result = await startTask(taskId.value);
@@ -146,12 +153,14 @@ async function onCurrentAction(): Promise<void> {
     if (!step.stepCode) {
       return;
     }
+    track(TRACK.TASK_STEP_CLICK, { instanceId, stepCode: step.stepCode });
     const result = await clickTaskStep(instanceId, step.stepCode);
     if (!isOk(result) || !result.data) {
       showPortalFail(result);
       return;
     }
     if (result.data.instanceStatus === "COMPLETED") {
+      track(TRACK.TASK_COMPLETE_VIEW, { instanceId, taskId: taskId.value });
       showReward(result.data.rewardFeedback);
     }
     waitingConfirm.value = false;
@@ -176,6 +185,7 @@ async function onAbandon(): Promise<void> {
   } catch {
     return;
   }
+  track(TRACK.TASK_ABANDON_CLICK, { instanceId });
   acting.value = true;
   try {
     const result = await abandonTask(instanceId);

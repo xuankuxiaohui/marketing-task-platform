@@ -7,6 +7,7 @@ import { fetchDict, TASK_CATEGORY_DICT, type DictPortalEntry } from "@/api/dict"
 import { fetchTaskList, startTask, type TaskCardView } from "@/api/task";
 import TaskCard from "@/components/TaskCard.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { TRACK, track } from "@/tracking";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 import { taskButtonState } from "@/utils/task-button";
 
@@ -98,6 +99,7 @@ async function onCardAction(task: TaskCardView): Promise<void> {
     openTask(task);
     return;
   }
+  track(TRACK.TASK_START_CLICK, { taskId: task.taskId });
   try {
     const result = await startTask(task.taskId);
     if (!isOk(result) || !result.data) {

@@ -1,5 +1,19 @@
 import { config } from "@vue/test-utils";
 
+if (typeof globalThis.IntersectionObserver === "undefined") {
+  globalThis.IntersectionObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+    root = null;
+    rootMargin = "";
+    thresholds = [];
+  } as typeof IntersectionObserver;
+}
+
 const slotStub = { template: "<div><slot /></div>" };
 
 config.global.stubs = {

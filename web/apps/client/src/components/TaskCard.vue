@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Button, Tag } from "vant";
 import type { TaskCardView } from "@/api/task";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { observeTaskCardExposure } from "@/tracking";
 import { formatRewardPreview } from "@/utils/reward-preview";
 import { taskButtonState } from "@/utils/task-button";
 
@@ -18,12 +19,28 @@ const emit = defineEmits<{
   action: [];
 }>();
 
+const root = ref<HTMLElement | null>(null);
 const button = computed(() => taskButtonState(props.task.userStatus));
 const reward = computed(() => formatRewardPreview(props.task.rewardPreview));
+
+let stopExposure: (() => void) | undefined;
+
+onMounted(() => {
+  if (root.value) {
+    stopExposure = observeTaskCardExposure(root.value, {
+      taskId: props.task.taskId,
+      taskCode: props.task.taskCode,
+    });
+  }
+});
+
+onUnmounted(() => {
+  stopExposure?.();
+});
 </script>
 
 <template>
-  <article class="task-card" data-testid="task-card">
+  <article ref="root" class="task-card" data-testid="task-card">
     <button class="task-card__body" type="button" data-testid="task-card-open" @click="emit('open')">
       <FallbackImage :src="task.iconUrl" :alt="task.name ?? zhCN.home.title" />
       <span class="task-card__meta">

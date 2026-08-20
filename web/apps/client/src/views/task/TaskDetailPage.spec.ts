@@ -13,6 +13,17 @@ vi.mock("@/api/task", () => ({
   INSTANCE_FROZEN_CODE: "task.instance.frozen",
 }));
 
+vi.mock("@/tracking", () => ({
+  TRACK: {
+    TASK_DETAIL_VIEW: "task.detail.view",
+    TASK_START_CLICK: "task.start.click",
+    TASK_STEP_CLICK: "task.step.click",
+    TASK_COMPLETE_VIEW: "task.complete.view",
+    TASK_ABANDON_CLICK: "task.abandon.click",
+  },
+  track: vi.fn(),
+}));
+
 vi.mock("vant", async () => {
   const actual = await vi.importActual<typeof import("vant")>("vant");
   return {

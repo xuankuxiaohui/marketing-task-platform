@@ -38,6 +38,10 @@ export const useSessionStore = defineStore("session", () => {
     pointsBalance.value = Number(data.pointsBalance ?? 0);
   }
 
+  function setPointsBalance(balance: number): void {
+    pointsBalance.value = Number(balance);
+  }
+
   function clear(): void {
     persistToken("");
     userId.value = null;
@@ -63,6 +67,7 @@ export const useSessionStore = defineStore("session", () => {
     authenticated,
     setLogin,
     setProfile,
+    setPointsBalance,
     clear,
   };
 });

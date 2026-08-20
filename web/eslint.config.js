@@ -29,6 +29,7 @@ export default [
         extraFileExtensions: [".vue"],
         sourceType: "module",
       },
+      globals: { ...globals.browser },
     },
     rules: {
       "vue/multi-word-component-names": "error",

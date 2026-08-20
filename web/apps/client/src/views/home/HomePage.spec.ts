@@ -14,6 +14,12 @@ vi.mock("@/api/task", () => ({
   abandonTask: vi.fn(),
 }));
 
+vi.mock("@/tracking", () => ({
+  TRACK: { TASK_START_CLICK: "task.start.click" },
+  track: vi.fn(),
+  observeTaskCardExposure: vi.fn(() => () => undefined),
+}));
+
 vi.mock("@/api/dict", async () => {
   const actual = await vi.importActual<typeof import("@/api/dict")>("@/api/dict");
   return {
