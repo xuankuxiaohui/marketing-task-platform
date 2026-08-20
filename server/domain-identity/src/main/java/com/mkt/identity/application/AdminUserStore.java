@@ -8,15 +8,23 @@ import com.mkt.identity.entity.AdminUserEntity;
 import com.mkt.identity.mapper.AdminUserMapper;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class AdminUserStore {
 
     private final AdminUserMapper mapper;
+    private final RbacPermissionCache permissionCache;
 
     public AdminUserStore(AdminUserMapper mapper) {
+        this(mapper, null);
+    }
+
+    @Autowired
+    public AdminUserStore(AdminUserMapper mapper, RbacPermissionCache permissionCache) {
         this.mapper = mapper;
+        this.permissionCache = permissionCache;
     }
 
     public AdminUserEntity getByUsername(String username) {
@@ -65,6 +73,9 @@ public class AdminUserStore {
     }
 
     public List<String> listPermissionCodes(long userId) {
+        if (permissionCache != null) {
+            return permissionCache.codesFor(userId);
+        }
         List<String> codes = mapper.listPermissionCodes(userId);
         return codes == null ? List.of() : List.copyOf(codes);
     }

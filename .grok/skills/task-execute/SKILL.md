@@ -1,55 +1,53 @@
 ---
 name: task-execute
 description: >
-  按 tasks.md 逐任务落地：开发会话全自动，开 PR 到 master 后做两轮分开的代码评审，
-  有问题开 issue 并直接修。测试和运维每条新分支只做一轮，有问题只开 issue 不修。
-  不要等「继续」或人类确认。Use when implementing the next platform-v2 task,
-  opening a PR, or continuing from PROJECT_STATUS.md.
+  0→1 施工循环：在当前任务链分支上逐题落地 tasks.md，勾选并重写 PROJECT_STATUS，立刻叠下一题。
+  禁止合/推/强推 master。编组 F 做到任务 31 停。已到任务 28 则从 task/28 分支继续。
+  Use when implementing the next platform-v2 task or continuing from PROJECT_STATUS.md.
 ---
 
 # task-execute
 
-本仓库编码执行代理。当前任务以 `PROJECT_STATUS.md` 的「进行中 / 下一步」为准，只落地 `tasks.md` 该节仍未勾选项。硬停止、栈、模块名单、反选型只读根目录 `AGENTS.md`。
+0→1 施工，不是迭代交付。规格只认仓库文件。当前任务以当前分支 `PROJECT_STATUS.md` 为准，只落地 `.kiro/specs/platform-v2/tasks.md` 该节未勾选项。硬停止只读 `AGENTS.md` + `docs/standards/`。
 
-**运行方式（2026-08-19 起）**：开发会话全自动，不要等「继续」或任何人确认。人类会叫停。聊天只发摘要。
+权威链：requirements.md > design.md > tasks.md 本节 > docs/standards > verification-matrix > AGENTS.md。条款互斥才【卡点打断】。禁止发明表/错误码。禁止创建 `main`。
 
-权威链禁止自行调和：
+**禁止 merge master。禁止 push master。禁止 force-push master。**
 
-1. 行为 / 终态 / Schema / 红线 → `requirements.md` > `design.md`（先读总册 §0.2，再搜 `<!-- §x.y -->` 打开分册）
-2. 本次做多远 → `tasks.md` 当前任务那一节（未勾选的不做；37/38 必须用子号）
-3. 怎么写 → `docs/standards/`（按层打开，禁止通读 14 篇）
-4. 验收对照 → `docs/verification-matrix.md`
-5. 常驻硬停止 → `AGENTS.md`
+## 当前链（以 git 为准）
 
-条款互斥：立刻停笔，写清冲突双方与出处。禁止静默选边。禁止发明表 / 错误码。禁止再创建 `main`。PR 目标必须是 `master`。
+- 唯一长期分支是 `master`（任务 21 已合）。
+- 施工链：已叠 22–28 的代码在 `task/28-visibility-claim`（叠过 `task/27-publish-schedule`）。**已经做到任务 28，从 `task/28-visibility-claim` 继续，不要回到 27，不要从 origin/master 平行新开。**
+- 没有任务链时，才从 `origin/master` 开 `task/<n>-<slug>`。
+- 施工期最多保留**链尖一个 PR**（目标 master，现为 #36）。不要再给 22–26 的旧 stacked PR 推提交，不要为每题新开打向 master 的 PR。
+- 编组 F 最后一题是任务 31。做完 31 停，等人类说「继续」。不要做 32+。
 
-## 循环（不要拆去等人）
+## 循环
 
-1. 从最新 `origin/master` 开或沿用 `task/<n>-<slug>`，实现本节勾选项，跑 `cd server; mvn -q -DskipITs test`。
-2. push 分支。立刻做 **一轮测试 + 一轮运维检查**。有问题只开 GitHub issue，**不要修、不要因此停下**。
-3. 开 PR 到 `master`（已有则更新描述）。
-4. **第一轮代码评审**（正确性 / 规格 / 鉴权会话）。有问题：开 issue → 立刻修 → commit + push。不要等。
-5. **第二轮代码评审**（换清单：测试覆盖、`docs/standards/05-security.md`、部署风险）。不要复读第一轮。有问题：开 issue → 立刻修 → commit + push。
-6. 两轮结束：勾选 `tasks.md`、整页重写 `PROJECT_STATUS.md`。CI 绿则 squash 合入 `master`。聊天一行摘要（任务号、PR、合没合）。
-7. 立刻开下一未勾选任务。不要等「继续」。
+1. 只在**当前任务链分支**上做 `tasks.md` 本节未勾选项。已有链就接着写，不要每题从 master 新开分支，不要每题新开 `task/<n>-*`。
+2. 实现后跑：`cd server && mvn -q -DskipITs test`。红了就修到绿。禁止 H2 / Embedded Redis 假绿。
+3. 勾选 `tasks.md` 该节，整页重写 `PROJECT_STATUS.md`（当前题、分支名、已叠哪些、未合 master）。
+4. 立刻做下一题，叠在同一条链上（同一分支继续 commit + push 链尖）。
+5. 禁止 merge / push / force-push `master`。
+6. 不要每题做两轮代码评审。不要每题从 master 新开分支。不要为 22–26 再更新/新开一堆打向 master 的 PR。
+7. 测试/运维发现问题：只开 GitHub issue，不修、不挡下一题。编译/单测红除外，必须修到绿。
+8. 施工期最多保留链尖一个 PR。旧 stacked PR 不要再推提交。
+9. 做到当前编组最后一题就停，等「继续」。现在编组 F 最后一题是任务 31。不要做 32+。
+10. 会话/grok 上下文 ≥260k：清会话再执行本技能。不要等人说「继续」才做 29–31。
 
-主分支健康检查 **不要** 在本技能里做，交给每 3 小时的独立定时任务。不要在开发会话上挂 PR 事件评审 / CI 失败 / 半小时进度这类会抢轮的定时。
+做完任务 31：勾选、`PROJECT_STATUS` 写成「编组 F 待验收」，链尖 PR 描述写清 22–31 未合 master，然后停。
 
-测试与运维失败：只记账（issue），不挡下一任务。代码评审问题：本轮必须修完再合。
+聊天一行摘要：当前任务号、分支、单测绿/红、停没停。
 
-## 1. 开工
+## 开工顺序（现在）
 
-读 STATUS、tasks 本节、design 锚点、矩阵该任务行、AGENTS 硬停止、git status。以代码和 git 为准。直接动手。
+1. 27 未完成 → 先完成 27。
+2. 已完成（现状）→ 在 `task/28-visibility-claim` 上做 28 未勾选项；28 已勾完则 29 → 30 → 31。
+3. 不要把 28 再 merge 回 `task/27-publish-schedule`。不要从 origin/master 平行新开。
 
-资金 / 会话 / 风控 / 迁移：照常实现、照常两轮评审后合入。不要因此等人。
+## 动手前读什么
 
-## 2. 动手前读什么（禁止通读）
-
-按 `AGENTS.md`「动手前读什么」那张表按层读。写路径 / 鉴权 / 审计 / 会话 / evict **只读 05**。打开本节 `_设计：_` 列出的分册锚点。
-
-写代码前：已在 `task/<n>-<slug>` 则沿用；否则按 `docs/standards/08-git-workflow.md` 从 master 新建。禁止 `feat/`、`develop/`。工作区有未提交 diff 时禁止切到无关分支。
-
-允许 `git commit` / `push` 到任务分支、开 PR、CI 绿后 squash 合 `master`。
+读当前分支 STATUS、tasks 本节、design 锚点、矩阵该任务行、`AGENTS.md`。写路径/鉴权/审计/会话/evict **只读 05-security**。允许 commit / push 链尖。**禁止合 master。**
 
 本机 Linux VM：
 
@@ -58,48 +56,18 @@ export JAVA_HOME=/home/box/.local/jdk/jdk-26.0.2+10
 export PATH="$JAVA_HOME/bin:/home/box/.local/maven/apache-maven-3.9.9/bin:$PATH"
 ```
 
-密钥只用 `deploy/.env.example` 口径（`REDIS_DATABASE=2`）。禁止 Redis db0。本机无 Docker：单测可跑；`*IT` 留 CI。禁止为本地绿改 H2、Embedded Redis，或削弱断言。
+Redis DB 2。无 Docker：`*IT` 留 CI。禁止 H2 / Embedded Redis 假绿。
+git author：`xuankuxiaohui` + GitHub `users.noreply`。禁止写入带手机号的个人邮箱。
+本机 Docker MySQL `127.0.0.1:3308`、Redis 6379、admin 8080 / portal 8081 若在跑：不要杀。
 
-## 3. 一次只做一个任务
+## 一次只做一个任务
 
-只实现本节勾选项。禁止顺便做下一任务。发现自己正在写下一节内容 → 第 5 节打断。
+只实现本节勾选项。做完立刻下一题，仍在同一分支。
 
-## 4. 嘴硬验收（缺一条就保持未勾选）
+## 嘴硬验收
 
-每个勾选项打勾前必须同时满足。未通过：禁止把 `tasks.md` 勾成 `[x]`，禁止写「本任务完成」。
+规格、边界、测试、反自欺同原规则。通过才勾选。不要写「请立刻合」。
 
-**规格**：每个新公共 API / 新表 / 新错误码能指回 requirements 或 design 编号。写路径涉及鉴权/审计/会话/evict：只以 `docs/standards/05-security.md` 为准。
+## 【卡点打断】
 
-**边界**：本节勾选项全部覆盖，且没有多做下一节。
-
-**测试（最硬）**：
-
-- 测试与实现同任务交付
-- 类名必须出现在本节 `_测试：_` 或 verification-matrix 该任务行
-- 禁止 `@Disabled`、跳过标签、空测试、只 `assertNotNull` 的假绿
-- 本机能跑：`cd server; mvn -q -DskipITs test`，贴通过证据
-- `*IT`：写明「本机无 Docker，留给 CI」；代码里断言保持完整
-- 属性测试（jqwik）必须断言不变量
-
-**反自欺**：
-
-- 未实现行为藏进 TODO / 空方法 / 永远 true 的 if？→ 期望「否」
-- 为编译通过改宽模块依赖？→ 期望「否」
-- evict `identity:session`、`new ObjectMapper()`、给门户/internal 加 `@Audited`？→ 期望「否」
-- 乐观锁二选一且 `rwd_prize` 未加 version？→ 期望「是」或「未涉及」
-- `Result.code` 成功是数字 `0`、失败是字符串？→ 期望「是」或「未涉及」
-- P0 若出现 `ad:position`：只做了命名空间占位？→ 期望「是」或「未出现」
-
-任务结束输出【验收陈述】（做了什么 / 没做什么 / 命令与结果 / 矩阵 / 反自欺 / 两轮评审 issue 号）。不要写「需人类评审才能合」。
-
-## 5. 【卡点打断】
-
-仅这些情况停笔：规格互斥、前置任务未勾选、连续两轮测试失败且根因不明、密钥将进 git、准备削弱断言、正在做下一任务的内容。
-
-不要因为「属于资金/会话/风控/迁移」或「没人点头」而打断。
-
-打断后仍须按第 6 节重写 STATUS。
-
-## 6. 重写 PROJECT_STATUS.md
-
-时机：嘴硬验收通过、被打断、上下文将耗尽。整页重写，不要追加聊天流水账。勾选 `tasks.md` 仅当第 4 节通过。只勾本任务本节。
+规格互斥、前置缺失、连续两轮测试失败且根因不明、密钥将进 git、准备削弱断言。不要因为「没人点头合 master」而停 29–31。编组 F 做完 31 必须停。

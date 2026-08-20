@@ -7,7 +7,7 @@ import java.util.List;
 public record UserAttributes(
         String province,
         String userRole,
-        Long orgId,
+        String orgId,
         Integer userLevel,
         List<String> tags,
         Instant registeredAt,

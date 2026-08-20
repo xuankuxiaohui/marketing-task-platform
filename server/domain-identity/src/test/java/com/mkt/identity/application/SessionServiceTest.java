@@ -37,4 +37,32 @@ class SessionServiceTest {
         sessions.logoutClient(client);
         assertThat(sessions.clientSessionValid(clientRaw)).isFalse();
     }
+
+    @Test
+    void logoutAllInvalidatesEverySessionForTheAccount() {
+        String first = sessions.loginAdmin(7L, 5, null, "ops");
+        String second = sessions.loginAdmin(7L, 5, null, "ops");
+        sessions.logoutAllAdmin(7L);
+        assertThat(sessions.adminSessionValid(first.substring("admin:".length()))).isFalse();
+        assertThat(sessions.adminSessionValid(second.substring("admin:".length()))).isFalse();
+        String client = sessions.loginClient(9L, 3, null, "user_01");
+        sessions.logoutAllClient(9L);
+        assertThat(sessions.clientSessionValid(client.substring("client:".length()))).isFalse();
+    }
+
+    @Test
+    void listExposesIpDeviceAndKickAllInvalidates() {
+        com.mkt.infra.session.KickReasonStore kicks =
+                new com.mkt.infra.session.KickReasonStore(new com.mkt.infra.redis.MemoryKeyValueStore());
+        SessionService withKicks = new SessionService(kicks);
+        String token = withKicks.loginClient(4L, 3, "phone-1", "user_01", "10.9.9.9");
+        var rows = withKicks.listClient(4L);
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).account()).isEqualTo("user_01");
+        assertThat(rows.get(0).accountType()).isEqualTo("portal");
+        assertThat(rows.get(0).ip()).isEqualTo("10.9.9.9");
+        assertThat(rows.get(0).deviceId()).isEqualTo("phone-1");
+        withKicks.kickAllClient(4L);
+        assertThat(withKicks.clientSessionValid(token.substring("client:".length()))).isFalse();
+    }
 }

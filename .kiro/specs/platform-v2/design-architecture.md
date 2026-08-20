@@ -113,6 +113,7 @@ graph TD
 |------|------------|------|
 | grant | `GrantResult grant(long prizeId, long userId, GrantSource grantSource, String sourceId, GrantContext ctx)` | 与调用方**同事务**（传播 REQUIRED）执行 §5.6.2 全流程；幂等键 = (grantSource, sourceId, prizeId)；异常封闭三类：`RetryableGrantException`（可重试，调用方整级联回滚）/ `PermanentGrantException`（封闭枚举 PRIZE_DISABLED、PRIZE_DELETED、USER_INVALID）/ 规则链业务异常（§5.6.2 原样上抛） |
 | userSummary | `UserRewardSummary userSummary(long userId)` | **只读**（D-13 / R5.6 / R4.5）：`pointsBalance`、`prizeSummary{won, granted}`。不走发放写路径。用户无账户则余额 0、摘要为 0 |
+| prizeEnabled | `boolean prizeEnabled(long prizeId)` | **只读**（D-13 / R12.3）：奖品存在、未删除且 `status=ENABLED` 时 true。发布校验 REWARD 步骤走此方法，**禁止** task 域直查 `rwd_prize` |
 | GrantResult | 记录 | `recordId: long、status: 领取七态之一、fulfillmentStatus: NONE\|SENDING\|ARRIVED\|FULFILL_FAILED、prizeId: long、hitIdempotent: boolean`（命中幂等键时 true，其余字段取既有记录值） |
 | GrantContext | 记录 | `reason?: string`（MANUAL_GRANT 必填）、`bypassRules?: ("REGION"|"LEVEL"|"TAG")[]`（仅 MANUAL_GRANT 允许，R17.5）、`operatorId?: long`（MANUAL_GRANT 必填）、`simulated: boolean`（默认 false，P1 模拟器专用）、`elapsedSeconds?: Long`（task 在 GRANT 时填入；非 TASK_STEP 或同请求新建实例则 null，D-09） |
 | GrantSource | 枚举 | TASK_STEP / SIGNIN_DAY / ACTIVITY_PARTICIPATION / MANUAL_GRANT / SIMULATE（= §3.4 grant_source 列封闭枚举） |

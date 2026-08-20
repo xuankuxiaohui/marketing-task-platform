@@ -1,0 +1,2 @@
+# M-05 compile reject
+province() == 'x' || (1 == 1

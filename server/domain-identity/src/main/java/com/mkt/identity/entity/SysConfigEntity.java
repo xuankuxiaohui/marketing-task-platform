@@ -3,6 +3,7 @@ package com.mkt.identity.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import java.time.LocalDateTime;
 
 @TableName("sys_config")
 public class SysConfigEntity {
@@ -15,6 +16,9 @@ public class SysConfigEntity {
     private String valueType;
     private Integer masked;
     private String status;
+    private String remark;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public Long getId() {
         return id;
@@ -70,5 +74,37 @@ public class SysConfigEntity {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public boolean maskedFlag() {
+        return masked != null && masked == 1;
+    }
+
+    public boolean enabled() {
+        return "ENABLED".equals(status);
     }
 }

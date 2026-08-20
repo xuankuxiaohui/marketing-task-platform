@@ -4,6 +4,8 @@ import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.dao.auto.SaTokenDaoByObjectFollowString;
 import com.mkt.infra.redis.KeyValueStore;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /** Sa-Token DAO over {@link KeyValueStore} (Redis DB 2). */
@@ -70,6 +72,22 @@ public final class SaTokenDaoKeyValue implements SaTokenDaoByObjectFollowString 
 
     @Override
     public List<String> searchData(String prefix, String keyword, int start, int size, boolean sortType) {
-        return List.of();
+        String p = prefix == null ? "" : prefix;
+        String kw = keyword == null ? "" : keyword;
+        List<String> matched = new ArrayList<>();
+        for (String key : store.keysByPattern(p + "*")) {
+            if (key.startsWith(p) && key.contains(kw)) {
+                matched.add(key);
+            }
+        }
+        if (!sortType) {
+            Collections.reverse(matched);
+        }
+        int from = Math.max(0, start);
+        int to = size < 0 ? matched.size() : Math.min(matched.size(), from + size);
+        if (from >= matched.size()) {
+            return List.of();
+        }
+        return new ArrayList<>(matched.subList(from, to));
     }
 }

@@ -1,3 +1,4 @@
 com.mkt.identity.IdentityAutoConfiguration
 com.mkt.identity.IdentityAdminAutoConfiguration
 com.mkt.identity.IdentityPortalAutoConfiguration
+com.mkt.identity.IdentityAdminSupportAutoConfiguration

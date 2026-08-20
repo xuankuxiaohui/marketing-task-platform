@@ -1,0 +1,2 @@
+# M-06 stack-depth / node-cap reject
+# nested-parens=5000

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskCrowdItemMapper">
+
+    <select id="countByCrowdAndUser" resultType="int">
+        SELECT COUNT(*)
+        FROM task_crowd_item
+        WHERE crowd_id = #{crowdId} AND user_id = #{userId}
+    </select>
+
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO task_crowd_item (crowd_id, user_id)
+        VALUES (#{crowdId}, #{userId})
+    </insert>
+
+    <delete id="deleteByCrowdId">
+        DELETE FROM task_crowd_item WHERE crowd_id = #{crowdId}
+    </delete>
+
+    <select id="selectUserIds" resultType="long">
+        SELECT user_id
+        FROM task_crowd_item
+        WHERE crowd_id = #{crowdId}
+        ORDER BY id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

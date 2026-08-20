@@ -1,0 +1,166 @@
+package com.mkt.task.testsupport;
+
+import com.mkt.task.application.TaskDefinitionStore;
+import com.mkt.task.entity.TaskDefinitionEntity;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+public final class MemoryTaskDefinitionStore implements TaskDefinitionStore {
+
+    private final ConcurrentHashMap<Long, TaskDefinitionEntity> rows = new ConcurrentHashMap<>();
+    private final AtomicLong seq = new AtomicLong(1);
+
+    @Override
+    public TaskDefinitionEntity getById(long id) {
+        return rows.get(id);
+    }
+
+    @Override
+    public TaskDefinitionEntity getByCode(String code) {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag() && code.equals(row.getCode()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    public int insert(TaskDefinitionEntity entity) {
+        entity.setId(seq.getAndIncrement());
+        rows.put(entity.getId(), entity);
+        return 1;
+    }
+
+    @Override
+    public int update(TaskDefinitionEntity entity) {
+        rows.put(entity.getId(), entity);
+        return 1;
+    }
+
+    @Override
+    public long countByQuery(String code, String name, String status, String category) {
+        return listByQuery(code, name, status, category, 0, Integer.MAX_VALUE).size();
+    }
+
+    @Override
+    public List<TaskDefinitionEntity> listByQuery(
+            String code, String name, String status, String category, long offset, int limit) {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag())
+                .filter(row -> code == null || code.equals(row.getCode()))
+                .filter(row -> name == null || (row.getName() != null && row.getName().contains(name)))
+                .filter(row -> status == null || status.equals(row.getStatus()))
+                .filter(row -> category == null || category.equals(row.getCategory()))
+                .sorted(Comparator.comparing(TaskDefinitionEntity::getId).reversed())
+                .skip(offset)
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public List<String> cycleTypesInMutexGroup(long mutexGroupId, Long excludeTaskId) {
+        List<String> types = new ArrayList<>();
+        for (TaskDefinitionEntity row : rows.values()) {
+            if (row.deletedFlag() || row.getMutexGroupId() == null || row.getMutexGroupId() != mutexGroupId) {
+                continue;
+            }
+            if (excludeTaskId != null && excludeTaskId.equals(row.getId())) {
+                continue;
+            }
+            types.add(row.getCycleType());
+        }
+        return types;
+    }
+
+    @Override
+    public int countByMutexGroup(long mutexGroupId) {
+        int count = 0;
+        for (TaskDefinitionEntity row : rows.values()) {
+            if (!row.deletedFlag() && row.getMutexGroupId() != null && row.getMutexGroupId() == mutexGroupId) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    @Override
+    public int countReferencingCrowd(long crowdId) {
+        return 0;
+    }
+
+    @Override
+    public TaskDefinitionEntity getByIdForUpdate(long id) {
+        return getById(id);
+    }
+
+    @Override
+    public List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit) {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag())
+                .filter(row -> "SCHEDULED".equals(row.getStatus()))
+                .filter(row -> row.getSchedulePublishAt() != null && !row.getSchedulePublishAt().isAfter(now))
+                .sorted(Comparator.comparing(TaskDefinitionEntity::getSchedulePublishAt)
+                        .thenComparing(TaskDefinitionEntity::getId))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public int countInProgressInstances(long taskId) {
+        return inFlight.getOrDefault(taskId, 0);
+    }
+
+    @Override
+    public List<TaskDefinitionEntity> listPublished() {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag() && "PUBLISHED".equals(row.getStatus()))
+                .sorted(Comparator.comparing((TaskDefinitionEntity row) -> row.getSortWeight() == null ? 0 : row.getSortWeight())
+                        .thenComparing(TaskDefinitionEntity::getId))
+                .toList();
+    }
+
+    @Override
+    public List<Long> listIdsByMutexGroup(long mutexGroupId) {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag()
+                        && row.getMutexGroupId() != null
+                        && row.getMutexGroupId() == mutexGroupId)
+                .map(TaskDefinitionEntity::getId)
+                .toList();
+    }
+
+    public final java.util.Map<Long, Integer> inFlight = new ConcurrentHashMap<>();
+
+    public int liveCount() {
+        return (int) rows.values().stream().filter(row -> !row.deletedFlag()).count();
+    }
+
+    @Override
+    public int casPublish(
+            long id,
+            String expectedStatus,
+            int expectedVersion,
+            int expectedPending,
+            int nextVersion,
+            java.time.LocalDateTime updatedAt) {
+        TaskDefinitionEntity row = rows.get(id);
+        if (row == null || row.deletedFlag()) {
+            return 0;
+        }
+        int pending = row.getPendingRevision() == null ? 0 : row.getPendingRevision();
+        int version = row.getVersion() == null ? 0 : row.getVersion();
+        if (!expectedStatus.equals(row.getStatus())
+                || version != expectedVersion
+                || pending != expectedPending) {
+            return 0;
+        }
+        row.setStatus("PUBLISHED");
+        row.setVersion(nextVersion);
+        row.setPendingRevision(0);
+        row.setSchedulePublishAt(null);
+        row.setUpdatedAt(updatedAt);
+        return 1;
+    }
+}

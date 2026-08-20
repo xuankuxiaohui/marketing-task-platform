@@ -83,7 +83,7 @@ Google 要求作者先自审 diff。本项目清单：
 - [ ] 本地 / CI 相关测试已跑（至少单元 + 被改模块 IT）
 - [ ] 无密钥、无本地绝对路径、无 `TODO` 无主
 - [ ] 新 API 已进 OpenAPI 分组，错误码已在 design §4 或走缺省三件套
-- [ ] 契约变更已跑 `pnpm --filter @mkt/shared gen:api`，生成物无手工改、无未提交 diff
+- [ ] 契约变更：任务 36 落地 `web/` 之后必须跑 `pnpm --filter @mkt/shared gen:api`，生成物无手工改、无未提交 diff；此前不要求 `packages/shared`
 - [ ] 后台非 GET 已标 `@Audited`；门户 / internal 未标
 - [ ] 新表/列只出现在新的 Flyway 版本
 - [ ] 未跨域 import
@@ -192,6 +192,7 @@ APPROVE | REQUEST_CHANGES
 - [ ] `@Audited` 机械规则
 - [ ] OpenAPI 生成物
 - [ ] 测试与任务测试行对应
+- [ ] 未为 springdoc 在 app IT 上堆 AutoConfiguration exclude
 ```
 
 **MUST** 引用文件与条款，禁止空泛「LGTM」。未读 design 对应节时，结论只能是「未完整评审」。
@@ -206,7 +207,7 @@ APPROVE | REQUEST_CHANGES
 | 集成测试 `*IT` | 阻断 |
 | 覆盖率阈值 D-04 | 阻断 |
 | Spotless 格式化 | 阻断 |
-| OpenAPI 生成物无 diff | 阻断（触及 Controller / Command / Query / Response / ErrorCode / springdoc 的 PR，以及任何 `web/` PR）。命令：`pnpm --filter @mkt/shared gen:api`；产物只提交 `packages/shared`，禁止手改 |
+| OpenAPI 生成物无 diff | 阻断（**任务 36 起**：触及 Controller / Command / Query / Response / ErrorCode / springdoc 的 PR，以及任何 `web/` PR）。命令：`pnpm --filter @mkt/shared gen:api`；产物只提交 `packages/shared`，禁止手改。任务 36 之前不因缺少生成物阻断 |
 | 开发会话两轮分开的代码评审（有问题开 issue 并直接修，不等人类点头） | 所有 PR |
 
 资金与并发路径（领取、发奖、库存、积分、HMAC）**MUST** 走两轮分开的代码评审并修完 issue；不要等人签字。人类会叫停。

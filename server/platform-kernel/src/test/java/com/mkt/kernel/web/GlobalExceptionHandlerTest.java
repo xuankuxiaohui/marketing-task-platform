@@ -34,14 +34,25 @@ class GlobalExceptionHandlerTest {
     @Test
     void businessUsesErrorCodeHttpAndMessage() {
         TraceIds.put("t-biz");
-        ResponseEntity<Result<Void>> response =
+        ResponseEntity<Result<Object>> response =
                 handler.handleBusiness(new BusinessException(CommonErrorCodes.NOT_FOUND, "资源不存在"));
 
         assertThat(response.getStatusCode().value()).isEqualTo(404);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().code()).isEqualTo("common.not-found");
         assertThat(response.getBody().message()).isEqualTo("资源不存在");
+        assertThat(response.getBody().data()).isNull();
         assertThat(response.getBody().traceId()).isEqualTo("t-biz");
+    }
+
+    @Test
+    void businessPassesDataOnFailureEnvelope() {
+        ResponseEntity<Result<Object>> response = handler.handleBusiness(
+                new BusinessException(CommonErrorCodes.PARAM_INVALID, "发布校验失败", java.util.Map.of("checkErrors", java.util.List.of())));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().data()).isEqualTo(java.util.Map.of("checkErrors", java.util.List.of()));
     }
 
     @Test
@@ -76,7 +87,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void rateLimitedSetsRetryAfter() {
-        ResponseEntity<Result<Void>> response =
+        ResponseEntity<Result<Object>> response =
                 handler.handleBusiness(new RateLimitedException(CommonErrorCodes.RATE_LIMITED, 60));
 
         assertThat(response.getStatusCode().value()).isEqualTo(429);

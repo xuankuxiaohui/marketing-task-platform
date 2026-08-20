@@ -4,24 +4,48 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
+import com.mkt.contract.PrizeSummary;
+import com.mkt.contract.RewardPort;
 import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.TaskReadPort;
+import com.mkt.contract.UserRewardSummary;
 import com.mkt.contract.UserRiskSummary;
 import com.mkt.identity.application.AdminAuthService;
+import com.mkt.identity.application.AdminUserAppService;
 import com.mkt.identity.application.AdminUserStore;
 import com.mkt.identity.application.AuditLogConsumer;
 import com.mkt.identity.application.AuthRateLimiter;
 import com.mkt.identity.application.CaptchaService;
+import com.mkt.identity.application.IdentityAuditAppender;
+import com.mkt.identity.application.CacheAdminAppService;
+import com.mkt.identity.application.DictAppService;
+import com.mkt.identity.application.InternalAppAppService;
+import com.mkt.identity.application.InternalAppSecretCipher;
 import com.mkt.identity.application.LoginAuditAppender;
 import com.mkt.identity.application.PasswordHasher;
 import com.mkt.identity.application.PortalAuthService;
+import com.mkt.identity.application.PortalUserAppService;
 import com.mkt.identity.application.PortalUserStore;
+import com.mkt.identity.application.RbacPermissionCache;
+import com.mkt.identity.application.RoleAppService;
 import com.mkt.identity.application.SessionService;
+import com.mkt.identity.application.UserAttributePortImpl;
+import com.mkt.identity.config.ConfigAppService;
 import com.mkt.identity.config.MybatisConfigService;
 import com.mkt.identity.config.SysConfigMapper;
 import com.mkt.identity.mapper.AdminUserMapper;
+import com.mkt.identity.mapper.DictEntryMapper;
+import com.mkt.identity.mapper.DictTypeMapper;
+import com.mkt.identity.mapper.AdminUserRoleMapper;
+import com.mkt.identity.mapper.InternalAppMapper;
+import com.mkt.identity.mapper.PermissionMapper;
 import com.mkt.identity.mapper.PortalUserMapper;
+import com.mkt.identity.mapper.RoleMapper;
+import com.mkt.identity.mapper.RolePermissionMapper;
+import com.mkt.infra.cache.PlatformCache;
+import com.mkt.infra.cache.TwoLevelPlatformCache;
 import com.mkt.infra.lock.PlatformLock;
 import com.mkt.infra.outbox.AwaitOutboxDrain;
 import com.mkt.infra.outbox.EventPublisher;
@@ -56,6 +80,20 @@ public final class IdentityITSupport implements AutoCloseable {
     public final AwaitOutboxDrain drain;
     public final PasswordHasher hasher;
     public final SessionService sessions;
+    public final AdminUserStore adminUsers;
+    public final RoleAppService roles;
+    public final RbacPermissionCache permissionCache;
+    public final IdentityAuditAppender identityAudits;
+    public final AdminUserAppService adminUserApp;
+    public final PortalUserAppService portalUserApp;
+    public final InternalAppAppService internalApps;
+    public final UserAttributePortImpl userAttributes;
+    public final InternalAppSecretCipher secretCipher;
+    public final DictAppService dictApp;
+    public final ConfigAppService configApp;
+    public final CacheAdminAppService cacheAdmin;
+    public final PlatformCache platformCache;
+    public final org.springframework.transaction.PlatformTransactionManager txm;
     private final HikariDataSource dataSource;
 
     private IdentityITSupport(
@@ -69,6 +107,20 @@ public final class IdentityITSupport implements AutoCloseable {
             AwaitOutboxDrain drain,
             PasswordHasher hasher,
             SessionService sessions,
+            AdminUserStore adminUsers,
+            RoleAppService roles,
+            RbacPermissionCache permissionCache,
+            IdentityAuditAppender identityAudits,
+            AdminUserAppService adminUserApp,
+            PortalUserAppService portalUserApp,
+            InternalAppAppService internalApps,
+            UserAttributePortImpl userAttributes,
+            InternalAppSecretCipher secretCipher,
+            DictAppService dictApp,
+            ConfigAppService configApp,
+            CacheAdminAppService cacheAdmin,
+            PlatformCache platformCache,
+            org.springframework.transaction.PlatformTransactionManager txm,
             HikariDataSource dataSource) {
         this.clock = clock;
         this.jdbc = jdbc;
@@ -80,6 +132,20 @@ public final class IdentityITSupport implements AutoCloseable {
         this.drain = drain;
         this.hasher = hasher;
         this.sessions = sessions;
+        this.adminUsers = adminUsers;
+        this.roles = roles;
+        this.permissionCache = permissionCache;
+        this.identityAudits = identityAudits;
+        this.adminUserApp = adminUserApp;
+        this.portalUserApp = portalUserApp;
+        this.internalApps = internalApps;
+        this.userAttributes = userAttributes;
+        this.secretCipher = secretCipher;
+        this.dictApp = dictApp;
+        this.configApp = configApp;
+        this.cacheAdmin = cacheAdmin;
+        this.platformCache = platformCache;
+        this.txm = txm;
         this.dataSource = dataSource;
     }
 
@@ -111,9 +177,42 @@ public final class IdentityITSupport implements AutoCloseable {
         DataSourceTransactionManager txm = new DataSourceTransactionManager(ds);
         TransactionTemplate tx = new TransactionTemplate(txm);
         SqlSessionTemplate sql = mybatis(ds);
-        AdminUserStore adminUsers = new AdminUserStore(sql.getMapper(AdminUserMapper.class));
-        PortalUserStore portalUsers = new PortalUserStore(sql.getMapper(PortalUserMapper.class));
-        MybatisConfigService configs = new MybatisConfigService(sql.getMapper(SysConfigMapper.class));
+        AdminUserMapper adminUserMapper = sql.getMapper(AdminUserMapper.class);
+        RoleMapper roleMapper = sql.getMapper(RoleMapper.class);
+        PermissionMapper permissionMapper = sql.getMapper(PermissionMapper.class);
+        RolePermissionMapper rolePermissionMapper = sql.getMapper(RolePermissionMapper.class);
+        AdminUserRoleMapper adminUserRoleMapper = sql.getMapper(AdminUserRoleMapper.class);
+        PortalUserMapper portalUserMapper = sql.getMapper(PortalUserMapper.class);
+        InternalAppMapper internalAppMapper = sql.getMapper(InternalAppMapper.class);
+        DictTypeMapper dictTypeMapper = sql.getMapper(DictTypeMapper.class);
+        DictEntryMapper dictEntryMapper = sql.getMapper(DictEntryMapper.class);
+        SysConfigMapper sysConfigMapper = sql.getMapper(SysConfigMapper.class);
+        TwoLevelPlatformCache platformCache = new TwoLevelPlatformCache(kv);
+        RbacPermissionCache rbacCache =
+                new RbacPermissionCache(platformCache, adminUserMapper, roleMapper, permissionMapper);
+        AdminUserStore adminUsers = new AdminUserStore(adminUserMapper, rbacCache);
+        IdentityAuditAppender identityAudits = new IdentityAuditAppender(publisher);
+        RoleAppService roleApp = TransactionalProxies.proxy(
+                new RoleAppService(
+                        roleMapper,
+                        adminUserRoleMapper,
+                        rolePermissionMapper,
+                        permissionMapper,
+                        rbacCache,
+                        identityAudits,
+                        clock),
+                txm);
+        PortalUserStore portalUsers = new PortalUserStore(portalUserMapper);
+        UserAttributePortImpl userAttributes = new UserAttributePortImpl(portalUserMapper, platformCache);
+        InternalAppSecretCipher secretCipher =
+                new InternalAppSecretCipher("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        MybatisConfigService configs = new MybatisConfigService(sysConfigMapper, platformCache);
+        DictAppService dictApp = TransactionalProxies.proxy(
+                new DictAppService(dictTypeMapper, dictEntryMapper, platformCache, identityAudits, clock), txm);
+        ConfigAppService configApp = TransactionalProxies.proxy(
+                new ConfigAppService(sysConfigMapper, platformCache, identityAudits, clock), txm);
+        CacheAdminAppService cacheAdmin = TransactionalProxies.proxy(
+                new CacheAdminAppService(platformCache, identityAudits), txm);
         PasswordHasher hasher = new PasswordHasher();
         CaptchaService captchas = new CaptchaService(kv, configs);
         SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(kv, clock);
@@ -136,6 +235,53 @@ public final class IdentityITSupport implements AutoCloseable {
         PortalAuthService portalAuth = TransactionalProxies.proxy(
                 new PortalAuthService(portalUsers, captchas, rates, hasher, sessions, pass, publisher, configs, clock),
                 txm);
+        RewardPort rewards = new RewardPort() {
+            @Override
+            public com.mkt.contract.GrantResult grant(
+                    long prizeId,
+                    long userId,
+                    com.mkt.contract.GrantSource grantSource,
+                    String sourceId,
+                    com.mkt.contract.GrantContext ctx) {
+                throw new UnsupportedOperationException("reward stub");
+            }
+
+            @Override
+            public UserRewardSummary userSummary(long userId) {
+                return new UserRewardSummary(0L, new PrizeSummary(0L, 0L));
+            }
+
+            @Override
+            public boolean prizeEnabled(long prizeId) {
+                return false;
+            }
+        };
+        TaskReadPort taskReads = userId -> new com.mkt.contract.InstanceCounts(0L, 0L);
+        AdminUserAppService adminUserApp = TransactionalProxies.proxy(
+                new AdminUserAppService(
+                        adminUserMapper,
+                        adminUserRoleMapper,
+                        roleMapper,
+                        hasher,
+                        sessions,
+                        rbacCache,
+                        identityAudits,
+                        clock),
+                txm);
+        PortalUserAppService portalUserApp = TransactionalProxies.proxy(
+                new PortalUserAppService(
+                        portalUserMapper,
+                        hasher,
+                        sessions,
+                        userAttributes,
+                        rewards,
+                        pass,
+                        taskReads,
+                        identityAudits,
+                        clock),
+                txm);
+        InternalAppAppService internalAppApp = TransactionalProxies.proxy(
+                new InternalAppAppService(internalAppMapper, secretCipher, identityAudits, clock), txm);
         OutboxRelay relay = new OutboxRelay(
                 outbox, OutboxProducer.ADMIN, new PlatformLock(kv), clock, List.of(new AuditLogConsumer(jdbc, clock)));
         return new IdentityITSupport(
@@ -149,6 +295,20 @@ public final class IdentityITSupport implements AutoCloseable {
                 new AwaitOutboxDrain(outbox, OutboxProducer.ADMIN, relay, clock),
                 hasher,
                 sessions,
+                adminUsers,
+                roleApp,
+                rbacCache,
+                identityAudits,
+                adminUserApp,
+                portalUserApp,
+                internalAppApp,
+                userAttributes,
+                secretCipher,
+                dictApp,
+                configApp,
+                cacheAdmin,
+                platformCache,
+                txm,
                 ds);
     }
 
@@ -163,6 +323,13 @@ public final class IdentityITSupport implements AutoCloseable {
             configuration.addMapper(AdminUserMapper.class);
             configuration.addMapper(PortalUserMapper.class);
             configuration.addMapper(SysConfigMapper.class);
+            configuration.addMapper(RoleMapper.class);
+            configuration.addMapper(PermissionMapper.class);
+            configuration.addMapper(RolePermissionMapper.class);
+            configuration.addMapper(AdminUserRoleMapper.class);
+            configuration.addMapper(InternalAppMapper.class);
+            configuration.addMapper(DictTypeMapper.class);
+            configuration.addMapper(DictEntryMapper.class);
             factoryBean.setConfiguration(configuration);
             GlobalConfig globalConfig = new GlobalConfig();
             GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();

@@ -42,6 +42,9 @@ public interface KeyValueStore {
 
     void unlinkByPattern(String pattern);
 
+    /** SCAN-style key listing for Sa-Token {@code searchData} (session list). */
+    List<String> keysByPattern(String pattern);
+
     void publish(String channel, String payload);
 
     AutoCloseable subscribe(String channel, Consumer<String> listener);

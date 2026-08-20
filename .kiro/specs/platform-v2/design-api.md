@@ -164,7 +164,7 @@
 - **SCHEDULED 且 `early=true`**：手动提前发布（R12.1 `SCHEDULED→PUBLISHED`）。同到点路径：重新校验 → 固化快照 → version+1 → 主状态 `PUBLISHED`，清除 `schedule_publish_at`。取消定时再发布是两条边，不能替代本路径。
 **POST /admin/task/definitions/{id}/schedule**（`task:definition:schedule`）· `{publishAt}`；**POST .../cancel-schedule**（schedule）；**POST .../offline**（`task:definition:offline`）· 记录 offline_at（R14.10）
 **POST /admin/task/definitions/batch-publish** / **batch-offline**（publish/offline）· `{ids: [≤50]}`；响应逐条明细 `[{id, success, errorCode?}]`（R12.9）
-**GET /admin/task/definitions/{id}/versions**（query）· 版本历史；**GET .../versions/diff?left=&right=**· 结构化差异 `{steps: [...], transitions: [...], filter: {...}, gray: {...}, actions: [...]}`（R12.8）
+**GET /admin/task/definitions/{id}/versions**（query）· 版本历史；**GET .../versions/diff?left=&right=**· 结构化差异 `{steps: [...], transitions: [...], filter: {field: DiffEntry}, gray: {field: DiffEntry}, actions: [...]}`（R12.8）
 
 **POST /admin/task/expressions/validate**（`task:expression:validate`）· 入参 `{expression, type: FILTER|BRANCH}`；出参 `{valid, error?: {position, reason}, nullAttrSample?: [string]}`（空值语义模拟求值 R11.5）
 

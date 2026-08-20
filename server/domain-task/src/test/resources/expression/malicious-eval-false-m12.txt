@@ -1,0 +1,2 @@
+# M-12 unicode escape is literal, not quote
+hasTag('\u0027') OR province() == 'x'

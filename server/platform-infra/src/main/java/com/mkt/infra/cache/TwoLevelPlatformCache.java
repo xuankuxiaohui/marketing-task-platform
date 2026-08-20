@@ -2,6 +2,7 @@ package com.mkt.infra.cache;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.mkt.infra.redis.KeyValueStore;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.json.JsonUtil;
@@ -27,12 +28,22 @@ public final class TwoLevelPlatformCache implements PlatformCache {
     private final Map<CacheNamespace, AtomicLong> misses = new EnumMap<>(CacheNamespace.class);
 
     public TwoLevelPlatformCache(KeyValueStore store) {
+        this(store, Ticker.systemTicker());
+    }
+
+    TwoLevelPlatformCache(KeyValueStore store, Ticker ticker) {
         this.store = store;
         for (CacheNamespace ns : CacheNamespace.values()) {
             hits.put(ns, new AtomicLong());
             misses.put(ns, new AtomicLong());
             if (ns.kind() == CacheNamespaceKind.MANAGED) {
-                l1.put(ns, Caffeine.newBuilder().maximumSize(ns.l1Capacity()).build());
+                l1.put(
+                        ns,
+                        Caffeine.newBuilder()
+                                .ticker(ticker)
+                                .maximumSize(ns.l1Capacity())
+                                .expireAfterWrite(ns.ttl())
+                                .build());
             }
         }
         store.subscribe(EVICT_CHANNEL, this::onBroadcast);

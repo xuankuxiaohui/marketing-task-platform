@@ -14,5 +14,12 @@ class AuthErrorCodesTest {
         assertThat(AuthErrorCodes.RISK_BLOCKED_REGISTER.httpStatus()).isEqualTo(403);
         assertThat(AuthErrorCodes.RISK_BLOCKED_LOGIN.message()).isEqualTo("暂时无法登录");
         assertThat(AuthErrorCodes.ACCOUNT_DISABLED.httpStatus()).isEqualTo(403);
+        assertThat(AuthErrorCodes.ROLE_BUILT_IN.code()).isEqualTo("auth.role.built-in");
+        assertThat(AuthErrorCodes.ROLE_BUILT_IN.httpStatus()).isEqualTo(400);
+        assertThat(AuthErrorCodes.USER_SELF_PROTECTED.code()).isEqualTo("auth.user.self-protected");
+        assertThat(InternalAppErrorCodes.DUPLICATE.code()).isEqualTo("internal.app.duplicate");
+        assertThat(SystemErrorCodes.DICT_ENTRY_DUPLICATE_VALUE.code()).isEqualTo("dict.entry.duplicate-value");
+        assertThat(SystemErrorCodes.CONFIG_TYPE_MISMATCH.code()).isEqualTo("config.value.type-mismatch");
+        assertThat(SystemErrorCodes.CACHE_NAMESPACE_UNKNOWN.code()).isEqualTo("cache.namespace.unknown");
     }
 }

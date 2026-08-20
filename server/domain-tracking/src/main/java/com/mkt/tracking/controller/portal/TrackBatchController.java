@@ -44,11 +44,7 @@ public class TrackBatchController {
         if (request == null) {
             return null;
         }
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            int comma = forwarded.indexOf(',');
-            return (comma < 0 ? forwarded : forwarded.substring(0, comma)).trim();
-        }
-        return request.getRemoteAddr();
+        String remote = request.getRemoteAddr();
+        return remote == null || remote.isBlank() ? null : remote;
     }
 }

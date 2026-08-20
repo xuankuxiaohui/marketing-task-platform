@@ -16,6 +16,8 @@ public enum AuthErrorCodes implements ErrorCode {
     PASSWORD_POLICY_VIOLATED("auth.password.policy-violated", 400, "密码不符合复杂度要求"),
     PASSWORD_OLD_MISMATCH("auth.password.old-mismatch", 400, "原密码不正确"),
     ACCOUNT_DISABLED("auth.account.disabled", 403, "账号已停用"),
+    ROLE_BUILT_IN("auth.role.built-in", 400, "内置角色不可删除或修改权限集"),
+    USER_SELF_PROTECTED("auth.user.self-protected", 400, "不能停用或删除当前用户或内置超管"),
     RISK_BLOCKED_REGISTER("risk.blocked.register", 403, "暂时无法完成注册"),
     RISK_BLOCKED_LOGIN("risk.blocked.login", 403, "暂时无法登录");
 

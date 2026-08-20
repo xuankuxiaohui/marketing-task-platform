@@ -52,6 +52,7 @@ src/test/java/com/mkt/task/ScenarioMatrixIT.java
 2. **MUST NOT** `test1` / `testOk`。
 3. 单测类与被测类同包不同源集，便于测包可见性。
 4. 新测试优先放被测模块；需要完整装配的放 app 模块。
+5. 不启 Testcontainers、不启两应用的 HTTP 冒烟（`Result` 外壳、traceId、OpenAPI 三分组隔离）放 `platform-kernel` 的 `*IT`，用 `KernelTestApplication`（仍起嵌入式 Tomcat，走 failsafe）。**MUST NOT** 为此起 admin-app / portal-app。任务 36 / `gen:api` 的 JSON **MUST** 来自两应用命名空间路径，见 [07-api-design.md](07-api-design.md) §2，**MUST NOT** 用 kernel 冒烟 JSON。
 
 ## 4. 单元测试
 
@@ -157,6 +158,7 @@ design §7.9：
 | 把生产库当 IT | 安全 |
 | 断言完整 JSON 字符串含动态时间 | 脆弱；断言字段 |
 | 复制 200 行 Fixture 不抽 | 维护成本 |
+| 为测 OpenAPI 分组起整应用再维护 AutoConfiguration exclude | 每加一个域配置就红；隔离测用 kernel `OpenApiGroupsIT`，路径用各 app `SpringdocNamespacePathTest`；`gen:api` 仍打两应用 |
 
 ## 14. AI 检查清单
 
@@ -168,3 +170,4 @@ design §7.9：
 - [ ] Outbox 用 `awaitOutboxDrain`
 - [ ] 架构规则未因「方便」削弱
 - [ ] 前端未手写与 OpenAPI 冲突的类型
+- [ ] 新增 `*AutoConfiguration` 未去改 OpenAPI 测试 exclude 名单

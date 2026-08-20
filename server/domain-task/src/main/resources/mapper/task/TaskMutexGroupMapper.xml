@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.task.mapper.TaskMutexGroupMapper">
+
+    <select id="selectByCode" resultType="com.mkt.task.entity.TaskMutexGroupEntity">
+        SELECT id, code, name, cross_cycle, created_at
+        FROM task_mutex_group
+        WHERE code = #{code}
+    </select>
+
+    <select id="selectCountAll" resultType="long">
+        SELECT COUNT(*) FROM task_mutex_group
+    </select>
+
+    <select id="selectPage" resultType="com.mkt.task.entity.TaskMutexGroupEntity">
+        SELECT id, code, name, cross_cycle, created_at
+        FROM task_mutex_group
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

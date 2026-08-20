@@ -28,6 +28,10 @@
         </dependency>
         <dependency>
             <groupId>com.mkt</groupId>
+            <artifactId>domain-task</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
             <artifactId>domain-risk</artifactId>
         </dependency>
         <dependency>

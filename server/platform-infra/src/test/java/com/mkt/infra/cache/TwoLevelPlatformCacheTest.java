@@ -3,9 +3,12 @@ package com.mkt.infra.cache;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.kernel.BusinessException;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -102,6 +105,25 @@ class TwoLevelPlatformCacheTest {
         } finally {
             TransactionSynchronizationManager.clear();
         }
+    }
+
+    @Test
+    void l1ExpiresAfterNamespaceTtl() {
+        AtomicLong nanos = new AtomicLong();
+        Ticker ticker = nanos::get;
+        cache = new TwoLevelPlatformCache(store, ticker);
+        cache.put(CacheNamespace.TASK_PUBLISHED_INDEX, "all", "v1");
+        store.unlink("task:published-index:all");
+        assertThat(cache.get(CacheNamespace.TASK_PUBLISHED_INDEX, "all", String.class, () -> "miss"))
+                .isEqualTo("v1");
+        nanos.addAndGet(Duration.ofSeconds(31).toNanos());
+        AtomicInteger loads = new AtomicInteger();
+        String after = cache.get(CacheNamespace.TASK_PUBLISHED_INDEX, "all", String.class, () -> {
+            loads.incrementAndGet();
+            return "v2";
+        });
+        assertThat(after).isEqualTo("v2");
+        assertThat(loads.get()).isEqualTo(1);
     }
 
     @Test

@@ -16,6 +16,9 @@ import com.mkt.kernel.UserContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -73,6 +76,21 @@ class SessionAuthFilterTest {
         filter.doFilter(req, response, unused());
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("auth.session.invalid");
+    }
+
+    @Test
+    void portalAdminKickOnRealTokenIs401KickedAdmin() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        SessionService sessions = new SessionService(kicks);
+        String token = sessions.loginClient(3L, 3, null, "bob_01");
+        sessions.kickAllClient(3L);
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+        MockHttpServletRequest req = request("GET", "/api/common/auth/profile");
+        req.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, unused());
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("auth.session.kicked-admin");
     }
 
     @Test
@@ -298,6 +316,69 @@ class SessionAuthFilterTest {
                 }))
                 .isInstanceOf(ServletException.class);
         assertThat(UserContext.current()).isEmpty();
+    }
+
+    @Test
+    void interceptorForbiddenWritesAuditForAdmin() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        AtomicReference<String> audited = new AtomicReference<>();
+        SessionAuthFilter filter = new SessionAuthFilter(
+                SessionSide.ADMIN,
+                kicks,
+                availability,
+                (userId, username, method, path, ip, userAgent) ->
+                        audited.set(userId + ":" + username + ":" + method + ":" + path + ":" + ip));
+        MockHttpServletRequest req = request("GET", "/admin/identity/roles");
+        req.setRemoteAddr("10.0.0.9");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, (r, s) -> {
+            r.setAttribute(SessionAuthFilter.RBAC_DENIED, Boolean.TRUE);
+            ((HttpServletResponse) s).setStatus(403);
+        });
+        assertThat(audited.get()).isEqualTo("7:alice:GET:/admin/identity/roles:10.0.0.9");
+        com.mkt.kernel.audit.AuditOnce.mark();
+        filter.doFilter(req, new MockHttpServletResponse(), (r, s) -> {});
+        assertThat(com.mkt.kernel.audit.AuditOnce.written()).isFalse();
+    }
+
+    @Test
+    void csrfForbiddenIsNotAuditedAsPermissionDenied() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        AtomicReference<String> audited = new AtomicReference<>();
+        SessionAuthFilter filter = new SessionAuthFilter(
+                SessionSide.ADMIN,
+                kicks,
+                availability,
+                (userId, username, method, path, ip, userAgent) -> audited.set("hit"));
+        MockHttpServletRequest req = request("PUT", "/admin/identity/roles/1");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(req, response, (r, s) -> ((HttpServletResponse) s).setStatus(403));
+        assertThat(audited.get()).isNull();
+    }
+
+    @Test
+    void downstreamSeesUnwrappedAdminCookie() throws Exception {
+        SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
+        String token = new SessionService().loginAdmin(7L, 5, null, "alice");
+        assertThat(token).startsWith("admin:");
+        String raw = token.substring("admin:".length());
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.ADMIN, kicks, availability);
+        MockHttpServletRequest req = request("GET", "/admin/identity/roles");
+        req.setCookies(new Cookie(AuthCookies.SESSION, token), new Cookie(AuthCookies.CSRF, "csrf"));
+        AtomicReference<String> seen = new AtomicReference<>();
+        filter.doFilter(req, new MockHttpServletResponse(), (r, s) -> {
+            HttpServletRequest http = (HttpServletRequest) r;
+            for (Cookie cookie : http.getCookies()) {
+                if (AuthCookies.SESSION.equals(cookie.getName())) {
+                    seen.set(cookie.getValue());
+                }
+            }
+        });
+        assertThat(seen.get()).isEqualTo(raw);
     }
 
     private static String setCookie(MockHttpServletResponse response, String name) {

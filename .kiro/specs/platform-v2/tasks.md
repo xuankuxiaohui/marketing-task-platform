@@ -268,11 +268,11 @@ _测试：故意违规类失败、合规类通过；ClockDirectCallArchTest_
 - [x] `Clock` Bean + 测试用 `MutableClock`（D-03）
 - [x] traceId 入口过滤：读 `X-Trace-Id` 或生成，写 MDC / 响应头 / 响应体
 - [x] 错误码格式断言：`<域>.<场景>.<原因>`
-- [x] 两应用 `GroupedOpenApi` 三分组（admin / portal / internal）能导出 JSON；任务 36 消费本导出，**禁止**锁死 spike/5 的 JSON
+- [x] 两应用 `GroupedOpenApi` 三分组（admin / portal / internal）能导出 JSON；任务 36 消费**两应用**导出，**禁止**锁死 spike/5 的 JSON（本任务只测分组隔离与 yml 路径，不启两应用）
 
 _需求：附录 C；NFR 可观测性 2_
 _设计：design §2.2.1、§2.9、§3.9、§6.6、§7.2_
-_测试：ResultJsonIT、ErrorCodeFormatTest、MutableClockTest、TraceIdFilterIT_
+_测试：ResultJsonIT、ErrorCodeFormatTest、MutableClockTest、TraceIdFilterIT、OpenApiGroupsIT（kernel 分组隔离，不是 gen:api 源）、OpenApiGroupsConfigurationTest、两应用 SpringdocNamespacePathTest（生产 yml 属性 equals）_
 
 ### 任务 12：platform-contract 跨域契约（编组 C）
 
@@ -394,9 +394,9 @@ _测试：§7.3 R1.1–R1.3、R4.1、R32.1；`LoginLockPropertyTest`、`LoginAud
 
 ### 任务 22：RBAC 与权限树（编组 E）
 
-- [ ] 用户—角色—权限五表端点；权限树 / 菜单种子 = §4.10
-- [ ] `rbac:permission` 缓存；变更 afterCommit 立即生效（RL-10 无鉴权后门）
-- [ ] 超管内置、不可改权限集
+- [x] 用户—角色—权限五表端点；权限树 / 菜单种子 = §4.10
+- [x] `rbac:permission` 缓存；变更 afterCommit 立即生效（RL-10 无鉴权后门）
+- [x] 超管内置、不可改权限集
 
 _需求：R2_
 _设计：design §3.2.2、§4.2、§6.2_
@@ -404,12 +404,12 @@ _测试：§7.3 R2.1–R2.2_
 
 ### 任务 23：用户管理三组端点（编组 E）
 
-- [ ] admin-user CRUD / 重置 / 停用
-- [ ] portal-user 查询 / 档案覆盖式编辑 / 停用 / 重置 / `DELETE` 逻辑删除级联失效
-- [ ] internal-apps 五要素：query / add / rotate / disable / enable；secret AES-256-GCM + 24h 双活
-- [ ] 实现 `UserAttributePort.attributes`（缓存）与 `lockAndGet`（`SELECT ... FOR UPDATE`，不走缓存）；`accountStatus` 四态
-- [ ] R5.6 详情聚合：identity 控制器组装 `RewardPort.userSummary` + `RiskCheckPort.userSummary` + `TaskReadPort.instanceCounts`（任务 12 契约；实现可先替身，真实现分别在 28/32/18）。**禁止**直查他域表
-- [ ] 启停 / 逻辑删除 / 档案变更 afterCommit evict `identity:user-attr`
+- [x] admin-user CRUD / 重置 / 停用
+- [x] portal-user 查询 / 档案覆盖式编辑 / 停用 / 重置 / `DELETE` 逻辑删除级联失效
+- [x] internal-apps 五要素：query / add / rotate / disable / enable；secret AES-256-GCM + 24h 双活
+- [x] 实现 `UserAttributePort.attributes`（缓存）与 `lockAndGet`（`SELECT ... FOR UPDATE`，不走缓存）；`accountStatus` 四态
+- [x] R5.6 详情聚合：identity 控制器组装 `RewardPort.userSummary` + `RiskCheckPort.userSummary` + `TaskReadPort.instanceCounts`（任务 12 契约；实现可先替身，真实现分别在 28/32/18）。**禁止**直查他域表
+- [x] 启停 / 逻辑删除 / 档案变更 afterCommit evict `identity:user-attr`
 
 _需求：R3、R5、R15.2_
 _设计：design §2.2.3、§3.2.8、§4.2_
@@ -417,9 +417,9 @@ _测试：§7.3 R3.1、R5.1；InternalAppSecretIT_
 
 ### 任务 24：字典 / 配置 / 缓存管理（编组 E）
 
-- [ ] §4.3 字典类型 / 项 CRUD；停用类型两侧查空列表
-- [ ] 配置 CRUD；掩码项不回显；未带 value = 保持原值；配置旧值审计
-- [ ] 缓存 stats / evict；level 必填校验；三级粒度；`identity:session` 一律 400 `system.cache.session-forbidden`；`ad:position` evict 合法但无键（P0 未接线）
+- [x] §4.3 字典类型 / 项 CRUD；停用类型两侧查空列表
+- [x] 配置 CRUD；掩码项不回显；未带 value = 保持原值；配置旧值审计
+- [x] 缓存 stats / evict；level 必填校验；三级粒度；`identity:session` 一律 400 `system.cache.session-forbidden`；`ad:position` evict 合法但无键（P0 未接线）
 
 _需求：R7、R8、R9_
 _设计：design §4.3、§6.2、§6.5_
@@ -427,12 +427,12 @@ _测试：§7.3 R7.1、R8.1、R9.1_
 
 ### 任务 25：审计 AOP 与会话管理端点（编组 E）
 
-- [ ] `@Audited` 机械规则：**仅**非 GET 的 `/admin/**`；`/api/common/**` 与 `/internal/**` 禁止标注
-- [ ] 落库只经 Outbox `audit.log`（R10.3）；拦截器 403 由过滤器补审计（R2.3）
-- [ ] 失败登录 `operator_id=NULL`、`operator_name`=提交用户名
-- [ ] 脱敏截断管线经 Outbox；R10.2 必记清单全覆盖
-- [ ] 调度 9 `sched:audit-clean`（`retention.audit-days`，分批 5000）
-- [ ] 会话列表 / 踢下线按 accountType + account 维度
+- [x] `@Audited` 机械规则：**仅**非 GET 的 `/admin/**`；`/api/common/**` 与 `/internal/**` 禁止标注
+- [x] 落库只经 Outbox `audit.log`（R10.3）；拦截器 403 由过滤器补审计（R2.3）
+- [x] 失败登录 `operator_id=NULL`、`operator_name`=提交用户名
+- [x] 脱敏截断管线经 Outbox；R10.2 必记清单全覆盖
+- [x] 调度 9 `sched:audit-clean`（`retention.audit-days`，分批 5000）
+- [x] 会话列表 / 踢下线按 accountType + account 维度
 
 _需求：R6、R10_
 _设计：design §4.2、§6.1、§6.5_
@@ -440,10 +440,10 @@ _测试：§7.3 R6.1、R10.1_
 
 ### 任务 26：任务定义聚合与表达式引擎（编组 F）
 
-- [ ] save-aggregate 原子保存定义 / 步骤 / 分支 / 动作 / 互斥 / 人群包
-- [ ] §5.10 白名单 + 7 函数 + 空值哨兵 + long 域 + 长度 1024 + 节点 ≤200
-- [ ] 校验端点 + copy；人群包导入去重 / 无效跳过
-- [ ] M-01~M-15 恶意样本全部拒绝
+- [x] save-aggregate 原子保存定义 / 步骤 / 分支 / 动作 / 互斥 / 人群包
+- [x] §5.10 白名单 + 7 函数 + 空值哨兵 + long 域 + 长度 1024 + 节点 ≤200
+- [x] 校验端点 + copy；人群包导入去重 / 无效跳过
+- [x] M-01~M-15 恶意样本全部拒绝
 
 _需求：R11_
 _设计：design §3.3、§4.4、§5.10、§7.7_
@@ -451,10 +451,10 @@ _测试：§7.3 R11.1–R11.2、§7.7_
 
 ### 任务 27：发布版本与定时发布（编组 F）
 
-- [ ] D-01 修订草稿：单套编辑态 + `pending_revision`；SCHEDULED 修订不 +version 不落快照
-- [ ] publish / 批量 / 影响面两段确认 / 版本对比
-- [ ] SCHEDULED + `early=true`：手动提前发布 → PUBLISHED + 快照 + version+1（R12.1）；`early` 缺省只清修订
-- [ ] 调度 1 定时发布；失败列表端点 + 审计 `schedule-publish-failure`
+- [x] D-01 修订草稿：单套编辑态 + `pending_revision`；SCHEDULED 修订不 +version 不落快照
+- [x] publish / 批量 / 影响面两段确认 / 版本对比
+- [x] SCHEDULED + `early=true`：手动提前发布 → PUBLISHED + 快照 + version+1（R12.1）；`early` 缺省只清修订
+- [x] 调度 1 定时发布；失败列表端点 + 审计 `schedule-publish-failure`
 
 _需求：R12_
 _设计：design §3.3.1、§4.4、§6.7-1_
@@ -462,12 +462,12 @@ _测试：§7.3 R12.1–R12.3_
 
 ### 任务 28：可见性与领取（编组 F）
 
-- [ ] §5.3 分桶：md5 前 8 字节大端 `remainderUnsigned` + 3 组标准测试向量
-- [ ] §5.5 校验链：`UserAttributePort.lockAndGet`（账号非 ACTIVE → 403）→ 幂等短路 → 可见性 → 风控 → 互斥 → 每日上限
-- [ ] INSERT 前计算 `expire_at`（R14.10）并 append `task.instance.start`
-- [ ] 实现 `TaskReadPort.instanceCounts`；灰度 CROWD = 允许包 AND NOT 排除包（`gray_exclude_crowd_id`）
-- [ ] 过滤 / 灰度 / 列表经 `UserAttributePort.attributes`（任务 23）；属性缺失按 §5.10 空值哨兵；**禁止**本域 `SELECT`/`FOR UPDATE` `sys_portal_user`
-- [ ] C 端列表 / 详情三分渲染；OFFLINE 兜底 200 + 状态；一次性任务放弃后再领返回终态实例
+- [x] §5.3 分桶：md5 前 8 字节大端 `remainderUnsigned` + 3 组标准测试向量
+- [x] §5.5 校验链：`UserAttributePort.lockAndGet`（账号非 ACTIVE → 403）→ 幂等短路 → 可见性 → 风控 → 互斥 → 每日上限
+- [x] INSERT 前计算 `expire_at`（R14.10）并 append `task.instance.start`
+- [x] 实现 `TaskReadPort.instanceCounts`；灰度 CROWD = 允许包 AND NOT 排除包（`gray_exclude_crowd_id`）
+- [x] 过滤 / 灰度 / 列表经 `UserAttributePort.attributes`（任务 23）；属性缺失按 §5.10 空值哨兵；**禁止**本域 `SELECT`/`FOR UPDATE` `sys_portal_user`
+- [x] C 端列表 / 详情三分渲染；OFFLINE 兜底 200 + 状态；一次性任务放弃后再领返回终态实例
 
 _需求：R13、R34_
 _设计：design §2.2.3 UserAttributePort、§4.9.2、§5.3、§5.5、§5.10_

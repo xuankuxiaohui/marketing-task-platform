@@ -5,12 +5,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.mkt.identity.application.AdminAuthService;
+import com.mkt.identity.application.AdminMenuService;
 import com.mkt.identity.application.AuthAttempt;
 import com.mkt.identity.response.AdminLoginResponse;
 import com.mkt.identity.support.AuthCookies;
@@ -30,12 +32,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 class AdminAuthControllerTest {
 
     private final AdminAuthService authService = Mockito.mock(AdminAuthService.class);
+    private final AdminMenuService menus = Mockito.mock(AdminMenuService.class);
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         TransactionSynchronizationManager.setActualTransactionActive(true);
-        mvc = MockMvcBuilders.standaloneSetup(new AdminAuthController(authService))
+        mvc = MockMvcBuilders.standaloneSetup(new AdminAuthController(authService, menus))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -87,6 +90,23 @@ class AdminAuthControllerTest {
                         .cookie(new jakarta.servlet.http.Cookie(AuthCookies.SESSION, "admin:t"))
                         .content("{\"oldPassword\":\"Abcdef12!x\",\"newPassword\":\"NewPass12!x\"}"))
                 .andExpect(status().isOk());
+        UserContext.clear();
+    }
+
+    @Test
+    void menusAndProfile() throws Exception {
+        UserContext.set(new UserPrincipal(1L, "admin", "admin"));
+        when(menus.menus(1L)).thenReturn(List.of());
+        when(menus.profile(1L))
+                .thenReturn(new com.mkt.identity.response.AdminProfileResponse(
+                        1L, "admin", "超管", List.of("super-admin"), List.of("identity:role:query")));
+        mvc.perform(get("/admin/auth/menus"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        mvc.perform(get("/admin/auth/profile"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("admin"))
+                .andExpect(jsonPath("$.data.permissions[0]").value("identity:role:query"));
         UserContext.clear();
     }
 }

@@ -13,7 +13,7 @@ public record InfraRedisProperties(String host, int port, String password, int d
         if (password == null) {
             password = "";
         }
-        if (database <= 0) {
+        if (database != 2) {
             database = 2;
         }
     }

@@ -1,0 +1,2 @@
+# M-02 compile reject
+new java.io.File("/etc/passwd")

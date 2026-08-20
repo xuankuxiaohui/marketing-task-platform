@@ -1,0 +1,2 @@
+# M-09 float/scientific reject
+userLevel() > 1.5e300

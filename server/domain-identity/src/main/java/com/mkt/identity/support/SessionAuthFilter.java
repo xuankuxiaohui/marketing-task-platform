@@ -13,10 +13,13 @@ import com.mkt.kernel.Result;
 import com.mkt.kernel.SessionErrorCodes;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
+import com.mkt.kernel.audit.AuditOnce;
 import com.mkt.kernel.json.JsonUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.MediaType;
@@ -25,14 +28,27 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /** Dual-namespace session filter (design §6.1 / D-02). */
 public final class SessionAuthFilter extends OncePerRequestFilter {
 
+    /** Set by {@code NotPermissionException} advice so CSRF 403 is not audited as R2.3. */
+    public static final String RBAC_DENIED = "mkt.rbac.denied";
+
     private final SessionSide side;
     private final KickReasonStore kickReasons;
     private final SessionAvailability availability;
+    private final ForbiddenAuditSink forbiddenAudit;
 
     public SessionAuthFilter(SessionSide side, KickReasonStore kickReasons, SessionAvailability availability) {
+        this(side, kickReasons, availability, null);
+    }
+
+    public SessionAuthFilter(
+            SessionSide side,
+            KickReasonStore kickReasons,
+            SessionAvailability availability,
+            ForbiddenAuditSink forbiddenAudit) {
         this.side = side;
         this.kickReasons = kickReasons;
         this.availability = availability;
+        this.forbiddenAudit = forbiddenAudit;
     }
 
     @Override
@@ -117,16 +133,82 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             return;
         }
         try {
+            HttpServletRequest downstream = exposeRawToken(request, raw);
             bindToken(logic, raw);
             String username = SessionUsernames.read(logic, raw, id);
             UserContext.set(new UserPrincipal(Long.parseLong(id), loginType, username));
             logic.updateLastActiveToNow(raw);
             renew(logic, raw);
             slideAdminCookies(request, response, presented);
-            chain.doFilter(request, response);
+            chain.doFilter(downstream, response);
+            auditForbidden(downstream, response);
         } finally {
             UserContext.clear();
+            AuditOnce.clear();
         }
+    }
+
+    private void auditForbidden(HttpServletRequest request, HttpServletResponse response) {
+        if (forbiddenAudit == null || side != SessionSide.ADMIN) {
+            return;
+        }
+        if (request.getAttribute(RBAC_DENIED) == null) {
+            return;
+        }
+        if (response.getStatus() != com.mkt.kernel.CommonErrorCodes.PERMISSION_DENIED.httpStatus()) {
+            return;
+        }
+        UserPrincipal principal = UserContext.current().orElse(null);
+        if (principal == null) {
+            return;
+        }
+        forbiddenAudit.onForbidden(
+                principal.userId(),
+                principal.username(),
+                request.getMethod(),
+                path(request),
+                ClientIp.of(request),
+                request.getHeader("User-Agent"));
+    }
+
+    /** Cookie/header keep the {@code admin:} prefix; Sa-Token DAO keys do not. */
+    private HttpServletRequest exposeRawToken(HttpServletRequest request, String raw) {
+        if (side != SessionSide.ADMIN || raw == null) {
+            return request;
+        }
+        return new HttpServletRequestWrapper(request) {
+            @Override
+            public Cookie[] getCookies() {
+                Cookie[] cookies = super.getCookies();
+                if (cookies == null) {
+                    return null;
+                }
+                Cookie[] copy = new Cookie[cookies.length];
+                for (int i = 0; i < cookies.length; i++) {
+                    Cookie cookie = cookies[i];
+                    if (AuthCookies.SESSION.equals(cookie.getName())) {
+                        copy[i] = new Cookie(cookie.getName(), raw);
+                    } else {
+                        copy[i] = cookie;
+                    }
+                }
+                return copy;
+            }
+
+            @Override
+            public String getHeader(String name) {
+                String value = super.getHeader(name);
+                if (value == null || !"Authorization".equalsIgnoreCase(name)) {
+                    return value;
+                }
+                if (value.length() < 8 || !value.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                    return value;
+                }
+                String presented = value.substring(7).trim();
+                String unwrapped = TokenPrefixes.unwrapAdmin(presented);
+                return unwrapped == null ? value : "Bearer " + unwrapped;
+            }
+        };
     }
 
     private void slideAdminCookies(HttpServletRequest request, HttpServletResponse response, String presented) {

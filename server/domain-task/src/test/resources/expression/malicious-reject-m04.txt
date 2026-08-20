@@ -1,0 +1,2 @@
+# M-04 compile reject
+include("other.expr")
