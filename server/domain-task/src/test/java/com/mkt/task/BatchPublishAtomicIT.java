@@ -38,7 +38,7 @@ class BatchPublishAtomicIT {
                     window);
             long mutexA = env.tx.execute(status -> env.defs.saveAggregate(PublishITSupport.legal("batch_mx_a")).id());
             long mutexB = env.tx.execute(status -> env.defs.saveAggregate(PublishITSupport.legal("batch_mx_b")).id());
-            env.jdbc.update("UPDATE task_definition SET mutex_group_id = 9, cycle_type = 'WEEKLY' WHERE id = ?", mutexA);
+            env.jdbc.update("UPDATE task_definition SET mutex_group_id = 9, cycle_type = 'MONTHLY' WHERE id = ?", mutexA);
             env.jdbc.update("UPDATE task_definition SET mutex_group_id = 9, cycle_type = 'DAILY' WHERE id = ?", mutexB);
             long late = env.tx.execute(status -> env.defs.saveAggregate(PublishITSupport.legal("batch_late")).id());
             env.jdbc.update(

@@ -234,7 +234,7 @@ class TaskPublishAppServiceTest {
         long mutexA = defs.saveAggregate(legal("batch_mx_a")).id();
         long mutexB = defs.saveAggregate(legal("batch_mx_b")).id();
         definitions.getById(mutexA).setMutexGroupId(9L);
-        definitions.getById(mutexA).setCycleType("WEEKLY");
+        definitions.getById(mutexA).setCycleType("MONTHLY");
         definitions.getById(mutexB).setMutexGroupId(9L);
         definitions.getById(mutexB).setCycleType("DAILY");
         long late = defs.saveAggregate(legal("batch_late")).id();
