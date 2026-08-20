@@ -72,7 +72,8 @@ public class GrantAppService {
     private final EventPublisher events;
     private final GrantFailureLedger failures;
     private final FulfillmentService fulfillment;
-    private final GrantStepResumer resumer;
+    private final ObjectProvider<GrantStepResumer> resumerProvider;
+    private final GrantStepResumer resumerDirect;
     private final Clock clock;
 
     @Autowired
@@ -88,18 +89,18 @@ public class GrantAppService {
             FulfillmentService fulfillment,
             ObjectProvider<GrantStepResumer> resumer,
             Clock clock) {
-        this(
-                prizes,
-                categories,
-                grants,
-                stockLogs,
-                users.getIfAvailable(),
-                risk.getIfAvailable(),
-                events.getIfAvailable(),
-                failures,
-                fulfillment,
-                resumer.getIfAvailable(),
-                clock);
+        this.prizes = prizes;
+        this.categories = categories;
+        this.grants = grants;
+        this.stockLogs = stockLogs;
+        this.users = users.getIfAvailable();
+        this.risk = risk.getIfAvailable();
+        this.events = events.getIfAvailable();
+        this.failures = failures;
+        this.fulfillment = fulfillment;
+        this.resumerProvider = resumer;
+        this.resumerDirect = null;
+        this.clock = clock;
     }
 
     public GrantAppService(
@@ -123,7 +124,8 @@ public class GrantAppService {
         this.events = events;
         this.failures = failures;
         this.fulfillment = fulfillment;
-        this.resumer = resumer;
+        this.resumerProvider = null;
+        this.resumerDirect = resumer;
         this.clock = clock;
     }
 
@@ -580,6 +582,10 @@ public class GrantAppService {
     }
 
     private void resume(GrantSource source, String sourceId) {
+        GrantStepResumer resumer = resumerDirect;
+        if (resumer == null && resumerProvider != null) {
+            resumer = resumerProvider.getIfAvailable();
+        }
         if (resumer == null) {
             return;
         }

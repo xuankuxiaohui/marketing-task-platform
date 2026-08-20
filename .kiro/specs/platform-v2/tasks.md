@@ -651,11 +651,11 @@ _测试：ScenarioMatrixIT 23/23 绿_
 
 ### 任务 41：双实例拓扑与故障注入（编组 I）
 
-- [ ] 拓扑 B：TwoAdminAppIT + PortalAssemblyIT（RL-05：portal-app 装配 task 与 reward）+ NamespaceIsolationIT
-- [ ] scenario24 定时发布多实例恰一（feasibility §2 末行，TwoAdminAppIT）
-- [ ] Redis pause 按 §6.8 矩阵逐行
-- [ ] §7.4 **P0**：C-1~C-8、C-12；`awaitOutboxDrain`
-- [ ] **本任务不跑 P1**：C-9 归任务 44、C-10 归任务 45、C-11 归任务 48（签到 / 活动 / 广告表未建，跑则红）
+- [x] 拓扑 B：TwoAdminAppIT + PortalAssemblyIT（RL-05：portal-app 装配 task 与 reward）+ NamespaceIsolationIT
+- [x] scenario24 定时发布多实例恰一（feasibility §2 末行，TwoAdminAppIT）
+- [x] Redis pause 按 §6.8 矩阵逐行
+- [x] §7.4 **P0**：C-1~C-8、C-12；`awaitOutboxDrain`
+- [x] **本任务不跑 P1**：C-9 归任务 44、C-10 归任务 45、C-11 归任务 48（签到 / 活动 / 广告表未建，跑则红）
 
 _需求：NFR 可用性 4、可维护性 4_
 _设计：design §7.2、§7.4、§7.6_

@@ -48,10 +48,20 @@ public class InfraAutoConfiguration {
         return Clock.systemUTC();
     }
 
+    @Bean
+    @ConditionalOnMissingBean(InfraRedisProperties.class)
+    InfraRedisProperties infraRedisProperties(
+            @Value("${mkt.redis.host:${REDIS_HOST:127.0.0.1}}") String host,
+            @Value("${mkt.redis.port:${REDIS_PORT:6379}}") int port,
+            @Value("${mkt.redis.password:${REDIS_PASSWORD:}}") String password,
+            @Value("${mkt.redis.database:${REDIS_DATABASE:2}}") int database) {
+        return new InfraRedisProperties(host, port, password, database);
+    }
+
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean(RedissonClient.class)
-    RedissonClient redissonClient() {
-        return RedissonFactory.create(InfraRedisProperties.fromEnv());
+    RedissonClient redissonClient(InfraRedisProperties properties) {
+        return RedissonFactory.create(properties);
     }
 
     @Bean
