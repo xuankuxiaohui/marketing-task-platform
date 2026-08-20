@@ -14,6 +14,10 @@ public final class ClaimWindows {
 
     public static LocalDateTime dailyStartUtc(Clock clock) {
         LocalDate today = LocalDate.ofInstant(clock.instant(), BUSINESS_OFFSET);
-        return today.atStartOfDay().minusHours(8);
+        return businessDayStartUtc(today);
+    }
+
+    public static LocalDateTime businessDayStartUtc(LocalDate day) {
+        return day.atStartOfDay().minusHours(8);
     }
 }

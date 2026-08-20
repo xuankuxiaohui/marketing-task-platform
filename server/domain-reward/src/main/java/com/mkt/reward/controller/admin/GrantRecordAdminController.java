@@ -3,8 +3,10 @@ package com.mkt.reward.controller.admin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.audit.Audited;
+import com.mkt.reward.application.FulfillmentService;
 import com.mkt.reward.application.GrantAppService;
 import com.mkt.reward.command.ManualGrantCommand;
+import com.mkt.reward.response.FulfillmentCallbackResponse;
 import com.mkt.reward.response.GrantRetryResponse;
 import com.mkt.reward.response.ManualGrantResponse;
 import com.mkt.reward.support.RewardPermissions;
@@ -23,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class GrantRecordAdminController {
 
     private final GrantAppService grants;
+    private final FulfillmentService fulfillment;
 
-    public GrantRecordAdminController(GrantAppService grants) {
+    public GrantRecordAdminController(GrantAppService grants, FulfillmentService fulfillment) {
         this.grants = grants;
+        this.fulfillment = fulfillment;
     }
 
     @PostMapping("/{id}/retry")
@@ -42,5 +46,21 @@ public class GrantRecordAdminController {
     @Operation(summary = "人工补发", description = "权限 reward:record:manual-grant")
     public Result<ManualGrantResponse> manualGrant(@Valid @RequestBody ManualGrantCommand command) {
         return Result.ok(grants.manualGrant(command));
+    }
+
+    @PostMapping("/{id}/fulfill-confirm")
+    @SaCheckPermission(RewardPermissions.RECORD_FULFILL)
+    @Audited(module = "reward", action = "record-fulfill-confirm")
+    @Operation(summary = "履约确认到账", description = "权限 reward:record:fulfill")
+    public Result<FulfillmentCallbackResponse> fulfillConfirm(@PathVariable long id) {
+        return Result.ok(fulfillment.confirm(id));
+    }
+
+    @PostMapping("/{id}/fulfill-retry")
+    @SaCheckPermission(RewardPermissions.RECORD_FULFILL)
+    @Audited(module = "reward", action = "record-fulfill-retry")
+    @Operation(summary = "履约重试", description = "权限 reward:record:fulfill")
+    public Result<FulfillmentCallbackResponse> fulfillRetry(@PathVariable long id) {
+        return Result.ok(fulfillment.retry(id));
     }
 }

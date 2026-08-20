@@ -537,13 +537,13 @@ _测试：§7.3 R18.1–R18.2、§7.4 C-6_
 
 ### 任务 34：领取与过期（编组 G）
 
-- [ ] claim 前置含 RETRY_PENDING；领取锁退化 CAS（§6.8）；claim 成功后启动履约
-- [ ] CLAIMING 超时调度 4；WON / RETRY_PENDING 过期调度 5；履约调度 10（超时写 `fulfill_fail_reason=TIMEOUT`，须对账则 `recon_status=PENDING`）
-- [ ] `POST /internal/reward/fulfillment/callback`；后台 fulfill-confirm / fulfill-retry
-- [ ] 花销查询 `/admin/reward/spend`；对账批次导入/匹配（平台集含 `FULFILL_FAILED`）
-- [ ] 对账核渠 `POST .../items/{id}/review` + 差异动作门禁（§5.11）：`TIMEOUT`/`SENDING` 未 CONFIRMED 拒补发与履约重试；`MANUAL_GRANT` 永不自动；`AUTO` 仅 REFULFILL 且受 `reward.recon.auto-refulfill-enabled`
-- [ ] 补发成功同事务关原单：`FULFILL_FAILED` + `fulfill_fail_reason=MANUAL`；原 `fulfillmentRef` 回调 / confirm 200 不改态（R37.5）
-- [ ] C 端 prize 端点组：领取状态 × 履约状态（已到账 / 发送中 / 发送失败）
+- [x] claim 前置含 RETRY_PENDING；领取锁退化 CAS（§6.8）；claim 成功后启动履约
+- [x] CLAIMING 超时调度 4；WON / RETRY_PENDING 过期调度 5；履约调度 10（超时写 `fulfill_fail_reason=TIMEOUT`，须对账则 `recon_status=PENDING`）
+- [x] `POST /internal/reward/fulfillment/callback`；后台 fulfill-confirm / fulfill-retry
+- [x] 花销查询 `/admin/reward/spend`；对账批次导入/匹配（平台集含 `FULFILL_FAILED`）
+- [x] 对账核渠 `POST .../items/{id}/review` + 差异动作门禁（§5.11）：`TIMEOUT`/`SENDING` 未 CONFIRMED 拒补发与履约重试；`MANUAL_GRANT` 永不自动；`AUTO` 仅 REFULFILL 且受 `reward.recon.auto-refulfill-enabled`
+- [x] 补发成功同事务关原单：`FULFILL_FAILED` + `fulfill_fail_reason=MANUAL`；原 `fulfillmentRef` 回调 / confirm 200 不改态（R37.5）
+- [x] C 端 prize 端点组：领取状态 × 履约状态（已到账 / 发送中 / 发送失败）
 
 _需求：R19、R18.3、R37、R35 后端_
 _设计：design §4.5、§4.8、§4.9.3、§5.6、§5.11、§6.7-4/5/10；[feasibility-recon.md](feasibility-recon.md)_

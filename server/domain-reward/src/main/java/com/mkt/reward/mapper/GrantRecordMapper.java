@@ -28,4 +28,59 @@ public interface GrantRecordMapper extends BaseMapper<GrantRecordEntity> {
     int updateFulfillmentRef(@Param("id") long id, @Param("fulfillmentRef") String fulfillmentRef);
 
     List<GrantRecordEntity> listDueRetry(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    int casClaimStart(
+            @Param("id") long id,
+            @Param("now") LocalDateTime now,
+            @Param("retryMax") int retryMax);
+
+    int casExpireOne(@Param("id") long id, @Param("now") LocalDateTime now);
+
+    int casPermanentFromRetry(@Param("id") long id, @Param("now") LocalDateTime now, @Param("retryMax") int retryMax);
+
+    GrantRecordEntity selectByFulfillmentRef(@Param("fulfillmentRef") String fulfillmentRef);
+
+    int updateIfFulfillment(
+            @Param("row") GrantRecordEntity row, @Param("expectedFulfillment") String expectedFulfillment);
+
+    int closeAsManual(
+            @Param("id") long id,
+            @Param("now") LocalDateTime now);
+
+    List<GrantRecordEntity> listClaimingTimeout(
+            @Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
+
+    int rollbackClaiming(
+            @Param("id") long id, @Param("now") LocalDateTime now);
+
+    List<GrantRecordEntity> listPrizeExpireDue(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    List<GrantRecordEntity> listFulfillRetryDue(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    List<GrantRecordEntity> listSendingTimeout(
+            @Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
+
+    List<GrantRecordEntity> listCrossDaySending(
+            @Param("dayStart") LocalDateTime dayStart, @Param("limit") int limit);
+
+    int markReconPending(@Param("id") long id, @Param("now") LocalDateTime now);
+
+    List<GrantRecordEntity> listPlatformRecon(
+            @Param("categoryCode") String categoryCode,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    List<GrantRecordEntity> listPortalPrizes(
+            @Param("userId") long userId,
+            @Param("pendingOnly") boolean pendingOnly,
+            @Param("offset") long offset,
+            @Param("limit") int limit);
+
+    long countPortalPrizes(@Param("userId") long userId, @Param("pendingOnly") boolean pendingOnly);
+
+    List<com.mkt.reward.response.SpendRowView> sumSpend(
+            @Param("categoryCode") String categoryCode,
+            @Param("prizeId") Long prizeId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }

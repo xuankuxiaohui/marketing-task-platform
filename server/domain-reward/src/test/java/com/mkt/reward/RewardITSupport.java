@@ -13,27 +13,35 @@ import com.mkt.contract.RiskVerdict;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.UserRiskSummary;
+import com.mkt.infra.lock.PlatformLock;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.infra.outbox.MemoryOutboxStore;
 import com.mkt.infra.outbox.OutboxProducer;
+import com.mkt.reward.application.ClaimAppService;
 import com.mkt.reward.application.FulfillmentService;
 import com.mkt.reward.application.GrantAppService;
 import com.mkt.reward.application.GrantFailureLedger;
 import com.mkt.reward.application.MybatisGrantRecordStore;
 import com.mkt.reward.application.MybatisPrizeCategoryStore;
 import com.mkt.reward.application.MybatisPrizeStore;
+import com.mkt.reward.application.MybatisReconBatchStore;
+import com.mkt.reward.application.MybatisReconItemStore;
 import com.mkt.reward.application.MybatisStockLogStore;
 import com.mkt.reward.application.PrizeAppService;
 import com.mkt.reward.application.PrizeCategoryAppService;
 import com.mkt.reward.application.PrizeStockService;
+import com.mkt.reward.application.ReconAppService;
 import com.mkt.reward.application.SnapshotPrizeScanner;
 import com.mkt.reward.command.PrizeConfirmCommand;
 import com.mkt.reward.command.PrizeSaveCommand;
 import com.mkt.reward.mapper.GrantRecordMapper;
 import com.mkt.reward.mapper.PrizeCategoryMapper;
 import com.mkt.reward.mapper.PrizeMapper;
+import com.mkt.reward.mapper.ReconBatchMapper;
+import com.mkt.reward.mapper.ReconItemMapper;
 import com.mkt.reward.mapper.StockLogMapper;
 import com.mkt.reward.support.RewardGrantSettings;
+import com.mkt.reward.support.RewardRuntimeSettings;
 import com.mkt.reward.testsupport.RecordingPointsPort;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -62,9 +70,13 @@ final class RewardITSupport implements AutoCloseable {
     final PrizeCategoryAppService categories;
     final PrizeStockService stock;
     final GrantAppService grant;
+    final ClaimAppService claims;
+    final FulfillmentService fulfillment;
+    final ReconAppService recon;
     final RecordingPointsPort points;
     final ItRisk risk;
     final Clock clock;
+    final RewardRuntimeSettings runtime;
 
     RewardITSupport(MySQLContainer<?> mysql) throws Exception {
         this(mysql, Clock.fixed(Instant.parse("2026-08-19T00:00:00Z"), ZoneOffset.UTC));
@@ -86,6 +98,8 @@ final class RewardITSupport implements AutoCloseable {
         MybatisPrizeStore prizeStore = new MybatisPrizeStore(sql.getMapper(PrizeMapper.class));
         MybatisStockLogStore logs = new MybatisStockLogStore(sql.getMapper(StockLogMapper.class));
         MybatisGrantRecordStore grants = new MybatisGrantRecordStore(sql.getMapper(GrantRecordMapper.class));
+        MybatisReconBatchStore batches = new MybatisReconBatchStore(sql.getMapper(ReconBatchMapper.class));
+        MybatisReconItemStore reconItems = new MybatisReconItemStore(sql.getMapper(ReconItemMapper.class));
         SnapshotPrizeScanner snapshots = new SnapshotPrizeScanner(jdbc);
         categories = new PrizeCategoryAppService(categoryStore, prizeStore, clock);
         prizes = new PrizeAppService(prizeStore, categoryStore, logs, snapshots, clock);
@@ -95,9 +109,10 @@ final class RewardITSupport implements AutoCloseable {
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         EventPublisher events = new EventPublisher(new MemoryOutboxStore(clock), OutboxProducer.PORTAL);
         RewardGrantSettings settings = new RewardGrantSettings();
+        runtime = new RewardRuntimeSettings();
         GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, txm);
         points = new RecordingPointsPort();
-        FulfillmentService fulfillment = new FulfillmentService(points, grants, events, clock);
+        fulfillment = new FulfillmentService(points, grants, prizeStore, categoryStore, events, runtime, clock);
         risk = new ItRisk();
         grant = new GrantAppService(
                 prizeStore,
@@ -111,6 +126,10 @@ final class RewardITSupport implements AutoCloseable {
                 fulfillment,
                 null,
                 clock);
+        claims = new ClaimAppService(
+                grants, prizeStore, categoryStore, fulfillment, (PlatformLock) null, runtime, clock);
+        recon = new ReconAppService(
+                batches, reconItems, grants, prizeStore, categoryStore, grant, fulfillment, runtime, clock);
     }
 
     long enablePoints(String code, int totalStock, int pointsAmount) {
@@ -187,6 +206,30 @@ final class RewardITSupport implements AutoCloseable {
         return created.id();
     }
 
+    long enableManualCoupon(String code, int totalStock, int expireHours) {
+        var created = tx.execute(status -> prizes.create(new PrizeSaveCommand(
+                code,
+                code,
+                null,
+                null,
+                "COUPON",
+                Map.of(),
+                null,
+                totalStock,
+                0,
+                0,
+                null,
+                null,
+                null,
+                "MANUAL",
+                null,
+                expireHours,
+                null,
+                null)));
+        tx.executeWithoutResult(status -> prizes.enable(created.id(), new PrizeConfirmCommand(true)));
+        return created.id();
+    }
+
     @Override
     public void close() {
         if (dataSource != null) {
@@ -207,6 +250,8 @@ final class RewardITSupport implements AutoCloseable {
         configuration.addMapper(PrizeMapper.class);
         configuration.addMapper(StockLogMapper.class);
         configuration.addMapper(GrantRecordMapper.class);
+        configuration.addMapper(ReconBatchMapper.class);
+        configuration.addMapper(ReconItemMapper.class);
         factoryBean.setConfiguration(configuration);
         GlobalConfig globalConfig = new GlobalConfig();
         GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();

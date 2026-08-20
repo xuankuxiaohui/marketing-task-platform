@@ -245,6 +245,23 @@ public class GrantAppService {
         }
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = PermanentGrantException.class)
+    public ManualGrantResponse reconManualGrant(long userId, long prizeId, String reason, String sourceId) {
+        if (reason == null || reason.isBlank() || sourceId == null || sourceId.isBlank()) {
+            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
+        }
+        long operatorId = RewardOperator.requireUserId();
+        GrantContext ctx = new GrantContext(reason.trim(), List.of(), operatorId, false, null);
+        try {
+            GrantResult result = doGrant(prizeId, userId, GrantSource.MANUAL_GRANT, sourceId, ctx, false);
+            return new ManualGrantResponse(result.recordId(), result.status().name());
+        } catch (PermanentGrantException ex) {
+            throw mapPermanent(ex);
+        } catch (RetryableGrantException ex) {
+            throw mapRetryable(ex);
+        }
+    }
+
     public List<GrantRecordEntity> listDueRetry() {
         return grants.listDueRetry(RewardTime.toUtc(clock.instant()), RETRY_BATCH);
     }

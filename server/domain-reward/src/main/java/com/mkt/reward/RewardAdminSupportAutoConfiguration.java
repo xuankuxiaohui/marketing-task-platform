@@ -1,9 +1,14 @@
 package com.mkt.reward;
 
 import com.mkt.infra.lock.PlatformLock;
+import com.mkt.reward.application.ClaimAppService;
+import com.mkt.reward.application.FulfillmentService;
 import com.mkt.reward.application.GrantAppService;
 import com.mkt.reward.application.GrantStepResumer;
+import com.mkt.reward.schedule.ClaimTimeoutScheduler;
+import com.mkt.reward.schedule.FulfillRetryScheduler;
 import com.mkt.reward.schedule.GrantRetryScheduler;
+import com.mkt.reward.schedule.PrizeExpireScheduler;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -23,5 +28,26 @@ public class RewardAdminSupportAutoConfiguration {
     GrantRetryScheduler grantRetryScheduler(
             GrantAppService grants, ObjectProvider<GrantStepResumer> resumer, PlatformLock locks, Clock clock) {
         return new GrantRetryScheduler(grants, resumer.getIfAvailable(), locks, clock);
+    }
+
+    @Bean
+    @ConditionalOnBean({ClaimAppService.class, PlatformLock.class})
+    @ConditionalOnMissingBean
+    ClaimTimeoutScheduler claimTimeoutScheduler(ClaimAppService claims, PlatformLock locks, Clock clock) {
+        return new ClaimTimeoutScheduler(claims, locks, clock);
+    }
+
+    @Bean
+    @ConditionalOnBean({ClaimAppService.class, PlatformLock.class})
+    @ConditionalOnMissingBean
+    PrizeExpireScheduler prizeExpireScheduler(ClaimAppService claims, PlatformLock locks, Clock clock) {
+        return new PrizeExpireScheduler(claims, locks, clock);
+    }
+
+    @Bean
+    @ConditionalOnBean({FulfillmentService.class, PlatformLock.class})
+    @ConditionalOnMissingBean
+    FulfillRetryScheduler fulfillRetryScheduler(FulfillmentService fulfillment, PlatformLock locks, Clock clock) {
+        return new FulfillRetryScheduler(fulfillment, locks, clock);
     }
 }

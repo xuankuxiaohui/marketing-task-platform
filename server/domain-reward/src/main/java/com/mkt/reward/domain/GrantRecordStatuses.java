@@ -22,6 +22,8 @@ public final class GrantRecordStatuses {
 
     public static final String RECON_NONE = "NONE";
     public static final String RECON_PENDING = "PENDING";
+    public static final String RECON_MATCHED = "MATCHED";
+    public static final String RECON_DIFF = "DIFF";
 
     private GrantRecordStatuses() {}
 }

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.ReconBatchMapper">
+
+    <select id="selectByCategoryAndDay" resultType="com.mkt.reward.entity.ReconBatchEntity">
+        SELECT * FROM rwd_recon_batch
+        WHERE category_code = #{categoryCode}
+          AND bill_date = #{billDate}
+        LIMIT 1
+    </select>
+
+    <sql id="batchFilter">
+        <where>
+            <if test="categoryCode != null and categoryCode != ''">AND category_code = #{categoryCode}</if>
+            <if test="billDate != null">AND bill_date = #{billDate}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
+        </where>
+    </sql>
+
+    <select id="listByFilter" resultType="com.mkt.reward.entity.ReconBatchEntity">
+        SELECT * FROM rwd_recon_batch
+        <include refid="batchFilter"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByFilter" resultType="long">
+        SELECT COUNT(*) FROM rwd_recon_batch
+        <include refid="batchFilter"/>
+    </select>
+</mapper>

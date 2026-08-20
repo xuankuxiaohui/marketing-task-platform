@@ -18,7 +18,12 @@ public final class RewardPermissions {
     public static final String PRIZE_STOCK_REPLENISH = "reward:prize:stock-replenish";
     public static final String RECORD_QUERY = "reward:record:query";
     public static final String RECORD_RETRY = "reward:record:retry";
+    public static final String RECORD_FULFILL = "reward:record:fulfill";
     public static final String RECORD_MANUAL_GRANT = "reward:record:manual-grant";
+    public static final String RECON_QUERY = "reward:recon:query";
+    public static final String RECON_IMPORT = "reward:recon:import";
+    public static final String RECON_MATCH = "reward:recon:match";
+    public static final String RECON_ACTION = "reward:recon:action";
 
     private RewardPermissions() {}
 }

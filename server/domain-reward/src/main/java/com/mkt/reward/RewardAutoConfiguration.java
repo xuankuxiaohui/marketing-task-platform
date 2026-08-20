@@ -7,6 +7,7 @@ import com.mkt.reward.points.PointsPort;
 import com.mkt.reward.points.PointsPortStub;
 import com.mkt.reward.port.RewardPortImpl;
 import com.mkt.reward.support.RewardGrantSettings;
+import com.mkt.reward.support.RewardRuntimeSettings;
 import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
@@ -29,6 +30,12 @@ public class RewardAutoConfiguration {
     @ConditionalOnMissingBean
     RewardGrantSettings rewardGrantSettings() {
         return new RewardGrantSettings();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    RewardRuntimeSettings rewardRuntimeSettings() {
+        return new RewardRuntimeSettings();
     }
 
     @Bean
