@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mkt/shared": "workspace:*",
+    "@vue-flow/core": "^1.48.2",
     "axios": "^1.12.2",
     "element-plus": "^2.11.5",
     "pinia": "^3.0.3",

@@ -88,3 +88,14 @@ textarea {
   align-items: center;
   font-size: 13px;
 }
+.task-canvas {
+  height: 420px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.split-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}

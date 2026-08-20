@@ -50,6 +50,27 @@ describe("dynamic routes from §4.10 menus", () => {
     expect(viewModuleKey("system/audit/index", keys)).toBe("../views/system/audit/index.vue");
   });
 
+  it("resolves §4.10 task and reward views", () => {
+    const keys = [
+      "../views/task/definition/index.vue",
+      "../views/task/definition/edit.vue",
+      "../views/task/definition/version.vue",
+      "../views/task/mutex-group/index.vue",
+      "../views/task/crowd/index.vue",
+      "../views/task/instance/index.vue",
+      "../views/reward/category/index.vue",
+      "../views/reward/prize/index.vue",
+      "../views/reward/record/index.vue",
+      "../views/reward/recon/index.vue",
+      "../views/points/account/index.vue",
+      "../views/points/transaction/index.vue",
+    ];
+    expect(viewModuleKey("task/definition/index", keys)).toBe("../views/task/definition/index.vue");
+    expect(viewModuleKey("task/definition/edit", keys)).toBe("../views/task/definition/edit.vue");
+    expect(viewModuleKey("reward/prize/index", keys)).toBe("../views/reward/prize/index.vue");
+    expect(viewModuleKey("points/account/index", keys)).toBe("../views/points/account/index.vue");
+  });
+
   it("covers every §4.10 component path", () => {
     expect(MENU_SEED_COMPONENTS).toHaveLength(28);
     expect(MENU_SEED_COMPONENTS[0]).toBe("login/index");
