@@ -31,6 +31,7 @@ class ExpiredFinalityIT {
     void clickCallbackProgressRejectedAfterExpireAt() throws Exception {
         try (ClaimITSupport env =
                 new ClaimITSupport(MYSQL, ClaimITSupport.activeUsers(), ClaimITSupport.passRisk(), null)) {
+            isolateInstances(env);
             long clickTask = env.publishLegal("exp_click");
             long cbTask = env.publishSteps(
                     "exp_cb", List.of(new TaskStepCommand("cb", "回调", 1, "CALLBACK", null, null)), List.of());
@@ -84,6 +85,7 @@ class ExpiredFinalityIT {
     void schedulerFlipThenAllEntriesRejected() throws Exception {
         try (ClaimITSupport env =
                 new ClaimITSupport(MYSQL, ClaimITSupport.activeUsers(), ClaimITSupport.passRisk(), null)) {
+            isolateInstances(env);
             long taskId = env.publishLegal("exp_sched");
             TaskStartResponse started =
                     env.tx.execute(status -> env.claims.start(taskId, 9L, "203.0.113.1", null, "WEB"));
@@ -108,6 +110,7 @@ class ExpiredFinalityIT {
     void expiredStatusRejectsClick() throws Exception {
         try (ClaimITSupport env =
                 new ClaimITSupport(MYSQL, ClaimITSupport.activeUsers(), ClaimITSupport.passRisk(), null)) {
+            isolateInstances(env);
             long taskId = env.publishLegal("exp_status");
             TaskStartResponse started =
                     env.tx.execute(status -> env.claims.start(taskId, 9L, "203.0.113.1", null, "WEB"));
@@ -119,5 +122,11 @@ class ExpiredFinalityIT {
                     .extracting(ex -> ((BusinessException) ex).errorCode())
                     .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
         }
+    }
+
+    private static void isolateInstances(ClaimITSupport env) {
+        env.jdbc.update("DELETE FROM task_progress_report");
+        env.jdbc.update("DELETE FROM task_instance_step");
+        env.jdbc.update("DELETE FROM task_instance");
     }
 }

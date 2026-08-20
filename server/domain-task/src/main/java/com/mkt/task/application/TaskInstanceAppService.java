@@ -1,10 +1,8 @@
 package com.mkt.task.application;
 
-import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskScene;
-import com.mkt.contract.RiskSubject;
-import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.RiskListType;
+import com.mkt.contract.UserRiskSummary;
 import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
@@ -152,7 +150,7 @@ public class TaskInstanceAppService {
         if (row == null || row.getUserId() == null || row.getUserId() != userId) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
-        rejectIfFrozen(userId, ip, deviceId);
+        rejectIfFrozen(userId);
         if (StepEngine.expired(row, clock.instant())) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
         }
@@ -236,15 +234,18 @@ public class TaskInstanceAppService {
         publisher.append(eventCode, "task_instance", String.valueOf(row.getId()), payload);
     }
 
-    private void rejectIfFrozen(long userId, String ip, String deviceId) {
-        if (risk == null) {
-            return;
-        }
-        String resolvedIp = ip == null || ip.isBlank() ? "0.0.0.0" : ip;
-        RiskVerdict verdict = risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null));
-        if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
+    private void rejectIfFrozen(long userId) {
+        if (blacklisted(userId)) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_FROZEN);
         }
+    }
+
+    private boolean blacklisted(long userId) {
+        if (risk == null) {
+            return false;
+        }
+        UserRiskSummary summary = risk.userSummary(userId);
+        return summary != null && summary.listStatus().contains(RiskListType.BLACK);
     }
 
     private SnapshotContent snapshotOf(TaskInstanceEntity row) {

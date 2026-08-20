@@ -9,10 +9,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskScene;
-import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.RiskListType;
+import com.mkt.contract.UserRiskSummary;
 import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
@@ -64,7 +63,7 @@ class TaskInstanceAppServiceTest {
         timeline = new MemoryInstanceEventStore();
         publisher = mock(EventPublisher.class);
         risk = mock(RiskCheckPort.class);
-        when(risk.check(eq(RiskScene.CLAIM), any())).thenReturn(new RiskVerdict(RiskAction.PASS));
+        when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(0L, List.of()));
         service = new TaskInstanceAppService(
                 instances,
                 snapshots,
@@ -124,6 +123,21 @@ class TaskInstanceAppServiceTest {
         assertThat(service.abandonUser(row.getId(), 9L, "203.0.113.1", null).instanceStatus())
                 .isEqualTo(InstanceStatuses.ABANDONED);
         assertThat(instances.getById(row.getId()).getAbandonSource()).isEqualTo(AbandonSources.USER);
+        verify(risk).userSummary(9L);
+        verify(risk, never()).check(any(), any());
+    }
+
+    @Test
+    void userAbandonFrozenIs403() {
+        TaskInstanceEntity row = inProgress(1L, 9L, NOW.plusSeconds(86400));
+        instances.insert(row);
+        when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(1L, List.of(RiskListType.BLACK)));
+        assertThatThrownBy(() -> service.abandonUser(row.getId(), 9L, "203.0.113.1", null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.INSTANCE_FROZEN);
+        assertThat(instances.getById(row.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        verify(risk, never()).check(any(), any());
     }
 
     @Test
