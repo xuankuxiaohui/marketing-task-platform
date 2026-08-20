@@ -8,6 +8,9 @@ public final class TaskPermissions {
     public static final String DEFINITION_COPY = "task:definition:copy";
     public static final String DEFINITION_DELETE = "task:definition:delete";
     public static final String DEFINITION_QUERY = "task:definition:query";
+    public static final String DEFINITION_PUBLISH = "task:definition:publish";
+    public static final String DEFINITION_SCHEDULE = "task:definition:schedule";
+    public static final String DEFINITION_OFFLINE = "task:definition:offline";
     public static final String EXPRESSION_VALIDATE = "task:expression:validate";
     public static final String MUTEX_QUERY = "task:mutex-group:query";
     public static final String MUTEX_CREATE = "task:mutex-group:create";

@@ -41,4 +41,13 @@ class ResultTest {
         assertThat(node.get("data")).isNull();
         assertThat(node.get("traceId").asString()).isEqualTo("trace-fail");
     }
+
+    @Test
+    void failureCanCarryData() {
+        String json = JsonUtil.toJson(Result.fail(
+                CommonErrorCodes.PARAM_INVALID, "发布校验失败", java.util.Map.of("checkErrors", java.util.List.of())));
+        JsonNode node = JsonUtil.readTree(json);
+        assertThat(node.get("code").asString()).isEqualTo("common.param-invalid");
+        assertThat(node.get("data").get("checkErrors").isArray()).isTrue();
+    }
 }

@@ -138,6 +138,18 @@ public class TaskDefinitionAppService {
     }
 
     @Transactional
+    public void restoreEditState(long id, TaskDefinitionSaveCommand command) {
+        ValidatedAggregate validated = validate(command);
+        TaskDefinitionEntity existing = requireLive(id);
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        TaskDefinitionConvert.applyHeader(validated.command(), existing);
+        existing.setPendingRevision(0);
+        existing.setUpdatedAt(now);
+        definitions.update(existing);
+        persistChildren(existing.getId(), validated);
+    }
+
+    @Transactional
     public void delete(long id) {
         TaskDefinitionEntity existing = requireLive(id);
         if (!DefinitionStatuses.deletable(existing.getStatus())) {
@@ -176,7 +188,10 @@ public class TaskDefinitionAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 不可修改");
         }
         TaskDefinitionConvert.applyHeader(validated.command(), existing);
-        if (DefinitionStatuses.publishedFamily(existing.getStatus())) {
+        if (DefinitionStatuses.OFFLINE.equals(existing.getStatus())) {
+            existing.setStatus(DefinitionStatuses.DRAFT);
+            existing.setPendingRevision(0);
+        } else if (DefinitionStatuses.publishedFamily(existing.getStatus())) {
             existing.setPendingRevision(1);
         }
         existing.setUpdatedAt(now);

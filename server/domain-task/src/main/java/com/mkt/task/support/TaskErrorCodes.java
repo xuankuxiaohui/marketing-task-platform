@@ -16,7 +16,8 @@ public enum TaskErrorCodes implements ErrorCode {
     EXPRESSION_INVALID("task.expression.invalid", 400, "表达式非法"),
     EXPRESSION_VALIDATE_FAILED("task.expression.validate-failed", 400, "表达式校验失败"),
     MUTEX_IN_USE("task.mutex.in-use", 400, "互斥组仍被任务引用"),
-    CROWD_SIZE_EXCEEDED("task.crowd.size-exceeded", 400, "人群包条目超过上限");
+    CROWD_SIZE_EXCEEDED("task.crowd.size-exceeded", 400, "人群包条目超过上限"),
+    PUBLISH_VALIDATE_FAILED("task.publish.validate-failed", 400, "发布校验失败");
 
     private final String code;
     private final int httpStatus;

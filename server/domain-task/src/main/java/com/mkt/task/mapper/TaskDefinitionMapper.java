@@ -31,4 +31,11 @@ public interface TaskDefinitionMapper extends BaseMapper<TaskDefinitionEntity> {
     int countByMutexGroup(@Param("mutexGroupId") long mutexGroupId);
 
     int countReferencingCrowd(@Param("crowdId") long crowdId);
+
+    TaskDefinitionEntity selectByIdForUpdate(@Param("id") long id);
+
+    List<TaskDefinitionEntity> selectDueScheduled(
+            @Param("now") java.time.LocalDateTime now, @Param("limit") int limit);
+
+    int countInProgressInstances(@Param("taskId") long taskId);
 }

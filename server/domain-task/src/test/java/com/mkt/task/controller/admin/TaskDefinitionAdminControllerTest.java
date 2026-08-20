@@ -11,6 +11,7 @@ import com.mkt.task.application.TaskCrowdAppService;
 import com.mkt.task.application.TaskDefinitionAppService;
 import com.mkt.task.application.TaskExpressionAppService;
 import com.mkt.task.application.TaskMutexGroupAppService;
+import com.mkt.task.application.TaskPublishAppService;
 import com.mkt.task.command.CrowdImportCommand;
 import com.mkt.task.command.CrowdSaveCommand;
 import com.mkt.task.command.ExpressionValidateCommand;
@@ -34,11 +35,16 @@ class TaskDefinitionAdminControllerTest {
         when(defs.page(any())).thenReturn(new PageData<>(0, List.of()));
         when(defs.saveAggregate(any())).thenReturn(new TaskDefinitionSaveResponse(1, "a", 0, "DRAFT"));
         when(defs.copy(any(Long.class), any())).thenReturn(new TaskDefinitionSaveResponse(2, "b", 0, "DRAFT"));
-        TaskDefinitionAdminController defCtl = new TaskDefinitionAdminController(defs);
+        TaskPublishAppService publishes = mock(TaskPublishAppService.class);
+        when(publishes.publish(any(Long.class), any()))
+                .thenReturn(com.mkt.task.response.PublishResponse.done(1, "a", 1, "PUBLISHED"));
+        TaskDefinitionAdminController defCtl = new TaskDefinitionAdminController(defs, publishes);
         assertThat(defCtl.page(null, null, null, null, 1, 20).code()).isEqualTo(0);
         Result<TaskDefinitionSaveResponse> copied = defCtl.copy(1, new TaskCopyCommand("copy_me", "副本"));
         assertThat(copied.data().id()).isEqualTo(2);
         assertThat(defCtl.delete(1).data()).isEqualTo(OkResponse.yes());
+        assertThat(defCtl.publish(1, new com.mkt.task.command.PublishCommand(true, null)).data().version())
+                .isEqualTo(1);
 
         TaskExpressionAppService expr = mock(TaskExpressionAppService.class);
         when(expr.validate(any())).thenReturn(new ExpressionValidateResponse(true, null, List.of()));

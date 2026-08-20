@@ -90,6 +90,30 @@ public final class MemoryTaskDefinitionStore implements TaskDefinitionStore {
         return 0;
     }
 
+    @Override
+    public TaskDefinitionEntity getByIdForUpdate(long id) {
+        return getById(id);
+    }
+
+    @Override
+    public List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit) {
+        return rows.values().stream()
+                .filter(row -> !row.deletedFlag())
+                .filter(row -> "SCHEDULED".equals(row.getStatus()))
+                .filter(row -> row.getSchedulePublishAt() != null && !row.getSchedulePublishAt().isAfter(now))
+                .sorted(Comparator.comparing(TaskDefinitionEntity::getSchedulePublishAt)
+                        .thenComparing(TaskDefinitionEntity::getId))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public int countInProgressInstances(long taskId) {
+        return inFlight.getOrDefault(taskId, 0);
+    }
+
+    public final java.util.Map<Long, Integer> inFlight = new ConcurrentHashMap<>();
+
     public int liveCount() {
         return (int) rows.values().stream().filter(row -> !row.deletedFlag()).count();
     }

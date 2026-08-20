@@ -25,6 +25,10 @@ public record Result<T>(Object code, String message, T data, String traceId) {
         return new Result<>(errorCode.code(), messageOverride, null, TraceIds.current());
     }
 
+    public static <T> Result<T> fail(ErrorCode errorCode, String messageOverride, T data) {
+        return new Result<>(errorCode.code(), messageOverride, data, TraceIds.current());
+    }
+
     public boolean success() {
         return Integer.valueOf(0).equals(code);
     }

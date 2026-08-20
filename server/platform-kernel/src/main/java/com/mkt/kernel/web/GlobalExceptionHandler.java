@@ -27,14 +27,14 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Result<Void>> handleBusiness(BusinessException ex) {
+    public ResponseEntity<Result<Object>> handleBusiness(BusinessException ex) {
         ErrorCode errorCode = ex.errorCode();
         log.warn("business rejected, code={}, traceId={}", errorCode.code(), TraceIds.current());
         var body = ResponseEntity.status(errorCode.httpStatus());
         if (ex instanceof RateLimitedException limited && limited.retryAfterSeconds() > 0) {
             body.header("Retry-After", String.valueOf(limited.retryAfterSeconds()));
         }
-        return body.body(Result.fail(errorCode, ex.getMessage()));
+        return body.body(Result.fail(errorCode, ex.getMessage(), ex.data()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

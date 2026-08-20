@@ -59,4 +59,19 @@ public class MybatisTaskDefinitionStore implements TaskDefinitionStore {
     public int countReferencingCrowd(long crowdId) {
         return mapper.countReferencingCrowd(crowdId);
     }
+
+    @Override
+    public TaskDefinitionEntity getByIdForUpdate(long id) {
+        return mapper.selectByIdForUpdate(id);
+    }
+
+    @Override
+    public List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit) {
+        return mapper.selectDueScheduled(now, limit);
+    }
+
+    @Override
+    public int countInProgressInstances(long taskId) {
+        return mapper.countInProgressInstances(taskId);
+    }
 }

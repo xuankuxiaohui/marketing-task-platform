@@ -157,6 +157,54 @@ public final class TaskDefinitionConvert {
                 List.copyOf(actionCmds));
     }
 
+    public static SnapshotContent toSnapshot(
+            TaskDefinitionAggregateResponse view, String mutexGroupCode) {
+        return new SnapshotContent(
+                view.code(),
+                view.name(),
+                view.description(),
+                view.category(),
+                view.iconUrl(),
+                view.badgeText(),
+                view.startTime(),
+                view.endTime(),
+                view.sortWeight(),
+                view.cycleType(),
+                view.cronExpr(),
+                view.specialStart(),
+                view.specialEnd(),
+                mutexGroupCode,
+                view.gray(),
+                view.filter(),
+                view.steps() == null ? List.of() : view.steps(),
+                view.transitions() == null ? List.of() : view.transitions(),
+                view.actions() == null ? List.of() : view.actions());
+    }
+
+    public static TaskDefinitionSaveCommand toSaveCommand(long id, SnapshotContent content, Long mutexGroupId) {
+        return new TaskDefinitionSaveCommand(
+                id,
+                content.code(),
+                content.name(),
+                content.description(),
+                content.category(),
+                content.iconUrl(),
+                content.badgeText(),
+                content.startTime(),
+                content.endTime(),
+                content.sortWeight(),
+                content.cycleType(),
+                content.cronExpr(),
+                content.specialStart(),
+                content.specialEnd(),
+                mutexGroupId,
+                content.gray(),
+                content.filter(),
+                content.steps(),
+                content.transitions(),
+                content.actions());
+    }
+
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }

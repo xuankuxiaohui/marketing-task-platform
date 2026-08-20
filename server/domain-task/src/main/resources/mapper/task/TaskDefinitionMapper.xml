@@ -77,4 +77,28 @@
             OR JSON_CONTAINS(filter_exclude_crowd_ids, CAST(#{crowdId} AS JSON))
           )
     </select>
+
+    <select id="selectByIdForUpdate" resultType="com.mkt.task.entity.TaskDefinitionEntity">
+        SELECT <include refid="cols"/>
+        FROM task_definition
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="selectDueScheduled" resultType="com.mkt.task.entity.TaskDefinitionEntity">
+        SELECT <include refid="cols"/>
+        FROM task_definition
+        WHERE deleted = 0
+          AND status = 'SCHEDULED'
+          AND schedule_publish_at IS NOT NULL
+          AND schedule_publish_at &lt;= #{now}
+        ORDER BY schedule_publish_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countInProgressInstances" resultType="int">
+        SELECT COUNT(*)
+        FROM task_instance
+        WHERE task_id = #{taskId} AND status = 'IN_PROGRESS'
+    </select>
 </mapper>

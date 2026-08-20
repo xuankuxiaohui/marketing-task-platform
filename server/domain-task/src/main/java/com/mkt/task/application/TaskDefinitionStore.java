@@ -23,4 +23,10 @@ public interface TaskDefinitionStore {
     int countByMutexGroup(long mutexGroupId);
 
     int countReferencingCrowd(long crowdId);
+
+    TaskDefinitionEntity getByIdForUpdate(long id);
+
+    List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit);
+
+    int countInProgressInstances(long taskId);
 }
