@@ -41,6 +41,8 @@ jobs:
       - name: lint and typecheck
         run: pnpm lint
       - name: OpenAPI types
-        run: pnpm --filter @mkt/shared gen:api && git diff --exit-code -- packages/shared/src/openapi packages/shared/openapi
+        working-directory: ${{ github.workspace }}
+        run: bash ci/check-openapi-types.sh
       - name: unit tests
         run: pnpm test
+      # Playwright journeys (web/e2e) are skeletons in task 39; CI blocking E2E is task 43.

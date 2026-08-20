@@ -57,3 +57,7 @@ web/**/coverage/
 web/**/.eslintcache
 web/**/*.tsbuildinfo
 web/**/.vite/
+web/**/playwright-report/
+web/**/test-results/
+web/**/blob-report/
+web/**/playwright/.cache/

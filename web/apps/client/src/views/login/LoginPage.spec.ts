@@ -99,4 +99,43 @@ describe("LoginPage", () => {
     expect(wrapper.get('[data-testid="login-error"]').text()).toBe("验证码错误");
     expect(fetchCaptchaMock).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps captcha when credentials fail so captcha errors stay a separate prompt (R32.2)", async () => {
+    loginMock.mockResolvedValue(fail("auth.login.invalid-credential", "用户名或密码错误") as never);
+    const { wrapper } = await mountLogin();
+    await setField(wrapper, "login-username", "bob_01");
+    await setField(wrapper, "login-password", "wrongpass1");
+    await setField(wrapper, "login-captcha", "ab12");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="login-error"]').text()).toBe("用户名或密码错误");
+    expect(fetchCaptchaMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("toggles password visibility (R32.2)", async () => {
+    const { wrapper } = await mountLogin();
+    const field = wrapper.get('[data-testid="login-password"]');
+    expect(field.find("input").attributes("type")).toBe("password");
+    await field.get(".van-field__right-icon").trigger("click");
+    expect(field.find("input").attributes("type")).toBe("text");
+  });
+
+  it("disables submit while login is in flight (R32.2)", async () => {
+    let finish!: (value: ReturnType<typeof ok<PortalAuthData>>) => void;
+    loginMock.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { wrapper } = await mountLogin();
+    await setField(wrapper, "login-username", "bob_01");
+    await setField(wrapper, "login-password", "abcdefg1");
+    await setField(wrapper, "login-captcha", "ab12");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="login-submit"]').attributes("disabled")).toBeDefined();
+    finish(ok<PortalAuthData>({ token: "client:t", userId: 9, nickname: "用户9" }));
+    await flushPromises();
+  });
 });
+

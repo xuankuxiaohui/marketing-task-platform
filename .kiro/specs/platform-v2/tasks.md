@@ -631,9 +631,9 @@ _测试：§7.3 R35.1 `PrizeButtonStateTest`；SDK Vitest_
 
 ### 任务 39：前端测试与类型门禁（编组 H）
 
-- [ ] Vitest 组件单测覆盖 §7.9 点位
-- [ ] Playwright 用例骨架（正式旅程在任务 43）
-- [ ] `openapi-typescript` diff CI 门禁：后端契约变前端未更则失败
+- [x] Vitest 组件单测覆盖 §7.9 点位
+- [x] Playwright 用例骨架（正式旅程在任务 43）
+- [x] `openapi-typescript` diff CI 门禁：后端契约变前端未更则失败
 
 _需求：NFR 可维护性 2_
 _设计：design §7.9_
