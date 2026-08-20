@@ -89,6 +89,22 @@ export const PERMS = {
   POINTS_ACCOUNT_QUERY: "points:account:query",
   POINTS_ACCOUNT_ADJUST: "points:account:adjust",
   POINTS_TX_QUERY: "points:transaction:query",
+  RISK_BLACK_QUERY: "risk:blacklist:query",
+  RISK_BLACK_ADD: "risk:blacklist:add",
+  RISK_BLACK_REMOVE: "risk:blacklist:remove",
+  RISK_BLACK_IMPORT: "risk:blacklist:import",
+  RISK_WHITE_QUERY: "risk:whitelist:query",
+  RISK_WHITE_ADD: "risk:whitelist:add",
+  RISK_WHITE_REMOVE: "risk:whitelist:remove",
+  RISK_RULE_QUERY: "risk:rule:query",
+  RISK_RULE_CONFIG: "risk:rule:config",
+  RISK_CASE_QUERY: "risk:case:query",
+  RISK_CASE_HANDLE: "risk:case:handle",
+  TRACK_META_QUERY: "track:metadata:query",
+  TRACK_META_CREATE: "track:metadata:create",
+  TRACK_META_UPDATE: "track:metadata:update",
+  TRACK_META_DELETE: "track:metadata:delete",
+  TRACK_EVENT_QUERY: "track:event:query",
 } as const;
 
 export const CONFIG_VALUE_TYPES = ["STRING", "NUMBER", "BOOL", "JSON"] as const;

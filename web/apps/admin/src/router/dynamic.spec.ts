@@ -71,6 +71,21 @@ describe("dynamic routes from §4.10 menus", () => {
     expect(viewModuleKey("points/account/index", keys)).toBe("../views/points/account/index.vue");
   });
 
+  it("resolves §4.10 risk and track views", () => {
+    const keys = [
+      "../views/risk/list-item/index.vue",
+      "../views/risk/rule/index.vue",
+      "../views/risk/case/index.vue",
+      "../views/track/metadata/index.vue",
+      "../views/track/event/index.vue",
+    ];
+    expect(viewModuleKey("risk/list-item/index", keys)).toBe("../views/risk/list-item/index.vue");
+    expect(viewModuleKey("risk/rule/index", keys)).toBe("../views/risk/rule/index.vue");
+    expect(viewModuleKey("risk/case/index", keys)).toBe("../views/risk/case/index.vue");
+    expect(viewModuleKey("track/metadata/index", keys)).toBe("../views/track/metadata/index.vue");
+    expect(viewModuleKey("track/event/index", keys)).toBe("../views/track/event/index.vue");
+  });
+
   it("covers every §4.10 component path", () => {
     expect(MENU_SEED_COMPONENTS).toHaveLength(28);
     expect(MENU_SEED_COMPONENTS[0]).toBe("login/index");

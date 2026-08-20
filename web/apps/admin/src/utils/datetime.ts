@@ -1,5 +1,13 @@
 const SHANGHAI = "Asia/Shanghai";
 
+export function toIsoInstant(value: string | undefined | null): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+}
+
 export function formatDateTime(iso: string | undefined | null): string {
   if (!iso) {
     return "—";
