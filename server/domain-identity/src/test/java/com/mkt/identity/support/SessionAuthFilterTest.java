@@ -54,6 +54,9 @@ class SessionAuthFilterTest {
         RecordingChain batch = new RecordingChain();
         filter.doFilter(request("POST", "/api/common/track/batch"), new MockHttpServletResponse(), batch);
         assertThat(batch.called).isTrue();
+        RecordingChain internal = new RecordingChain();
+        filter.doFilter(request("POST", "/internal/task/callback"), new MockHttpServletResponse(), internal);
+        assertThat(internal.called).isTrue();
     }
 
     @Test

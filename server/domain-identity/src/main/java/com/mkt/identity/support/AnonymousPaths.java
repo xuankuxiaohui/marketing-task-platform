@@ -26,6 +26,9 @@ public final class AnonymousPaths {
         if (isInfra(path)) {
             return true;
         }
+        if ("/internal".equals(path) || path.startsWith("/internal/")) {
+            return true;
+        }
         if ("GET".equalsIgnoreCase(method) && "/api/common/captcha".equals(path)) {
             return true;
         }

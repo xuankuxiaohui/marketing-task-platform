@@ -7,5 +7,5 @@ import org.springframework.context.annotation.ComponentScan;
 /** Portal controllers only when portal-app is on the classpath (03 §6.1). */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.mkt.portal.PortalApplication")
-@ComponentScan(basePackages = "com.mkt.task.controller.portal")
+@ComponentScan(basePackages = {"com.mkt.task.controller.portal", "com.mkt.task.controller.internal"})
 public class TaskPortalAutoConfiguration {}

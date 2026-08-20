@@ -15,4 +15,7 @@ public interface InternalAppMapper extends BaseMapper<InternalAppEntity> {
 
     @Select("SELECT * FROM sys_internal_app ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}")
     List<InternalAppEntity> listPage(@Param("offset") long offset, @Param("limit") int limit);
+
+    @Select("SELECT * FROM sys_internal_app WHERE app_id = #{appId}")
+    InternalAppEntity getByAppId(@Param("appId") String appId);
 }
