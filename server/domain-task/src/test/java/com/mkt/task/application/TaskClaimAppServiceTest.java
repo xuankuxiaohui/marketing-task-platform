@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,13 +41,18 @@ import com.mkt.task.testsupport.MemoryTaskDefinitionStore;
 import com.mkt.task.testsupport.MemoryTaskInstanceStore;
 import com.mkt.task.testsupport.MemoryTaskMutexGroupStore;
 import com.mkt.task.testsupport.MemoryTaskVersionSnapshotStore;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import org.apache.ibatis.exceptions.PersistenceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 class TaskClaimAppServiceTest {
 
@@ -98,6 +106,63 @@ class TaskClaimAppServiceTest {
         assertThat(instances.listSteps(started.instanceId()))
                 .anyMatch(step -> "go".equals(step.getStepCode()) && StepStatuses.COMPLETED.equals(step.getStatus()));
         verify(events).append(eq("task.instance.start"), eq("task_instance"), any(), any());
+    }
+
+    @Test
+    void startUsesReadCommitted() throws Exception {
+        Transactional tx = TaskClaimAppService.class
+                .getMethod("start", long.class, long.class, String.class, String.class, String.class)
+                .getAnnotation(Transactional.class);
+        assertThat(tx.isolation()).isEqualTo(Isolation.READ_COMMITTED);
+    }
+
+    @Test
+    void ukConflictFromMybatisPersistenceExceptionReturnsExisting() {
+        long taskId = publish("uk_pe", "NONE", null);
+        TaskStartResponse first = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        MemoryTaskInstanceStore spyStore = spy(instances);
+        service = new TaskClaimAppService(
+                definitions,
+                snapshots,
+                spyStore,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                settings);
+        doReturn(null).doCallRealMethod().when(spyStore).getByUserTaskCycle(eq(9L), eq(taskId), any());
+        doThrow(new PersistenceException(new SQLIntegrityConstraintViolationException(
+                        "Duplicate entry for key 'uk_user_task_cycle'", "23000", 1062)))
+                .when(spyStore)
+                .insert(any());
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        assertThat(again.instanceId()).isEqualTo(first.instanceId());
+        assertThat(instances.rows).hasSize(1);
+    }
+
+    @Test
+    void ukConflictFromDuplicateKeyExceptionReturnsExisting() {
+        long taskId = publish("uk_dk", "NONE", null);
+        TaskStartResponse first = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        MemoryTaskInstanceStore spyStore = spy(instances);
+        service = new TaskClaimAppService(
+                definitions,
+                snapshots,
+                spyStore,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                settings);
+        doReturn(null).doCallRealMethod().when(spyStore).getByUserTaskCycle(eq(9L), eq(taskId), any());
+        doThrow(new DuplicateKeyException("uk_user_task_cycle")).when(spyStore).insert(any());
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        assertThat(again.instanceId()).isEqualTo(first.instanceId());
+        assertThat(instances.rows).hasSize(1);
     }
 
     @Test

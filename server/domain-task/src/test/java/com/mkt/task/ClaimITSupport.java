@@ -61,6 +61,7 @@ import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.MySQLContainer;
 
@@ -123,6 +124,7 @@ final class ClaimITSupport implements AutoCloseable {
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
         DataSourceTransactionManager txm = new DataSourceTransactionManager(dataSource);
         tx = new TransactionTemplate(txm);
+        tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         JdbcOutboxStore outbox = new JdbcOutboxStore(jdbc);
         this.publisher = publisher != null ? publisher : new EventPublisher(outbox, OutboxProducer.PORTAL);
         MybatisTaskProgressReportStore progress =
