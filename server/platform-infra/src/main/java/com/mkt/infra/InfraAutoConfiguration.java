@@ -3,6 +3,7 @@ package com.mkt.infra;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.infra.cache.TwoLevelPlatformCache;
 import com.mkt.infra.degrade.SessionAvailability;
+import com.mkt.infra.health.RedisHealthIndicator;
 import com.mkt.infra.lock.PlatformLock;
 import com.mkt.infra.nonce.NonceStore;
 import com.mkt.infra.ratelimit.SlidingWindowRateLimiter;
@@ -51,10 +52,10 @@ public class InfraAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(InfraRedisProperties.class)
     InfraRedisProperties infraRedisProperties(
-            @Value("${mkt.redis.host:${REDIS_HOST:127.0.0.1}}") String host,
-            @Value("${mkt.redis.port:${REDIS_PORT:6379}}") int port,
-            @Value("${mkt.redis.password:${REDIS_PASSWORD:}}") String password,
-            @Value("${mkt.redis.database:${REDIS_DATABASE:2}}") int database) {
+            @Value("${mkt.redis.host:${MKT_REDIS_HOST:${REDIS_HOST:127.0.0.1}}}") String host,
+            @Value("${mkt.redis.port:${MKT_REDIS_PORT:${REDIS_PORT:6379}}}") int port,
+            @Value("${mkt.redis.password:${MKT_REDIS_PASSWORD:${REDIS_PASSWORD:}}}") String password,
+            @Value("${mkt.redis.database:${MKT_REDIS_DATABASE:${REDIS_DATABASE:2}}}") int database) {
         return new InfraRedisProperties(host, port, password, database);
     }
 
@@ -142,6 +143,12 @@ public class InfraAutoConfiguration {
     @ConditionalOnMissingBean(SessionAvailability.class)
     SessionAvailability sessionAvailability(KeyValueStore keyValueStore) {
         return new SessionAvailability(keyValueStore);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(RedisHealthIndicator.class)
+    RedisHealthIndicator redisHealthIndicator(SessionAvailability sessionAvailability) {
+        return new RedisHealthIndicator(sessionAvailability);
     }
 
     @Bean

@@ -46,3 +46,15 @@ jobs:
       - name: unit tests
         run: pnpm test
       # Playwright journeys (web/e2e) are skeletons in task 39; CI blocking E2E is task 43.
+
+  deploy-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: R31.1 compose smoke
+        run: bash ci/deploy-smoke.sh

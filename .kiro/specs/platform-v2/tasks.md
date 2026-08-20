@@ -663,10 +663,10 @@ _测试：上述 P0 IT 全绿_
 
 ### 任务 42：部署编排（编组 I）
 
-- [ ] compose：MySQL / Redis / Nginx 前缀路由 / 双应用；健康检查与启动顺序
-- [ ] Prometheus 抓取两应用 `/actuator/prometheus`（内网）；Grafana 看板可后置，告警项按 NFR 可观测性 3 列出
-- [ ] `.env.example` 无真实密钥；密钥只走环境变量
-- [ ] Flyway 仅 admin-app；备份恢复演练；R31 上线清单
+- [x] compose：MySQL / Redis / Nginx 前缀路由 / 双应用；健康检查与启动顺序
+- [x] Prometheus 抓取两应用 `/actuator/prometheus`（内网）；Grafana 看板可后置，告警项按 NFR 可观测性 3 列出
+- [x] `.env.example` 无真实密钥；密钥只走环境变量
+- [x] Flyway 仅 admin-app；备份恢复演练；R31 上线清单
 
 _需求：R31_
 _设计：design §2.4、§2.6、§6.9_

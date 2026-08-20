@@ -330,6 +330,7 @@
                                         <exclude>org.testcontainers:testcontainers-mysql</exclude>
                                         <exclude>com.github.ben-manes.caffeine:caffeine</exclude>
                                         <exclude>org.springframework:spring-tx</exclude>
+                                        <exclude>io.micrometer:micrometer-registry-prometheus</exclude>
                                     </excludes>
                                     <includes>
                                         <include>*:*</include>
