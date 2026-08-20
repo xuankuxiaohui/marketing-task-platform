@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CSRF_COOKIE, CSRF_HEADER, attachCsrf, readCookie, shouldSkipUnauthorized } from "./http";
+import { CSRF_COOKIE, CSRF_HEADER, attachCsrf, compactParams, readCookie, shouldSkipUnauthorized } from "./http";
 
 describe("admin http", () => {
   it("reads the non-HttpOnly CSRF cookie", () => {
@@ -18,5 +18,12 @@ describe("admin http", () => {
   it("does not treat login 401 as session invalid", () => {
     expect(shouldSkipUnauthorized("/admin/auth/login")).toBe(true);
     expect(shouldSkipUnauthorized("/admin/identity/users")).toBe(false);
+  });
+
+  it("drops blank query params", () => {
+    expect(compactParams({ username: "a", nickname: "", page: 1, roleId: undefined })).toEqual({
+      username: "a",
+      page: 1,
+    });
   });
 });

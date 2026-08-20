@@ -77,11 +77,35 @@ export function createHttp(): AxiosInstance {
 
 export const http = createHttp();
 
+export function compactParams(
+  params?: Record<string, unknown>,
+): Record<string, string | number | boolean> | undefined {
+  if (!params) {
+    return undefined;
+  }
+  const out: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      out[key] = value;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export async function request<T>(
   method: string,
   url: string,
   body?: unknown,
+  params?: Record<string, unknown>,
 ): Promise<Result<T>> {
-  const response = await http.request<Result<T>>({ method, url, data: body });
+  const response = await http.request<Result<T>>({
+    method,
+    url,
+    data: body,
+    params: compactParams(params),
+  });
   return response.data;
 }
