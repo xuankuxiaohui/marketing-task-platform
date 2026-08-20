@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const proxyTarget = env.ADMIN_PROXY_TARGET || "http://127.0.0.1:8080";
+  const proxyTarget = process.env.ADMIN_PROXY_TARGET || env.ADMIN_PROXY_TARGET || "http://127.0.0.1:8080";
   return {
     plugins: [vue()],
     resolve: {
@@ -14,6 +14,15 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
+      proxy: {
+        "/admin": {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+      },
+    },
+    preview: {
+      port: 4173,
       proxy: {
         "/admin": {
           target: proxyTarget,

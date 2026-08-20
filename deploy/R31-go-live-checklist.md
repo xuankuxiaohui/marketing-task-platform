@@ -1,6 +1,6 @@
 # R31 上线检查清单（签署项）
 
-上线前逐项打勾并签字。k6 性能门槛的脚本在任务 43；本任务交付清单与编排，不跑 43。
+上线前逐项打勾并签字。k6 P0 脚本：`perf/list.js` `advance.js` `complete.js` `risk-delta.js` `track.js` `admin-list.js`；执行 `perf/run-p0.sh`（不进例行 CI，签署项）。
 
 ## 安全（R31.2 / NFR 安全）
 
@@ -39,7 +39,7 @@
 
 ## 性能（R31.2，任务 43 签署）
 
-- [ ] k6 NFR 性能 1–5、7 在 staging compose（portal ×2）通过
+- [ ] k6 NFR 性能 1–5、7 在 staging compose（portal ×2）通过（`perf/run-p0.sh`，报告 `perf/reports/<日期>/`）
 
 ## 部署幂等（R31.1）
 

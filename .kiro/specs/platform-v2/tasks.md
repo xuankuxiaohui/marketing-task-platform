@@ -674,9 +674,9 @@ _测试：compose 拉起后健康检查 + 登录冒烟_
 
 ### 任务 43：Playwright E2E + k6 性能基线（编组 I）
 
-- [ ] `journey-core`（匿名→注册→领任务→完成→领奖→积分）
-- [ ] `journey-admin`（登录→编排→发布→实例查询）
-- [ ] k6：NFR 性能 1–8 的 P0 子集，对 staging compose 执行
+- [x] `journey-core`（匿名→注册→领任务→完成→领奖→积分）
+- [x] `journey-admin`（登录→编排→发布→实例查询）
+- [x] k6：NFR 性能 1–8 的 P0 子集，对 staging compose 执行
 
 _需求：R32–R35、NFR 性能、R31_
 _设计：design §7.8、§7.9_

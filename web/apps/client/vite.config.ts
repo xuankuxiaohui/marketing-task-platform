@@ -7,7 +7,7 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const proxyTarget = env.PORTAL_PROXY_TARGET || "http://127.0.0.1:8081";
+  const proxyTarget = process.env.PORTAL_PROXY_TARGET || env.PORTAL_PROXY_TARGET || "http://127.0.0.1:8081";
   return {
     plugins: [
       vue(),
@@ -21,6 +21,15 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5174,
+      proxy: {
+        "/api": {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+      },
+    },
+    preview: {
+      port: 4174,
       proxy: {
         "/api": {
           target: proxyTarget,
