@@ -15,7 +15,7 @@ const session = useSessionStore();
 const inProgressCount = ref(0);
 
 async function loadBadge(): Promise<void> {
-  const result = await fetchMineTasks("IN_PROGRESS");
+  const result = await fetchMineTasks({ status: "IN_PROGRESS", page: 1, pageSize: 1 });
   if (isOk(result) && result.data) {
     inProgressCount.value = Number(result.data.total ?? 0);
   }

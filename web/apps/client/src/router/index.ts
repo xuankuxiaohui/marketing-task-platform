@@ -2,7 +2,7 @@ import { showFailToast } from "vant";
 import { createRouter, createWebHistory } from "vue-router";
 import { setUnauthorizedHandler } from "@/api/http";
 import { zhCN } from "@/locales/zh-CN";
-import { LOGIN_ROUTE, resolveAuthNavigation } from "@/router/guards";
+import { HOME_ROUTE, LOGIN_ROUTE, resolveAuthNavigation } from "@/router/guards";
 import { ensurePortalSession, resetPortalSession } from "@/router/session";
 import { useSessionStore } from "@/store/session";
 import { sessionMessage } from "@/utils/session-reason";
@@ -53,10 +53,16 @@ const router = createRouter({
           meta: { title: zhCN.password.title },
         },
         {
+          path: "task/:taskId",
+          name: "TaskDetailPage",
+          component: () => import("@/views/task/TaskDetailPage.vue"),
+          meta: { title: zhCN.home.title },
+        },
+        {
           path: "mine/tasks",
           name: "MineTasksPage",
-          component: () => import("@/views/mine/EmptyListPage.vue"),
-          meta: { title: zhCN.mine.tasks, emptyKind: "tasks" },
+          component: () => import("@/views/mine/MineTasksPage.vue"),
+          meta: { title: zhCN.mine.tasks },
         },
         {
           path: "mine/prizes",

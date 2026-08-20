@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { AUTH_HEADER, DEVICE_HEADER, attachPortalHeaders, shouldSkipUnauthorized } from "./http";
+import {
+  AUTH_HEADER,
+  CLIENT_PLATFORM,
+  DEVICE_HEADER,
+  PLATFORM_HEADER,
+  attachPortalHeaders,
+  shouldSkipUnauthorized,
+} from "./http";
 
 describe("portal http", () => {
   it("skips session handling on anonymous auth endpoints", () => {
@@ -15,5 +22,6 @@ describe("portal http", () => {
     attachPortalHeaders({ headers }, "client:tok", "550e8400-e29b-41d4-a716-446655440000");
     expect(headers[AUTH_HEADER]).toBe("Bearer client:tok");
     expect(headers[DEVICE_HEADER]).toBe("550e8400-e29b-41d4-a716-446655440000");
+    expect(headers[PLATFORM_HEADER]).toBe(CLIENT_PLATFORM);
   });
 });

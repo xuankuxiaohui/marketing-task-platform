@@ -5,6 +5,8 @@ import { readPortalToken } from "@/utils/token";
 
 export const DEVICE_HEADER = "X-Device-Id";
 export const AUTH_HEADER = "Authorization";
+export const PLATFORM_HEADER = "X-Client-Platform";
+export const CLIENT_PLATFORM = "WEB";
 
 const SKIP_UNAUTHORIZED = [
   "/api/common/auth/login",
@@ -48,6 +50,7 @@ export function attachPortalHeaders(
     if (deviceId) {
       settable.set(DEVICE_HEADER, deviceId);
     }
+    settable.set(PLATFORM_HEADER, CLIENT_PLATFORM);
     return;
   }
   const record = headers as Record<string, string>;
@@ -57,6 +60,7 @@ export function attachPortalHeaders(
   if (deviceId) {
     record[DEVICE_HEADER] = deviceId;
   }
+  record[PLATFORM_HEADER] = CLIENT_PLATFORM;
 }
 
 export function createHttp(): AxiosInstance {
