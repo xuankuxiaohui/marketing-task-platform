@@ -143,6 +143,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/common/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 门户档案 */
+        get: operations["profile"];
+        /** 修改昵称 */
+        put: operations["updateProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 修改密码 */
+        put: operations["changePassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/common/task/{taskId}/detail": {
         parameters: {
             query?: never;
@@ -611,6 +646,31 @@ export interface components {
             available?: boolean;
             reason?: string;
         };
+        PortalNicknameCommand: {
+            nickname: string;
+        };
+        ChangePasswordCommand: {
+            oldPassword: string;
+            newPassword: string;
+        };
+        PortalProfileResponse: {
+            /** Format: int64 */
+            userId?: number;
+            username?: string;
+            nickname?: string;
+            province?: string;
+            userLevel?: string;
+            userRole?: string;
+            tags?: string[];
+            /** Format: int64 */
+            pointsBalance?: number;
+        };
+        ResultPortalProfileResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PortalProfileResponse"];
+            traceId?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -811,6 +871,74 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResultPortalAuthResponse"];
+                };
+            };
+        };
+    };
+    profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPortalProfileResponse"];
+                };
+            };
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalNicknameCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
                 };
             };
         };

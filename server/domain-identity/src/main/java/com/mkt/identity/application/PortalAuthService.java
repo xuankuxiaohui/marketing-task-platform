@@ -1,26 +1,33 @@
 package com.mkt.identity.application;
 
+import com.mkt.contract.RewardPort;
 import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskSubject;
+import com.mkt.contract.UserRewardSummary;
 import com.mkt.contract.event.EventCodes;
+import com.mkt.identity.command.ChangePasswordCommand;
 import com.mkt.identity.command.PortalLoginCommand;
 import com.mkt.identity.command.PortalRegisterCommand;
 import com.mkt.identity.config.ConfigService;
 import com.mkt.identity.convert.IdentityTime;
+import com.mkt.identity.convert.UserAttributeConvert;
 import com.mkt.identity.domain.DefaultNicknames;
 import com.mkt.identity.domain.DeviceIds;
 import com.mkt.identity.domain.LoginLock;
+import com.mkt.identity.domain.Nicknames;
 import com.mkt.identity.domain.PasswordPolicies;
 import com.mkt.identity.domain.Usernames;
 import com.mkt.identity.entity.PortalUserEntity;
 import com.mkt.identity.response.PortalAuthResponse;
+import com.mkt.identity.response.PortalProfileResponse;
 import com.mkt.identity.response.UsernameAvailableResponse;
 import com.mkt.identity.support.AuthConfigKeys;
 import com.mkt.identity.support.AuthErrorCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
+import com.mkt.kernel.CommonErrorCodes;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -42,6 +49,7 @@ public class PortalAuthService {
     private final PasswordHasher hasher;
     private final SessionService sessions;
     private final RiskCheckPort risk;
+    private final RewardPort rewards;
     private final EventPublisher events;
     private final ConfigService configs;
     private final Clock clock;
@@ -53,6 +61,7 @@ public class PortalAuthService {
             PasswordHasher hasher,
             SessionService sessions,
             RiskCheckPort risk,
+            RewardPort rewards,
             EventPublisher events,
             ConfigService configs,
             Clock clock) {
@@ -62,6 +71,7 @@ public class PortalAuthService {
         this.hasher = hasher;
         this.sessions = sessions;
         this.risk = risk;
+        this.rewards = rewards;
         this.events = events;
         this.configs = configs;
         this.clock = clock;
@@ -172,6 +182,52 @@ public class PortalAuthService {
 
     public void logout(String presentedToken) {
         sessions.logoutClient(presentedToken);
+    }
+
+    public PortalProfileResponse profile(long userId) {
+        PortalUserEntity user = requireActive(userId);
+        UserRewardSummary summary = rewards.userSummary(userId);
+        long points = summary == null ? 0L : summary.pointsBalance();
+        return new PortalProfileResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                user.getProvince(),
+                user.getUserLevel(),
+                user.getUserRole(),
+                UserAttributeConvert.parseTags(user.getTags()),
+                points);
+    }
+
+    @Transactional
+    public void updateNickname(long userId, String raw) {
+        requireActive(userId);
+        String nickname = Nicknames.normalize(raw);
+        if (!Nicknames.valid(nickname)) {
+            throw new BusinessException(AuthErrorCodes.PROFILE_NICKNAME_INVALID);
+        }
+        users.updateNickname(userId, nickname);
+    }
+
+    @Transactional
+    public void changePassword(long userId, ChangePasswordCommand command, String presentedToken) {
+        if (!PasswordPolicies.portalSatisfied(command.newPassword())) {
+            throw new BusinessException(AuthErrorCodes.PASSWORD_POLICY_VIOLATED);
+        }
+        PortalUserEntity user = requireActive(userId);
+        if (!hasher.matches(command.oldPassword(), user.getPasswordHash())) {
+            throw new BusinessException(AuthErrorCodes.PASSWORD_OLD_MISMATCH);
+        }
+        users.updatePassword(userId, hasher.hash(command.newPassword()));
+        sessions.keepCurrentClient(userId, presentedToken);
+    }
+
+    private PortalUserEntity requireActive(long userId) {
+        PortalUserEntity user = users.getById(userId);
+        if (user == null || user.deletedFlag()) {
+            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
+        }
+        return user;
     }
 
     private void rejectIfBlocked(

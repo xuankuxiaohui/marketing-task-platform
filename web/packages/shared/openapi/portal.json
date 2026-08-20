@@ -331,6 +331,87 @@
         }
       }
     },
+    "/api/common/auth/profile": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "门户档案",
+        "operationId": "profile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultPortalProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "修改昵称",
+        "operationId": "updateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalNicknameCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/common/auth/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "修改密码",
+        "operationId": "changePassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/common/task/{taskId}/detail": {
       "get": {
         "tags": [
@@ -1502,6 +1583,84 @@
             "type": "boolean"
           },
           "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "PortalNicknameCommand": {
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "nickname"
+        ]
+      },
+      "ChangePasswordCommand": {
+        "type": "object",
+        "properties": {
+          "oldPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "newPassword",
+          "oldPassword"
+        ]
+      },
+      "PortalProfileResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "userLevel": {
+            "type": "string"
+          },
+          "userRole": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pointsBalance": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultPortalProfileResponse": {
+        "type": "object",
+        "properties": {
+          "code": {},
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PortalProfileResponse"
+          },
+          "traceId": {
             "type": "string"
           }
         }

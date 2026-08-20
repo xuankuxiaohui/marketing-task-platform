@@ -1,0 +1,68 @@
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
+import type { PortalAuthData, PortalProfileData } from "@/api/auth";
+import { readPortalToken, writePortalToken } from "@/utils/token";
+
+export const useSessionStore = defineStore("session", () => {
+  const token = ref(readPortalToken());
+  const userId = ref<number | null>(null);
+  const username = ref("");
+  const nickname = ref("");
+  const province = ref("");
+  const userLevel = ref("");
+  const userRole = ref("");
+  const tags = ref<string[]>([]);
+  const pointsBalance = ref(0);
+
+  const authenticated = computed(() => Boolean(token.value));
+
+  function persistToken(next: string): void {
+    token.value = next;
+    writePortalToken(next);
+  }
+
+  function setLogin(data: PortalAuthData): void {
+    persistToken(data.token ?? "");
+    userId.value = data.userId != null ? Number(data.userId) : null;
+    nickname.value = data.nickname ?? "";
+  }
+
+  function setProfile(data: PortalProfileData): void {
+    userId.value = data.userId != null ? Number(data.userId) : userId.value;
+    username.value = data.username ?? "";
+    nickname.value = data.nickname ?? "";
+    province.value = data.province ?? "";
+    userLevel.value = data.userLevel ?? "";
+    userRole.value = data.userRole ?? "";
+    tags.value = [...(data.tags ?? [])];
+    pointsBalance.value = Number(data.pointsBalance ?? 0);
+  }
+
+  function clear(): void {
+    persistToken("");
+    userId.value = null;
+    username.value = "";
+    nickname.value = "";
+    province.value = "";
+    userLevel.value = "";
+    userRole.value = "";
+    tags.value = [];
+    pointsBalance.value = 0;
+  }
+
+  return {
+    token,
+    userId,
+    username,
+    nickname,
+    province,
+    userLevel,
+    userRole,
+    tags,
+    pointsBalance,
+    authenticated,
+    setLogin,
+    setProfile,
+    clear,
+  };
+});
