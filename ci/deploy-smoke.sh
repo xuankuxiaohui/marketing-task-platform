@@ -31,6 +31,14 @@ fi
 
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$ROOT/deploy/docker-compose.yml")
 
+dump_stack() {
+  echo "compose failed; dumping admin-app / mysql / redis" >&2
+  "${COMPOSE[@]}" ps -a || true
+  "${COMPOSE[@]}" logs --no-color --tail=400 admin-app || true
+  "${COMPOSE[@]}" logs --no-color --tail=80 mysql redis || true
+}
+trap dump_stack ERR
+
 "${COMPOSE[@]}" up -d --build
 wait_stack() {
   local tries=60

@@ -4,6 +4,7 @@ name: mkt
 
 x-app-env: &app-env
   TZ: UTC
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
   SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
   MKT_DATASOURCE_URL: ${MKT_DATASOURCE_URL}
   MKT_DATASOURCE_USERNAME: ${MKT_DATASOURCE_USERNAME}
@@ -23,7 +24,7 @@ x-app-env: &app-env
 x-app-resources: &app-resources
   limits:
     cpus: "2.0"
-    memory: 1G
+    memory: 1536M
   reservations:
     cpus: "0.25"
     memory: 256M

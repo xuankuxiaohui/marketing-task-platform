@@ -9,6 +9,8 @@ import com.mkt.infra.redis.KeyValueStore;
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.infra.redis.RedissonFactory;
 import com.mkt.infra.redis.RedissonKeyValueStore;
+import com.mkt.kernel.UserContext;
+import com.mkt.kernel.UserPrincipal;
 import com.mkt.kernel.time.MutableClock;
 import com.mkt.risk.application.RiskAuditAppender;
 import com.mkt.risk.application.RiskCaseAppService;
@@ -145,6 +147,7 @@ public final class RiskITSupport implements AutoCloseable {
         RiskHandleLogStore handleStore = mybatis.handles;
         RiskListProjection projection = new RiskListProjection(kv, listStore, clock);
         RiskAuditAppender audit = new RiskAuditAppender(publisher);
+        UserContext.set(new UserPrincipal(1L, "admin", "op"));
         RiskListAppService lists = new RiskListAppService(listStore, projection, audit, clock);
         RiskCaseAppService cases =
                 new RiskCaseAppService(mybatis.hits, handleStore, listStore, projection, audit, clock);
@@ -188,6 +191,7 @@ public final class RiskITSupport implements AutoCloseable {
 
     @Override
     public void close() {
+        UserContext.clear();
         if (redisson != null) {
             redisson.shutdown();
         }

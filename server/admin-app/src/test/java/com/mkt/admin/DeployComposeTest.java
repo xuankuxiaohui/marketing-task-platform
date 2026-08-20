@@ -30,6 +30,17 @@ class DeployComposeTest {
         assertThat(compose).contains("SPRING_FLYWAY_ENABLED: \"false\"");
         assertThat(compose).contains("REDIS_DATABASE: \"2\"");
         assertThat(compose).contains("limits:");
+        assertThat(compose).contains("JAVA_TOOL_OPTIONS");
+        assertThat(compose).contains("MaxRAMPercentage");
+        String dockerfile = read("deploy/docker/Dockerfile");
+        assertThat(dockerfile).contains("fontconfig");
+        assertThat(dockerfile).contains("fonts-dejavu-core");
+        assertThat(dockerfile).contains("MaxRAMPercentage");
+        assertThat(dockerfile).contains("HOME=/app");
+        String smoke = read("ci/deploy-smoke.sh");
+        assertThat(smoke).contains("dump_stack");
+        String e2e = read("ci/e2e-compose.sh");
+        assertThat(e2e).contains("dump_stack");
         assertThat(hostPublishedPorts(compose))
                 .doesNotContain("3308", "6379", "8080", "8081")
                 .anyMatch(port -> port.contains("18080"))

@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**编组 J 进行中** / 当前任务：**44 签到域，已交付；PR #60 CI 已修** / 更新：2026-08-20
+> 阶段：**编组 J 进行中** / 当前任务：**44 签到域，已交付；PR #60 CI 续修** / 更新：2026-08-20
 
 ## 项目一句话
 
@@ -8,7 +8,7 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master）
-- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付**
+- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI，未开任务 45**
 - 下一步：下一会话从本分支 tip 开 `task/45-activity` 做编组 J 第二题。**禁止在本分支继续写 45+。禁止 merge / push / force-push master**
 - Git：工作分支 `task/44-signin`（基线 `origin/task/43-e2e-k6` @ `9ac6168` / 其上叠 43 → 42 → 41 → 40 → 39 → 38.3 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
 
@@ -23,7 +23,9 @@
 - 附录 A 窗口/日限/消耗走 `SigninSettings` 默认值（7 / 1 / 100），与 V1 `sys_config` 种子同文
 - C-7 失败者允许 `reward.claim.conflict` 或幂等 GRANTED；`PrizeClaimExactlyOnceIT` 以 MySQL `status='GRANTED'` 恰 1 行为准
 - 领取过期兜底：`claim()` `noRollbackFor=BusinessException`，EXPIRED 翻转与 `CLAIM_EXPIRED` 同路径提交（R19.3）。IT 不把 persist-then-throw 包进 `TransactionTemplate`（同 `LoginLockCommitIT`）
-- Compose bake 按 **context** 解析 dockerfile。三处 app build context 改为仓库根，`dockerfile: deploy/docker/Dockerfile`，避免 `server/deploy`
+- Compose bake 按 **context** 解析 dockerfile。三处 app build context 改为仓库根，`dockerfile: deploy/docker/Dockerfile`
+- 名单写路径要 `UserContext` 操作者（`RiskOperator.requireUserId`）。`RiskRejectIdempotentIT` 与 `ListExpiryIT` / `ListConcurrentDecisionIT` / `CaseHandleAuditIT` 同模式；`RiskITSupport.start` 也落操作者，避免后续 IT 漏设
+- 容器默认堆是 cgroup 的 25%。1G limit 下 admin-app 启动即死，compose 在 ~15s 报 unhealthy。镜像/编排设 `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0`，app limit 1536M；JRE 装 fontconfig + fonts-dejavu-core（EasyCaptcha）；`HOME=/app`。smoke/e2e 失败 dump admin-app 日志
 
 ## 改过的核心文件
 
@@ -33,7 +35,10 @@
 - `server/domain-reward` `RewardPortImpl` / `PointsPort` 接线 CONSUME
 - `server/domain-reward/.../ClaimAppService.java`（claim 过期翻转不回滚）
 - `server/domain-reward` `PrizeClaimExactlyOnceIT` / `PrizeExpireIT` / `ClaimAppServiceTest`
+- `server/domain-risk` `RiskRejectIdempotentIT` / `RiskITSupport`
 - `deploy/docker-compose.yml`、`deploy/docker/Dockerfile`、`.dockerignore`
+- `ci/deploy-smoke.sh`、`ci/e2e-compose.sh`
+- `server/admin-app` `DeployComposeTest`
 - `server/pom.xml`、`admin-app/pom.xml`、`portal-app/pom.xml`
 - `web/apps/admin/src/views/signin/**`、`web/apps/client/src/views/signin/**`
 - `.kiro/specs/platform-v2/tasks.md`（任务 44 勾选）
@@ -41,14 +46,14 @@
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test` 本机 exit 0（含 domain-signin 单测 / jqwik、domain-reward jacoco、ArchUnit RL-02）
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R19.1 / R19.2 / R31.1 父链 CI
-- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）
+- 命令与结果：`cd server && mvn -q -DskipITs test` 本机 exit 0（含 domain-signin 单测 / jqwik、domain-reward jacoco、ArchUnit RL-02、DeployComposeTest）
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R13.4 操作者上下文、R31.1 compose 启动
+- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；无 Docker，admin-app 崩溃栈等 CI dump
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
-- PR #59 / #60 父链 CI 同源失败：C-7 把幂等 GRANTED 计成 64 次成功；领取过期兜底被外层 TX 回滚；compose bake 把 dockerfile 解析到 `server/deploy`
+- PR #60 `ccc0902` 后新失败：`RiskRejectIdempotentIT` `lists.add` 无 `UserContext`（reward IT 修好后 fail-fast 才跑到 domain-risk）；e2e/deploy-smoke bake 已过，`mkt-admin-app-1` 启动后 ~15s unhealthy（无容器日志）。本会话按同模式补操作者，并修堆/字体/失败 dump
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
@@ -97,6 +102,6 @@
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 下一会话从本分支 tip 开 `task/45-activity`（未合则叠在 44 上），做活动域 V6 / C-10
+1. 等 PR #60 CI（server / e2e / deploy-smoke）。下一会话从本分支 tip 开 `task/45-activity`（未合则叠在 44 上），做活动域 V6 / C-10
 2. 合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → 30 PR #39 → 31 PR #40 → 32 PR #42 → 33 PR #43 → 34 PR #46 → 35 PR #47 → 36 PR #48 → 37.1 PR #49 → 37.2 PR #50 → 37.3 PR #51 → 38.1 PR #52 → 38.2 PR #53 → 38.3 PR #54 → 39 PR #55 → 40 PR #56 → 41 PR #57 → 42 PR #58 → 43 PR #59 → 44 PR #60
 3. **停止本会话。不要在本分支写 45+。不要合 master。**
