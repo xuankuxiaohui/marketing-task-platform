@@ -1,4 +1,6 @@
-import { apiBase, loadDotEnv } from "./env";
+import { existsSync, readFileSync } from "node:fs";
+import { apiBase, loadDotEnv, statePath } from "./env";
+import { isAuthRateLimited, withAuthRateLimitRetry } from "./rateLimit";
 import { waitRedisGet } from "./redis";
 
 export type Json = Record<string, unknown>;
@@ -55,8 +57,17 @@ function requireOk<T extends { code?: unknown; message?: string }>(payload: T, l
   return payload;
 }
 
-export async function captcha(path: string, realm: "admin" | "portal"): Promise<{ captchaId: string; code: string }> {
-  const { body } = await api<{ code: unknown; data?: { captchaId?: string } }>(path);
+export async function captcha(
+  path: string,
+  realm: "admin" | "portal",
+): Promise<{ captchaId: string; code: string }> {
+  const body = await withAuthRateLimitRetry(
+    async () => {
+      const { body } = await api<{ code: unknown; data?: { captchaId?: string } }>(path);
+      return body;
+    },
+    (payload) => payload.code,
+  );
   requireOk(body, path);
   const captchaId = body.data?.captchaId;
   if (!captchaId) {
@@ -73,29 +84,55 @@ type AdminLoginBody = {
 };
 
 async function loginAdminOnce(password: string): Promise<{ body: AdminLoginBody; cookie: string }> {
-  const { captchaId, code } = await captcha("/admin/captcha", "admin");
-  return api<AdminLoginBody>("/admin/auth/login", {
-    method: "POST",
-    body: JSON.stringify({
-      username: "admin",
-      password,
-      captchaId,
-      captchaCode: code,
-    }),
-  });
+  return withAuthRateLimitRetry(
+    async () => {
+      const { captchaId, code } = await captcha("/admin/captcha", "admin");
+      return api<AdminLoginBody>("/admin/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          username: "admin",
+          password,
+          captchaId,
+          captchaCode: code,
+        }),
+      });
+    },
+    (result) => result.body.code,
+  );
+}
+
+function peekKnownAdminPassword(): string | undefined {
+  const path = statePath();
+  if (!existsSync(path)) {
+    return undefined;
+  }
+  try {
+    const state = JSON.parse(readFileSync(path, "utf8")) as { adminPassword?: unknown };
+    return typeof state.adminPassword === "string" && state.adminPassword
+      ? state.adminPassword
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function adminLogin(): Promise<AdminSession> {
   const env = loadDotEnv();
   const initPassword = env.MKT_INIT_ADMIN_PASSWORD;
   const unlockedPassword = unlockedAdminPassword(initPassword);
-  let { body, cookie } = await loginAdminOnce(initPassword);
-  let usedPassword = initPassword;
+  const known = peekKnownAdminPassword();
+  const first = known === unlockedPassword ? unlockedPassword : initPassword;
+  const second = first === initPassword ? unlockedPassword : initPassword;
+  let { body, cookie } = await loginAdminOnce(first);
+  let usedPassword = first;
+  if (isAuthRateLimited(body)) {
+    requireOk(body, "admin login");
+  }
   if (body.code !== 0) {
-    const retry = await loginAdminOnce(unlockedPassword);
+    const retry = await loginAdminOnce(second);
     body = retry.body;
     cookie = retry.cookie;
-    usedPassword = unlockedPassword;
+    usedPassword = second;
   }
   requireOk(body, "admin login");
   const csrfToken = body.data?.csrfToken;
@@ -126,7 +163,11 @@ export async function adminLogin(): Promise<AdminSession> {
   return { cookie, csrfToken, password: usedPassword };
 }
 
-export async function ensurePrize(session: AdminSession, code: string, claimMode: "AUTO" | "MANUAL"): Promise<number> {
+export async function ensurePrize(
+  session: AdminSession,
+  code: string,
+  claimMode: "AUTO" | "MANUAL",
+): Promise<number> {
   const page = await api<{ code: unknown; data?: { records?: Array<{ id?: number }> } }>(
     `/admin/reward/prizes?code=${encodeURIComponent(code)}&page=1&pageSize=5`,
     { cookie: session.cookie },
@@ -194,21 +235,24 @@ export async function ensurePublishedTask(session: AdminSession, seed: TaskSeed)
     }
     return Number(row.id);
   }
-  const saved = await api<{ code: unknown; data?: { id?: number } }>("/admin/task/definitions/save-aggregate", {
-    method: "POST",
-    cookie: session.cookie,
-    csrf: session.csrfToken,
-    body: JSON.stringify({
-      code: seed.code,
-      name: seed.name,
-      cycleType: "NONE",
-      sortWeight: 0,
-      gray: { type: "NONE" },
-      steps: seed.steps,
-      transitions: seed.transitions,
-      actions: [],
-    }),
-  });
+  const saved = await api<{ code: unknown; data?: { id?: number } }>(
+    "/admin/task/definitions/save-aggregate",
+    {
+      method: "POST",
+      cookie: session.cookie,
+      csrf: session.csrfToken,
+      body: JSON.stringify({
+        code: seed.code,
+        name: seed.name,
+        cycleType: "NONE",
+        sortWeight: 0,
+        gray: { type: "NONE" },
+        steps: seed.steps,
+        transitions: seed.transitions,
+        actions: [],
+      }),
+    },
+  );
   requireOk(saved.body, "task save");
   const taskId = saved.body.data?.id;
   if (taskId == null) {
@@ -224,22 +268,37 @@ export async function ensurePublishedTask(session: AdminSession, seed: TaskSeed)
   return Number(taskId);
 }
 
-export async function registerPortalUser(username: string, password: string): Promise<{ token: string; userId: number }> {
-  const available = await api<{ code: unknown; data?: { available?: boolean } }>(
-    `/api/common/auth/username-available?username=${encodeURIComponent(username)}`,
+export async function registerPortalUser(
+  username: string,
+  password: string,
+): Promise<{ token: string; userId: number }> {
+  const available = await withAuthRateLimitRetry(
+    () =>
+      api<{ code: unknown; data?: { available?: boolean } }>(
+        `/api/common/auth/username-available?username=${encodeURIComponent(username)}`,
+      ),
+    (result) => result.body.code,
   );
   requireOk(available.body, "username-available");
-  const { captchaId, code } = await captcha("/api/common/captcha", "portal");
-  const path = available.body.data?.available === false ? "/api/common/auth/login" : "/api/common/auth/register";
-  const auth = await api<{ code: unknown; data?: { token?: string; userId?: number } }>(path, {
-    method: "POST",
-    body: JSON.stringify({
-      username,
-      password,
-      captchaId,
-      captchaCode: code,
-    }),
-  });
+  const path =
+    available.body.data?.available === false
+      ? "/api/common/auth/login"
+      : "/api/common/auth/register";
+  const auth = await withAuthRateLimitRetry(
+    async () => {
+      const { captchaId, code } = await captcha("/api/common/captcha", "portal");
+      return api<{ code: unknown; data?: { token?: string; userId?: number } }>(path, {
+        method: "POST",
+        body: JSON.stringify({
+          username,
+          password,
+          captchaId,
+          captchaCode: code,
+        }),
+      });
+    },
+    (result) => result.body.code,
+  );
   requireOk(auth.body, path);
   const token = auth.body.data?.token;
   const userId = auth.body.data?.userId;
@@ -250,11 +309,14 @@ export async function registerPortalUser(username: string, password: string): Pr
 }
 
 export async function startTask(token: string, taskId: number): Promise<number> {
-  const started = await api<{ code: unknown; data?: { instanceId?: number } }>(`/api/common/task/${taskId}/start`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: "{}",
-  });
+  const started = await api<{ code: unknown; data?: { instanceId?: number } }>(
+    `/api/common/task/${taskId}/start`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: "{}",
+    },
+  );
   requireOk(started.body, "task start");
   const instanceId = started.body.data?.instanceId;
   if (instanceId == null) {

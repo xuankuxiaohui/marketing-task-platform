@@ -1,16 +1,11 @@
-import type { Page, Response } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { isAuthRateLimited, withAuthRateLimitRetry } from "./rateLimit";
 import { waitRedisGet } from "./redis";
 
-async function captchaFromResponse(response: Response, realm: "admin" | "portal"): Promise<string> {
-  const payload = (await response.json()) as { data?: { captchaId?: string } };
-  const captchaId = payload.data?.captchaId;
-  if (!captchaId) {
-    throw new Error("captchaId missing from UI captcha response");
-  }
-  return waitRedisGet(`captcha:${realm}:${captchaId}`);
-}
-
-function isCaptchaGet(item: { url(): string; request(): { method(): string } }, path: string): boolean {
+function isCaptchaGet(
+  item: { url(): string; request(): { method(): string } },
+  path: string,
+): boolean {
   return item.url().includes(path) && item.request().method() === "GET";
 }
 
@@ -24,10 +19,35 @@ async function fillCaptchaFromRefresh(
   path: string,
   realm: "admin" | "portal",
 ): Promise<string> {
-  await page.getByTestId("login-captcha-image").waitFor({ state: "visible" });
-  const pending = page.waitForResponse((item) => isCaptchaGet(item, path));
-  await page.getByTestId("login-captcha-refresh").click();
-  return captchaFromResponse(await pending, realm);
+  await page.getByTestId("login-captcha-refresh").waitFor({ state: "visible" });
+  // onMounted GET may 429; image stays hidden. Refresh below retries the same bucket.
+  await page
+    .getByTestId("login-captcha-image")
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .catch(() => undefined);
+  const payload = await withAuthRateLimitRetry(
+    async () => {
+      const pending = page.waitForResponse((item) => isCaptchaGet(item, path));
+      await page.getByTestId("login-captcha-refresh").click();
+      return (await (await pending).json()) as { code?: unknown; data?: { captchaId?: string } };
+    },
+    (body) => body.code,
+  );
+  if (isAuthRateLimited(payload)) {
+    throw new Error(`${path} failed: ${JSON.stringify(payload)}`);
+  }
+  return captchaFromResponsePayload(payload, realm);
+}
+
+async function captchaFromResponsePayload(
+  payload: { data?: { captchaId?: string } },
+  realm: "admin" | "portal",
+): Promise<string> {
+  const captchaId = payload.data?.captchaId;
+  if (!captchaId) {
+    throw new Error("captchaId missing from UI captcha response");
+  }
+  return waitRedisGet(`captcha:${realm}:${captchaId}`);
 }
 
 export async function fillPortalCaptcha(page: Page): Promise<void> {
