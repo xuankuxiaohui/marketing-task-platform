@@ -17,5 +17,5 @@ public interface AdMaterialMapper extends BaseMapper<AdMaterialEntity> {
             @Param("offset") long offset,
             @Param("limit") int limit);
 
-    List<AdMaterialEntity> selectByIds(@Param("ids") List<Long> ids);
+    List<AdMaterialEntity> selectByIds(@Param("coll") List<Long> ids);
 }
