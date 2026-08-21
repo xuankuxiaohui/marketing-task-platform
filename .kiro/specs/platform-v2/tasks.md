@@ -712,11 +712,11 @@ _测试：§7.3 R22.1、§7.4 C-10_
 
 ### 任务 46：聚合看板（编组 J，P1）
 
-- [ ] 按日聚合表 `mtr_task_funnel_d` / `mtr_reward_spend_d` / `mtr_risk_hit_d` / `mtr_ad_material_d`，uk(`day`,`dim_key`)；保留 ≥ 1 年；排除 `simulated`
-- [ ] 事件条数口径（曝光 / 领取 / 完成等按 evt 行计，不按用户去重除非条款另述）
-- [ ] 增量聚合调度恰一（Redisson tryLock(0)，§6.7 增）
-- [ ] 延迟 ≤ 附录 A `metrics.aggregate.max-delay-minutes`
-- [ ] 指标端点 + ECharts 页（漏斗 / 成本 / 风控 / 广告）
+- [x] 按日聚合表 `mtr_task_funnel_d` / `mtr_reward_spend_d` / `mtr_risk_hit_d` / `mtr_ad_material_d`，uk(`day`,`dim_key`)；保留 ≥ 1 年；排除 `simulated`
+- [x] 事件条数口径（曝光 / 领取 / 完成等按 evt 行计，不按用户去重除非条款另述）
+- [x] 增量聚合调度恰一（Redisson tryLock(0)，§6.7 增）
+- [x] 延迟 ≤ 附录 A `metrics.aggregate.max-delay-minutes`
+- [x] 指标端点 + ECharts 页（漏斗 / 成本 / 风控 / 广告）
 
 _需求：R23_
 _设计：design §3.11、§6.7 增聚合调度、§7.3 R23.1_

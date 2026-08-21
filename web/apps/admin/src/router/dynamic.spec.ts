@@ -92,8 +92,13 @@ describe("dynamic routes from §4.10 menus", () => {
     expect(viewModuleKey("signin/record/index", keys)).toBe("../views/signin/record/index.vue");
   });
 
-  it("covers every §4.10 component path plus P1 signin", () => {
-    expect(MENU_SEED_COMPONENTS).toHaveLength(30);
+  it("resolves metrics view", () => {
+    const keys = ["../views/metrics/index.vue"];
+    expect(viewModuleKey("metrics/index", keys)).toBe("../views/metrics/index.vue");
+  });
+
+  it("covers every §4.10 component path plus P1 signin and metrics", () => {
+    expect(MENU_SEED_COMPONENTS).toHaveLength(31);
     expect(MENU_SEED_COMPONENTS[0]).toBe("login/index");
     expect(MENU_SEED_COMPONENTS[1]).toBe("dashboard/index");
     expect(firstAuthorizedPath([menu({ id: 2, name: "工作台", route: "/dashboard", component: "dashboard/index" })])).toBe(

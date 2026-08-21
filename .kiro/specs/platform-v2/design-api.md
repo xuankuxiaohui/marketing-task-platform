@@ -384,7 +384,8 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 页面 | 路由（菜单 route） | component | 数据来源 |
 |------|-------------------|-----------|---------|
 | 登录 | `/login` | `login/index` | §4.2 登录/验证码（匿名） |
-| 工作台 | `/dashboard` | `dashboard/index` | P0 静态欢迎页（无聚合指标，P1 看板替换） |
+| 工作台 | `/dashboard` | `dashboard/index` | GET `/admin/metrics/**` 摘要（R23） |
+| 运营看板 | `/metrics` | `metrics/index` | GET `/admin/metrics/funnel|spend|risk|ad` |
 | 后台用户 | `/system/users` | `system/user/index` | §4.2 users |
 | 角色权限 | `/system/roles` | `system/role/index` | §4.2 roles/permissions/tree |
 | 会话管理 | `/system/sessions` | `system/session/index` | §4.2 sessions/kick |
@@ -411,3 +412,16 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 命中与处置 | `/risk/cases` | `risk/case/index` | §4.6 hits/cases |
 | 埋点元数据 | `/track/metadata` | `track/metadata/index` | §4.7 metadata |
 | 事件调试 | `/track/events` | `track/event/index` | §4.7 调试查询 |
+
+<!-- §4.4 P1 metrics -->
+#### 4.4.1 指标端点（R23，任务 46）
+
+权限一律 `metrics:dashboard:view`。查询走 `mtr_*` 聚合表（非原始事件）。参数：`from?` `to?`（ISO-8601）、`grain?`=`DAY|WEEK|MONTH`（默认 DAY）、`dimKey?`（漏斗=taskId，成本=category_code，风控=rule_code，广告=positionCode 前缀）。上环节为 0 时转化率 / CTR / 拦截率为 `null`（前端展示 —）。
+
+**GET /admin/metrics/funnel** · `records: [{period, dimKey, exposureCount, startCount, completeCount, startRate?, completeRate?}]`
+
+**GET /admin/metrics/spend** · `records: [{period, dimKey, arrivedCount, arrivedCostFen, sendingCount, sendingCostFen, remainingStock, totalStock}]`（库存水位为当前 `rwd_prize` 快照）
+
+**GET /admin/metrics/risk** · `records: [{period, dimKey, hitCount, interceptCount, interceptRate?}]`
+
+**GET /admin/metrics/ad** · `records: [{period, dimKey, exposureCount, clickCount, ctr?}]`

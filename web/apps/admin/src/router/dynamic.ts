@@ -103,4 +103,5 @@ export const MENU_SEED_COMPONENTS = [
   "track/event/index",
   "signin/activity/index",
   "signin/record/index",
+  "metrics/index",
 ] as const;

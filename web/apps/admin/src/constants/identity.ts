@@ -120,6 +120,7 @@ export const PERMS = {
   ACTIVITY_PUBLISH: "activity:publish",
   ACTIVITY_OFFLINE: "activity:offline",
   ACTIVITY_PARTICIPATION_QUERY: "activity:participation:query",
+  METRICS_DASHBOARD_VIEW: "metrics:dashboard:view",
 } as const;
 
 export const CONFIG_VALUE_TYPES = ["STRING", "NUMBER", "BOOL", "JSON"] as const;

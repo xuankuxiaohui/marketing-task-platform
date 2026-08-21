@@ -501,6 +501,7 @@ Relay（admin-app 与 portal-app 各一，锁键分应用：outbox:relay:admin /
 | 7 | 进度去重清理（§3.3.8） | 每日 04:00 | sched:progress-clean | `DELETE ... WHERE created_at < NOW()-7d` 分批 5000 行 |
 | 8 | 事件表分区预建 + 过期清理（R31/NFR 容量） | 每日 03:00 | sched:evt-partition | information_schema 判断预建未来 3 个月；DROP 分区 < 90 天（retention.event-days） |
 | 9 | 审计保留清理 | 每日 03:30 | sched:audit-clean | `DELETE WHERE created_at < NOW()-retention.audit-days` 分批 5000 行 |
+| 11 | 看板增量聚合（R23） | 1min | sched:metrics-aggregate | 按 UTC+8 日 COUNT 源数据后 uk(`day`,`dim_key`) upsert（重跑覆盖不累加）；排除 `simulated=1`；删除 `day < today-retention.metrics-days` 分批 5000 行 |
 
 调度规范：`tryLock(0)` 获取失败即跳过本轮（不等待）；执行体包裹 try/finally 释放；多实例部署下恰一执行（双实例测试验证，§7）；任务执行时长/结果暴露指标（NFR 可观测 1）。
 
