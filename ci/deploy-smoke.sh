@@ -177,6 +177,7 @@ if login.get("mustChangePassword"):
         ),
         "admin change password",
     )
+    jar.clear()
     login = require_ok(try_admin_login(unlocked), "admin login after change")
     csrf = login["csrfToken"]
     admin_headers = {"X-CSRF-Token": csrf}
