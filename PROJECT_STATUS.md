@@ -7,10 +7,10 @@
 
 ## 现在做到哪
 
-- 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47、48、49**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 49 PR 均未合 master）
+- 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47、48、49**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 49 PR **#66** 均未合 master）
 - 进行中：无。**编组 J（44–49）已交付，待人类验收。禁止在本分支继续写新任务。**
 - 下一步：人类验收编组 J。合入前 squash 顺序 29 PR #38 → … → 48 PR #65 → 49。**禁止 merge / push / force-push master**。不要开任务 50 或其它新分支开发。
-- Git：工作分支 `task/49-perf`（基线 `origin/task/48-ads` @ `3f38b4f` / 其上叠 48 → 47 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
+- Git：工作分支 `task/49-perf`（基线 `origin/task/48-ads` @ `3f38b4f` / 其上叠 48 → 47 → … → 29）。PR **#66** 目标 **master**。唯一长期分支是 **master**
 
 ## 关键技术决策（本轮新发生的）
 
@@ -37,8 +37,8 @@
 
 ## 已知问题（只写已证实）
 
-- 任务 29 PR #38 至任务 48 PR #65 均未合 master；叠链 29 → … → 48 → 49
-- PR #65 `3f38b4f` 全 CI 绿（本分支基线）
+- 任务 29 PR #38 至任务 49 PR #66 均未合 master；叠链 29 → … → 48 → 49
+- PR #65 `3f38b4f` 全 CI 绿（本分支基线）；PR #66 已开，5 分钟 k6 不进例行 CI
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
@@ -103,6 +103,6 @@
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 人类验收编组 J（44–49）。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 48 PR #65 → 49
+1. 人类验收编组 J（44–49）。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 48 PR #65 → 49 PR #66
 2. staging 签署：`SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh`（portal ×2），归档 `perf/reports/<日期>/`
 3. **停止本会话。不要写任务 50。不要合 master。**
