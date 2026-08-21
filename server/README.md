@@ -1,5 +1,7 @@
 # server/ — 后端多模块骨架（任务 9）
 
+> 任务 9 当时的骨架说明。P1 域与 `web/` 已在树上。现状见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。
+
 `groupId=com.mkt`。目录名 = `artifactId`。父 POM：`platform-parent` `0.1.0-SNAPSHOT`。
 
 版本唯一来源：[dependency-matrix.md](../.kiro/specs/platform-v2/dependency-matrix.md)（任务 1–8）。

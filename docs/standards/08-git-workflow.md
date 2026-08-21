@@ -10,29 +10,28 @@
 |------|------|
 | `master` | 唯一长期分支。随时可构建。禁止直接 `push`（有远端保护后） |
 
-**MUST NOT** 再建 `develop` / `release` / 按人命名的长期分支。P0 / P1 用任务号区分，不靠长期分支隔离。
+**MUST NOT** 再建 `develop` / `release` / 按人命名的长期分支。新工作用 issue 区分，不靠长期分支隔离。
 
 ## 2. 短命分支
 
-默认从最新 `master` 拉出，合入后删除。P0 任务链在 `master` 尚未合入前置时，后继任务从上一任务分支叠出（见 `PROJECT_STATUS.md` / `AGENTS.md`），不要从过期 `origin/master` 另开导致丢前置。
+默认从最新 `origin/master` 拉出，合入后删除。不要再叠 `task/*` 施工链。新工作用 `fix/<slug>`（文档用 `docs/<slug>`），走 issue + PR。
 
 ```text
-task/<n>-<slug>     对应 tasks.md 任务号，如 task/28-claim-start、task/37.1-admin-system
-spike/<n>-<slug>    编组 A 冒烟，如 spike/1-redisson（代码只进 spike/）
-fix/<slug>          无任务号的缺陷
-docs/<slug>         仅规格或 docs/standards
+fix/<slug>          缺陷 / 测试阶段改动
+docs/<slug>         仅文档或规格
+spike/<n>-<slug>    历史编组 A 冒烟（不要新开 task/* 施工链）
 ```
 
-1. **MUST** 一个分支只对应一件事（通常一个任务号）。编组 J（任务 44–49）**MUST NOT** 在任务 43 验收前从 `master` 开功能分支合入。
+1. **MUST** 一个分支只对应一件事（通常一个 issue）。
 2. `slug` 小写 + 连字符，不超过 40 字符。
 3. **MUST NOT** 用 `feat/xxx`、`thanh/xxx`、中文分支名。
-4. 需要基于未合入的前置任务时：在 PR 描述写清依赖，**不要**把两个任务揉进同一分支。
+4. 需要基于未合入的前置改动时：在 PR 描述写清依赖，**不要**把两件事揉进同一分支。
 
 ## 3. 提交
 
 规则全文在 04 §4。这里只强调：
 
-- 格式：`<type>(<scope>): <summary>`，正文 `Refs: task-<n>, R<x.y>`
+- 格式：`<type>(<scope>): <summary>`，正文 `Refs: #<issue>, R<x.y>`
 - **MUST NOT** 把无关文件、密钥、`spike/*/target`、`node_modules` 提交上去
 - 本地整理 **可以** rebase 自己的短命分支；**MUST NOT** `push --force` 到 `master`
 
@@ -40,10 +39,10 @@ docs/<slug>         仅规格或 docs/standards
 
 1. 目标分支 **MUST** 是 `master`。
 2. 标题与 squash 后的提交说明同一套 Conventional Commits。
-3. 描述里写：任务号、触及的需求/设计条款、测试怎么跑。
+3. 描述里写：issue 号、触及的需求/设计条款、测试怎么跑。
 4. 合入方式：**squash merge**，保持 `master` 线性。
-5. 门禁见 04 §10。开发会话在 PR 上做两轮分开的代码评审，有问题开 issue 并直接修；不要等人签字。主分支健康检查由每 3 小时定时任务做，不挡开发。
-6. 契约变更（Controller / Command / Response / ErrorCode）：任务 36 落地 `web/` 之后 **MUST** 同 PR 提交 `packages/shared` 生成物。此前不要求该目录。
+5. 门禁见 04 §10。先测后审。除非点名，不要合 `master`。
+6. 契约变更（Controller / Command / Response / ErrorCode）：**MUST** 同 PR 提交 `packages/shared` 生成物。
 
 ## 5. 保护与 CODEOWNERS
 
@@ -66,8 +65,8 @@ deploy/                             @owner
 
 ## 6. AI 检查清单
 
-- [ ] 分支名符合 §2，能指到 `task-<n>` 或说明为何是 `fix`/`docs`
+- [ ] 分支名符合 §2，能指到 issue 或说明为何是 `fix`/`docs`
 - [ ] 未把 spike 工程拷进 `server/`
 - [ ] 提交说明有 `Refs:`
 - [ ] 未 force-push `master`，未提交密钥
-- [ ] PR 已做两轮分开评审，评审 issue 已修完（不等人类点头）
+- [ ] 已测；评审按打开的 issue 处理，不要自动合 master
