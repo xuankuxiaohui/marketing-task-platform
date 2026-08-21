@@ -1,8 +1,23 @@
 # marketing-task-platform
-营销自动化任务平台
 
-规格（需求 v3.9 / 设计 v2.13 / 任务 v2.9）见 [`.kiro/specs/platform-v2/`](.kiro/specs/platform-v2/README.md)。设计先看总册 §0.2 索引再打开分册。
+营销任务平台：运营编排任务，C 端按步骤完成，平台发奖。
 
-编码规范（给人）：[`docs/standards/`](docs/standards/README.md)。产品语义以规格为准；命名、分层、SQL、接口、测试、部署以该目录为准。
+当前是**测试阶段**，还没到 preview，也不是正式上线。规格仍以 [`.kiro/specs/platform-v2`](.kiro/specs/platform-v2/README.md) 为准。进度看 [PROJECT_STATUS.md](PROJECT_STATUS.md)。编码代理先读 [AGENTS.md](AGENTS.md)。编码规范在 [`docs/standards/`](docs/standards/README.md)。
 
-编码代理先读根目录 [`AGENTS.md`](AGENTS.md)。
+## 怎么跑
+
+两个进程：`admin-app` 走 `/admin/**`，`portal-app` 走 `/api/**`。`/internal/**` 不能上公网。
+
+JDK 26 / Spring Boot 4.1。域模块之间不互相依赖。
+
+```bash
+cp deploy/.env.example deploy/.env          # 改占位符，不要提交真实密钥
+cd server && mvn -DskipTests -DskipITs package
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+```
+
+本机入口默认 `http://127.0.0.1:18080`（Nginx 只反代 `/admin/`、`/api/`，不转发 `/internal`）。
+
+## Git
+
+唯一长期分支是 `master`。新工作从 `origin/master` 开短命分支，PR 回去。
