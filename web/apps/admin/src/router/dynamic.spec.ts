@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { createMemoryHistory, createRouter } from "vue-router";
 import type { AdminMenuNode } from "@/api/auth";
 import {
   MENU_SEED_COMPONENTS,
   firstAuthorizedPath,
+  isLiteralRouteParam,
+  isParamRoute,
   menusToRoutes,
   sidebarMenus,
   viewModuleKey,
@@ -109,5 +112,65 @@ describe("dynamic routes from §4.10 menus", () => {
     expect(firstAuthorizedPath([menu({ id: 2, name: "工作台", route: "/dashboard", component: "dashboard/index" })])).toBe(
       "/dashboard",
     );
+  });
+
+  it("detects Vue-router param segments", () => {
+    expect(isParamRoute("/task/definitions/edit/:id?")).toBe(true);
+    expect(isParamRoute("/task/definitions/:id/versions")).toBe(true);
+    expect(isParamRoute("/task/definitions")).toBe(false);
+    expect(isParamRoute("/login")).toBe(false);
+    expect(isLiteralRouteParam(":id")).toBe(true);
+    expect(isLiteralRouteParam(":id?")).toBe(true);
+    expect(isLiteralRouteParam("8")).toBe(false);
+  });
+
+  it("hides seed :id menus from sidebar and landing path but keeps them as routes", () => {
+    const nodes = [
+      menu({ id: 1, name: "登录", route: "/login", component: "login/index" }),
+      menu({ id: 12, name: "任务列表", route: "/task/definitions", component: "task/definition/index" }),
+      menu({
+        id: 13,
+        name: "任务编辑（画布）",
+        route: "/task/definitions/edit/:id?",
+        component: "task/definition/edit",
+      }),
+      menu({
+        id: 14,
+        name: "任务版本",
+        route: "/task/definitions/:id/versions",
+        component: "task/definition/version",
+      }),
+    ];
+    expect(sidebarMenus(nodes).map((n) => n.route)).toEqual(["/task/definitions"]);
+    expect(firstAuthorizedPath(nodes)).toBe("/task/definitions");
+    expect(menusToRoutes(nodes).map((r) => r.path)).toEqual([
+      "/task/definitions",
+      "/task/definitions/edit/:id?",
+      "/task/definitions/:id/versions",
+    ]);
+  });
+
+  it("redirects bookmark-style literal :id params to the task list", async () => {
+    const routes = menusToRoutes([
+      menu({ id: 12, name: "任务列表", route: "/task/definitions", component: "task/definition/index" }),
+      menu({
+        id: 13,
+        name: "任务编辑（画布）",
+        route: "/task/definitions/edit/:id?",
+        component: "task/definition/edit",
+      }),
+      menu({
+        id: 14,
+        name: "任务版本",
+        route: "/task/definitions/:id/versions",
+        component: "task/definition/version",
+      }),
+    ]);
+    const router = createRouter({ history: createMemoryHistory(), routes });
+    await router.push("/task/definitions/edit/:id");
+    await router.isReady();
+    expect(router.currentRoute.value.path).toBe("/task/definitions");
+    await router.push("/task/definitions/:id/versions");
+    expect(router.currentRoute.value.path).toBe("/task/definitions");
   });
 });
