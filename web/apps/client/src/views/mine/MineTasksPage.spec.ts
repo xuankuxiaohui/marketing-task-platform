@@ -53,6 +53,32 @@ describe("MineTasksPage", () => {
     expect(wrapper.get('[data-testid="empty-go-home"]').text()).toBe(zhCN.empty.goHome);
   });
 
+  it("requests COMPLETED and renders the row after the completed tab is selected", async () => {
+    mineMock
+      .mockResolvedValueOnce(ok({ total: 0, records: [] }))
+      .mockResolvedValueOnce(
+        ok({
+          total: 1,
+          records: [
+            {
+              instanceId: 9,
+              taskId: 22,
+              taskName: "demo-claim-01",
+              status: "COMPLETED",
+              startedAt: "2026-08-20T04:00:00Z",
+            },
+          ],
+        }),
+      );
+    const { wrapper } = await mountMineTasks();
+    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "IN_PROGRESS" }));
+    (wrapper.vm as unknown as { selectStatus: (name: string | number) => void }).selectStatus(1);
+    await flushPromises();
+    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "COMPLETED" }));
+    expect(wrapper.get('[data-testid="mine-task-card"]').text()).toContain("demo-claim-01");
+    expect(wrapper.get('[data-testid="mine-task-card"]').text()).toContain(zhCN.task.completed);
+  });
+
   it("opens task detail from a mine row", async () => {
     mineMock.mockResolvedValue(
       ok({

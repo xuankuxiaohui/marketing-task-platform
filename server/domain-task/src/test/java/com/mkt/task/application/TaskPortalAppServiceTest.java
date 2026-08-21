@@ -21,6 +21,7 @@ import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
+import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import com.mkt.task.testsupport.MemoryTaskCrowdStore;
@@ -145,6 +146,41 @@ class TaskPortalAppServiceTest {
         assertThat(page.records()).hasSize(1);
         assertThat(page.records().get(0).userStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
         assertThat(service.detail(taskId, 9L, "WEB").instanceId()).isEqualTo(today.getId());
+    }
+
+    @Test
+    void mineReturnsCompletedInstanceForCompletedTab() {
+        long taskId = publish("demo-claim-01", 1);
+        long snapshotId = snapshots.listByTaskId(taskId).get(0).getId();
+        TaskInstanceEntity done = inProgress(taskId, snapshotId);
+        done.setStatus(InstanceStatuses.COMPLETED);
+        done.setTaskCode("demo-claim-01");
+        instances.insert(done);
+        instances.insert(inProgressAt(taskId, snapshotId, "other"));
+
+        PageData<MineTaskView> completed = service.mine(9L, "COMPLETED", null, 1, 20);
+        assertThat(completed.total()).isEqualTo(1);
+        assertThat(completed.records()).extracting(MineTaskView::taskName).containsExactly("demo-claim-01");
+        assertThat(completed.records()).extracting(MineTaskView::status).containsExactly(InstanceStatuses.COMPLETED);
+
+        PageData<MineTaskView> inProgress = service.mine(9L, "IN_PROGRESS", null, 1, 20);
+        assertThat(inProgress.records()).extracting(MineTaskView::status).containsExactly(InstanceStatuses.IN_PROGRESS);
+        assertThat(inProgress.records()).extracting(MineTaskView::instanceId).doesNotContain(done.getId());
+
+        PageData<MineTaskView> folded = service.mine(9L, "completed", null, 1, 20);
+        assertThat(folded.records()).extracting(MineTaskView::instanceId).containsExactly(done.getId());
+        assertThat(service.mine(9L, "SUCCESS", null, 1, 20).records())
+                .extracting(MineTaskView::instanceId)
+                .containsExactly(done.getId());
+        assertThat(service.mine(9L, "DONE", null, 1, 20).records())
+                .extracting(MineTaskView::instanceId)
+                .containsExactly(done.getId());
+        assertThat(service.mine(9L, "1", null, 1, 20).records())
+                .extracting(MineTaskView::instanceId)
+                .containsExactly(done.getId());
+        assertThat(service.mine(9L, "COMPLETED", "0", 1, 20).records())
+                .extracting(MineTaskView::instanceId)
+                .containsExactly(done.getId());
     }
 
     @Test
