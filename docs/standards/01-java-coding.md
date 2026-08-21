@@ -198,7 +198,7 @@ public class TaskDefinitionAdminController {
 | `task:snapshot` / `task:published-index` / `task:crowd` | PlatformCache | `task:crowd` 的 L2 是 Redis SET |
 | `risk:rule` | PlatformCache | |
 | `identity:user-attr` | PlatformCache | `lockAndGet` 不走缓存 |
-| `ad:position` | PlatformCache | **P0 占位 / P1 接线**。任务 15 只登记 ns；禁止广告读写。任务 48 才写 L2 与 evict |
+| `ad:position` | PlatformCache | 广告位目录，TTL 60s，写后 evict（任务 48 已接线） |
 | `identity:session` | **Sa-Token 自管** | **禁止**经 `PlatformCache.evict` / `/admin/system/cache/evict` 清理（R9.2）。踢下线走 R6 |
 
 Cache / 锁以外、实现时必须按 §3.10 原样使用的键（禁止改拼写）：

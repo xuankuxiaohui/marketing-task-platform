@@ -909,4 +909,4 @@ CREATE TABLE evt_event_metadata (
 | `nonce:{appId}:{nonce}` | SETNX + TTL = `internal.nonce.ttl-seconds`（默认 600） | internal 防重放 | R15.2 |
 | `session:kick-reason:{loginType}:{token}` | STRING 短 TTL | 踢下线原因（D-02，§6.1） | R6.2 |
 | `cache:evict` | pub/sub 频道 | 两级缓存本地失效广播（§6.2） | R9.3 |
-| `<namespace>:<业务键>`（R9.1 封闭清单） | Spring Cache 两级（Caffeine L1 + Redis L2） | dict/config/rbac:permission/task:snapshot/task:published-index/task:crowd/risk:rule/identity:user-attr（D-06）；`ad:position` **仅占位**（P0 不接线，见 §6.2） | R9.1 |
+| `<namespace>:<业务键>`（R9.1 封闭清单） | Spring Cache 两级（Caffeine L1 + Redis L2） | dict/config/rbac:permission/task:snapshot/task:published-index/task:crowd/risk:rule/identity:user-attr（D-06）；`ad:position` TTL 60s（任务 48 接线） | R9.1 |

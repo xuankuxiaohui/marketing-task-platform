@@ -99,6 +99,10 @@
             <groupId>com.mkt</groupId>
             <artifactId>domain-activity</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-ad</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

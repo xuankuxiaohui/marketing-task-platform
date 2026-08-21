@@ -14,6 +14,16 @@ export const TRACK = {
   SIGNIN_PAGE_VIEW: "signin.page.view",
   SIGNIN_SIGN_CLICK: "signin.sign.click",
   SIGNIN_CATCHUP_CLICK: "signin.catchup.click",
+  AD_CAROUSEL_EXPOSURE: "ad.carousel.exposure",
+  AD_SPLASH_EXPOSURE: "ad.splash.exposure",
+  AD_POPUP_EXPOSURE: "ad.popup.exposure",
+  AD_FLOAT_EXPOSURE: "ad.float.exposure",
+  AD_IMAGE_EXPOSURE: "ad.image.exposure",
+  AD_CAROUSEL_CLICK: "ad.carousel.click",
+  AD_SPLASH_CLICK: "ad.splash.click",
+  AD_POPUP_CLICK: "ad.popup.click",
+  AD_FLOAT_CLICK: "ad.float.click",
+  AD_IMAGE_CLICK: "ad.image.click",
 } as const;
 
 export type TrackCode = (typeof TRACK)[keyof typeof TRACK];

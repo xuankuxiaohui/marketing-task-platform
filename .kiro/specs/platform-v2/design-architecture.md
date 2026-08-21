@@ -410,7 +410,7 @@ graph TB
 | task:crowd | 10min + 导入失效 | 人群包成员判定 | R11.9 |
 | risk:rule | 5min + 变更即失效 | 规则配置 | R26.6 |
 | identity:session | Sa-Token 自管 | 会话（非本组件管理，**禁止经 cache evict 清理**，R9.2） | R6 |
-| ad:position | 60s（接线后） | **P1 预留名**（R9.1 封闭清单占位，避免 P0 占用该字符串）。**P0（任务 15/24）**：登记该 ns；`/admin/system/cache/stats` 返回键数 0 或 N/A；`evict` 空操作合法、不 400。**禁止**广告拉取、频控、素材装配、L2 写入。接线与 TTL=60s = 任务 48 | R30 |
+| ad:position | 60s | 广告位目录（code → 位+投放+素材快照）。写后 evict；C 端拉取再按排期/端/灰度/频控过滤。L1 容量 1000 | R30 |
 | identity:user-attr | 5min + 变更即失效 | 用户画像属性（UserAttributePort 数据源，§2.2.3） | R9.1 |
 
 task:crowd 的 L2 结构 = Redis **SET**（key = `task:crowd:{crowdId}`，成员 = userId）；缓存未命中时从 `task_crowd_item` 按 5000/批 SADD 装载并以 SETEX 包裹；容量上限 = `crowd.max-size`（10 万），导入超限即拒（§4.4）。L1/Caffeine 统一缺省：全部命名空间 L1 开启、容量 10000（task:snapshot / task:published-index / identity:user-attr / ad:position 为 1000）；指标标签 = Micrometer tag `ns=<命名空间>`；identity:session 行在 `/admin/system/cache/stats` 返回 N/A（Sa-Token 自管，不纳入本组件计数）。

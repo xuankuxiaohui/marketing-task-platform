@@ -21,6 +21,7 @@ class FullSchemaScriptTest {
     private static String v6;
     private static String v61;
     private static String v62;
+    private static String v7;
     private static String all;
 
     @BeforeAll
@@ -32,6 +33,7 @@ class FullSchemaScriptTest {
         v6 = loadSql("V6__act_activity.sql");
         v61 = loadSql("V6_1__mtr_metrics.sql");
         v62 = loadSql("V6_2__simulate_permissions.sql");
+        v7 = loadSql("V7__ad_position.sql");
         all = v2 + "\n" + v3 + "\n" + v4 + "\n" + loadSql("V1__sys_baseline.sql");
     }
 
@@ -120,6 +122,20 @@ class FullSchemaScriptTest {
         assertThat(v62.toLowerCase()).doesNotContain("foreign key");
         assertThat(v2 + v3 + v4 + v5 + v6 + v61).doesNotContain("simulate:task");
         assertThat(v62).doesNotContain("CREATE TABLE ad_");
+    }
+
+    @Test
+    void v7CreatesThreeAdTablesWithoutTouchingV1ToV62() {
+        assertThat(tableNames(v7, "ad_"))
+                .containsExactlyInAnyOrder("ad_position", "ad_material", "ad_position_material");
+        assertThat(v7).contains("UNIQUE KEY uk_code (code)");
+        assertThat(v7).contains("UNIQUE KEY uk_position_material (position_id, material_id)");
+        assertThat(v7).contains("CHECK (form IN ('CAROUSEL','IMAGE','SPLASH','POPUP','FLOAT'))");
+        assertThat(v7).contains("ad:position:query");
+        assertThat(v7).contains("ad:material:query");
+        assertThat(v7).contains("utf8mb4_0900_ai_ci");
+        assertThat(v7.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5 + v6 + v61 + v62).doesNotContain("CREATE TABLE ad_");
     }
 
     @Test

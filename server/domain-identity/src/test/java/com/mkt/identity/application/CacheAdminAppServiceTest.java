@@ -77,15 +77,17 @@ class CacheAdminAppServiceTest {
     }
 
     @Test
-    void evictKeyAndAdPositionNoop() {
+    void evictKeyAndAdPosition() {
         cache.put(CacheNamespace.DICT, "province", "GD");
         var evicted = service.evict(new CacheEvictCommand("KEY", "dict", null, "province"));
         assertThat(evicted.evictedRedis()).isEqualTo(1);
         assertThat(cache.get(CacheNamespace.DICT, "province", String.class, () -> "db")).isEqualTo("db");
 
+        cache.put(CacheNamespace.AD_POSITION, "home", "payload");
         var ad = service.evict(new CacheEvictCommand("NAMESPACE", "ad:position", null, null));
-        assertThat(ad.evictedRedis()).isZero();
-        assertThat(ad.notifiedInstances()).isZero();
+        assertThat(ad.evictedRedis()).isEqualTo(1);
+        assertThat(ad.notifiedInstances()).isEqualTo(1);
+        assertThat(cache.get(CacheNamespace.AD_POSITION, "home", String.class, () -> "live")).isEqualTo("live");
         assertThat(outbox.all()).isNotEmpty();
     }
 }

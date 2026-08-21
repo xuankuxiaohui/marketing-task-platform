@@ -109,6 +109,20 @@ public final class RedissonKeyValueStore implements KeyValueStore {
     }
 
     @Override
+    public long incr(String key, Duration ttlIfFirst) {
+        long ttlSeconds = ttlIfFirst == null || ttlIfFirst.isZero() || ttlIfFirst.isNegative()
+                ? 0L
+                : Math.max(1L, ttlIfFirst.toSeconds());
+        Long n = eval(
+                "local n = redis.call('INCR', KEYS[1]) "
+                        + "if n == 1 and tonumber(ARGV[1]) > 0 then redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1])) end "
+                        + "return n",
+                List.of(key),
+                List.of(String.valueOf(ttlSeconds)));
+        return n == null ? 0L : n;
+    }
+
+    @Override
     public Long eval(String lua, List<String> keys, List<String> argv) {
         List<Object> keyArgs = new ArrayList<>(keys);
         return client.getScript(StringCodec.INSTANCE)

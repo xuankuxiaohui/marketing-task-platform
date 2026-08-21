@@ -735,13 +735,13 @@ _测试：§7.3 R24.1_
 
 ### 任务 48：广告位域（编组 J，P1）
 
-- [ ] 父 POM 加 `domain-ad`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
-- [ ] V7：`ad_position` / `ad_material` / `ad_position_material`
-- [ ] §4.9 ad 端点组；**接线** `ad:position`（P0 任务 15 只占位，本任务才写 L2 / evict / 拉取）
-- [ ] Redis 频控：`ad:freq:{userId|dev}:{materialId}:{yyyyMMdd}`；弹窗冷却 `ad:popup:cd:{subject}`；登录 userId / 匿名 deviceId
-- [ ] R30.5 输出：轮播 weight 降序（并列 id 升序）；单图 / 开屏 / 弹窗取 weight 最大一条（并列 id 小者）
-- [ ] 门户 ad 组件（开屏 / 弹窗 / 轮播 / 悬浮）
-- [ ] §7.4 C-11（本任务交付，不在任务 41）
+- [x] 父 POM 加 `domain-ad`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
+- [x] V7：`ad_position` / `ad_material` / `ad_position_material`
+- [x] §4.9 ad 端点组；**接线** `ad:position`（P0 任务 15 只占位，本任务才写 L2 / evict / 拉取）
+- [x] Redis 频控：`ad:freq:{userId|dev}:{materialId}:{yyyyMMdd}`；弹窗冷却 `ad:popup:cd:{subject}`；登录 userId / 匿名 deviceId
+- [x] R30.5 输出：轮播 weight 降序（并列 id 升序）；单图 / 开屏 / 弹窗取 weight 最大一条（并列 id 小者）
+- [x] 门户 ad 组件（开屏 / 弹窗 / 轮播 / 悬浮）
+- [x] §7.4 C-11（本任务交付，不在任务 41）
 
 _需求：R30_
 _设计：design §3.11、§3.10、§6.2、§4.9 ad_

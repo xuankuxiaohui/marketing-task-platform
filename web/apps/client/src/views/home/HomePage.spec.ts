@@ -5,6 +5,11 @@ import { zhCN } from "@/locales/zh-CN";
 import { fail, ok } from "@/test-utils/result";
 import type { TaskCardView } from "@/api/task";
 
+vi.mock("@/api/ad", () => ({
+  fetchAdPosition: vi.fn(),
+  dismissAdMaterial: vi.fn(),
+}));
+
 vi.mock("@/api/task", () => ({
   fetchTaskList: vi.fn(),
   startTask: vi.fn(),
@@ -15,7 +20,7 @@ vi.mock("@/api/task", () => ({
 }));
 
 vi.mock("@/tracking", () => ({
-  TRACK: { TASK_START_CLICK: "task.start.click" },
+  TRACK: { TASK_START_CLICK: "task.start.click", AD_CAROUSEL_EXPOSURE: "ad.carousel.exposure", AD_CAROUSEL_CLICK: "ad.carousel.click" },
   track: vi.fn(),
   observeTaskCardExposure: vi.fn(() => () => undefined),
 }));
@@ -37,11 +42,13 @@ vi.mock("vant", async () => {
   };
 });
 
+import { fetchAdPosition } from "@/api/ad";
 import { fetchDict } from "@/api/dict";
 import { fetchTaskList, startTask } from "@/api/task";
 import { showFailToast } from "vant";
 import HomePage from "./index.vue";
 
+const adMock = vi.mocked(fetchAdPosition);
 const listMock = vi.mocked(fetchTaskList);
 const startMock = vi.mocked(startTask);
 const dictMock = vi.mocked(fetchDict);
@@ -83,6 +90,8 @@ describe("HomePage", () => {
     startMock.mockReset();
     dictMock.mockReset();
     failToast.mockReset();
+    adMock.mockReset();
+    adMock.mockResolvedValue(ok({ code: "home_banner", form: "CAROUSEL", materials: [] }));
     dictMock.mockResolvedValue(ok([{ label: "日常", value: "daily" }]));
   });
 

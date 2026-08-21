@@ -27,7 +27,8 @@ class ArchLayerRuleTest {
         "domain-risk",
         "domain-tracking",
         "domain-signin",
-        "domain-activity"
+        "domain-activity",
+        "domain-ad"
     };
 
     private static final String[] DOMAIN_PACKAGES = {
@@ -37,7 +38,8 @@ class ArchLayerRuleTest {
         "com.mkt.risk..",
         "com.mkt.tracking..",
         "com.mkt.signin..",
-        "com.mkt.activity.."
+        "com.mkt.activity..",
+        "com.mkt.ad.."
     };
 
     @Test
@@ -125,7 +127,11 @@ class ArchLayerRuleTest {
             "com.mkt.activity.mapper..",
             "com.mkt.activity.entity..",
             "com.mkt.activity.application..",
-            "com.mkt.activity.domain.."
+            "com.mkt.activity.domain..",
+            "com.mkt.ad.mapper..",
+            "com.mkt.ad.entity..",
+            "com.mkt.ad.application..",
+            "com.mkt.ad.domain.."
         };
         for (String domain : DOMAIN_PACKAGES) {
             String prefix = domain.substring(0, domain.length() - 2);

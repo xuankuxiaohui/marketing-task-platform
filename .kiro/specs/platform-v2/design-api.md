@@ -372,7 +372,28 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 字典值失效回显 | 引用停用字典项的存量数据按原值回显（label 取不到时显示 value 原文），不报错 | R7.5 |
 | 空态引导 | 各列表空态文案与引导（"暂无进行中的任务，去看看任务列表"） | R33.4 |
 
-> P1 端点：`/api/common/ad/**`（R30）、`/api/common/signin/**`（R21/R36）。契约要点由对应需求条款封闭（匿名访问、频控主键、素材输出、签到唯一约束）；端点明细随 P1 任务写入，不在本章 P0 范围。
+#### 4.9.5 ad（R30，任务 48）
+
+匿名 / 可选登录：`GET /api/common/ad/positions/{code}`、`POST /api/common/ad/materials/{id}/dismiss`（登录绑 userId，否则 X-Device-Id）。头 `X-Client-Platform`（缺省 WEB）。
+
+**GET /api/common/ad/positions/{code}**
+- 过滤：排期（素材∧投放）+ 端 +（登录才灰度；人群包列存储、匿名不生效、不直访 `task_`）+ 日频控 Redis `ad:freq:{userId|dev}:{materialId}:{yyyyMMdd}`
+- 弹窗：冷却键 `ad:popup:cd:{subject}`，渲染时刻起算
+- 输出 R30.5：轮播 weight 降序并列 materialId 升序，条数 ≤ `ad.carousel.max-items`；单图/开屏/弹窗/悬浮取 weight 最大一条（并列 ID 小者）
+- `data`: `{code, form, materials:[{materialId, trackId, title, subtitle, imageUrl, jumpType, jumpParams, weight}], splashDurationSeconds?, carouselIntervalSeconds?}`
+- 错误：`ad.position.not-found`(404)
+
+**POST /api/common/ad/materials/{id}/dismiss** · 入参 `{positionCode}`。仅 FLOAT：将该主体该素材当日频控打满（R30.11）。
+
+<!-- §4.10 P1 ad admin -->
+#### 4.3.1 广告位管理端（R30，任务 48）
+
+权限附录 B。非 GET `@Audited` + CSRF。
+
+**GET/POST /admin/ad/positions** · **GET/DELETE /admin/ad/positions/{id}** · **POST /admin/ad/positions/{id}/materials** · **DELETE /admin/ad/positions/{id}/materials/{materialId}**
+**GET/POST /admin/ad/materials** · **GET/DELETE /admin/ad/materials/{id}**
+
+详情含 `placements` 与 `overlapCount`（重叠排期对数，轮换合法）。写后 `evict(ad:position:{code})`，TTL 60s。
 
 ---
 
@@ -413,6 +434,8 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 埋点元数据 | `/track/metadata` | `track/metadata/index` | §4.7 metadata |
 | 事件调试 | `/track/events` | `track/event/index` | §4.7 调试查询 |
 | 任务模拟器 | `/simulate` | `simulate/index` | §4.4.2 list/detail/start/click/callback/progress/flow/reverse |
+| 广告位 | `/ad/positions` | `ad/position/index` | `/admin/ad/positions` CRUD + 投放绑定 |
+| 广告素材 | `/ad/materials` | `ad/material/index` | `/admin/ad/materials` CRUD |
 
 <!-- §4.4 P1 metrics -->
 #### 4.4.1 指标端点（R23，任务 46）

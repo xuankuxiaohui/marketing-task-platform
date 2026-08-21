@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.ad.mapper.AdMaterialMapper">
+
+    <sql id="cols">
+        id, title, subtitle, image_url, jump_type, jump_params, weight, start_time, end_time,
+        status, deleted, created_by, created_at, updated_at
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            deleted = 0
+            <if test="title != null and title != ''">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM ad_material
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.ad.entity.AdMaterialEntity">
+        SELECT <include refid="cols"/>
+        FROM ad_material
+        <include refid="queryWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectByIds" resultType="com.mkt.ad.entity.AdMaterialEntity">
+        SELECT <include refid="cols"/>
+        FROM ad_material
+        WHERE deleted = 0 AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+</mapper>

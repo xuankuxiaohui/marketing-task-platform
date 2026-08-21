@@ -123,6 +123,14 @@ export const PERMS = {
   METRICS_DASHBOARD_VIEW: "metrics:dashboard:view",
   SIMULATE_TASK: "simulate:task",
   SIMULATE_FLOW: "simulate:flow",
+  AD_POSITION_QUERY: "ad:position:query",
+  AD_POSITION_CREATE: "ad:position:create",
+  AD_POSITION_UPDATE: "ad:position:update",
+  AD_POSITION_DELETE: "ad:position:delete",
+  AD_MATERIAL_QUERY: "ad:material:query",
+  AD_MATERIAL_CREATE: "ad:material:create",
+  AD_MATERIAL_UPDATE: "ad:material:update",
+  AD_MATERIAL_DELETE: "ad:material:delete",
 } as const;
 
 export const CONFIG_VALUE_TYPES = ["STRING", "NUMBER", "BOOL", "JSON"] as const;

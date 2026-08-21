@@ -22,6 +22,11 @@ export function resolvePortalRoute(
       return "/mine/password";
     case "signin":
       return "/signin";
+    case "activity": {
+      const raw = params?.activityId;
+      const id = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+      return Number.isFinite(id) ? `/activity?id=${id}` : "/activity";
+    }
     default:
       return undefined;
   }

@@ -11,6 +11,7 @@ describe("resolvePortalRoute", () => {
     expect(resolvePortalRoute("points")).toBe("/mine/points");
     expect(resolvePortalRoute("password")).toBe("/mine/password");
     expect(resolvePortalRoute("signin")).toBe("/signin");
+    expect(resolvePortalRoute("activity", { activityId: 4 })).toBe("/activity?id=4");
     expect(resolvePortalRoute("unknown")).toBeUndefined();
   });
 });

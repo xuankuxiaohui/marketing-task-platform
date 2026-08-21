@@ -1,8 +1,23 @@
 import { mount } from "@vue/test-utils";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { ok } from "@/test-utils/result";
+
+vi.mock("@/api/ad", () => ({
+  fetchAdPosition: vi.fn(),
+  dismissAdMaterial: vi.fn(),
+}));
+
+vi.mock("@/tracking", () => ({
+  TRACK: {},
+  track: vi.fn(),
+}));
+
+import { fetchAdPosition } from "@/api/ad";
 import PortalLayout from "./PortalLayout.vue";
+
+const adMock = vi.mocked(fetchAdPosition);
 
 async function mountLayout(path: string) {
   const router = createRouter({
@@ -26,6 +41,11 @@ async function mountLayout(path: string) {
 }
 
 describe("PortalLayout", () => {
+  beforeEach(() => {
+    adMock.mockReset();
+    adMock.mockResolvedValue(ok({ code: "x", form: "SPLASH", materials: [] }));
+  });
+
   it("renders home / mine tabs on the two roots", async () => {
     const wrapper = await mountLayout("/home");
     expect(wrapper.get('[data-testid="portal-tabbar"]').text()).toContain(zhCN.tab.home);

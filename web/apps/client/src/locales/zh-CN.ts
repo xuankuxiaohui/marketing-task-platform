@@ -97,6 +97,15 @@ export const zhCN = {
     title: "任务",
     empty: "暂无任务",
   },
+  ad: {
+    skip: "跳过",
+    close: "关闭",
+    jumpUnavailable: "跳转目标不可用",
+    splash: "开屏广告",
+    popup: "弹窗广告",
+    float: "悬浮广告",
+    carousel: "轮播广告",
+  },
   empty: {
     tasks: "暂无进行中的任务，去看看任务列表",
     prizes: "暂无奖品，去做任务赢奖励",

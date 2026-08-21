@@ -117,9 +117,9 @@
 | 46 | R23 | 看板页（漏斗 / 成本 / 风控 / 广告） | `MetricsPage.spec.ts` / `DashboardPage.spec.ts` | 已交付 · ECharts + 转化率 0 分母为 — |
 | 47 | R24.1 | 模拟隔离 | `simulate SimulationIsolationIT` | 已交付 · 聚合/风控统计排除 simulated；R-a/b/f 不统计、R-e skip、R-c/d 观察不拦截 |
 | 47 | R24 | 模拟器页 list/detail/flow | `SimulatePage.spec.ts` | 已交付 · list/flow/reverse，冲正不调渠道 |
-| 48 | R30.1 | 广告频控不超限 | `ad AdFrequencyIT`（C-11） | 占位 · P0 完成后填充 |
-| 48 | R30.2 | 排期正确 | `ad AdScheduleIT` | 占位 · P0 完成后填充 |
-| 48 | R30 | 接线 `ad:position` + 门户广告组件 | （待补；P0 只占位 ns） | 占位 · P0 完成后填充 |
+| 48 | R30.1 | 广告频控不超限 | `ad AdFrequencyIT`（C-11） | 已交付 · 64 线程日上限 10，响应计数 ≤ 10 |
+| 48 | R30.2 | 排期正确 | `ad AdScheduleIT` | 已交付 · MutableClock 拨至排期外不含该素材 |
+| 48 | R30 | 接线 `ad:position` + 门户广告组件 | `AdPortalAppServiceTest` / `AdCarousel.spec.ts` / `AdFloat.spec.ts` / `AdPositionPage.spec.ts` | 已交付 · L2+evict、开屏/弹窗/轮播/悬浮 |
 | 49 | NFR 性能 1–8 | 容量复验 | k6 全量 + 慢查询复盘 | 占位 · P0 完成后填充 |
 
 无属性行、但仍须交测试的任务：1–8（Spike 冒烟）、9（`mvn compile`）、12/13/14 的编译与迁移失败即失败。

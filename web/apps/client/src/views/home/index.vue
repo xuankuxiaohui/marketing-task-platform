@@ -5,6 +5,7 @@ import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs, showToast } from "
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, type DictPortalEntry } from "@/api/dict";
 import { fetchTaskList, startTask, type TaskCardView } from "@/api/task";
+import AdCarousel from "@/components/AdCarousel.vue";
 import TaskCard from "@/components/TaskCard.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { TRACK, track } from "@/tracking";
@@ -131,6 +132,7 @@ onMounted(() => {
 <template>
   <section class="home-page">
     <NavBar :title="zhCN.home.title" />
+    <AdCarousel position-code="home_banner" />
     <Tabs v-model:active="activeCategory" shrink sticky>
       <Tab :title="zhCN.task.all" :name="ALL" />
       <Tab
