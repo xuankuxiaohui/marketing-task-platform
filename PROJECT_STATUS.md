@@ -20,7 +20,7 @@
 
 ## 也已知
 
-- callback/progress 级联 GRANT 不带 IP/设备，这两条上 R-f 空（已知漂移）
+- callback/progress 级联 GRANT 不带 IP/设备，这两条上 R-f 空（#71，P2）
 - CrowdPort / 看板直读他域表
 
 ## 下一步（最多 3 步）
