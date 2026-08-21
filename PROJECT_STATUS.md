@@ -7,10 +7,10 @@
 
 ## 现在做到哪
 
-- 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 46 PR #63 均未合 master）
+- 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 47 PR #64 均未合 master）
 - 进行中：无。**编组 J（44–49）进行中，任务 47 已交付。禁止在本分支继续写 48+**
 - 下一步：下一会话从本分支 tip 开 `task/48-ads` 做编组 J 第五题。**禁止 merge / push / force-push master**
-- Git：工作分支 `task/47-simulate`（基线 `origin/task/46-metrics` @ `61d1950` / 其上叠 46 → 45 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
+- Git：工作分支 `task/47-simulate`（基线 `origin/task/46-metrics` @ `61d1950` / 其上叠 46 → 45 → … → 29）。PR **#64** 目标 **master**。唯一长期分支是 **master**
 
 ## 关键技术决策（本轮新发生的）
 
@@ -41,8 +41,8 @@
 
 ## 已知问题（只写已证实）
 
-- 任务 29 PR #38 至任务 46 PR #63、任务 47 本 PR 均未合 master；叠链 29 → … → 46 → 47
-- PR #63 `61d1950` 全 CI 绿（本分支基线）
+- 任务 29 PR #38 至任务 47 PR #64 均未合 master；叠链 29 → … → 46 → 47
+- PR #63 `61d1950` 全 CI 绿（本分支基线）；本任务 PR #64
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
@@ -107,6 +107,6 @@
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 开 PR 到 master，等 CI。下一会话从本分支 tip 开 `task/48-ads`（未合则叠在 47 上），做广告位域
-2. 合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 46 PR #63 → 47 本 PR
+1. 等 PR #64 CI。下一会话从本分支 tip 开 `task/48-ads`（未合则叠在 47 上），做广告位域
+2. 合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 46 PR #63 → 47 PR #64
 3. **停止本会话。不要在本分支写 48+。不要合 master。**
