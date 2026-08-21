@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**编组 J 待验收** / 当前任务：**J 评审必须项已交付** / 更新：2026-08-21
+> 阶段：**编组 J 待验收** / 当前任务：**#61 实例唯一性已在叠链确认** / 更新：2026-08-21
 
 ## 项目一句话
 
@@ -8,9 +8,9 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47、48、49**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 49 PR **#66** 均未合 master）
-- 进行中：无。**编组 J（44–49）已交付。评审必须项在 `fix/j-review-mustfix`。禁止写新任务。**
-- 下一步：人类验收编组 J + 本必须项 PR **#67**。合入前 squash 顺序 29 PR #38 → … → 48 PR #65 → 49 PR #66 → **#67**。**禁止 merge / push / force-push master**。不要开任务 50。
-- Git：工作分支 `fix/j-review-mustfix`（基线 `origin/task/49-perf` @ `5c87a1d` / 其上叠 49 → 48 → … → 29）。PR **#67** 目标 **master**。唯一长期分支是 **master**
+- 进行中：无。**编组 J（44–49）已交付。#61 叠在 `fix/j-review-mustfix` @ `de95625`。禁止写新任务。**
+- 下一步：人类验收编组 J + #67 + 本 #61 PR。合入前 squash 顺序 29 PR #38 → … → 49 PR #66 → **#67** → 本 PR。**禁止 merge / push / force-push master**。不要开任务 50。
+- Git：工作分支 `bug/61-instance-uniqueness`（基线 `origin/fix/j-review-mustfix` @ `de95625`）。PR 目标 **master**。唯一长期分支是 **master**
 
 ## 关键技术决策（本轮新发生的）
 
@@ -18,6 +18,7 @@
 - R26.6：落地 `GET/PUT /admin/risk/rules`（附录 A 范围、`risk:rule:query` / `risk:rule:config`、审计、规则页读写）
 - R26.1：`GrantContext` / `RiskSubject` 传真实 IP / deviceId；空白或 `0.0.0.0` 视为缺失，不再伪造
 - 领取互斥/周期键读已发布快照，不读草稿定义（R13.7 / design §5.5）
+- #61：`01520c3` 已在叠链把 `uk_user_task_cycle` 的 DuplicateKey / MyBatis PersistenceException 收成一行；后续 snapshot-cycle 与 simulated start 仍走同一 `insertInstance`，无需重写
 - 奖品元数据更新不覆盖 `remaining_stock`；发放可按含逻辑删除行判定 `PRIZE_DELETED`（design §5.7）
 - 步骤引擎对 `PERMANENT_FAILED` 状态与永久失败异常走同一跳过路径
 
@@ -25,7 +26,7 @@
 
 - `server/domain-identity/**`（改密过滤器、资料/登录响应、portal `mustChangePassword`）
 - `server/domain-risk/**`（规则读写、范围校验、权限）
-- `server/domain-task/**`（快照互斥/周期、claim/step 传 IP）
+- `server/domain-task/**`（快照互斥/周期、claim/step 传 IP；#61 回归钉 simulated UK）
 - `server/domain-reward/**`（库存、删除奖品、grant 风控主体）
 - `server/platform-contract`（`GrantContext.ip/deviceId`、`RiskSubject.simulated`）
 - `server/domain-signin` / `server/domain-activity`（门户写路径传 IP/device）
@@ -36,17 +37,19 @@
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test` exit 0；`cd web && pnpm test` exit 0（admin 76 / client 93 / shared 6）
-- 矩阵覆盖：R3.6 / R5.4 / R26.1 / R26.6 / R13.7 / design §5.5 / §5.7
+- 命令与结果：`mvn -pl domain-task -am -DskipITs -Dsurefire.failIfNoSpecifiedTests=false test -Dtest=TaskClaimAppServiceTest` Tests run: 14, Failures: 0
+- 矩阵覆盖：R13.1 / #61 uk DuplicateKey + PersistenceException（含 simulated start）
+- `InstanceUniquenessIT` 本机未跑：无 Docker / Testcontainers MySQL
 - 未改 V1–V4；未用 H2 / Embedded Redis；未杀 3308 / Redis / 8080 / 8081；未提交 `perf/seed/__pycache__`
 
 ## 已知问题（只写已证实）
 
-- 任务 29 PR #38 至任务 49 PR #66、本必须项 PR **#67** 均未合 master；叠链 29 → … → 48 → 49 → 本必须项
+- 任务 29 PR #38 至任务 49 PR #66、必须项 PR **#67**、本 #61 均未合 master；叠链 29 → … → 49 → 67 → 本分支
 - PR #65 `3f38b4f` 全 CI 绿；PR #66 已开，5 分钟 k6 不进例行 CI；PR #67 跟进 portal OpenAPI + smoke 改密
 - `GET /admin/reward/records` 仍未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
 - 编组 F 评审必须项 #41 已在任务 31 分支修；待 CI 绿后关 #41
+- master CI #61（`InstanceUniquenessIT` DuplicateKey 冒出）已在 `01520c3` 修；本 PR 关 #61，未从红 master 另开分支
 - 任务 28 已合 master（#36）；评审 #37、测试 #34、运维 #35 只记账不修
 - 任务 27 PR #32 一轮评审 #33 已处理；测试 #30、运维 #31 只记账不修
 - 任务 26 PR #28 一轮评审 #29 已处理；测试 #26、运维 #27 只记账不修
@@ -107,6 +110,6 @@
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 人类验收编组 J（44–49）与本必须项 PR **#67**。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 49 PR #66 → 67
+1. 人类验收编组 J（44–49）、必须项 PR **#67** 与本 #61 PR。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 49 PR #66 → 67 → 本 PR
 2. staging 签署：`SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh`（portal ×2），归档 `perf/reports/<日期>/`
 3. **停止本会话。不要写任务 50。不要合 master。**

@@ -118,10 +118,21 @@ class TaskClaimAppServiceTest {
 
     @Test
     void startUsesReadCommitted() throws Exception {
-        Transactional tx = TaskClaimAppService.class
+        Transactional five = TaskClaimAppService.class
                 .getMethod("start", long.class, long.class, String.class, String.class, String.class)
                 .getAnnotation(Transactional.class);
-        assertThat(tx.isolation()).isEqualTo(Isolation.READ_COMMITTED);
+        Transactional six = TaskClaimAppService.class
+                .getMethod(
+                        "start",
+                        long.class,
+                        long.class,
+                        String.class,
+                        String.class,
+                        String.class,
+                        boolean.class)
+                .getAnnotation(Transactional.class);
+        assertThat(five.isolation()).isEqualTo(Isolation.READ_COMMITTED);
+        assertThat(six.isolation()).isEqualTo(Isolation.READ_COMMITTED);
     }
 
     @Test
@@ -171,6 +182,33 @@ class TaskClaimAppServiceTest {
         TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
         assertThat(again.instanceId()).isEqualTo(first.instanceId());
         assertThat(instances.rows).hasSize(1);
+    }
+
+    @Test
+    void simulatedStartUkConflictFromMybatisPersistenceExceptionReturnsExisting() {
+        long taskId = publish("uk_sim", "NONE", null);
+        TaskStartResponse first = service.start(taskId, 9L, "1.1.1.1", null, "WEB", true);
+        MemoryTaskInstanceStore spyStore = spy(instances);
+        service = new TaskClaimAppService(
+                definitions,
+                snapshots,
+                spyStore,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                settings);
+        doReturn(null).doCallRealMethod().when(spyStore).getByUserTaskCycle(eq(9L), eq(taskId), any());
+        doThrow(new PersistenceException(new SQLIntegrityConstraintViolationException(
+                        "Duplicate entry for key 'uk_user_task_cycle'", "23000", 1062)))
+                .when(spyStore)
+                .insert(any());
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB", true);
+        assertThat(again.instanceId()).isEqualTo(first.instanceId());
+        assertThat(instances.rows).hasSize(1);
+        assertThat(instances.getById(again.instanceId()).getSimulated()).isEqualTo(1);
     }
 
     @Test
