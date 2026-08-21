@@ -22,9 +22,6 @@ export function resolveMineStatus(value: string | number | undefined | null): Mi
   if (value == null || value === "") {
     return undefined;
   }
-  if (typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value))) {
-    return MINE_TASK_STATUSES[Number(value)];
-  }
   const raw = String(value);
   const upper = raw.toUpperCase();
   if ((MINE_TASK_STATUSES as readonly string[]).includes(upper)) {

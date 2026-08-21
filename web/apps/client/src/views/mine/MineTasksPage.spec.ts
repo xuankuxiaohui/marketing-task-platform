@@ -72,11 +72,23 @@ describe("MineTasksPage", () => {
       );
     const { wrapper } = await mountMineTasks();
     expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "IN_PROGRESS" }));
-    (wrapper.vm as unknown as { selectStatus: (name: string | number) => void }).selectStatus(1);
+    (wrapper.vm as unknown as { selectStatus: (name: string) => void }).selectStatus("COMPLETED");
     await flushPromises();
     expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "COMPLETED" }));
     expect(wrapper.get('[data-testid="mine-task-card"]').text()).toContain("demo-claim-01");
     expect(wrapper.get('[data-testid="mine-task-card"]').text()).toContain(zhCN.task.completed);
+  });
+
+  it("requests ABANDONED when the abandoned tab is selected, not COMPLETED", async () => {
+    mineMock
+      .mockResolvedValueOnce(ok({ total: 0, records: [] }))
+      .mockResolvedValueOnce(ok({ total: 0, records: [] }));
+    const { wrapper } = await mountMineTasks();
+    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "IN_PROGRESS" }));
+    (wrapper.vm as unknown as { selectStatus: (name: string) => void }).selectStatus("ABANDONED");
+    await flushPromises();
+    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "ABANDONED" }));
+    expect(mineMock).not.toHaveBeenCalledWith(expect.objectContaining({ status: "COMPLETED" }));
   });
 
   it("opens task detail from a mine row", async () => {
