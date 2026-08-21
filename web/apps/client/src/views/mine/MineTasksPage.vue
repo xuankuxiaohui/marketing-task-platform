@@ -5,6 +5,7 @@ import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
 import { fetchMineTasks, type MineTaskView } from "@/api/task";
+import { resolveMineStatus, type MineTaskStatus } from "@/utils/mine-status";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatBeijing } from "@/utils/datetime";
@@ -24,7 +25,7 @@ const STATUS_TABS = [
 
 const router = useRouter();
 const categories = ref<DictPortalEntry[]>([]);
-const activeStatus = ref<(typeof STATUS_TABS)[number]["name"]>("IN_PROGRESS");
+const activeStatus = ref<MineTaskStatus>("IN_PROGRESS");
 const activeCategory = ref(ALL);
 const records = ref<MineTaskView[]>([]);
 const page = ref(1);
@@ -55,9 +56,12 @@ async function loadPage(reset: boolean): Promise<void> {
   }
   loading.value = true;
   try {
+    const status = resolveMineStatus(activeStatus.value);
+    const rawCategory = String(activeCategory.value);
+    const category = rawCategory === ALL || rawCategory === "0" ? undefined : rawCategory;
     const result = await fetchMineTasks({
-      status: activeStatus.value,
-      category: activeCategory.value === ALL ? undefined : activeCategory.value,
+      status,
+      category,
       page: page.value,
       pageSize: PAGE_SIZE,
     });
@@ -99,6 +103,13 @@ function openTask(row: MineTaskView): void {
   void router.push(`/task/${row.taskId}`);
 }
 
+function onStatusChange(name: string | number): void {
+  const resolved = resolveMineStatus(name);
+  if (resolved) {
+    activeStatus.value = resolved;
+  }
+}
+
 watch([activeStatus, activeCategory], () => {
   void loadPage(true);
 });
@@ -107,13 +118,19 @@ onMounted(() => {
   void loadCategories();
   void loadPage(true);
 });
+
+defineExpose({ selectStatus: onStatusChange });
 </script>
 
 <template>
   <section class="mine-tasks">
     <NavBar :title="zhCN.mine.tasks" left-arrow @click-left="router.back()" />
-    <Tabs v-model:active="activeStatus" sticky>
-      <Tab v-for="tab in STATUS_TABS" :key="tab.name" :title="tab.title" :name="tab.name" />
+    <Tabs v-model:active="activeStatus" sticky @change="onStatusChange">
+      <Tab v-for="tab in STATUS_TABS" :key="tab.name" :title="tab.title" :name="tab.name">
+        <template #title>
+          <span :data-testid="'mine-status-' + tab.name">{{ tab.title }}</span>
+        </template>
+      </Tab>
     </Tabs>
     <Tabs v-model:active="activeCategory" shrink>
       <Tab :title="zhCN.task.all" :name="ALL" />

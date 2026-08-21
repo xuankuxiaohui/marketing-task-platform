@@ -176,11 +176,12 @@ public class TaskPortalAppService {
     public PageData<MineTaskView> mine(long userId, String status, String category, Integer page, Integer pageSize) {
         PageQuery query = PageQuery.of(page, pageSize);
         List<Long> categoryTaskIds = null;
-        if (category != null && !category.isBlank()) {
+        String categoryFilter = allCategoryToNull(category);
+        if (categoryFilter != null) {
             categoryTaskIds = new ArrayList<>();
             for (TaskDefinitionEntity definition : definitions.listPublished()) {
                 SnapshotContent snapshot = snapshotOf(definition);
-                if (snapshot != null && category.equals(snapshot.category())) {
+                if (snapshot != null && categoryFilter.equals(snapshot.category())) {
                     categoryTaskIds.add(definition.getId());
                 }
             }
@@ -193,7 +194,7 @@ public class TaskPortalAppService {
                     continue;
                 }
                 SnapshotContent content = JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-                if (content != null && category.equals(content.category())) {
+                if (content != null && categoryFilter.equals(content.category())) {
                     categoryTaskIds.add(row.getTaskId());
                 }
             }
@@ -201,9 +202,10 @@ public class TaskPortalAppService {
                 return new PageData<>(0, List.of());
             }
         }
-        long total = instances.countMine(userId, blankToNull(status), categoryTaskIds);
+        String statusFilter = InstanceStatuses.mineFilter(status);
+        long total = instances.countMine(userId, statusFilter, categoryTaskIds);
         List<TaskInstanceEntity> rows =
-                instances.listMine(userId, blankToNull(status), categoryTaskIds, query.offset(), query.pageSize());
+                instances.listMine(userId, statusFilter, categoryTaskIds, query.offset(), query.pageSize());
         List<MineTaskView> views = new ArrayList<>(rows.size());
         for (TaskInstanceEntity row : rows) {
             views.add(toMine(row));
@@ -355,5 +357,13 @@ public class TaskPortalAppService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private static String allCategoryToNull(String category) {
+        String raw = blankToNull(category);
+        if (raw == null || "ALL".equalsIgnoreCase(raw) || InstanceStatuses.tabIndexLeak(raw)) {
+            return null;
+        }
+        return raw;
     }
 }
