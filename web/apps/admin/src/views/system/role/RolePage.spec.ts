@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { useSessionStore } from "@/store/session";
+import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/identity", () => ({
@@ -52,7 +53,7 @@ describe("RolePermissionPage", () => {
     expect(assignButtons).toHaveLength(1);
     await assignButtons[0].trigger("click");
     await flushPromises();
-    await wrapper.get('[data-testid="perm-11"]').setValue(true);
+    await setControl(wrapper, "perm-11", true);
     await wrapper.get('[data-testid="form-dialog"] form').trigger("submit.prevent");
     await flushPromises();
     expect(assignMock).toHaveBeenCalledWith(2, { permissionIds: [11] });

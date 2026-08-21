@@ -201,75 +201,74 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="portal-user-page">
     <h2>{{ zhCN.portal.title }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
-      <input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
-      <input v-model="filters.province" data-testid="filter-province" :placeholder="zhCN.portal.province" />
-      <select v-model="filters.status" data-testid="filter-status">
-        <option value="">{{ zhCN.common.status }}</option>
-        <option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</option>
-        <option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</option>
-      </select>
-      <button type="button" data-testid="portal-query" @click="load">{{ zhCN.common.query }}</button>
-    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
+      <el-input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
+      <el-input v-model="filters.province" data-testid="filter-province" :placeholder="zhCN.portal.province" />
+      <el-select v-model="filters.status" data-testid="filter-status">
+        <el-option value="" :label="zhCN.common.status" />
+        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
+        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
+      </el-select>
+      <el-button data-testid="portal-query" @click="load">{{ zhCN.common.query }}</el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="portal-user-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.user.username }}</th>
-          <th>{{ zhCN.user.nickname }}</th>
-          <th>{{ zhCN.portal.province }}</th>
-          <th>{{ zhCN.portal.level }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.portal.registeredAt }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.username }}</td>
-          <td>{{ row.nickname }}</td>
-          <td>{{ row.province || "—" }}</td>
-          <td>{{ row.userLevel || "—" }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ formatDateTime(row.registeredAt) }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.PORTAL_QUERY" type="button" data-testid="portal-detail" @click="openDetail(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="portal-user-table" stripe>
+      <el-table-column :label="zhCN.user.username">
+        <template #default="{ row }">{{ row.username }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.user.nickname">
+        <template #default="{ row }">{{ row.nickname }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.portal.province">
+        <template #default="{ row }">{{ row.province || "—" }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.portal.level">
+        <template #default="{ row }">{{ row.userLevel || "—" }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.portal.registeredAt">
+        <template #default="{ row }">{{ formatDateTime(row.registeredAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.PORTAL_QUERY" data-testid="portal-detail" @click="openDetail(row)">
               {{ zhCN.portal.detail }}
-            </button>
-            <button v-auth="PERMS.PORTAL_PROFILE" type="button" data-testid="portal-profile" @click="openProfile(row)">
+            </el-button>
+            <el-button v-auth="PERMS.PORTAL_PROFILE" data-testid="portal-profile" @click="openProfile(row)">
               {{ zhCN.portal.profile }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === STATUS.ENABLED"
               v-auth="PERMS.PORTAL_DISABLE"
-              type="button"
               data-testid="portal-disable"
               @click="askDisable(row)"
             >
               {{ zhCN.common.disable }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === STATUS.DISABLED"
               v-auth="PERMS.PORTAL_DISABLE"
-              type="button"
               data-testid="portal-enable"
               @click="onEnable(row)"
             >
               {{ zhCN.common.enable }}
-            </button>
-            <button v-auth="PERMS.PORTAL_RESET" type="button" data-testid="portal-reset" @click="openReset(row)">
+            </el-button>
+            <el-button v-auth="PERMS.PORTAL_RESET" data-testid="portal-reset" @click="openReset(row)">
               {{ zhCN.user.resetPassword }}
-            </button>
-            <button v-auth="PERMS.PORTAL_DELETE" type="button" data-testid="portal-delete" @click="askDelete(row)">
+            </el-button>
+            <el-button v-auth="PERMS.PORTAL_DELETE" data-testid="portal-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div v-if="detail" class="detail-card" data-testid="portal-detail-card">
       <h3>{{ zhCN.portal.detail }} · {{ detail.username }}</h3>
       <p>{{ zhCN.portal.inProgress }}：{{ detail.inProgressInstanceCount }}</p>
@@ -281,37 +280,31 @@ onMounted(() => {
     </div>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog :visible="profileOpen" :title="zhCN.portal.profile" :saving="saving" @submit="submitProfile" @cancel="profileOpen = false">
-      <label class="field">
-        <span>{{ zhCN.portal.province }}</span>
-        <input v-model="profile.province" data-testid="profile-province" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.portal.level }}</span>
-        <input v-model="profile.userLevel" data-testid="profile-level" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.portal.userRole }}</span>
-        <input v-model="profile.userRole" data-testid="profile-role" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.portal.tag }}</span>
-        <input v-model="profile.tags" data-testid="profile-tags" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.portal.orgId }}</span>
-        <input v-model="profile.orgId" data-testid="profile-org" />
-      </label>
+      <el-form-item :label="zhCN.portal.province">
+        <el-input v-model="profile.province" data-testid="profile-province" />
+      </el-form-item>
+      <el-form-item :label="zhCN.portal.level">
+        <el-input v-model="profile.userLevel" data-testid="profile-level" />
+      </el-form-item>
+      <el-form-item :label="zhCN.portal.userRole">
+        <el-input v-model="profile.userRole" data-testid="profile-role" />
+      </el-form-item>
+      <el-form-item :label="zhCN.portal.tag">
+        <el-input v-model="profile.tags" data-testid="profile-tags" />
+      </el-form-item>
+      <el-form-item :label="zhCN.portal.orgId">
+        <el-input v-model="profile.orgId" data-testid="profile-org" />
+      </el-form-item>
     </FormDialog>
     <FormDialog :visible="resetOpen" :title="zhCN.user.resetPassword" :saving="saving" @submit="submitReset" @cancel="resetOpen = false">
-      <label class="field">
-        <span>{{ zhCN.user.newPassword }}</span>
-        <input v-model="newPassword" data-testid="portal-new-password" type="password" required />
-      </label>
+      <el-form-item :label="zhCN.user.newPassword">
+        <el-input v-model="newPassword" data-testid="portal-new-password" type="password" required />
+      </el-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

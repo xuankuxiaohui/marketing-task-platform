@@ -157,110 +157,96 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="dict-page">
     <h2>{{ zhCN.dict.title }}</h2>
-    <div class="admin-toolbar">
-      <button v-auth="PERMS.DICT_TYPE_CREATE" type="button" data-testid="dict-type-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-button v-auth="PERMS.DICT_TYPE_CREATE" data-testid="dict-type-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="types.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="dict-type-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.dict.code }}</th>
-          <th>{{ zhCN.dict.name }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in types" :key="row.id" :class="{ selected: selected?.id === row.id }">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ formatDateTime(row.createdAt) }}</td>
-          <td class="row-actions">
-            <button type="button" data-testid="dict-type-select" @click="selectType(row)">{{ zhCN.dict.entries }}</button>
-            <button v-auth="PERMS.DICT_TYPE_UPDATE" type="button" data-testid="dict-type-edit" @click="openEdit(row)">
+    <el-table v-else :data="types" class="data-table" data-testid="dict-type-table" stripe>
+      <el-table-column :label="zhCN.dict.code">
+        <template #default="{ row }">{{ row.code }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.dict.name">
+        <template #default="{ row }">{{ row.name }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button data-testid="dict-type-select" @click="selectType(row)">{{ zhCN.dict.entries }}</el-button>
+            <el-button v-auth="PERMS.DICT_TYPE_UPDATE" data-testid="dict-type-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button v-auth="PERMS.DICT_TYPE_DELETE" type="button" data-testid="dict-type-delete" @click="askDelete(row)">
+            </el-button>
+            <el-button v-auth="PERMS.DICT_TYPE_DELETE" data-testid="dict-type-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div v-if="selected" class="entry-panel" data-testid="dict-entry-panel">
       <h3>{{ zhCN.dict.entries }} · {{ selected.code }}</h3>
       <p class="hint">{{ zhCN.dict.enabledOnly }}</p>
-      <button
+      <el-button
         v-auth="PERMS.DICT_ENTRY_CREATE"
-        type="button"
         data-testid="dict-entry-create"
         @click="entryOpen = true"
       >
         {{ zhCN.dict.addEntry }}
-      </button>
-      <table class="data-table" data-testid="dict-entry-table">
-        <thead>
-          <tr>
-            <th>{{ zhCN.dict.label }}</th>
-            <th>{{ zhCN.dict.value }}</th>
-            <th>{{ zhCN.dict.sort }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in entries" :key="`${item.value}-${item.sort}`">
-            <td>{{ item.label }}</td>
-            <td>{{ item.value }}</td>
-            <td>{{ item.sort }}</td>
-          </tr>
-        </tbody>
-      </table>
+      </el-button>
+      <el-table :data="entries" class="data-table" data-testid="dict-entry-table" stripe>
+      <el-table-column :label="zhCN.dict.label">
+        <template #default="{ row }">{{ row.label }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.dict.value">
+        <template #default="{ row }">{{ row.value }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.dict.sort">
+        <template #default="{ row }">{{ row.sort }}</template>
+      </el-table-column>
+    </el-table>
     </div>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog :visible="formOpen" :title="editing ? zhCN.common.edit : zhCN.common.create" :saving="saving" @submit="submitType" @cancel="formOpen = false">
-      <label v-if="!editing" class="field">
-        <span>{{ zhCN.dict.code }}</span>
-        <input v-model="form.code" data-testid="dict-code" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.dict.name }}</span>
-        <input v-model="form.name" data-testid="dict-name" required />
-      </label>
-      <label v-if="editing" class="field">
-        <span>{{ zhCN.common.status }}</span>
-        <select v-model="form.status">
-          <option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</option>
-          <option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.common.remark }}</span>
-        <input v-model="form.remark" />
-      </label>
+      <el-form-item v-if="!editing" :label="zhCN.dict.code">
+        <el-input v-model="form.code" data-testid="dict-code" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.dict.name">
+        <el-input v-model="form.name" data-testid="dict-name" required />
+      </el-form-item>
+      <el-form-item v-if="editing" :label="zhCN.common.status">
+        <el-select v-model="form.status">
+        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
+        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.common.remark">
+        <el-input v-model="form.remark" />
+      </el-form-item>
     </FormDialog>
     <FormDialog :visible="entryOpen" :title="zhCN.dict.addEntry" :saving="saving" @submit="submitEntry" @cancel="entryOpen = false">
-      <label class="field">
-        <span>{{ zhCN.dict.label }}</span>
-        <input v-model="entryForm.label" data-testid="entry-label" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.dict.value }}</span>
-        <input v-model="entryForm.value" data-testid="entry-value" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.dict.sort }}</span>
-        <input v-model.number="entryForm.sort" data-testid="entry-sort" type="number" required />
-      </label>
+      <el-form-item :label="zhCN.dict.label">
+        <el-input v-model="entryForm.label" data-testid="entry-label" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.dict.value">
+        <el-input v-model="entryForm.value" data-testid="entry-value" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.dict.sort">
+        <el-input v-model.number="entryForm.sort" data-testid="entry-sort" type="number" required />
+      </el-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

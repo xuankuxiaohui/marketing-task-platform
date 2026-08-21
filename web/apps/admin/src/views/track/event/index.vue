@@ -61,54 +61,54 @@ onMounted(() => {
   <section class="admin-page" data-testid="track-event-page">
     <h2>{{ zhCN.trackEvent.title }}</h2>
     <p class="hint" data-testid="debug-no-side-effect">{{ zhCN.trackEvent.hint }}</p>
-    <div class="admin-toolbar">
-      <input v-model="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.trackEvent.eventCode" />
-      <input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.trackEvent.userId" />
-      <select v-model="filters.source" data-testid="filter-source">
-        <option value="">{{ zhCN.trackEvent.source }}</option>
-        <option v-for="item in TRACK_SOURCES" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <input v-model="filters.deviceId" data-testid="filter-device" :placeholder="zhCN.trackEvent.deviceId" />
-      <input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <button v-auth="PERMS.TRACK_EVENT_QUERY" type="button" data-testid="debug-query" @click="load">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.trackEvent.eventCode" />
+      <el-input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.trackEvent.userId" />
+      <el-select v-model="filters.source" data-testid="filter-source">
+        <el-option value="" :label="zhCN.trackEvent.source" />
+        <el-option v-for="item in TRACK_SOURCES" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-input v-model="filters.deviceId" data-testid="filter-device" :placeholder="zhCN.trackEvent.deviceId" />
+      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
+      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
+      <el-button v-auth="PERMS.TRACK_EVENT_QUERY" data-testid="debug-query" @click="load">
         {{ zhCN.common.query }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="debug-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.trackEvent.source }}</th>
-          <th>{{ zhCN.trackEvent.eventCode }}</th>
-          <th>{{ zhCN.trackEvent.userId }}</th>
-          <th>{{ zhCN.trackEvent.deviceId }}</th>
-          <th>{{ zhCN.trackEvent.registered }}</th>
-          <th>{{ zhCN.trackEvent.simulated }}</th>
-          <th>{{ zhCN.trackEvent.serverTime }}</th>
-          <th>{{ zhCN.trackEvent.events }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.source }}</td>
-          <td>{{ row.eventCode }}</td>
-          <td>{{ row.userId }}</td>
-          <td>{{ row.deviceId }}</td>
-          <td>{{ row.registered ? zhCN.common.enabled : zhCN.common.disabled }}</td>
-          <td>{{ row.simulated ? zhCN.common.enabled : zhCN.common.disabled }}</td>
-          <td>{{ formatDateTime(row.serverTime) }}</td>
-          <td data-testid="debug-events">{{ eventsText(row) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <el-table v-else :data="records" class="data-table" data-testid="debug-table" stripe>
+      <el-table-column :label="zhCN.trackEvent.source">
+        <template #default="{ row }">{{ row.source }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.eventCode">
+        <template #default="{ row }">{{ row.eventCode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.userId">
+        <template #default="{ row }">{{ row.userId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.deviceId">
+        <template #default="{ row }">{{ row.deviceId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.registered">
+        <template #default="{ row }">{{ row.registered ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.simulated">
+        <template #default="{ row }">{{ row.simulated ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.serverTime">
+        <template #default="{ row }">{{ formatDateTime(row.serverTime) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.trackEvent.events">
+        <template #default="{ row }"><span data-testid="debug-events">{{ eventsText(row) }}</span></template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
   </section>
 </template>

@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 import { SESSION_NAMESPACE } from "@/utils/cache-evict";
 
@@ -41,7 +42,7 @@ describe("CacheManagePage", () => {
     useSessionStore().permissions = Object.values(PERMS);
     const wrapper = mount(CachePage, { global: { plugins: [pinia], directives: { auth } } });
     await flushPromises();
-    await wrapper.get('[data-testid="evict-namespace"]').setValue(SESSION_NAMESPACE);
+    await setControl(wrapper, "evict-namespace", SESSION_NAMESPACE);
     await wrapper.get('[data-testid="cache-evict-form"]').trigger("submit.prevent");
     await flushPromises();
     expect(evictMock).not.toHaveBeenCalled();
@@ -54,7 +55,7 @@ describe("CacheManagePage", () => {
     useSessionStore().permissions = Object.values(PERMS);
     const wrapper = mount(CachePage, { global: { plugins: [pinia], directives: { auth } } });
     await flushPromises();
-    await wrapper.get('[data-testid="evict-namespace"]').setValue("dict");
+    await setControl(wrapper, "evict-namespace", "dict");
     await wrapper.get('[data-testid="cache-evict-form"]').trigger("submit.prevent");
     await flushPromises();
     expect(evictMock).toHaveBeenCalledWith({ level: "NAMESPACE", namespace: "dict" });

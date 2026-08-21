@@ -206,83 +206,80 @@ onMounted(async () => {
 <template>
   <section class="admin-page" data-testid="user-page">
     <h2>{{ zhCN.user.title }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
-      <input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
-      <select v-model="filters.status" data-testid="filter-status">
-        <option value="">{{ zhCN.common.status }}</option>
-        <option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</option>
-        <option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</option>
-      </select>
-      <button type="button" data-testid="user-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.USER_CREATE" type="button" data-testid="user-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
+      <el-input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
+      <el-select v-model="filters.status" data-testid="filter-status">
+        <el-option value="" :label="zhCN.common.status" />
+        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
+        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
+      </el-select>
+      <el-button data-testid="user-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.USER_CREATE" data-testid="user-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="user-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.user.username }}</th>
-          <th>{{ zhCN.user.nickname }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.user.roles }}</th>
-          <th>{{ zhCN.user.lastLoginAt }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.username }}</td>
-          <td>{{ row.nickname }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ (row.roles ?? []).join(", ") }}</td>
-          <td>{{ formatDateTime(row.lastLoginAt) }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.USER_UPDATE" type="button" data-testid="user-edit" @click="openEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="user-table" stripe>
+      <el-table-column :label="zhCN.user.username">
+        <template #default="{ row }">{{ row.username }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.user.nickname">
+        <template #default="{ row }">{{ row.nickname }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.user.roles">
+        <template #default="{ row }">{{ (row.roles ?? []).join(", ") }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.user.lastLoginAt">
+        <template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.USER_UPDATE" data-testid="user-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === STATUS.ENABLED && !isProtected(row)"
               v-auth="PERMS.USER_DISABLE"
-              type="button"
               data-testid="user-disable"
               @click="askDisable(row)"
             >
               {{ zhCN.common.disable }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === STATUS.DISABLED && !isProtected(row)"
               v-auth="PERMS.USER_DISABLE"
-              type="button"
               data-testid="user-enable"
               @click="onEnable(row)"
             >
               {{ zhCN.common.enable }}
-            </button>
-            <button v-auth="PERMS.USER_RESET" type="button" data-testid="user-reset" @click="openReset(row)">
+            </el-button>
+            <el-button v-auth="PERMS.USER_RESET" data-testid="user-reset" @click="openReset(row)">
               {{ zhCN.user.resetPassword }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="!isProtected(row)"
               v-auth="PERMS.USER_DELETE"
-              type="button"
               data-testid="user-delete"
               @click="askDelete(row)"
             >
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="formOpen"
@@ -291,27 +288,22 @@ onMounted(async () => {
       @submit="submitForm"
       @cancel="formOpen = false"
     >
-      <label v-if="formMode === 'create'" class="field">
-        <span>{{ zhCN.user.username }}</span>
-        <input v-model="form.username" data-testid="user-username" required />
-      </label>
-      <label v-if="formMode !== 'reset'" class="field">
-        <span>{{ zhCN.user.nickname }}</span>
-        <input v-model="form.nickname" data-testid="user-nickname" required />
-      </label>
-      <label v-if="formMode !== 'edit'" class="field">
-        <span>{{ zhCN.user.password }}</span>
-        <input v-model="form.password" data-testid="user-password" type="password" required />
+      <el-form-item v-if="formMode === 'create'" :label="zhCN.user.username">
+        <el-input v-model="form.username" data-testid="user-username" required />
+      </el-form-item>
+      <el-form-item v-if="formMode !== 'reset'" :label="zhCN.user.nickname">
+        <el-input v-model="form.nickname" data-testid="user-nickname" required />
+      </el-form-item>
+      <el-form-item v-if="formMode !== 'edit'" :label="zhCN.user.password">
+        <el-input v-model="form.password" data-testid="user-password" type="password" required />
         <span class="hint">{{ zhCN.common.passwordPolicy }}</span>
-      </label>
+      </el-form-item>
       <fieldset v-if="formMode !== 'reset'" class="field">
         <legend>{{ zhCN.user.roles }}</legend>
         <label v-for="role in roles" :key="role.id">
-          <input
-            type="checkbox"
-            :checked="form.roleIds.includes(Number(role.id))"
-            @change="toggleRole(Number(role.id), ($event.target as HTMLInputElement).checked)"
-          />
+          <el-checkbox
+            :model-value="form.roleIds.includes(Number(role.id))"
+            @update:model-value="(val: boolean) => toggleRole(Number(role.id), val)" />
           {{ role.name }}
         </label>
       </fieldset>

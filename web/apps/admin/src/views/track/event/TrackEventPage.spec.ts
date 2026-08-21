@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/track", () => ({
@@ -67,10 +68,10 @@ describe("TrackEventPage", () => {
 
   it("sends filter query on GET only", async () => {
     const wrapper = await mountPage();
-    await wrapper.get('[data-testid="filter-code"]').setValue("page.view");
-    await wrapper.get('[data-testid="filter-user"]').setValue("9");
-    await wrapper.get('[data-testid="filter-source"]').setValue("CLIENT");
-    await wrapper.get('[data-testid="filter-device"]').setValue("dev-9");
+    await setControl(wrapper, "filter-code", "page.view");
+    await setControl(wrapper, "filter-user", "9");
+    await setControl(wrapper, "filter-source", "CLIENT");
+    await setControl(wrapper, "filter-device", "dev-9");
     await wrapper.get('[data-testid="debug-query"]').trigger("click");
     await flushPromises();
     expect(debugMock).toHaveBeenLastCalledWith({

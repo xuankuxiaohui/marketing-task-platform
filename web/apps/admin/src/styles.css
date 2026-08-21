@@ -99,3 +99,21 @@ textarea {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+.admin-page .el-table {
+  width: 100%;
+}
+.admin-toolbar.el-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.admin-toolbar .el-form-item {
+  margin-bottom: 0;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

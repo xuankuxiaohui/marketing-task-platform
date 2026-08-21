@@ -100,70 +100,73 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="case-page">
     <h2>{{ zhCN.cases.title }}</h2>
-    <div class="admin-toolbar">
-      <select v-model="filters.ruleCode" data-testid="filter-rule">
-        <option value="">{{ zhCN.cases.ruleCode }}</option>
-        <option v-for="item in RISK_RULE_CODES" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <select v-model="filters.hitType" data-testid="filter-hit-type">
-        <option value="">{{ zhCN.cases.hitType }}</option>
-        <option v-for="item in RISK_HIT_TYPES" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <input v-model="filters.dimensionValue" data-testid="filter-dimension" :placeholder="zhCN.cases.dimensionValue" />
-      <input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.cases.userId" />
-      <select v-model="filters.actionResult" data-testid="filter-action-result">
-        <option value="">{{ zhCN.cases.actionResult }}</option>
-        <option v-for="item in RISK_ACTION_RESULTS" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <button v-auth="PERMS.RISK_CASE_QUERY" type="button" data-testid="case-query" @click="load">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-select v-model="filters.ruleCode" data-testid="filter-rule">
+        <el-option value="" :label="zhCN.cases.ruleCode" />
+        <el-option v-for="item in RISK_RULE_CODES" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-select v-model="filters.hitType" data-testid="filter-hit-type">
+        <el-option value="" :label="zhCN.cases.hitType" />
+        <el-option v-for="item in RISK_HIT_TYPES" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-input v-model="filters.dimensionValue" data-testid="filter-dimension" :placeholder="zhCN.cases.dimensionValue" />
+      <el-input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.cases.userId" />
+      <el-select v-model="filters.actionResult" data-testid="filter-action-result">
+        <el-option value="" :label="zhCN.cases.actionResult" />
+        <el-option v-for="item in RISK_ACTION_RESULTS" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
+      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
+      <el-button v-auth="PERMS.RISK_CASE_QUERY" data-testid="case-query" @click="load">
         {{ zhCN.common.query }}
-      </button>
-      <button v-auth="PERMS.RISK_CASE_HANDLE" type="button" data-testid="case-handle-open" @click="openHandle()">
+      </el-button>
+      <el-button v-auth="PERMS.RISK_CASE_HANDLE" data-testid="case-handle-open" @click="openHandle()">
         {{ zhCN.cases.handle }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="hit-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.cases.hitType }}</th>
-          <th>{{ zhCN.cases.ruleCode }}</th>
-          <th>{{ zhCN.cases.userId }}</th>
-          <th>{{ zhCN.cases.dimensionValue }}</th>
-          <th>{{ zhCN.cases.hitValue }}</th>
-          <th>{{ zhCN.cases.threshold }}</th>
-          <th>{{ zhCN.cases.actionResult }}</th>
-          <th>{{ zhCN.cases.occurredAt }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.hitType }}</td>
-          <td>{{ row.ruleCode }}</td>
-          <td>{{ row.userId }}</td>
-          <td>{{ row.dimensionValue }}</td>
-          <td>{{ row.hitValue }}</td>
-          <td>{{ row.threshold }}</td>
-          <td>{{ row.actionResult }}</td>
-          <td>{{ formatDateTime(row.occurredAt) }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.RISK_CASE_HANDLE" type="button" data-testid="case-handle" @click="openHandle(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="hit-table" stripe>
+      <el-table-column :label="zhCN.cases.hitType">
+        <template #default="{ row }">{{ row.hitType }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.ruleCode">
+        <template #default="{ row }">{{ row.ruleCode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.userId">
+        <template #default="{ row }">{{ row.userId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.dimensionValue">
+        <template #default="{ row }">{{ row.dimensionValue }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.hitValue">
+        <template #default="{ row }">{{ row.hitValue }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.threshold">
+        <template #default="{ row }">{{ row.threshold }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.actionResult">
+        <template #default="{ row }">{{ row.actionResult }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cases.occurredAt">
+        <template #default="{ row }">{{ formatDateTime(row.occurredAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.RISK_CASE_HANDLE" data-testid="case-handle" @click="openHandle(row)">
               {{ zhCN.cases.handle }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="handleOpen"
@@ -172,28 +175,23 @@ onMounted(() => {
       @submit="submitHandle"
       @cancel="handleOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.cases.userId }}</span>
-        <input v-model="form.userId" data-testid="handle-user" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.cases.action }}</span>
-        <select v-model="form.action" data-testid="handle-action">
-          <option v-for="item in RISK_HANDLE_ACTIONS" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label v-if="form.action === 'REMOVE_BLACK'" class="field">
-        <span>{{ zhCN.cases.toWhitelist }}</span>
-        <input v-model="form.toWhitelist" data-testid="handle-to-whitelist" type="checkbox" />
-      </label>
-      <label v-if="form.action === 'ADD_BLACK'" class="field">
-        <span>{{ zhCN.cases.expireAt }}</span>
-        <input v-model="form.expireAt" data-testid="handle-expire" type="datetime-local" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.cases.reason }}</span>
-        <input v-model="form.reason" data-testid="handle-reason" required />
-      </label>
+      <el-form-item :label="zhCN.cases.userId">
+        <el-input v-model="form.userId" data-testid="handle-user" />
+      </el-form-item>
+      <el-form-item :label="zhCN.cases.action">
+        <el-select v-model="form.action" data-testid="handle-action">
+        <el-option v-for="item in RISK_HANDLE_ACTIONS" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.action === 'REMOVE_BLACK'" :label="zhCN.cases.toWhitelist">
+        <el-checkbox v-model="form.toWhitelist" data-testid="handle-to-whitelist" />
+      </el-form-item>
+      <el-form-item v-if="form.action === 'ADD_BLACK'" :label="zhCN.cases.expireAt">
+        <el-input v-model="form.expireAt" data-testid="handle-expire" type="datetime-local" />
+      </el-form-item>
+      <el-form-item :label="zhCN.cases.reason">
+        <el-input v-model="form.reason" data-testid="handle-reason" required />
+      </el-form-item>
     </FormDialog>
   </section>
 </template>

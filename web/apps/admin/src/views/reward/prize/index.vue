@@ -260,83 +260,80 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="prize-page">
     <h2>{{ zhCN.prize.title }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.prize.code" />
-      <input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.prize.name" />
-      <input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
-      <select v-model="filters.status" data-testid="filter-status">
-        <option value="">{{ zhCN.common.status }}</option>
-        <option v-for="item in Object.values(PRIZE_STATUS)" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <button type="button" data-testid="prize-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.REWARD_PRIZE_CREATE" type="button" data-testid="prize-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.prize.code" />
+      <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.prize.name" />
+      <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
+      <el-select v-model="filters.status" data-testid="filter-status">
+        <el-option value="" :label="zhCN.common.status" />
+        <el-option v-for="item in Object.values(PRIZE_STATUS)" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-button data-testid="prize-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.REWARD_PRIZE_CREATE" data-testid="prize-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="prize-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.prize.code }}</th>
-          <th>{{ zhCN.prize.name }}</th>
-          <th>{{ zhCN.prize.category }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.prize.stock }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.categoryCode }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.remainingStock }}/{{ row.totalStock }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.REWARD_PRIZE_UPDATE" type="button" data-testid="prize-edit" @click="openEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="prize-table" stripe>
+      <el-table-column :label="zhCN.prize.code">
+        <template #default="{ row }">{{ row.code }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.prize.name">
+        <template #default="{ row }">{{ row.name }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.prize.category">
+        <template #default="{ row }">{{ row.categoryCode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.prize.stock">
+        <template #default="{ row }">{{ row.remainingStock }}/{{ row.totalStock }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.REWARD_PRIZE_UPDATE" data-testid="prize-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === PRIZE_STATUS.ENABLED"
               v-auth="PERMS.REWARD_PRIZE_DISABLE"
-              type="button"
               data-testid="prize-disable"
               @click="askDisable(row)"
             >
               {{ zhCN.common.disable }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status !== PRIZE_STATUS.ENABLED"
               v-auth="PERMS.REWARD_PRIZE_ENABLE"
-              type="button"
               data-testid="prize-enable"
               @click="askEnable(row)"
             >
               {{ zhCN.common.enable }}
-            </button>
-            <button v-auth="PERMS.REWARD_PRIZE_STOCK" type="button" data-testid="prize-replenish" @click="openReplenish(row)">
+            </el-button>
+            <el-button v-auth="PERMS.REWARD_PRIZE_STOCK" data-testid="prize-replenish" @click="openReplenish(row)">
               {{ zhCN.prize.replenish }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === PRIZE_STATUS.DRAFT"
               v-auth="PERMS.REWARD_PRIZE_DELETE"
-              type="button"
               data-testid="prize-delete"
               @click="askDelete(row)"
             >
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="formOpen"
@@ -345,55 +342,44 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.prize.code }}</span>
-        <input v-model="form.code" data-testid="prize-code" :disabled="editing != null" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.name }}</span>
-        <input v-model="form.name" data-testid="prize-name" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.category }}</span>
-        <input v-model="form.categoryCode" data-testid="prize-category" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.totalStock }}</span>
-        <input v-model.number="form.totalStock" type="number" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.dailyLimit }}</span>
-        <input v-model.number="form.dailyClaimLimit" type="number" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.totalLimit }}</span>
-        <input v-model.number="form.totalClaimLimit" type="number" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.claimMode }}</span>
-        <select v-model="form.claimMode">
-          <option v-for="item in CLAIM_MODES" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.reconActionPolicy }}</span>
-        <select v-model="form.reconActionPolicy">
-          <option value="">—</option>
-          <option v-for="item in RECON_POLICIES" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.unitCostFen }}</span>
-        <input v-model="form.unitCostFen" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.expireHours }}</span>
-        <input v-model="form.expireHours" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.typeParams }}</span>
-        <textarea v-model="form.typeParams" rows="3" />
-      </label>
+      <el-form-item :label="zhCN.prize.code">
+        <el-input v-model="form.code" data-testid="prize-code" :disabled="editing != null" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.name">
+        <el-input v-model="form.name" data-testid="prize-name" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.category">
+        <el-input v-model="form.categoryCode" data-testid="prize-category" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.totalStock">
+        <el-input v-model.number="form.totalStock" type="number" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.dailyLimit">
+        <el-input v-model.number="form.dailyClaimLimit" type="number" />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.totalLimit">
+        <el-input v-model.number="form.totalClaimLimit" type="number" />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.claimMode">
+        <el-select v-model="form.claimMode">
+        <el-option v-for="item in CLAIM_MODES" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.category.reconActionPolicy">
+        <el-select v-model="form.reconActionPolicy">
+        <el-option value="" label="—" />
+        <el-option v-for="item in RECON_POLICIES" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.unitCostFen">
+        <el-input v-model="form.unitCostFen" />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.expireHours">
+        <el-input v-model="form.expireHours" />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.typeParams">
+        <el-input type="textarea" v-model="form.typeParams" :rows="3"  />
+      </el-form-item>
     </FormDialog>
     <FormDialog
       :visible="replenishOpen"
@@ -402,14 +388,12 @@ onMounted(() => {
       @submit="submitReplenish"
       @cancel="replenishOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.prize.amount }}</span>
-        <input v-model.number="replenishForm.amount" data-testid="replenish-amount" type="number" min="1" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.reason }}</span>
-        <input v-model="replenishForm.reason" data-testid="replenish-reason" required />
-      </label>
+      <el-form-item :label="zhCN.prize.amount">
+        <el-input v-model.number="replenishForm.amount" data-testid="replenish-amount" type="number" min="1" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.reason">
+        <el-input v-model="replenishForm.reason" data-testid="replenish-reason" required />
+      </el-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

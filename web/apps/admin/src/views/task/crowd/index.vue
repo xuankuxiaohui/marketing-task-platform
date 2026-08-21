@@ -136,50 +136,49 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="crowd-page">
     <h2>{{ zhCN.crowd.title }}</h2>
-    <div class="admin-toolbar">
-      <button type="button" data-testid="crowd-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.TASK_CROWD_CREATE" type="button" data-testid="crowd-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-button data-testid="crowd-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.TASK_CROWD_CREATE" data-testid="crowd-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="crowd-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.crowd.code }}</th>
-          <th>{{ zhCN.crowd.name }}</th>
-          <th>{{ zhCN.crowd.itemCount }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.itemCount }}</td>
-          <td>{{ row.status }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.TASK_CROWD_UPDATE" type="button" data-testid="crowd-edit" @click="openEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="crowd-table" stripe>
+      <el-table-column :label="zhCN.crowd.code">
+        <template #default="{ row }">{{ row.code }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.crowd.name">
+        <template #default="{ row }">{{ row.name }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.crowd.itemCount">
+        <template #default="{ row }">{{ row.itemCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.TASK_CROWD_UPDATE" data-testid="crowd-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button v-auth="PERMS.TASK_CROWD_UPDATE" type="button" data-testid="crowd-import" @click="openImport(row)">
+            </el-button>
+            <el-button v-auth="PERMS.TASK_CROWD_UPDATE" data-testid="crowd-import" @click="openImport(row)">
               {{ zhCN.crowd.import }}
-            </button>
-            <button v-auth="PERMS.TASK_CROWD_DELETE" type="button" data-testid="crowd-delete" @click="askDelete(row)">
+            </el-button>
+            <el-button v-auth="PERMS.TASK_CROWD_DELETE" data-testid="crowd-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="formOpen"
@@ -188,21 +187,18 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.crowd.code }}</span>
-        <input v-model="form.code" data-testid="crowd-code" :disabled="editing != null" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.crowd.name }}</span>
-        <input v-model="form.name" data-testid="crowd-name" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.common.status }}</span>
-        <select v-model="form.status">
-          <option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</option>
-          <option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</option>
-        </select>
-      </label>
+      <el-form-item :label="zhCN.crowd.code">
+        <el-input v-model="form.code" data-testid="crowd-code" :disabled="editing != null" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.crowd.name">
+        <el-input v-model="form.name" data-testid="crowd-name" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.common.status">
+        <el-select v-model="form.status">
+        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
+        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
+      </el-select>
+      </el-form-item>
     </FormDialog>
     <FormDialog
       :visible="importOpen"
@@ -211,10 +207,9 @@ onMounted(() => {
       @submit="submitImport"
       @cancel="importOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.crowd.content }}</span>
-        <textarea v-model="importContent" data-testid="crowd-content" rows="8" />
-      </label>
+      <el-form-item :label="zhCN.crowd.content">
+        <el-input type="textarea" v-model="importContent" data-testid="crowd-content" :rows="8"  />
+      </el-form-item>
       <p v-if="importHint" data-testid="crowd-import-result">{{ importHint }}</p>
     </FormDialog>
     <ConfirmDialog

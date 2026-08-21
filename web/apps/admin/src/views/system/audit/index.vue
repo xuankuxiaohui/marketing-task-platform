@@ -62,49 +62,49 @@ onMounted(() => {
   <section class="admin-page" data-testid="audit-page">
     <h2>{{ zhCN.audit.title }}</h2>
     <p class="hint" data-testid="audit-no-delete">{{ zhCN.audit.noDelete }}</p>
-    <div class="admin-toolbar">
-      <input v-model="filters.operatorId" data-testid="filter-operator" :placeholder="zhCN.audit.operatorId" />
-      <input v-model="filters.module" data-testid="filter-module" :placeholder="zhCN.audit.module" />
-      <input v-model="filters.action" data-testid="filter-action" :placeholder="zhCN.audit.action" />
-      <input v-model="filters.result" data-testid="filter-result" :placeholder="zhCN.audit.result" />
-      <input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <button type="button" data-testid="audit-query" @click="load">{{ zhCN.common.query }}</button>
-    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.operatorId" data-testid="filter-operator" :placeholder="zhCN.audit.operatorId" />
+      <el-input v-model="filters.module" data-testid="filter-module" :placeholder="zhCN.audit.module" />
+      <el-input v-model="filters.action" data-testid="filter-action" :placeholder="zhCN.audit.action" />
+      <el-input v-model="filters.result" data-testid="filter-result" :placeholder="zhCN.audit.result" />
+      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
+      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
+      <el-button data-testid="audit-query" @click="load">{{ zhCN.common.query }}</el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="audit-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.audit.module }}</th>
-          <th>{{ zhCN.audit.action }}</th>
-          <th>{{ zhCN.audit.operatorName }}</th>
-          <th>{{ zhCN.audit.result }}</th>
-          <th>{{ zhCN.audit.summary }}</th>
-          <th>{{ zhCN.audit.costMs }}</th>
-          <th>{{ zhCN.audit.traceId }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.module }}</td>
-          <td>{{ row.action }}</td>
-          <td>{{ row.operatorName }}</td>
-          <td>{{ row.result }}</td>
-          <td>{{ row.requestSummary }}</td>
-          <td>{{ row.costMs }}</td>
-          <td>{{ row.traceId }}</td>
-          <td>{{ formatDateTime(row.createdAt) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <el-table v-else :data="records" class="data-table" data-testid="audit-table" stripe>
+      <el-table-column :label="zhCN.audit.module">
+        <template #default="{ row }">{{ row.module }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.audit.action">
+        <template #default="{ row }">{{ row.action }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.audit.operatorName">
+        <template #default="{ row }">{{ row.operatorName }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.audit.result">
+        <template #default="{ row }">{{ row.result }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.audit.summary">
+        <template #default="{ row }">{{ row.requestSummary }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.audit.costMs">
+        <template #default="{ row }">{{ row.costMs }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.audit.traceId">
+        <template #default="{ row }">{{ row.traceId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
   </section>
 </template>

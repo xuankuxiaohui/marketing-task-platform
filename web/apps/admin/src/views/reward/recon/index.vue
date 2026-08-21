@@ -193,132 +193,119 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="recon-page">
     <h2>{{ zhCN.recon.title }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.recon.category" />
-      <input v-model="filters.billDate" data-testid="filter-bill" type="date" />
-      <button type="button" data-testid="recon-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.REWARD_RECON_IMPORT" type="button" data-testid="recon-create" @click="createOpen = true">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.recon.category" />
+      <el-input v-model="filters.billDate" data-testid="filter-bill" type="date" />
+      <el-button data-testid="recon-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.REWARD_RECON_IMPORT" data-testid="recon-create" @click="createOpen = true">
         {{ zhCN.recon.createBatch }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="batches.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="recon-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>{{ zhCN.recon.category }}</th>
-          <th>{{ zhCN.recon.billDate }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in batches" :key="row.id">
-          <td>{{ row.id }}</td>
-          <td>{{ row.categoryCode }}</td>
-          <td>{{ row.billDate }}</td>
-          <td>{{ row.status }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.REWARD_RECON_QUERY" type="button" data-testid="recon-items" @click="loadItems(row)">
+    <el-table v-else :data="batches" class="data-table" data-testid="recon-table" stripe>
+      <el-table-column label="ID">
+        <template #default="{ row }">{{ row.id }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.recon.category">
+        <template #default="{ row }">{{ row.categoryCode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.recon.billDate">
+        <template #default="{ row }">{{ row.billDate }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.REWARD_RECON_QUERY" data-testid="recon-items" @click="loadItems(row)">
               {{ zhCN.recon.items }}
-            </button>
-            <button v-auth="PERMS.REWARD_RECON_IMPORT" type="button" data-testid="recon-import" @click="selected = row; importOpen = true">
+            </el-button>
+            <el-button v-auth="PERMS.REWARD_RECON_IMPORT" data-testid="recon-import" @click="selected = row; importOpen = true">
               {{ zhCN.recon.import }}
-            </button>
-            <button v-auth="PERMS.REWARD_RECON_MATCH" type="button" data-testid="recon-match" @click="onMatch(row)">
+            </el-button>
+            <el-button v-auth="PERMS.REWARD_RECON_MATCH" data-testid="recon-match" @click="onMatch(row)">
               {{ zhCN.recon.match }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
-    <table v-if="items.length > 0" class="data-table" data-testid="recon-item-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>{{ zhCN.recon.result }}</th>
-          <th>{{ zhCN.recon.reviewStatus }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in items" :key="row.id">
-          <td>{{ row.id }}</td>
-          <td>{{ row.result }}</td>
-          <td>{{ row.reviewStatus }}</td>
-          <td class="row-actions">
-            <button
+    <el-table :data="items" class="data-table" stripe>
+      <el-table-column label="ID">
+        <template #default="{ row }">{{ row.id }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.recon.result">
+        <template #default="{ row }">{{ row.result }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.recon.reviewStatus">
+        <template #default="{ row }">{{ row.reviewStatus }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button
               v-if="row.reviewStatus === RECON_REVIEW.PENDING_REVIEW"
               v-auth="PERMS.REWARD_RECON_ACTION"
-              type="button"
               data-testid="recon-review"
               @click="openReview(row)"
             >
               {{ zhCN.recon.review }}
-            </button>
-            <button v-auth="PERMS.REWARD_RECON_ACTION" type="button" data-testid="recon-action" @click="openAction(row)">
+            </el-button>
+            <el-button v-auth="PERMS.REWARD_RECON_ACTION" data-testid="recon-action" @click="openAction(row)">
               {{ zhCN.recon.action }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <FormDialog :visible="createOpen" :title="zhCN.recon.createBatch" :saving="saving" @submit="submitCreate" @cancel="createOpen = false">
-      <label class="field">
-        <span>{{ zhCN.recon.category }}</span>
-        <input v-model="createForm.categoryCode" data-testid="batch-category" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.recon.billDate }}</span>
-        <input v-model="createForm.billDate" data-testid="batch-date" type="date" required />
-      </label>
+      <el-form-item :label="zhCN.recon.category">
+        <el-input v-model="createForm.categoryCode" data-testid="batch-category" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.recon.billDate">
+        <el-input v-model="createForm.billDate" data-testid="batch-date" type="date" required />
+      </el-form-item>
     </FormDialog>
     <FormDialog :visible="importOpen" :title="zhCN.recon.import" :saving="saving" @submit="submitImport" @cancel="importOpen = false">
-      <label class="field">
-        <span>{{ zhCN.recon.lines }}</span>
-        <textarea v-model="importJson" data-testid="import-json" rows="6" />
-      </label>
+      <el-form-item :label="zhCN.recon.lines">
+        <el-input type="textarea" v-model="importJson" data-testid="import-json" :rows="6"  />
+      </el-form-item>
     </FormDialog>
     <FormDialog :visible="reviewOpen" :title="zhCN.recon.review" :saving="saving" @submit="submitReview" @cancel="reviewOpen = false">
-      <label class="field">
-        <span>{{ zhCN.recon.decision }}</span>
-        <select v-model="reviewForm.decision" data-testid="review-decision">
-          <option value="CONFIRM">{{ zhCN.recon.confirmChannel }}</option>
-          <option value="REJECT">{{ zhCN.recon.rejectChannel }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.recon.remark }}</span>
-        <input v-model="reviewForm.remark" data-testid="review-remark" required />
-      </label>
+      <el-form-item :label="zhCN.recon.decision">
+        <el-select v-model="reviewForm.decision" data-testid="review-decision">
+        <el-option value="CONFIRM" :label="zhCN.recon.confirmChannel" />
+        <el-option value="REJECT" :label="zhCN.recon.rejectChannel" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.recon.remark">
+        <el-input v-model="reviewForm.remark" data-testid="review-remark" required />
+      </el-form-item>
     </FormDialog>
     <FormDialog :visible="actionOpen" :title="zhCN.recon.action" :saving="saving" @submit="submitAction" @cancel="actionOpen = false">
-      <label class="field">
-        <span>{{ zhCN.recon.action }}</span>
-        <select v-model="actionForm.action" data-testid="action-type">
-          <option v-for="item in RECON_ACTIONS" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.prize.reason }}</span>
-        <input v-model="actionForm.reason" data-testid="action-reason" />
-      </label>
-      <label v-if="actionForm.action === 'MANUAL_GRANT'" class="field">
-        <span>{{ zhCN.record.userId }}</span>
-        <input v-model="actionForm.userId" />
-      </label>
-      <label v-if="actionForm.action === 'MANUAL_GRANT'" class="field">
-        <span>{{ zhCN.record.prizeId }}</span>
-        <input v-model="actionForm.prizeId" />
-      </label>
+      <el-form-item :label="zhCN.recon.action">
+        <el-select v-model="actionForm.action" data-testid="action-type">
+        <el-option v-for="item in RECON_ACTIONS" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.prize.reason">
+        <el-input v-model="actionForm.reason" data-testid="action-reason" />
+      </el-form-item>
+      <el-form-item v-if="actionForm.action === 'MANUAL_GRANT'" :label="zhCN.record.userId">
+        <el-input v-model="actionForm.userId" />
+      </el-form-item>
+      <el-form-item v-if="actionForm.action === 'MANUAL_GRANT'" :label="zhCN.record.prizeId">
+        <el-input v-model="actionForm.prizeId" />
+      </el-form-item>
     </FormDialog>
   </section>
 </template>
