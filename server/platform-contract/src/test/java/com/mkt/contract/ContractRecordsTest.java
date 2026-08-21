@@ -29,9 +29,8 @@ class ContractRecordsTest {
     }
 
     @Test
-    void riskSubjectRequiresIp() {
-        assertThatThrownBy(() -> new RiskSubject(1L, " ", "dev", null))
-                .isInstanceOf(IllegalArgumentException.class);
+    void riskSubjectAllowsMissingIp() {
+        assertThat(new RiskSubject(1L, " ", "dev", null).ip()).isNull();
         RiskSubject subject = new RiskSubject(1L, "127.0.0.1", null, null);
         assertThat(subject.ip()).isEqualTo("127.0.0.1");
         assertThat(subject.simulated()).isFalse();
@@ -118,6 +117,8 @@ class ContractRecordsTest {
                 new GrantContext("manual", List.of(BypassRule.REGION), 8L, false, 12L);
         assertThat(withRules.bypassRules()).containsExactly(BypassRule.REGION);
         assertThat(withRules.elapsedSeconds()).isEqualTo(12L);
+        assertThat(withRules.ip()).isNull();
         assertThat(new GrantContext(null, null, null, false, null).bypassRules()).isEmpty();
+        assertThat(GrantContext.defaults().withClient("203.0.113.8", "dev-1").ip()).isEqualTo("203.0.113.8");
     }
 }

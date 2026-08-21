@@ -41,6 +41,15 @@ describe("route guards", () => {
     expect(decision).toEqual({ type: "redirect", path: "/dashboard" });
   });
 
+  it("sends must-change users to the password page", async () => {
+    const ensureSession = vi.fn();
+    const decision = await resolveAuthNavigation(
+      { path: "/dashboard", fullPath: "/dashboard" },
+      { routesReady: true, sessionKnown: true, mustChangePassword: true, ensureSession },
+    );
+    expect(decision).toEqual({ type: "redirect", path: "/change-password" });
+  });
+
   it("lets ready sessions through protected routes", async () => {
     const ensureSession = vi.fn();
     const decision = await resolveAuthNavigation(

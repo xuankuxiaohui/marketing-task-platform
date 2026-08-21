@@ -237,11 +237,9 @@ class TaskClaimAppServiceTest {
         group.setName("互斥");
         group.setCrossCycle(0);
         mutex.insert(group);
-        long first = publish("a", "NONE", null);
-        definitions.getById(first).setMutexGroupId(group.getId());
+        long first = publish("a", "NONE", null, "mutex_a");
         service.start(first, 9L, "1.1.1.1", null, "WEB");
-        long second = publish("b", "NONE", null);
-        definitions.getById(second).setMutexGroupId(group.getId());
+        long second = publish("b", "NONE", null, "mutex_a");
         assertThatThrownBy(() -> service.start(second, 9L, "1.1.1.1", null, "WEB"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
@@ -258,6 +256,17 @@ class TaskClaimAppServiceTest {
     }
 
     @Test
+    void publishedDraftCycleDoesNotChangeClaimCycleKey() {
+        long taskId = publish("cyc", "DAILY", null);
+        TaskDefinitionEntity definition = definitions.getById(taskId);
+        definition.setCycleType("NONE");
+        definitions.update(definition);
+        TaskStartResponse started = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        TaskInstanceEntity row = instances.getById(started.instanceId());
+        assertThat(row.getCycleKey()).isEqualTo("20260819");
+    }
+
+    @Test
     void expireAtIsNowPlusDaysWhenUnbounded() {
         long taskId = publishOpen("open");
         TaskStartResponse started = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
@@ -266,14 +275,25 @@ class TaskClaimAppServiceTest {
     }
 
     private long publish(String code, String cycleType, TaskGrayCommand gray) {
-        return publish(code, cycleType, gray, Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"));
+        return publish(code, cycleType, gray, Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"), null);
+    }
+
+    private long publish(String code, String cycleType, TaskGrayCommand gray, String mutexGroupCode) {
+        return publish(
+                code,
+                cycleType,
+                gray,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2027-01-01T00:00:00Z"),
+                mutexGroupCode);
     }
 
     private long publishOpen(String code) {
-        return publish(code, "NONE", null, null, null);
+        return publish(code, "NONE", null, null, null, null);
     }
 
-    private long publish(String code, String cycleType, TaskGrayCommand gray, Instant start, Instant end) {
+    private long publish(
+            String code, String cycleType, TaskGrayCommand gray, Instant start, Instant end, String mutexGroupCode) {
         TaskDefinitionEntity entity = new TaskDefinitionEntity();
         entity.setCode(code);
         entity.setName(code);
@@ -298,7 +318,7 @@ class TaskClaimAppServiceTest {
                 null,
                 null,
                 null,
-                null,
+                mutexGroupCode,
                 gray == null ? new TaskGrayCommand("NONE", null, null, null, null) : gray,
                 new TaskFilterCommand(null, List.of(), List.of()),
                 List.of(

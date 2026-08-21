@@ -45,8 +45,9 @@ class PortalAuthControllerTest {
     void registerLoginLogoutAndUsernameAvailable() throws Exception {
         when(authService.usernameAvailable(anyString(), anyString()))
                 .thenReturn(new UsernameAvailableResponse(true, null));
-        when(authService.register(any(), any())).thenReturn(new PortalAuthResponse("client:t", 9L, "用户9"));
-        when(authService.login(any(), any())).thenReturn(AuthAttempt.ok(new PortalAuthResponse("client:t2", 9L, "用户9")));
+        when(authService.register(any(), any())).thenReturn(new PortalAuthResponse("client:t", 9L, "用户9", false));
+        when(authService.login(any(), any()))
+                .thenReturn(AuthAttempt.ok(new PortalAuthResponse("client:t2", 9L, "用户9", false)));
         doNothing().when(authService).logout(any());
 
         mvc.perform(get("/api/common/auth/username-available").param("username", "bob_01"))
@@ -75,7 +76,7 @@ class PortalAuthControllerTest {
     void profileAndPassword() throws Exception {
         UserContext.set(new UserPrincipal(9L, "client", "bob_01"));
         when(authService.profile(9L))
-                .thenReturn(new PortalProfileResponse(9L, "bob_01", "用户9", "BJ", "3", "vip", List.of("a"), 12L));
+                .thenReturn(new PortalProfileResponse(9L, "bob_01", "用户9", "BJ", "3", "vip", List.of("a"), 12L, false));
         Mockito.doNothing().when(authService).updateNickname(anyLong(), anyString());
         Mockito.doNothing().when(authService).changePassword(anyLong(), any(), any());
         mvc.perform(get("/api/common/auth/profile"))

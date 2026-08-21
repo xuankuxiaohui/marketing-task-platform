@@ -35,6 +35,7 @@ async function mountLogin(query: Record<string, string> = {}) {
     routes: [
       { path: "/login", component: LoginPage },
       { path: "/dashboard", component: { template: "<div />" } },
+      { path: "/change-password", component: { template: "<div />" } },
       { path: "/system/users", component: { template: "<div />" } },
     ],
   });
@@ -91,6 +92,26 @@ describe("LoginPage", () => {
       captchaCode: "ab12",
     });
     expect(router.currentRoute.value.path).toBe("/dashboard");
+  });
+
+  it("sends first-login admin to change-password", async () => {
+    loginMock.mockResolvedValue(
+      ok<AdminLoginData>({
+        userId: 1,
+        nickname: "超管",
+        roles: ["super-admin"],
+        permissions: ["identity:admin-user:query"],
+        mustChangePassword: true,
+        csrfToken: "csrf-1",
+      }),
+    );
+    const { wrapper, router } = await mountLogin();
+    await wrapper.get('[data-testid="login-username"]').setValue("admin");
+    await wrapper.get('[data-testid="login-password"]').setValue("Admin123!x");
+    await wrapper.get('[data-testid="login-captcha"]').setValue("ab12");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/change-password");
   });
 
   it("refreshes captcha when captcha is invalid", async () => {

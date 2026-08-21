@@ -39,3 +39,9 @@ export function fetchMenus(): Promise<Result<AdminMenuNode[]>> {
 export function fetchProfile(): Promise<Result<AdminProfileData>> {
   return request<AdminProfileData>("GET", "/admin/auth/profile");
 }
+
+export type ChangePasswordBody = Json<paths["/admin/auth/password"]["put"]["requestBody"]>;
+
+export function changePassword(body: ChangePasswordBody): Promise<Result<{ ok?: boolean }>> {
+  return request("PUT", "/admin/auth/password", body);
+}

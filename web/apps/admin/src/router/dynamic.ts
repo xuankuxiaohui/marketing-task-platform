@@ -5,6 +5,7 @@ import ComingSoonPage from "@/views/placeholder/ComingSoonPage.vue";
 const viewModules = import.meta.glob("../views/**/*.vue");
 
 export const LOGIN_ROUTE = "/login";
+export const CHANGE_PASSWORD_ROUTE = "/change-password";
 export const DASHBOARD_ROUTE = "/dashboard";
 export const ADMIN_ROOT_NAME = "AdminRoot";
 

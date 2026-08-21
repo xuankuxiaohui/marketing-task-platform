@@ -147,6 +147,10 @@ public class PortalUserEntity {
         this.mustChangePassword = mustChangePassword;
     }
 
+    public boolean mustChangePasswordFlag() {
+        return mustChangePassword != null && mustChangePassword == 1;
+    }
+
     public LocalDateTime getRegisteredAt() {
         return registeredAt;
     }

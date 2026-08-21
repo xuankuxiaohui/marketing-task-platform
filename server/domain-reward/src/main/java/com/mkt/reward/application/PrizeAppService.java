@@ -134,10 +134,13 @@ public class PrizeAppService {
         applyWritable(existing, normalized, category, !frozen);
         if (!frozen) {
             existing.setTotalStock(normalized.totalStock());
-            existing.setRemainingStock(normalized.totalStock());
         }
         existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         prizes.update(existing);
+        if (!frozen) {
+            prizes.resetDraftStock(id);
+            existing.setRemainingStock(normalized.totalStock());
+        }
         return toResponse(existing);
     }
 

@@ -14,6 +14,7 @@ import com.mkt.signin.support.SigninErrorCodes;
 import com.mkt.signin.support.SigninSettings;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -60,19 +62,33 @@ public class SigninPortalController {
 
     @PostMapping("/{activityId}/checkin")
     @Operation(summary = "今日签到")
-    public Result<SigninActionResponse> checkin(@PathVariable long activityId) {
+    public Result<SigninActionResponse> checkin(
+            @PathVariable long activityId,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
+            HttpServletRequest request) {
         long userId = UserContext.require().userId();
         rateLimit(userId);
-        return Result.ok(portal.checkin(activityId, userId));
+        return Result.ok(portal.checkin(activityId, userId, remoteIp(request), deviceId));
     }
 
     @PostMapping("/{activityId}/catchup")
     @Operation(summary = "补签")
     public Result<SigninActionResponse> catchup(
-            @PathVariable long activityId, @Valid @RequestBody CatchupCommand command) {
+            @PathVariable long activityId,
+            @Valid @RequestBody CatchupCommand command,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
+            HttpServletRequest request) {
         long userId = UserContext.require().userId();
         rateLimit(userId);
-        return Result.ok(portal.catchup(activityId, userId, command.signDate()));
+        return Result.ok(portal.catchup(activityId, userId, command.signDate(), remoteIp(request), deviceId));
+    }
+
+    private static String remoteIp(HttpServletRequest request) {
+        if (request == null || request.getRemoteAddr() == null || request.getRemoteAddr().isBlank()) {
+            return null;
+        }
+        String ip = request.getRemoteAddr();
+        return "0.0.0.0".equals(ip) ? null : ip;
     }
 
     private void rateLimit(long userId) {

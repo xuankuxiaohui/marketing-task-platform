@@ -13,6 +13,7 @@ export const useSessionStore = defineStore("session", () => {
   const userRole = ref("");
   const tags = ref<string[]>([]);
   const pointsBalance = ref(0);
+  const mustChangePassword = ref(false);
 
   const authenticated = computed(() => Boolean(token.value));
 
@@ -25,6 +26,7 @@ export const useSessionStore = defineStore("session", () => {
     persistToken(data.token ?? "");
     userId.value = data.userId != null ? Number(data.userId) : null;
     nickname.value = data.nickname ?? "";
+    mustChangePassword.value = Boolean(data.mustChangePassword);
   }
 
   function setProfile(data: PortalProfileData): void {
@@ -36,6 +38,13 @@ export const useSessionStore = defineStore("session", () => {
     userRole.value = data.userRole ?? "";
     tags.value = [...(data.tags ?? [])];
     pointsBalance.value = Number(data.pointsBalance ?? 0);
+    if (data.mustChangePassword != null) {
+      mustChangePassword.value = Boolean(data.mustChangePassword);
+    }
+  }
+
+  function setMustChangePassword(value: boolean): void {
+    mustChangePassword.value = value;
   }
 
   function setPointsBalance(balance: number): void {
@@ -52,6 +61,7 @@ export const useSessionStore = defineStore("session", () => {
     userRole.value = "";
     tags.value = [];
     pointsBalance.value = 0;
+    mustChangePassword.value = false;
   }
 
   return {
@@ -64,9 +74,11 @@ export const useSessionStore = defineStore("session", () => {
     userRole,
     tags,
     pointsBalance,
+    mustChangePassword,
     authenticated,
     setLogin,
     setProfile,
+    setMustChangePassword,
     setPointsBalance,
     clear,
   };

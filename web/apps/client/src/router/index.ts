@@ -99,6 +99,7 @@ router.beforeEach(async (to) => {
     { path: to.path, fullPath: to.fullPath },
     {
       sessionKnown: session.authenticated && session.userId != null,
+      mustChangePassword: session.mustChangePassword,
       ensureSession: () => ensurePortalSession(),
     },
   );

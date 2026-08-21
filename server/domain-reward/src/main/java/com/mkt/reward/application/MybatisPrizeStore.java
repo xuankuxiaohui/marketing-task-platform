@@ -40,7 +40,7 @@ public class MybatisPrizeStore implements PrizeStore {
 
     @Override
     public int update(PrizeEntity entity) {
-        return mapper.updateById(entity);
+        return mapper.updateIgnoringRemainingStock(entity);
     }
 
     @Override
@@ -78,5 +78,10 @@ public class MybatisPrizeStore implements PrizeStore {
     @Override
     public int replenish(long id, int amount) {
         return mapper.replenish(id, amount);
+    }
+
+    @Override
+    public int resetDraftStock(long id) {
+        return mapper.resetDraftStock(id);
     }
 }

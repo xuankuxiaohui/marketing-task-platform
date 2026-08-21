@@ -227,6 +227,39 @@ class PrizeAppServiceTest {
     }
 
     @Test
+    void metadataUpdateDoesNotOverwriteRemainingStock() {
+        var created = service.create(pointsCommand("pts_stock", 20));
+        service.enable(created.id(), new PrizeConfirmCommand(true));
+        assertThat(prizes.deductOne(created.id())).isEqualTo(1);
+        assertThat(prizes.getById(created.id()).getRemainingStock()).isEqualTo(19);
+        service.disable(created.id(), new PrizeConfirmCommand(true));
+        assertThat(prizes.getById(created.id()).getRemainingStock()).isEqualTo(19);
+        service.enable(created.id(), new PrizeConfirmCommand(true));
+        service.update(
+                created.id(),
+                new PrizeSaveCommand(
+                        "pts_stock",
+                        "积分库存",
+                        null,
+                        null,
+                        BuiltinCategories.POINTS,
+                        Map.of("points", 10),
+                        null,
+                        20,
+                        0,
+                        0,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        "AUTO",
+                        null,
+                        null,
+                        null,
+                        null));
+        assertThat(prizes.getById(created.id()).getRemainingStock()).isEqualTo(19);
+    }
+
+    @Test
     void deleteDraftRejectedWhenSnapshotReferences() {
         var created = service.create(pointsCommand("pts_d", 8));
         snapshots.referenced.add(created.id());

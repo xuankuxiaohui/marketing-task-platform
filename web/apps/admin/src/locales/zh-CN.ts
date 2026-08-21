@@ -8,6 +8,14 @@ export const zhCN = {
     submit: "登录",
     captchaAlt: "验证码，点击刷新",
   },
+  password: {
+    title: "修改密码",
+    hint: "首次登录或重置后必须修改密码",
+    oldPassword: "原密码",
+    newPassword: "新密码",
+    submit: "确认修改",
+    success: "密码已更新",
+  },
   dashboard: {
     title: "工作台",
     welcome: "欢迎使用营销任务平台",
@@ -331,7 +339,12 @@ export const zhCN = {
   },
   rule: {
     title: "风控规则",
-    noApiHint: "GET/PUT /admin/risk/rules 未装配，本页不发明规则读写契约。",
+    enabled: "启用",
+    threshold: "阈值",
+    windowSeconds: "窗口（秒）",
+    action: "命中动作",
+    save: "保存",
+    loadFailed: "规则加载失败",
   },
   cases: {
     title: "命中与处置",

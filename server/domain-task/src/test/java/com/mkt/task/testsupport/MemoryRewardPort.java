@@ -23,6 +23,7 @@ public final class MemoryRewardPort implements RewardPort {
         WON,
         RETRYABLE,
         PERMANENT,
+        PERMANENT_STATUS,
         RETRY_PENDING_STATUS
     }
 
@@ -39,6 +40,8 @@ public final class MemoryRewardPort implements RewardPort {
             case WON -> new GrantResult(2L, GrantStatus.WON, FulfillmentStatus.NONE, prizeId, false);
             case RETRYABLE -> throw new RetryableGrantException(RetryableGrantReason.STOCK_INSUFFICIENT);
             case PERMANENT -> throw new PermanentGrantException(PermanentGrantReason.PRIZE_DISABLED);
+            case PERMANENT_STATUS ->
+                new GrantResult(4L, GrantStatus.PERMANENT_FAILED, FulfillmentStatus.NONE, prizeId, true);
             case RETRY_PENDING_STATUS ->
                 new GrantResult(3L, GrantStatus.RETRY_PENDING, FulfillmentStatus.NONE, prizeId, false);
         };

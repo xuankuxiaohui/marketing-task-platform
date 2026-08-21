@@ -67,4 +67,40 @@
         WHERE id = #{id}
           AND deleted = 0
     </update>
+
+    <update id="updateIgnoringRemainingStock">
+        UPDATE rwd_prize
+        SET code = #{code},
+            name = #{name},
+            image_url = #{imageUrl},
+            description = #{description},
+            category_code = #{categoryCode},
+            type_params = #{typeParams},
+            reward_target = #{rewardTarget},
+            fulfillment_mode = #{fulfillmentMode},
+            unit_cost_fen = #{unitCostFen},
+            total_stock = #{totalStock},
+            daily_claim_limit = #{dailyClaimLimit},
+            total_claim_limit = #{totalClaimLimit},
+            region_limit = #{regionLimit},
+            level_limit = #{levelLimit},
+            tag_limit = #{tagLimit},
+            claim_mode = #{claimMode},
+            recon_action_policy = #{reconActionPolicy},
+            expire_hours = #{expireHours},
+            group_id = #{groupId},
+            status = #{status},
+            ext_config = #{extConfig},
+            deleted = #{deleted},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="resetDraftStock">
+        UPDATE rwd_prize
+        SET remaining_stock = total_stock
+        WHERE id = #{id}
+          AND deleted = 0
+          AND status = 'DRAFT'
+    </update>
 </mapper>

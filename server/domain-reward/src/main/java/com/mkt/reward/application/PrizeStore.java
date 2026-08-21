@@ -35,4 +35,6 @@ public interface PrizeStore {
     int restoreOne(long id);
 
     int replenish(long id, int amount);
+
+    int resetDraftStock(long id);
 }

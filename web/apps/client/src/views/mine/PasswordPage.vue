@@ -5,11 +5,13 @@ import { Button, Field, NavBar, showSuccessToast } from "vant";
 import { isFail, isOk } from "@mkt/shared";
 import { changePassword } from "@/api/auth";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { portalPasswordSatisfied } from "@/utils/password";
 
 defineOptions({ name: "PasswordPage" });
 
 const router = useRouter();
+const session = useSessionStore();
 const oldPassword = ref("");
 const newPassword = ref("");
 const errorMessage = ref("");
@@ -35,6 +37,7 @@ async function submit(): Promise<void> {
       newPassword: newPassword.value,
     });
     if (isOk(result)) {
+      useSessionStore().setMustChangePassword(false);
       showSuccessToast(zhCN.password.success);
       await router.replace("/mine");
       return;
@@ -50,7 +53,11 @@ async function submit(): Promise<void> {
 
 <template>
   <section>
-    <NavBar :title="zhCN.password.title" left-arrow @click-left="router.back()" />
+    <NavBar
+      :title="zhCN.password.title"
+      :left-arrow="!session.mustChangePassword"
+      @click-left="session.mustChangePassword ? undefined : router.back()"
+    />
     <form @submit.prevent="submit">
       <Field
         v-model="oldPassword"

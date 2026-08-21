@@ -83,6 +83,16 @@ public final class StepEngine {
 
     public void enter(
             TaskInstanceEntity instance, SnapshotContent snapshot, UserAttributes attrs, CrowdResolver crowds) {
+        enter(instance, snapshot, attrs, crowds, null, null);
+    }
+
+    public void enter(
+            TaskInstanceEntity instance,
+            SnapshotContent snapshot,
+            UserAttributes attrs,
+            CrowdResolver crowds,
+            String ip,
+            String deviceId) {
         List<TaskStepCommand> steps = snapshot.steps() == null ? List.of() : snapshot.steps();
         Instant now = clock.instant();
         LocalDateTime utc = TaskTime.toUtc(now);
@@ -98,7 +108,7 @@ public final class StepEngine {
             row.setCreatedAt(utc);
             instances.insertStep(row);
         }
-        cascade(instance, snapshot, attrs, crowds, 0, true, new ArrayList<>());
+        cascade(instance, snapshot, attrs, crowds, 0, true, new ArrayList<>(), ip, deviceId);
     }
 
     public StepAdvanceResult click(
@@ -107,7 +117,18 @@ public final class StepEngine {
             SnapshotContent snapshot,
             UserAttributes attrs,
             CrowdResolver crowds) {
-        return completeExternal(Entry.CLICK, instance, step, snapshot, attrs, crowds, null);
+        return click(instance, step, snapshot, attrs, crowds, null, null);
+    }
+
+    public StepAdvanceResult click(
+            TaskInstanceEntity instance,
+            TaskInstanceStepEntity step,
+            SnapshotContent snapshot,
+            UserAttributes attrs,
+            CrowdResolver crowds,
+            String ip,
+            String deviceId) {
+        return completeExternal(Entry.CLICK, instance, step, snapshot, attrs, crowds, null, ip, deviceId);
     }
 
     public StepAdvanceResult callback(
@@ -117,11 +138,23 @@ public final class StepEngine {
             UserAttributes attrs,
             CrowdResolver crowds,
             String bizNo) {
+        return callback(instance, step, snapshot, attrs, crowds, bizNo, null, null);
+    }
+
+    public StepAdvanceResult callback(
+            TaskInstanceEntity instance,
+            TaskInstanceStepEntity step,
+            SnapshotContent snapshot,
+            UserAttributes attrs,
+            CrowdResolver crowds,
+            String bizNo,
+            String ip,
+            String deviceId) {
         if (bizNo != null && !bizNo.isBlank()) {
             instances.updateLastBizNo(step.getId(), bizNo.trim());
             step.setLastBizNo(bizNo.trim());
         }
-        return completeExternal(Entry.CALLBACK, instance, step, snapshot, attrs, crowds, null);
+        return completeExternal(Entry.CALLBACK, instance, step, snapshot, attrs, crowds, null, ip, deviceId);
     }
 
     public StepAdvanceResult progress(
@@ -154,7 +187,7 @@ public final class StepEngine {
         if (value < 1 || value > 1000) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
-        return accumulate(instance, step, snapshot, attrs, crowds, value);
+        return accumulate(instance, step, snapshot, attrs, crowds, value, null, null);
     }
 
     private StepAdvanceResult completeExternal(
@@ -164,7 +197,9 @@ public final class StepEngine {
             SnapshotContent snapshot,
             UserAttributes attrs,
             CrowdResolver crowds,
-            Integer progressCurrent) {
+            Integer progressCurrent,
+            String ip,
+            String deviceId) {
         StepAdvanceResult blocked = precheck(entry, instance, step, snapshot);
         if (blocked != null) {
             return blocked;
@@ -192,7 +227,7 @@ public final class StepEngine {
                 }
                 appendStepComplete(instance, current);
                 List<RewardFeedbackView> feedback = new ArrayList<>();
-                cascade(instance, snapshot, attrs, crowds, seqOf(current), false, feedback);
+                cascade(instance, snapshot, attrs, crowds, seqOf(current), false, feedback, ip, deviceId);
                 TaskInstanceEntity fresh = instances.getById(instance.getId());
                 TaskInstanceStepEntity after = reloadStep(instance.getId(), current.getStepCode());
                 return snapshotOf(fresh == null ? instance : fresh, after == null ? current : after, snapshot, feedback, false);
@@ -212,7 +247,9 @@ public final class StepEngine {
             SnapshotContent snapshot,
             UserAttributes attrs,
             CrowdResolver crowds,
-            int value) {
+            int value,
+            String ip,
+            String deviceId) {
         Integer target = progressTarget(snapshot, step.getStepCode());
         int goal = target == null ? Integer.MAX_VALUE : target;
         for (int attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
@@ -228,7 +265,8 @@ public final class StepEngine {
             }
             int newCur = (current.getProgressCurrent() == null ? 0 : current.getProgressCurrent()) + value;
             if (newCur >= goal) {
-                return completeExternal(Entry.PROGRESS, instance, current, snapshot, attrs, crowds, newCur);
+                return completeExternal(
+                        Entry.PROGRESS, instance, current, snapshot, attrs, crowds, newCur, ip, deviceId);
             }
             int version = current.getVersion() == null ? 0 : current.getVersion();
             int affected = instances.addProgressCas(current.getId(), version, newCur);
@@ -287,7 +325,9 @@ public final class StepEngine {
             CrowdResolver crowds,
             int fromSeq,
             boolean sameRequestInsert,
-            List<RewardFeedbackView> feedback) {
+            List<RewardFeedbackView> feedback,
+            String ip,
+            String deviceId) {
         int max = settings.stepMaxCount();
         int seq = fromSeq;
         for (int i = 0; i < max; i++) {
@@ -306,7 +346,7 @@ public final class StepEngine {
                 continue;
             }
             if (StepTypes.REWARD.equals(next.getType())) {
-                if (!grantReward(instance, next, snapshot, sameRequestInsert, now, feedback)) {
+                if (!grantReward(instance, next, snapshot, sameRequestInsert, now, feedback, ip, deviceId)) {
                     return;
                 }
                 seq = seqOf(next);
@@ -337,7 +377,7 @@ public final class StepEngine {
         }
         Instant now = clock.instant();
         holdComplete(instance, step, now, null);
-        cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>());
+        cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>(), null, null);
     }
 
     private boolean grantReward(
@@ -346,7 +386,9 @@ public final class StepEngine {
             SnapshotContent snapshot,
             boolean sameRequestInsert,
             Instant now,
-            List<RewardFeedbackView> feedback) {
+            List<RewardFeedbackView> feedback,
+            String ip,
+            String deviceId) {
         if (rewards == null) {
             return false;
         }
@@ -362,7 +404,7 @@ public final class StepEngine {
             }
         }
         boolean simulated = instance.getSimulated() != null && instance.getSimulated() == 1;
-        GrantContext ctx = new GrantContext(null, List.of(), null, simulated, elapsed);
+        GrantContext ctx = new GrantContext(null, List.of(), null, simulated, elapsed, ip, deviceId);
         try {
             GrantResult result = rewards.grant(
                     def.prizeId(),
@@ -377,20 +419,28 @@ public final class StepEngine {
                 feedback.add(new RewardFeedbackView(name, 1));
                 return true;
             }
+            if (result != null && result.status() == GrantStatus.PERMANENT_FAILED) {
+                skipPermanentFailed(step, now);
+                return true;
+            }
             return false;
         } catch (RetryableGrantException ex) {
             return false;
         } catch (PermanentGrantException ex) {
-            int version = step.getVersion() == null ? 0 : step.getVersion();
-            int affected = instances.skipStepCas(
-                    step.getId(), version, TaskTime.toUtc(now), SkipReasons.GRANT_PERMANENT_FAILED);
-            if (affected == 1) {
-                step.setStatus(StepStatuses.SKIPPED);
-                step.setSkipReason(SkipReasons.GRANT_PERMANENT_FAILED);
-                step.setCompletedAt(TaskTime.toUtc(now));
-                step.setVersion(version + 1);
-            }
+            skipPermanentFailed(step, now);
             return true;
+        }
+    }
+
+    private void skipPermanentFailed(TaskInstanceStepEntity step, Instant now) {
+        int version = step.getVersion() == null ? 0 : step.getVersion();
+        int affected = instances.skipStepCas(
+                step.getId(), version, TaskTime.toUtc(now), SkipReasons.GRANT_PERMANENT_FAILED);
+        if (affected == 1) {
+            step.setStatus(StepStatuses.SKIPPED);
+            step.setSkipReason(SkipReasons.GRANT_PERMANENT_FAILED);
+            step.setCompletedAt(TaskTime.toUtc(now));
+            step.setVersion(version + 1);
         }
     }
 

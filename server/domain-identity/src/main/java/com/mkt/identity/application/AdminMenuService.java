@@ -35,6 +35,11 @@ public class AdminMenuService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return new AdminProfileResponse(
-                user.getId(), user.getUsername(), user.getNickname(), users.listRoleCodes(userId), cache.codesFor(userId));
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                users.listRoleCodes(userId),
+                cache.codesFor(userId),
+                user.mustChangePasswordFlag());
     }
 }

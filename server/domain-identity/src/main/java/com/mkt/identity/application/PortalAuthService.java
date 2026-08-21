@@ -127,7 +127,7 @@ public class PortalAuthService {
         String token = sessions.loginClient(entity.getId(), max, deviceId, username, context.ip());
         users.markLoginSuccess(entity.getId(), now);
         appendEvent(EventCodes.AUTH_REGISTER_SUCCESS, entity.getId(), context.ip(), deviceId);
-        return new PortalAuthResponse(token, entity.getId(), nickname);
+        return new PortalAuthResponse(token, entity.getId(), nickname, false);
     }
 
     /**
@@ -174,7 +174,8 @@ public class PortalAuthService {
             String token = sessions.loginClient(user.getId(), max, deviceId, user.getUsername(), context.ip());
             users.markLoginSuccess(user.getId(), now);
             appendEvent(EventCodes.AUTH_LOGIN_SUCCESS, user.getId(), context.ip(), deviceId);
-            return AuthAttempt.ok(new PortalAuthResponse(token, user.getId(), user.getNickname()));
+            return AuthAttempt.ok(
+                    new PortalAuthResponse(token, user.getId(), user.getNickname(), user.mustChangePasswordFlag()));
         } catch (BusinessException ex) {
             return AuthAttempt.rejected(ex);
         }
@@ -196,7 +197,8 @@ public class PortalAuthService {
                 user.getUserLevel(),
                 user.getUserRole(),
                 UserAttributeConvert.parseTags(user.getTags()),
-                points);
+                points,
+                user.mustChangePasswordFlag());
     }
 
     @Transactional

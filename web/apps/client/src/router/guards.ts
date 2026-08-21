@@ -1,6 +1,7 @@
 export const PUBLIC_PATHS = new Set(["/login", "/register"]);
 export const LOGIN_ROUTE = "/login";
 export const HOME_ROUTE = "/home";
+export const PASSWORD_ROUTE = "/mine/password";
 
 export type GuardTo = {
   path: string;
@@ -13,6 +14,7 @@ export type GuardDecision =
 
 export type GuardDeps = {
   sessionKnown: boolean;
+  mustChangePassword?: boolean;
   ensureSession: () => Promise<boolean>;
 };
 
@@ -21,21 +23,28 @@ export function isPublicPath(path: string): boolean {
 }
 
 export async function resolveAuthNavigation(to: GuardTo, deps: GuardDeps): Promise<GuardDecision> {
+  const mustChange = Boolean(deps.mustChangePassword);
   if (isPublicPath(to.path)) {
     if (to.path === LOGIN_ROUTE || to.path === "/register") {
       const ok = deps.sessionKnown ? true : await deps.ensureSession();
       if (ok) {
-        return { type: "redirect", path: HOME_ROUTE };
+        return { type: "redirect", path: mustChange ? PASSWORD_ROUTE : HOME_ROUTE };
       }
     }
     return { type: "next" };
   }
   if (deps.sessionKnown) {
+    if (mustChange && to.path !== PASSWORD_ROUTE) {
+      return { type: "redirect", path: PASSWORD_ROUTE };
+    }
     return { type: "next" };
   }
   const ok = await deps.ensureSession();
   if (!ok) {
     return { type: "redirect", path: LOGIN_ROUTE, query: { redirect: to.fullPath } };
+  }
+  if (mustChange && to.path !== PASSWORD_ROUTE) {
+    return { type: "redirect", path: PASSWORD_ROUTE };
   }
   return { type: "next" };
 }

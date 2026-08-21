@@ -109,7 +109,8 @@ public class TaskStepAppService {
         }
         rejectIfFrozen(userId, TaskErrorCodes.INSTANCE_FROZEN);
         TaskInstanceStepEntity step = requireStep(instanceId, stepCode);
-        StepAdvanceResult result = engine.click(instance, step, snapshotOf(instance), attrs(userId), crowds(userId));
+        StepAdvanceResult result =
+                engine.click(instance, step, snapshotOf(instance), attrs(userId), crowds(userId), ip, deviceId);
         return toClick(result, platform);
     }
 

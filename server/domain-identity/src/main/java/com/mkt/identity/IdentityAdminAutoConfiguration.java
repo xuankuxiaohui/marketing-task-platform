@@ -7,6 +7,7 @@ import com.mkt.identity.application.AdminUserStore;
 import com.mkt.identity.support.AdminStpInterface;
 import com.mkt.identity.support.CsrfFilter;
 import com.mkt.identity.support.ForbiddenAuditSink;
+import com.mkt.identity.support.MustChangePasswordFilter;
 import com.mkt.identity.support.SessionAuthFilter;
 import com.mkt.identity.support.SessionSide;
 import com.mkt.infra.degrade.SessionAvailability;
@@ -54,6 +55,15 @@ public class IdentityAdminAutoConfiguration {
                 registry.addInterceptor(new SaInterceptor()).addPathPatterns("/admin/**");
             }
         };
+    }
+
+    @Bean
+    FilterRegistrationBean<MustChangePasswordFilter> adminMustChangePasswordFilter(AdminUserStore users) {
+        FilterRegistrationBean<MustChangePasswordFilter> bean = new FilterRegistrationBean<>();
+        bean.setFilter(new MustChangePasswordFilter(SessionSide.ADMIN, users, null));
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE + 4);
+        bean.addUrlPatterns("/*");
+        return bean;
     }
 
     @Bean

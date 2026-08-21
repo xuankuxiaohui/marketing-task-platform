@@ -303,15 +303,28 @@ class StepEngineTest {
     }
 
     @Test
+    void rewardPermanentStatusSkipsLikeException() {
+        TaskInstanceEntity instance = insertInstance();
+        rewards.behavior = MemoryRewardPort.Behavior.PERMANENT_STATUS;
+        engine.enter(instance, singleReward(), attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "r");
+        assertThat(step.getStatus()).isEqualTo(StepStatuses.SKIPPED);
+        assertThat(step.getSkipReason()).isEqualTo(SkipReasons.GRANT_PERMANENT_FAILED);
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+    }
+
+    @Test
     void clickThenRewardPassesElapsedSeconds() {
         TaskInstanceEntity instance = insertInstance();
         SnapshotContent snap = clickThenReward();
         engine.enter(instance, snap, attrs(), null);
         TaskInstanceStepEntity click = store.getStep(instance.getId(), "a");
-        engine.click(instance, click, snap, attrs(), null);
+        engine.click(instance, click, snap, attrs(), null, "203.0.113.10", "dev-x");
         assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.COMPLETED);
         assertThat(rewards.calls).hasSize(1);
         assertThat(rewards.calls.get(0).ctx().elapsedSeconds()).isEqualTo(0L);
+        assertThat(rewards.calls.get(0).ctx().ip()).isEqualTo("203.0.113.10");
+        assertThat(rewards.calls.get(0).ctx().deviceId()).isEqualTo("dev-x");
     }
 
     private TaskInstanceEntity insertInstance() {

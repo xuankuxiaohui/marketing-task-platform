@@ -13,6 +13,7 @@ import com.mkt.kernel.Result;
 import com.mkt.kernel.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
@@ -65,10 +66,21 @@ public class ActivityPortalController {
 
     @PostMapping("/{activityId}/participate")
     @Operation(summary = "参与活动")
-    public Result<ParticipateResponse> participate(@PathVariable long activityId) {
+    public Result<ParticipateResponse> participate(
+            @PathVariable long activityId,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
+            HttpServletRequest request) {
         long userId = UserContext.require().userId();
         rateLimit(userId);
-        return Result.ok(portal.participate(activityId, userId));
+        return Result.ok(portal.participate(activityId, userId, remoteIp(request), deviceId));
+    }
+
+    private static String remoteIp(HttpServletRequest request) {
+        if (request == null || request.getRemoteAddr() == null || request.getRemoteAddr().isBlank()) {
+            return null;
+        }
+        String ip = request.getRemoteAddr();
+        return "0.0.0.0".equals(ip) ? null : ip;
     }
 
     private void rateLimit(long userId) {

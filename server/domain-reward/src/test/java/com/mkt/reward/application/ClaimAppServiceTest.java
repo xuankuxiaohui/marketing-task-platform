@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.mkt.contract.AccountStatus;
 import com.mkt.contract.GrantContext;
 import com.mkt.contract.GrantSource;
+import com.mkt.contract.RetryableGrantException;
+import com.mkt.contract.RetryableGrantReason;
 import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskScene;
@@ -119,7 +121,7 @@ class ClaimAppServiceTest {
                 .getMethod("claim", long.class, long.class)
                 .getAnnotation(Transactional.class);
         assertThat(tx).isNotNull();
-        assertThat(tx.noRollbackFor()).contains(BusinessException.class);
+        assertThat(tx.noRollbackFor()).contains(BusinessException.class, RetryableGrantException.class);
     }
 
     @Test

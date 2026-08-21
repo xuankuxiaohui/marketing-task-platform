@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**编组 J 待验收** / 当前任务：**49 P1 压测与容量复验，已交付** / 更新：2026-08-21
+> 阶段：**编组 J 待验收** / 当前任务：**J 评审必须项已交付** / 更新：2026-08-21
 
 ## 项目一句话
 
@@ -8,39 +8,41 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47、48、49**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 49 PR **#66** 均未合 master）
-- 进行中：无。**编组 J（44–49）已交付，待人类验收。禁止在本分支继续写新任务。**
-- 下一步：人类验收编组 J。合入前 squash 顺序 29 PR #38 → … → 48 PR #65 → 49。**禁止 merge / push / force-push master**。不要开任务 50 或其它新分支开发。
-- Git：工作分支 `task/49-perf`（基线 `origin/task/48-ads` @ `3f38b4f` / 其上叠 48 → 47 → … → 29）。PR **#66** 目标 **master**。唯一长期分支是 **master**
+- 进行中：无。**编组 J（44–49）已交付。评审必须项在 `fix/j-review-mustfix`。禁止写新任务。**
+- 下一步：人类验收编组 J + 本必须项 PR。合入前 squash 顺序 29 PR #38 → … → 48 PR #65 → 49 PR #66 → 本 PR。**禁止 merge / push / force-push master**。不要开任务 50。
+- Git：工作分支 `fix/j-review-mustfix`（基线 `origin/task/49-perf` @ `5c87a1d` / 其上叠 49 → 48 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
 
 ## 关键技术决策（本轮新发生的）
 
-- k6 全量 NFR 性能 1–8：P0 脚本保留；新增 `perf/ad.js`（性能 6：300 QPS、P95 ≤ 100 ms）；`perf/run-full.sh` 跑 1–8 + 容量断言 + EXPLAIN
-- 性能 8 种子 `--scale p1`：SQL 归档 100 万门户用户（`capu*` 不登录）+ 50 万实例 + 500 万 `evt_event_log` 行 + 当前月起分区；k6 token 池仍 2000 HTTP 注册
-- 峰值口径 3000 eps；性能 5 仍按 2 倍余量 6000 eps 施压
-- 慢查询复盘：热路径对照 design §3 已有索引；**不加 V8 / 不改 V1–V4**。积分后台无 `user_id` 的 `ORDER BY created_at` 记为已知形态
-- **5 分钟 k6 不进例行 PR CI**（`run-full.sh` 在 `GITHUB_ACTIONS` 且未设 `ALLOW_K6_SOAK=1` 时直接退出；`PerfCapacityTest` 断言 `ci.yml` 不含 k6）
+- R3.6 / R5.4：`MustChangePasswordFilter` 拦截非改密写路径；登录/资料带 `mustChangePassword`；后台改密页 `/change-password`
+- R26.6：落地 `GET/PUT /admin/risk/rules`（附录 A 范围、`risk:rule:query` / `risk:rule:config`、审计、规则页读写）
+- R26.1：`GrantContext` / `RiskSubject` 传真实 IP / deviceId；空白或 `0.0.0.0` 视为缺失，不再伪造
+- 领取互斥/周期键读已发布快照，不读草稿定义（R13.7 / design §5.5）
+- 奖品元数据更新不覆盖 `remaining_stock`；发放可按含逻辑删除行判定 `PRIZE_DELETED`（design §5.7）
+- 步骤引擎对 `PERMANENT_FAILED` 状态与永久失败异常走同一跳过路径
 
 ## 改过的核心文件
 
-- `perf/ad.js`、`perf/run-full.sh`、`perf/slow-query-review.md`
-- `perf/seed/seed.py`（p1 容量、广告位、分区）、`capacity_check.py`、`explain.sql`、`explain_hot.py`
-- `server/admin-app/src/test/java/com/mkt/admin/PerfCapacityTest.java`
-- `.kiro/specs/platform-v2/tasks.md`（任务 49 勾选）
-- `docs/verification-matrix.md`（任务 49 已交付）
-- `deploy/R31-go-live-checklist.md`（P1 性能 6/8 签署项）
+- `server/domain-identity/**`（改密过滤器、资料/登录响应、portal `mustChangePassword`）
+- `server/domain-risk/**`（规则读写、范围校验、权限）
+- `server/domain-task/**`（快照互斥/周期、claim/step 传 IP）
+- `server/domain-reward/**`（库存、删除奖品、grant 风控主体）
+- `server/platform-contract`（`GrantContext.ip/deviceId`、`RiskSubject.simulated`）
+- `server/domain-signin` / `server/domain-activity`（门户写路径传 IP/device）
+- `web/apps/admin`（改密页、规则页 PUT、守卫）
+- `web/apps/client`（改密守卫、登录 `mustChangePassword`）
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test`（本会话跑）；`cd web && pnpm test` 未改前端，不重跑
-- 矩阵覆盖：verification-matrix 任务 49（NFR 性能 1–8 / `PerfCapacityTest` / `run-full.sh` / 慢查询复盘）
-- 5 分钟 k6 与 p1 千万级种子走 staging compose 签署（`SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh`）。本机无 Docker，未跑 soak；未把 k6 灌进 `.github/workflows/ci.yml`；未用 H2 / Embedded Redis；未杀 3308 / Redis / 8080 / 8081
+- 命令与结果：`cd server && mvn -q -DskipITs test` exit 0；`cd web && pnpm test` exit 0（admin 76 / client 93 / shared 6）
+- 矩阵覆盖：R3.6 / R5.4 / R26.1 / R26.6 / R13.7 / design §5.5 / §5.7
+- 未改 V1–V4；未用 H2 / Embedded Redis；未杀 3308 / Redis / 8080 / 8081；未提交 `perf/seed/__pycache__`
 
 ## 已知问题（只写已证实）
 
-- 任务 29 PR #38 至任务 49 PR #66 均未合 master；叠链 29 → … → 48 → 49
-- PR #65 `3f38b4f` 全 CI 绿（本分支基线）；PR #66 已开，5 分钟 k6 不进例行 CI
-- `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
-- `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
+- 任务 29 PR #38 至任务 49 PR #66 均未合 master；叠链 29 → … → 48 → 49 → 本必须项分支
+- PR #65 `3f38b4f` 全 CI 绿；PR #66 已开，5 分钟 k6 不进例行 CI
+- `GET /admin/reward/records` 仍未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
 - 编组 F 评审必须项 #41 已在任务 31 分支修；待 CI 绿后关 #41
 - 任务 28 已合 master（#36）；评审 #37、测试 #34、运维 #35 只记账不修
@@ -76,10 +78,10 @@
 - 不要削弱 CSRF 双重提交断言
 - 不要用 REQUIRES_NEW 修登录失败落库（05-security §3.4）
 - 不要修任务 22 的 #12 #13、任务 23 的 #15 #16、任务 24 的 #19 #20、任务 25 的 #21 #22、任务 26 的 #26 #27、任务 27 的 #30 #31、任务 28 的 #34 #35
-- 不要在 `task/49-perf` 上继续写新任务
+- 不要在 `task/49-perf` 或 `fix/j-review-mustfix` 上继续写新任务
 - 不要做多轮代码评审
 - 不要杀本机 MySQL 3308 / Redis / admin 8080 / portal 8081
-- 不要发明 `GET/PUT /admin/risk/rules` 或 `GET /admin/reward/records`
+- 不要发明 `GET /admin/reward/records`
 - 不要发明 portal `claimMode` 或改发放/积分后端只为补来源任务 ID
 - 不要把 k6 5 分钟全量灌进例行 PR CI（§7.8 发布签署，不进例行 CI）
 - 不要在 compose 里把 `/internal` 暴露到公网 Nginx
@@ -103,6 +105,6 @@
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 人类验收编组 J（44–49）。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 48 PR #65 → 49 PR #66
+1. 人类验收编组 J（44–49）与本必须项 PR。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 49 PR #66 → 本 PR
 2. staging 签署：`SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh`（portal ×2），归档 `perf/reports/<日期>/`
 3. **停止本会话。不要写任务 50。不要合 master。**

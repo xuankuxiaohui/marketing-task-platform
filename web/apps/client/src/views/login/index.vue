@@ -45,7 +45,12 @@ async function submit(): Promise<void> {
       captchaCode: captchaCode.value,
     });
     if (isOk(result) && result.data) {
-      useSessionStore().setLogin(result.data);
+      const session = useSessionStore();
+      session.setLogin(result.data);
+      if (session.mustChangePassword) {
+        await router.replace("/mine/password");
+        return;
+      }
       await redirectAfterAuth(router, route.query.redirect);
       return;
     }

@@ -34,4 +34,8 @@ public interface PrizeMapper extends BaseMapper<PrizeEntity> {
     int restoreOne(@Param("id") long id);
 
     int replenish(@Param("id") long id, @Param("amount") int amount);
+
+    int updateIgnoringRemainingStock(PrizeEntity entity);
+
+    int resetDraftStock(@Param("id") long id);
 }

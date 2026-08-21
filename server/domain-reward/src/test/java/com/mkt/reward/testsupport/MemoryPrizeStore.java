@@ -47,7 +47,10 @@ public final class MemoryPrizeStore implements PrizeStore {
 
     @Override
     public int update(PrizeEntity entity) {
+        PrizeEntity stored = rows.get(entity.getId());
+        Integer remaining = stored == null ? entity.getRemainingStock() : stored.getRemainingStock();
         rows.put(entity.getId(), entity);
+        entity.setRemainingStock(remaining);
         return 1;
     }
 
@@ -134,6 +137,16 @@ public final class MemoryPrizeStore implements PrizeStore {
         }
         entity.setRemainingStock(entity.getRemainingStock() + amount);
         entity.setTotalStock(entity.getTotalStock() + amount);
+        return 1;
+    }
+
+    @Override
+    public synchronized int resetDraftStock(long id) {
+        PrizeEntity entity = getById(id);
+        if (entity == null || !PrizeStatuses.DRAFT.equals(entity.getStatus())) {
+            return 0;
+        }
+        entity.setRemainingStock(entity.getTotalStock());
         return 1;
     }
 }

@@ -190,6 +190,17 @@ class GrantAppServiceTest {
     }
 
     @Test
+    void grantRiskUsesClientIpNotDummy() {
+        long prizeId = enableAlipay("red_ip", 2);
+        GrantContext ctx = GrantContext.defaults().withClient("203.0.113.9", "dev-9");
+        grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-ip", ctx);
+        assertThat(risk.last.ip()).isEqualTo("203.0.113.9");
+        assertThat(risk.last.deviceId()).isEqualTo("dev-9");
+        grant.grant(prizeId, 8L, GrantSource.TASK_STEP, "s-ip2", GrantContext.defaults());
+        assertThat(risk.last.ip()).isNull();
+    }
+
+    @Test
     void regionMissRejected() {
         long prizeId = enableAlipayLimited("red_reg", 2, 0, 0, List.of("BJ"), null, null);
         assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-reg", GrantContext.defaults()))
@@ -432,9 +443,11 @@ class GrantAppServiceTest {
 
     private static final class StubRisk implements RiskCheckPort {
         boolean reject;
+        RiskSubject last;
 
         @Override
         public RiskVerdict check(RiskScene scene, RiskSubject subject) {
+            last = subject;
             return new RiskVerdict(reject ? RiskAction.REJECT : RiskAction.PASS);
         }
 

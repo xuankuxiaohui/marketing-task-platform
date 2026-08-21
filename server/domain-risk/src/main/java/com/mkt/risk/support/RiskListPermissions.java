@@ -14,6 +14,8 @@ public final class RiskListPermissions {
     public static final String BLACK_IMPORT = "risk:blacklist:import";
     public static final String CASE_QUERY = "risk:case:query";
     public static final String CASE_HANDLE = "risk:case:handle";
+    public static final String RULE_QUERY = "risk:rule:query";
+    public static final String RULE_CONFIG = "risk:rule:config";
 
     private RiskListPermissions() {
     }

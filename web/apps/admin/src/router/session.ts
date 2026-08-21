@@ -47,7 +47,7 @@ export function resetClientSession(current: Router): void {
   usePermissionStore().reset();
   useTagsStore().reset();
   installing = false;
-  const keep = new Set(["LoginPage", ADMIN_ROOT_NAME]);
+  const keep = new Set(["LoginPage", "ChangePasswordPage", ADMIN_ROOT_NAME]);
   for (const route of current.getRoutes()) {
     if (route.name && !keep.has(String(route.name))) {
       current.removeRoute(route.name);

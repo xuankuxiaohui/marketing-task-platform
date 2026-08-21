@@ -15,6 +15,7 @@ public enum AuthErrorCodes implements ErrorCode {
     USERNAME_DUPLICATE("auth.username.duplicate", 400, "用户名已存在"),
     PASSWORD_POLICY_VIOLATED("auth.password.policy-violated", 400, "密码不符合复杂度要求"),
     PASSWORD_OLD_MISMATCH("auth.password.old-mismatch", 400, "原密码不正确"),
+    PASSWORD_MUST_CHANGE("auth.password.must-change", 403, "请先修改密码"),
     PROFILE_NICKNAME_INVALID("auth.profile.nickname-invalid", 400, "昵称格式不正确"),
     ACCOUNT_DISABLED("auth.account.disabled", 403, "账号已停用"),
     ROLE_BUILT_IN("auth.role.built-in", 400, "内置角色不可删除或修改权限集"),

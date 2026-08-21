@@ -43,8 +43,13 @@ async function submit(): Promise<void> {
       captchaCode: captchaCode.value,
     });
     if (isOk(result) && result.data) {
-      useSessionStore().setLogin(result.data);
+      const session = useSessionStore();
+      session.setLogin(result.data);
       await ensureDynamicRoutes(router);
+      if (session.mustChangePassword) {
+        await router.replace("/change-password");
+        return;
+      }
       const redirect =
         typeof route.query.redirect === "string" && route.query.redirect.startsWith("/")
           ? route.query.redirect

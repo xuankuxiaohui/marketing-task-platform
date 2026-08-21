@@ -56,3 +56,27 @@ export function pageHits(
 export function handleCase(body: RiskCaseHandleCommand): Promise<Result<OkResponse>> {
   return request("POST", "/admin/risk/cases/handle", body);
 }
+
+export type RiskRuleResponse = {
+  ruleCode: string;
+  enabled: boolean;
+  threshold: number;
+  windowSeconds?: number | null;
+  action: string;
+  updatedAt?: string;
+};
+
+export type RiskRuleUpdateCommand = {
+  enabled: boolean;
+  threshold: number;
+  windowSeconds?: number | null;
+  action: "REJECT" | "SILENT_REJECT" | "MARK";
+};
+
+export function listRules(): Promise<Result<RiskRuleResponse[]>> {
+  return request("GET", "/admin/risk/rules");
+}
+
+export function updateRule(ruleCode: string, body: RiskRuleUpdateCommand): Promise<Result<RiskRuleResponse>> {
+  return request("PUT", `/admin/risk/rules/${ruleCode}`, body);
+}

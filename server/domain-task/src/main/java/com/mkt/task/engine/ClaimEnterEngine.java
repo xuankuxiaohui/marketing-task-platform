@@ -31,6 +31,16 @@ public final class ClaimEnterEngine {
 
     public void enter(
             TaskInstanceEntity instance, SnapshotContent snapshot, UserAttributes attrs, CrowdResolver crowds) {
-        engine.enter(instance, snapshot, attrs, crowds);
+        enter(instance, snapshot, attrs, crowds, null, null);
+    }
+
+    public void enter(
+            TaskInstanceEntity instance,
+            SnapshotContent snapshot,
+            UserAttributes attrs,
+            CrowdResolver crowds,
+            String ip,
+            String deviceId) {
+        engine.enter(instance, snapshot, attrs, crowds, ip, deviceId);
     }
 }

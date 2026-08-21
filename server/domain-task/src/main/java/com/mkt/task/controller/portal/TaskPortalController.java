@@ -104,7 +104,7 @@ public class TaskPortalController {
                         RateLimitDim.USER, "claim:" + userId, 1, settings.portalWritePerSecond())) {
             throw new BusinessException(TaskErrorCodes.CLAIM_RATE_LIMITED);
         }
-        String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
+        String ip = remoteIp(request);
         String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
         return Result.ok(claims.start(taskId, userId, ip, device, platforms.resolve(platform)));
     }
@@ -118,7 +118,7 @@ public class TaskPortalController {
             @RequestHeader(value = "X-Client-Platform", required = false) String platform,
             HttpServletRequest request) {
         long userId = UserContext.require().userId();
-        String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
+        String ip = remoteIp(request);
         String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
         return Result.ok(steps.click(instanceId, stepCode, userId, ip, device, platforms.resolve(platform)));
     }
@@ -130,8 +130,16 @@ public class TaskPortalController {
             @RequestHeader(value = "X-Device-Id", required = false) String deviceId,
             HttpServletRequest request) {
         long userId = UserContext.require().userId();
-        String ip = request == null ? "0.0.0.0" : request.getRemoteAddr();
+        String ip = remoteIp(request);
         String device = deviceId == null || deviceId.isBlank() ? null : deviceId.trim();
         return Result.ok(instances.abandonUser(instanceId, userId, ip, device));
+    }
+
+    private static String remoteIp(HttpServletRequest request) {
+        if (request == null || request.getRemoteAddr() == null || request.getRemoteAddr().isBlank()) {
+            return null;
+        }
+        String ip = request.getRemoteAddr();
+        return "0.0.0.0".equals(ip) ? null : ip;
     }
 }

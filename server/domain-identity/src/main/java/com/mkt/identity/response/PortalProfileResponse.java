@@ -10,4 +10,5 @@ public record PortalProfileResponse(
         String userLevel,
         String userRole,
         List<String> tags,
-        long pointsBalance) {}
+        long pointsBalance,
+        boolean mustChangePassword) {}

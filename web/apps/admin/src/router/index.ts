@@ -18,6 +18,12 @@ const router = createRouter({
       meta: { title: zhCN.login.title, public: true },
     },
     {
+      path: "/change-password",
+      name: "ChangePasswordPage",
+      component: () => import("@/views/login/ChangePasswordPage.vue"),
+      meta: { title: zhCN.password.title },
+    },
+    {
       path: "/",
       name: ADMIN_ROOT_NAME,
       component: () => import("@/layout/AdminLayout.vue"),
@@ -35,6 +41,7 @@ router.beforeEach(async (to) => {
     {
       routesReady: permission.ready,
       sessionKnown: session.authenticated,
+      mustChangePassword: session.mustChangePassword,
       ensureSession: () => ensureDynamicRoutes(router),
     },
   );

@@ -34,6 +34,7 @@ import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,10 +107,10 @@ public class TaskPortalAppService {
                 continue;
             }
             String cycleKey = CycleKeyResolver.resolve(
-                    definition.getCycleType(),
-                    definition.getCronExpr(),
-                    TaskTime.toInstant(definition.getSpecialStart()),
-                    TaskTime.toInstant(definition.getSpecialEnd()),
+                    snapshot.cycleType(),
+                    snapshot.cronExpr(),
+                    snapshot.specialStart(),
+                    snapshot.specialEnd(),
                     now);
             TaskInstanceEntity current = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey);
             boolean inProgressThisCycle =
@@ -121,6 +122,7 @@ public class TaskPortalAppService {
             String userStatus = current == null ? InstanceStatuses.NOT_STARTED : current.getStatus();
             cards.add(toCard(definition, snapshot, userStatus));
         }
+        cards.sort(Comparator.comparingInt(TaskCardView::sortWeight).thenComparingLong(TaskCardView::taskId));
         PageQuery query = PageQuery.of(page, pageSize);
         long total = cards.size();
         int from = (int) Math.min(query.offset(), total);
@@ -134,12 +136,16 @@ public class TaskPortalAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         Instant now = clock.instant();
-        String cycleKey = CycleKeyResolver.resolve(
-                definition.getCycleType(),
-                definition.getCronExpr(),
-                TaskTime.toInstant(definition.getSpecialStart()),
-                TaskTime.toInstant(definition.getSpecialEnd()),
-                now);
+        SnapshotContent live = snapshotOf(definition);
+        String cycleKey = live == null
+                ? CycleKeyResolver.resolve(
+                        definition.getCycleType(),
+                        definition.getCronExpr(),
+                        TaskTime.toInstant(definition.getSpecialStart()),
+                        TaskTime.toInstant(definition.getSpecialEnd()),
+                        now)
+                : CycleKeyResolver.resolve(
+                        live.cycleType(), live.cronExpr(), live.specialStart(), live.specialEnd(), now);
         TaskInstanceEntity current = instances.getByUserTaskCycle(userId, taskId, cycleKey);
         TaskInstanceEntity inProgress = pickInProgress(taskId, userId, cycleKey);
         if (inProgress != null) {
@@ -303,7 +309,7 @@ public class TaskPortalAppService {
     }
 
     private static TaskCardView toCard(TaskDefinitionEntity definition, SnapshotContent snapshot, String userStatus) {
-        int weight = definition.getSortWeight() == null ? 0 : definition.getSortWeight();
+        int weight = snapshot.sortWeight();
         return new TaskCardView(
                 definition.getId(),
                 snapshot.code(),

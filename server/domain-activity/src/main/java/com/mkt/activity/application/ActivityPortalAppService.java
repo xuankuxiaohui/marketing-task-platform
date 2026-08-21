@@ -74,6 +74,11 @@ public class ActivityPortalAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ParticipateResponse participate(long activityId, long userId) {
+        return participate(activityId, userId, null, null);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ParticipateResponse participate(long activityId, long userId, String ip, String deviceId) {
         ActActivityEntity locked = activities.getByIdForUpdate(activityId);
         if (locked == null || locked.deletedFlag()) {
             throw new BusinessException(ActivityErrorCodes.NOT_FOUND);
@@ -124,7 +129,7 @@ public class ActivityPortalAppService {
                     userId,
                     GrantSource.ACTIVITY_PARTICIPATION,
                     String.valueOf(id),
-                    GrantContext.defaults());
+                    GrantContext.defaults().withClient(ip, deviceId));
             grantId = result.recordId();
             granted = true;
         }

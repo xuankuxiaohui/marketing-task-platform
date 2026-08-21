@@ -137,12 +137,23 @@ public class SigninPortalAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public SigninActionResponse checkin(long activityId, long userId) {
+        return checkin(activityId, userId, null, null);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public SigninActionResponse checkin(long activityId, long userId, String ip, String deviceId) {
         LocalDate today = SigninDates.today(clock);
-        return sign(activityId, userId, today, SignSources.CHECKIN, false);
+        return sign(activityId, userId, today, SignSources.CHECKIN, false, ip, deviceId);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public SigninActionResponse catchup(long activityId, long userId, String signDateRaw) {
+        return catchup(activityId, userId, signDateRaw, null, null);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public SigninActionResponse catchup(
+            long activityId, long userId, String signDateRaw, String ip, String deviceId) {
         LocalDate today = SigninDates.today(clock);
         LocalDate signDate = parseDate(signDateRaw);
         if (!signDate.isBefore(today)) {
@@ -151,11 +162,17 @@ public class SigninPortalAppService {
         if (signDate.isBefore(today.minusDays(settings.windowDays()))) {
             throw new BusinessException(SigninErrorCodes.CATCHUP_WINDOW);
         }
-        return sign(activityId, userId, signDate, SignSources.CATCHUP, true);
+        return sign(activityId, userId, signDate, SignSources.CATCHUP, true, ip, deviceId);
     }
 
     private SigninActionResponse sign(
-            long activityId, long userId, LocalDate signDate, String source, boolean catchup) {
+            long activityId,
+            long userId,
+            LocalDate signDate,
+            String source,
+            boolean catchup,
+            String ip,
+            String deviceId) {
         SgnActivityEntity activity = requirePublished(activityId);
         Instant now = clock.instant();
         if (!inWindow(activity, now)) {
@@ -207,20 +224,21 @@ public class SigninPortalAppService {
                     SigninSourceIds.catchupConsume(activityId, userId, signDate),
                     "catchup");
         }
-        List<GrantFeedbackView> grants = grantTiers(activityId, userId, snapRow);
+        List<GrantFeedbackView> grants = grantTiers(activityId, userId, snapRow, ip, deviceId);
         int consecutive = ConsecutiveDays.compute(records.listSignDates(activityId, userId), SigninDates.today(clock));
         return new SigninActionResponse(
                 false, null, row.getId(), source, consecutive, grants);
     }
 
-    private List<GrantFeedbackView> grantTiers(long activityId, long userId, SgnActivitySnapshotEntity snapRow) {
+    private List<GrantFeedbackView> grantTiers(
+            long activityId, long userId, SgnActivitySnapshotEntity snapRow, String ip, String deviceId) {
         SigninSnapshotContent content = JsonUtil.fromJson(snapRow.getContent(), SigninSnapshotContent.class);
         int consecutive = ConsecutiveDays.compute(records.listSignDates(activityId, userId), SigninDates.today(clock));
         List<GrantFeedbackView> out = new ArrayList<>();
         if (content.tiers() == null) {
             return out;
         }
-        GrantContext ctx = GrantContext.defaults();
+        GrantContext ctx = GrantContext.defaults().withClient(ip, deviceId);
         for (SigninTierCommand tier : content.tiers()) {
             if (tier.day() == null || tier.prizeId() == null || tier.day() > consecutive) {
                 continue;

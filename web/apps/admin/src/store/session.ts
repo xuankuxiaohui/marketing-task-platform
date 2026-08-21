@@ -28,6 +28,13 @@ export const useSessionStore = defineStore("session", () => {
     nickname.value = data.nickname ?? "";
     roles.value = [...(data.roles ?? [])];
     permissions.value = [...(data.permissions ?? [])];
+    if (data.mustChangePassword != null) {
+      mustChangePassword.value = Boolean(data.mustChangePassword);
+    }
+  }
+
+  function setMustChangePassword(value: boolean): void {
+    mustChangePassword.value = value;
   }
 
   function clear(): void {
@@ -55,6 +62,7 @@ export const useSessionStore = defineStore("session", () => {
     authenticated,
     setLogin,
     setProfile,
+    setMustChangePassword,
     clear,
     hasPermission,
   };
