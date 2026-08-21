@@ -329,7 +329,7 @@ onMounted(() => {
         <el-input v-model="form.endTime" type="datetime-local" data-testid="activity-end" required />
       </el-form-item>
       <el-form-item :label="zhCN.activity.richText">
-        <el-input type="textarea" v-model="form.richText" data-testid="activity-html" :rows="6" required  />
+        <el-input v-model="form.richText" type="textarea" data-testid="activity-html" :rows="6" required  />
       </el-form-item>
       <el-form-item :label="zhCN.activity.prizeId">
         <el-input v-model="form.prizeId" data-testid="activity-prize" />
@@ -341,7 +341,7 @@ onMounted(() => {
         <el-input v-model="form.allowUserIds" data-testid="activity-allow-users" />
       </el-form-item>
       <el-form-item :label="zhCN.activity.submodules">
-        <el-input type="textarea" v-model="form.submodules" data-testid="activity-submodules"  />
+        <el-input v-model="form.submodules" type="textarea" data-testid="activity-submodules"  />
       </el-form-item>
       <el-form-item v-if="editing?.status === 'DRAFT'" :label="zhCN.activity.publishAt">
         <el-input v-model="form.publishAt" type="datetime-local" data-testid="activity-schedule-at" />

@@ -211,7 +211,7 @@ onMounted(() => {
         <el-input v-model="form.name" data-testid="metadata-name" required />
       </el-form-item>
       <el-form-item :label="zhCN.metadata.propSchema">
-        <el-input type="textarea" v-model="form.propSchema" data-testid="metadata-schema" :rows="6"  />
+        <el-input v-model="form.propSchema" type="textarea" data-testid="metadata-schema" :rows="6"  />
       </el-form-item>
       <el-form-item :label="zhCN.common.status">
         <el-select v-model="form.status" data-testid="metadata-status">

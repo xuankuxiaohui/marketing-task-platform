@@ -378,7 +378,7 @@ onMounted(() => {
         <el-input v-model="form.expireHours" />
       </el-form-item>
       <el-form-item :label="zhCN.prize.typeParams">
-        <el-input type="textarea" v-model="form.typeParams" :rows="3"  />
+        <el-input v-model="form.typeParams" type="textarea" :rows="3"  />
       </el-form-item>
     </FormDialog>
     <FormDialog

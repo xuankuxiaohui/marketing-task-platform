@@ -278,7 +278,7 @@ onMounted(() => {
         <el-input v-model="form.endTime" type="datetime-local" data-testid="signin-end" required />
       </el-form-item>
       <el-form-item :label="zhCN.signin.tiers">
-        <el-input type="textarea" v-model="form.tiers" data-testid="signin-tiers" required  />
+        <el-input v-model="form.tiers" type="textarea" data-testid="signin-tiers" required  />
       </el-form-item>
       <el-form-item v-if="editing?.status === 'DRAFT'" :label="zhCN.signin.publishAt">
         <el-input v-model="form.publishAt" type="datetime-local" data-testid="signin-schedule-at" />

@@ -276,7 +276,7 @@ onMounted(() => {
       </el-select>
       </el-form-item>
       <el-form-item :label="zhCN.list.content">
-        <el-input type="textarea" v-model="form.listValue" data-testid="import-content" :rows="8" required  />
+        <el-input v-model="form.listValue" type="textarea" data-testid="import-content" :rows="8" required  />
       </el-form-item>
       <el-form-item :label="zhCN.list.reason">
         <el-input v-model="form.reason" data-testid="import-reason" required />

@@ -11,7 +11,6 @@ export async function setControl(wrapper: VueWrapper, testid: string, value: unk
   const comp = wrapper.findComponent(selector);
   if (comp.exists()) {
     await comp.setValue(value);
-    comp.vm.$emit("change", value);
     await flushPromises();
     return;
   }

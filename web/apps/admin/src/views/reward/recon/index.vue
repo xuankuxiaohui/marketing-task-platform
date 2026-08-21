@@ -277,7 +277,7 @@ onMounted(() => {
     </FormDialog>
     <FormDialog :visible="importOpen" :title="zhCN.recon.import" :saving="saving" @submit="submitImport" @cancel="importOpen = false">
       <el-form-item :label="zhCN.recon.lines">
-        <el-input type="textarea" v-model="importJson" data-testid="import-json" :rows="6"  />
+        <el-input v-model="importJson" type="textarea" data-testid="import-json" :rows="6"  />
       </el-form-item>
     </FormDialog>
     <FormDialog :visible="reviewOpen" :title="zhCN.recon.review" :saving="saving" @submit="submitReview" @cancel="reviewOpen = false">

@@ -208,7 +208,7 @@ onMounted(() => {
       @cancel="importOpen = false"
     >
       <el-form-item :label="zhCN.crowd.content">
-        <el-input type="textarea" v-model="importContent" data-testid="crowd-content" :rows="8"  />
+        <el-input v-model="importContent" type="textarea" data-testid="crowd-content" :rows="8"  />
       </el-form-item>
       <p v-if="importHint" data-testid="crowd-import-result">{{ importHint }}</p>
     </FormDialog>
