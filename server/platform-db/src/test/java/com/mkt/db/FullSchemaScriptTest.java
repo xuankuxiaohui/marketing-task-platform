@@ -18,6 +18,7 @@ class FullSchemaScriptTest {
     private static String v3;
     private static String v4;
     private static String v5;
+    private static String v6;
     private static String all;
 
     @BeforeAll
@@ -26,6 +27,7 @@ class FullSchemaScriptTest {
         v3 = loadSql("V3__reward_points.sql");
         v4 = loadSql("V4__risk_tracking.sql");
         v5 = loadSql("V5__sgn_signin.sql");
+        v6 = loadSql("V6__act_activity.sql");
         all = v2 + "\n" + v3 + "\n" + v4 + "\n" + loadSql("V1__sys_baseline.sql");
     }
 
@@ -74,6 +76,18 @@ class FullSchemaScriptTest {
         assertThat(v5).contains("utf8mb4_0900_ai_ci");
         assertThat(v5.toLowerCase()).doesNotContain("foreign key");
         assertThat(v2 + v3 + v4).doesNotContain("CREATE TABLE sgn_");
+    }
+
+    @Test
+    void v6CreatesTwoActTablesWithoutTouchingV1ToV5() {
+        assertThat(tableNames(v6, "act_")).containsExactlyInAnyOrder("act_activity", "act_participation");
+        assertThat(v6).contains("CHECK (result IN ('PASS','REJECT'))");
+        assertThat(v6).contains("CHECK (status IN ('DRAFT','SCHEDULED','PUBLISHED','OFFLINE'))");
+        assertThat(v6).contains("activity:query");
+        assertThat(v6).contains("activity:participation:query");
+        assertThat(v6).contains("utf8mb4_0900_ai_ci");
+        assertThat(v6.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5).doesNotContain("CREATE TABLE act_");
     }
 
     @Test

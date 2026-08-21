@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.activity.mapper.ActActivityMapper">
+
+    <sql id="cols">
+        id, code, name, rich_text, content_hash, start_time, end_time, status, version,
+        schedule_publish_at, schedule_offline_at, gray_type, gray_ratio, submodules,
+        participation_prize_id, allow_user_ids, allow_crowd_codes, new_user_only, new_user_days,
+        user_daily_limit, user_total_limit, global_daily_limit, regions, quota_day, quota_count,
+        draft_content, pending_revision, deleted, created_by, created_at, updated_at
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            deleted = 0
+            <if test="code != null and code != ''">
+                AND code = #{code}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectByCode" resultType="com.mkt.activity.entity.ActActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM act_activity
+        WHERE code = #{code} AND deleted = 0
+    </select>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM act_activity
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.activity.entity.ActActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM act_activity
+        <include refid="queryWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectByIdForUpdate" resultType="com.mkt.activity.entity.ActActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM act_activity
+        WHERE id = #{id} AND deleted = 0
+        FOR UPDATE
+    </select>
+
+    <select id="selectPublished" resultType="com.mkt.activity.entity.ActActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM act_activity
+        WHERE deleted = 0 AND status = 'PUBLISHED'
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectDueScheduled" resultType="com.mkt.activity.entity.ActActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM act_activity
+        WHERE deleted = 0 AND status = 'SCHEDULED' AND schedule_publish_at IS NOT NULL
+          AND schedule_publish_at &lt;= #{now}
+        ORDER BY schedule_publish_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectDueOffline" resultType="com.mkt.activity.entity.ActActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM act_activity
+        WHERE deleted = 0 AND status = 'PUBLISHED' AND schedule_offline_at IS NOT NULL
+          AND schedule_offline_at &lt;= #{now}
+        ORDER BY schedule_offline_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+</mapper>

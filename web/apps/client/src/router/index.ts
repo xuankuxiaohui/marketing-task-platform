@@ -82,6 +82,12 @@ const router = createRouter({
           component: () => import("@/views/signin/index.vue"),
           meta: { title: zhCN.signin.title },
         },
+        {
+          path: "activity",
+          name: "ActivityPage",
+          component: () => import("@/views/activity/index.vue"),
+          meta: { title: zhCN.activity.title },
+        },
       ],
     },
   ],

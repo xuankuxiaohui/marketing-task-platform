@@ -13,7 +13,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * V1–V5 migrate + validate + second migrate is a no-op (design §6.9). Requires Docker; leave for CI.
+ * V1–V6 migrate + validate + second migrate is a no-op (design §6.9). Requires Docker; leave for CI.
  */
 @Testcontainers
 class FlywayFullIT {
@@ -25,14 +25,14 @@ class FlywayFullIT {
             .withPassword("mkt");
 
     @Test
-    void migrateCreatesFortyTwoTablesWithSeedsAndPartition() {
+    void migrateCreatesFortyFourTablesWithSeedsAndPartition() {
         Flyway flyway = Flyway.configure()
                 .dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())
                 .locations("classpath:db/migration")
                 .load();
 
         MigrateResult first = flyway.migrate();
-        assertThat(first.migrationsExecuted).isEqualTo(5);
+        assertThat(first.migrationsExecuted).isEqualTo(6);
         flyway.validate();
 
         MigrateResult second = flyway.migrate();
@@ -46,7 +46,7 @@ class FlywayFullIT {
                         + " WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'"
                         + " AND table_name <> 'flyway_schema_history'",
                 Integer.class);
-        assertThat(tables).isEqualTo(42);
+        assertThat(tables).isEqualTo(44);
 
         assertThat(indexExists(jdbc, "task_instance", "uk_user_task_cycle")).isTrue();
         assertThat(indexExists(jdbc, "task_progress_report", "uk_dedup")).isTrue();
@@ -58,6 +58,10 @@ class FlywayFullIT {
         Integer signinPerms = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM sys_permission WHERE id BETWEEN 29 AND 38", Integer.class);
         assertThat(signinPerms).isEqualTo(10);
+        assertThat(indexExists(jdbc, "act_activity", "uk_code")).isTrue();
+        Integer activityPerms = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM sys_permission WHERE id BETWEEN 39 AND 47", Integer.class);
+        assertThat(activityPerms).isEqualTo(9);
 
         assertThat(columnExists(jdbc, "task_instance_step", "skip_reason")).isTrue();
         assertThat(columnExists(jdbc, "task_instance_step", "last_biz_no")).isTrue();

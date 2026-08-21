@@ -29,6 +29,7 @@
         <module>domain-risk</module>
         <module>domain-tracking</module>
         <module>domain-signin</module>
+        <module>domain-activity</module>
         <module>admin-app</module>
         <module>portal-app</module>
     </modules>
@@ -111,6 +112,11 @@
             <dependency>
                 <groupId>com.mkt</groupId>
                 <artifactId>domain-signin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mkt</groupId>
+                <artifactId>domain-activity</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

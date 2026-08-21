@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.activity.mapper.ActParticipationMapper">
+
+    <sql id="cols">
+        id, activity_id, user_id, period_key, result, hit_rule, simulated, created_at
+    </sql>
+
+    <sql id="adminWhere">
+        <where>
+            <if test="activityId != null">
+                AND activity_id = #{activityId}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="result != null and result != ''">
+                AND result = #{result}
+            </if>
+            <if test="periodKey != null and periodKey != ''">
+                AND period_key = #{periodKey}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countPass" resultType="int">
+        SELECT COUNT(*)
+        FROM act_participation
+        WHERE activity_id = #{activityId}
+          AND result = 'PASS'
+          <if test="userId != null">
+              AND user_id = #{userId}
+          </if>
+          <if test="periodKey != null and periodKey != ''">
+              AND period_key = #{periodKey}
+          </if>
+    </select>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM act_participation
+        <include refid="adminWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.activity.entity.ActParticipationEntity">
+        SELECT <include refid="cols"/>
+        FROM act_participation
+        <include refid="adminWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM act_participation
+        WHERE activity_id = #{activityId}
+    </select>
+
+    <select id="countPassByActivity" resultType="long">
+        SELECT COUNT(*)
+        FROM act_participation
+        WHERE activity_id = #{activityId} AND result = 'PASS'
+    </select>
+
+    <select id="countRejectByRule" resultType="com.mkt.activity.response.HitRuleCountView">
+        SELECT hit_rule AS hitRule, COUNT(*) AS count
+        FROM act_participation
+        WHERE activity_id = #{activityId} AND result = 'REJECT' AND hit_rule IS NOT NULL
+        GROUP BY hit_rule
+        ORDER BY count DESC, hit_rule ASC
+    </select>
+</mapper>

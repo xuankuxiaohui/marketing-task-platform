@@ -111,8 +111,8 @@
 | 44 | R21.1 | 签到唯一 | `signin SigninUniqueIT`（C-9） | 已交付 · 64 线程同用户同日 |
 | 44 | R36.1 | 日历状态一致 | `web SigninCalendarStateTest` | 已交付 · `signin-calendar-state.spec.ts` |
 | 44 | R21 / R36 | 签到 H5 页（补签 / 断链 / 跨月） | `SigninPage.spec.ts` | 已交付 · 日历格子走后端四态 |
-| 45 | R22.1 | 活动限量 | `activity ActivityQuotaIT`（C-10） | 占位 · P0 完成后填充 |
-| 45 | R22 | 活动页 + 富文本消毒验收 | （待补） | 占位 · P0 完成后填充 |
+| 45 | R22.1 | 活动限量 | `activity ActivityQuotaIT`（C-10） | 已交付 · 128 线程全局日限量 10 |
+| 45 | R22 | 活动页 + 富文本消毒验收 | `ActivityHtmlSanitizerTest` / `ActivityPage.spec.ts` / `ActivityManagePage.spec.ts` | 已交付 · 服务端白名单消毒，C 端只渲染 richText |
 | 46 | R23.1 | 聚合幂等 | `metrics AggregationIdempotentIT` | 占位 · P0 完成后填充 |
 | 46 | R23 | 看板页（漏斗 / 成本 / 风控 / 广告） | （待补 ECharts 点位） | 占位 · P0 完成后填充 |
 | 47 | R24.1 | 模拟隔离 | `simulate SimulationIsolationIT` | 占位 · P0 完成后填充 |

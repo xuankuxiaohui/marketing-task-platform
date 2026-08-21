@@ -113,6 +113,13 @@ export const PERMS = {
   SIGNIN_CONFIG_SCHEDULE: "signin:config:schedule",
   SIGNIN_CONFIG_OFFLINE: "signin:config:offline",
   SIGNIN_RECORD_QUERY: "signin:record:query",
+  ACTIVITY_QUERY: "activity:query",
+  ACTIVITY_CREATE: "activity:create",
+  ACTIVITY_UPDATE: "activity:update",
+  ACTIVITY_DELETE: "activity:delete",
+  ACTIVITY_PUBLISH: "activity:publish",
+  ACTIVITY_OFFLINE: "activity:offline",
+  ACTIVITY_PARTICIPATION_QUERY: "activity:participation:query",
 } as const;
 
 export const CONFIG_VALUE_TYPES = ["STRING", "NUMBER", "BOOL", "JSON"] as const;

@@ -46,6 +46,8 @@ export const zhCN = {
     pointsDetail: "积分明细",
     signin: "签到",
     signinHint: "每日签到领奖励",
+    activity: "活动",
+    activityHint: "专题活动",
     password: "修改密码",
     logout: "退出登录",
     profile: "编辑资料",
@@ -70,6 +72,13 @@ export const zhCN = {
     newPassword: "新密码",
     submit: "确认修改",
     success: "密码已更新",
+  },
+  activity: {
+    title: "活动",
+    empty: "暂无进行中的活动",
+    join: "立即参与",
+    joined: "参与成功",
+    rejected: "暂不符合参与条件",
   },
   signin: {
     title: "签到",

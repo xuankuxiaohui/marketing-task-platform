@@ -87,6 +87,10 @@
             <groupId>com.mkt</groupId>
             <artifactId>domain-signin</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-activity</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

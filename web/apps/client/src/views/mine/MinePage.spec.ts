@@ -66,6 +66,7 @@ describe("MinePage", () => {
     expect(wrapper.get('[data-testid="entry-prizes"]').text()).toContain(zhCN.mine.prizes);
     expect(wrapper.get('[data-testid="entry-points"]').text()).toContain(zhCN.mine.pointsDetail);
     expect(wrapper.get('[data-testid="entry-signin"]').text()).toContain(zhCN.mine.signin);
+    expect(wrapper.get('[data-testid="entry-activity"]').text()).toContain(zhCN.mine.activity);
     expect(wrapper.get('[data-testid="entry-password"]').text()).toContain(zhCN.mine.password);
     expect(wrapper.get('[data-testid="entry-logout"]').text()).toContain(zhCN.mine.logout);
   });

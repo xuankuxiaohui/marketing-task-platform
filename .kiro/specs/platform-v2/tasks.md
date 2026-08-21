@@ -698,13 +698,13 @@ _测试：§7.3 R21.1、R36.1、§7.4 C-9_
 
 ### 任务 45：活动域（编组 J，P1）
 
-- [ ] 父 POM 加 `domain-activity`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
-- [ ] V6：`act_activity` / `act_participation`
-- [ ] 管理端 + C 端活动页
-- [ ] 限量 CAS（全局日限量 / 用户当日 / 累计）
-- [ ] 富文本 HTML 白名单消毒
-- [ ] 活动参与规则在本域实现（**不**复用任务领取 §5.5）；`ACTIVITY_PARTICIPATION` 发放来源
-- [ ] §7.4 C-10（本任务交付，不在任务 41）
+- [x] 父 POM 加 `domain-activity`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
+- [x] V6：`act_activity` / `act_participation`
+- [x] 管理端 + C 端活动页
+- [x] 限量 CAS（全局日限量 / 用户当日 / 累计）
+- [x] 富文本 HTML 白名单消毒
+- [x] 活动参与规则在本域实现（**不**复用任务领取 §5.5）；`ACTIVITY_PARTICIPATION` 发放来源
+- [x] §7.4 C-10（本任务交付，不在任务 41）
 
 _需求：R22_
 _设计：design §3.11、§8.1 R22 落点_

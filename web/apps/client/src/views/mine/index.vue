@@ -66,6 +66,13 @@ onMounted(() => {
         data-testid="entry-signin"
         @click="router.push('/signin')"
       />
+      <Cell
+        :title="zhCN.mine.activity"
+        :label="zhCN.mine.activityHint"
+        is-link
+        data-testid="entry-activity"
+        @click="router.push('/activity')"
+      />
     </CellGroup>
     <CellGroup inset class="mine-actions">
       <Cell :title="zhCN.mine.password" is-link data-testid="entry-password" @click="router.push('/mine/password')" />
