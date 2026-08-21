@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_PORTAL_PASSWORD } from "./helpers/backend";
 import { readE2EState } from "./helpers/state";
-import { fillPortalCaptcha } from "./helpers/ui";
+import { fillPortalCaptcha, waitPastGrantElapsedFloor } from "./helpers/ui";
 
 const PORTAL_TOKEN_KEY = "mkt.portal.token";
 
@@ -91,7 +91,16 @@ test.describe("journey-core registered path", () => {
     }
     await expect(page).toHaveURL(new RegExp(`/task/${state.taskId}`));
     await expect(page.getByTestId("task-timeline")).toBeVisible({ timeout: 15_000 });
+    await waitPastGrantElapsedFloor();
+    const pendingClick = page.waitForResponse(
+      (response) =>
+        response.url().includes("/steps/") &&
+        response.url().includes("/click") &&
+        response.request().method() === "POST",
+    );
     await page.getByTestId("task-step-action").click();
+    const clickBody = (await (await pendingClick).json()) as { code?: unknown; message?: string };
+    expect(clickBody.code, clickBody.message ?? JSON.stringify(clickBody)).toBe(0);
     await expect(page.getByText("任务完成")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "确认" }).click();
   });

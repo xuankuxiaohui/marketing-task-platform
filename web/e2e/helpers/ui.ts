@@ -39,3 +39,19 @@ export async function fillAdminCaptcha(page: Page): Promise<void> {
   const code = await fillCaptchaFromRefresh(page, "/admin/captcha", "admin");
   await page.getByTestId("login-captcha").fill(code);
 }
+
+/**
+ * V4 R-e / V1 `risk.rule.task-complete-min-seconds`: GRANT rejects when
+ * elapsedSeconds is non-null and < 5. Same-request REWARD (elapsed=null) skips;
+ * CLICK then REWARD measures from instance start. Wait 6s so Duration.toSeconds is ≥ 5.
+ */
+export const GRANT_ELAPSED_FLOOR_MS = 6_000;
+
+export async function waitPastGrantElapsedFloor(startedAtMs = Date.now()): Promise<void> {
+  const remaining = GRANT_ELAPSED_FLOOR_MS - (Date.now() - startedAtMs);
+  if (remaining > 0) {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, remaining);
+    });
+  }
+}

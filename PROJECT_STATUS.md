@@ -8,7 +8,7 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master）
-- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI（run 32433320742 e2e job 96629393266），未开任务 45**
+- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI（run 32434674877 e2e job 96633345269），未开任务 45**
 - 下一步：下一会话从本分支 tip 开 `task/45-activity` 做编组 J 第二题。**禁止在本分支继续写 45+。禁止 merge / push / force-push master**
 - Git：工作分支 `task/44-signin`（基线 `origin/task/43-e2e-k6` @ `9ac6168` / 其上叠 43 → 42 → 41 → 40 → 39 → 38.3 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
 
@@ -32,6 +32,7 @@
 - Vue Router `stringifyQuery` 用 `encodeURI`，`redirect=/mine` 不会变成 `%2Fmine`。R32.1 e2e 用 `URLSearchParams.get("redirect")`，两种编码都认
 - 首次 DRAFT 发布 `requiresConfirm=false`，不弹确认框；确认框只给已发布修订
 - Playwright 填验证码必须先等到 `login-captcha-image` 可见（onMounted 的 GET 已结束），再 click refresh 并 waitForResponse。否则 waitForResponse 会吃到进行中的首次 GET，refresh 换了 `captchaId`，提交仍用旧码，注册停在 `/register`
+- V4 R-e 阈值 5 秒：`RiskScene.GRANT` 且 `elapsedSeconds != null && elapsedSeconds < 5` 则 `risk.blocked.generic`。同请求 REWARD（`elapsed=null`，deploy-smoke）跳过 R-e。e2e `e2e_core` 是 CLICK→REWARD，点完成会带上从 `startedAt` 起的秒数；立刻 click 会被拒、CLICK 步骤回滚、对话框「任务完成」不出现。旅程在 timeline 可见后先等到 6s 再点步骤
 
 ## 改过的核心文件
 
@@ -55,14 +56,15 @@
 
 ## 测试与验证
 
-- 命令与结果：本轮只改 e2e helper / R32.4 断言 / compose 失败 dump。`cd web/apps/admin && pnpm exec vitest run` 与 `cd server && mvn -q -DskipITs test` 未重跑（未改 Vue 实现 / Java）
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R32.4 注册自动登录 e2e
-- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；e2e / deploy-smoke 等 PR #60 CI。run 32433320742：web 绿、deploy-smoke 绿、e2e job 96629393266 红（R32.4）
+- 命令与结果：本轮只改 e2e helper / R-e 等待 / click 响应断言。未改 Java / Vue 实现。`cd server && mvn -q -DskipITs test` 与 `cd web && pnpm test` 未重跑（与上一绿 SHA `839724f` 的 server / web / deploy-smoke 同源）
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；旅程 click-complete 对齐 R26.4（R-e 判定范围）
+- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；e2e / deploy-smoke 等 PR #60 CI。run 32434674877：server / web / deploy-smoke 绿，e2e job 96633345269 红（click-complete）
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
-- PR #60 `c444d44`（run 32433320742）e2e job 96629393266：compose 已健康，admin 5 绿，R32.1 绿。R32.4 提交后 URL 仍是 `/register`（5s）。根因：`fillPortalCaptcha` 的 waitForResponse 吃到 onMounted 进行中的 GET，refresh 换了 `captchaId`，提交验证码与 id 不一致
+- PR #60 `839724f`（run 32434674877）e2e job 96633345269：compose 已健康，admin 5 绿，R32.1 / R32.4 / R34.5 绿。click-complete：`task-timeline` 可见后立刻点步骤，portal 记 `risk.blocked.generic`（01:01:36.956），15s 内没有「任务完成」。根因：V4 R-e 对 GRANT `elapsedSeconds < 5` 拒绝；CLICK→REWARD 级联带非空耗时
+- 此前 `c444d44`（run 32433320742）e2e job 96629393266：R32.4 提交后 URL 仍是 `/register`（5s）。根因：`fillPortalCaptcha` 的 waitForResponse 吃到 onMounted 进行中的 GET，refresh 换了 `captchaId`，提交验证码与 id 不一致
 - 此前 `4cb77bc`（run 32432266368）e2e job 96626195604：门户 R32.1 实际 URL 是 `login?redirect=/mine`，断言写了 `%2Fmine`。后台登录到 dashboard 后 `goto /task/definitions` 全页刷新，动态路由 `addRoute` 后未 replace，列表页不挂载，60s 等不到 `task-create`
 - 此前 `e9a18ff`（run 32431360120）e2e / deploy-smoke：compose `mkt-admin-app-1 is unhealthy`。根因：去掉 `@ConditionalOnBean` 后 runner 被扫描，但 `DataSource` 与包可见测试构造并存，Spring 找无参构造失败（`NoSuchMethodException: InitAdminPasswordRunner.<init>()`）。已收成单构造器
 - 此前 `18d9a96` 后 compose 已健康，但登录 `auth.login.invalid-credential`：`@ConditionalOnBean(DataSource)` 扫描期跳过 runner，V1 空哈希未写入
@@ -117,6 +119,8 @@
 - 不要给 `InitAdminPasswordRunner` 再加第二个构造器（即使包可见 / 测用）
 - 不要把动态路由安装后的导航改回 `{ type: "next" }`（刷新会再次白屏）
 - 不要在首次 captcha GET 仍在飞行时就 waitForResponse + click refresh
+- 不要把 e2e click-complete 改回 timeline 可见后立刻点步骤（R-e 会 `risk.blocked.generic`）
+- 不要为了 e2e 关掉 V4 R-e 或改阈值
 
 ## 下一步开发顺序（最多 3 步）
 
