@@ -177,6 +177,10 @@ if login.get("mustChangePassword"):
         ),
         "admin change password",
     )
+    login = require_ok(try_admin_login(unlocked), "admin login after change")
+    csrf = login["csrfToken"]
+    admin_headers = {"X-CSRF-Token": csrf}
+    used_password = unlocked
 
 prizes = require_ok(load(base + "/admin/reward/prizes?code=smoke_pts&page=1&pageSize=5"), "prize page")
 records = prizes.get("records") or []

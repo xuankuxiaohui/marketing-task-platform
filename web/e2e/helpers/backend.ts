@@ -113,7 +113,15 @@ export async function adminLogin(): Promise<AdminSession> {
       }),
     });
     requireOk(changed.body, "admin change password");
-    usedPassword = unlockedPassword;
+    const retry = await loginAdminOnce(unlockedPassword);
+    body = retry.body;
+    cookie = retry.cookie;
+    requireOk(body, "admin login after change");
+    const nextCsrf = body.data?.csrfToken;
+    if (!cookie || !nextCsrf) {
+      throw new Error("admin login after change missing cookie/csrf");
+    }
+    return { cookie, csrfToken: nextCsrf, password: unlockedPassword };
   }
   return { cookie, csrfToken, password: usedPassword };
 }

@@ -173,6 +173,8 @@ def admin_login() -> dict:
             ),
             "admin change password",
         )
+        data = require_ok(try_admin_login(unlocked), "admin login after change")
+        session = {"cookie": cookie_header(), "csrfToken": data["csrfToken"]}
     return session
 
 
