@@ -534,7 +534,8 @@ public class GrantAppService {
             return;
         }
         Long elapsed = ctx.simulated() || grantSource != GrantSource.TASK_STEP ? null : ctx.elapsedSeconds();
-        RiskVerdict verdict = risk.check(RiskScene.GRANT, new RiskSubject(userId, "0.0.0.0", null, elapsed));
+        RiskVerdict verdict =
+                risk.check(RiskScene.GRANT, new RiskSubject(userId, "0.0.0.0", null, elapsed, ctx.simulated()));
         if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
             if (grantSource == GrantSource.MANUAL_GRANT) {
                 throw new BusinessException(RewardErrorCodes.RISK_BLOCKED_ACCOUNT);

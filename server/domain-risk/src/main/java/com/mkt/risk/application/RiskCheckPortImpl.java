@@ -107,11 +107,28 @@ public class RiskCheckPortImpl implements RiskCheckPort {
         }
         List<RuleSpec> rules = ruleConfigStore.listAll();
         WindowCounts counts = collectCounts(scene, subject, rules);
-        RuleOutcome outcome = RuleDecisionEngine.decide(scene, subject.elapsedSeconds(), counts, rules);
+        Long elapsed = subject.simulated() ? null : subject.elapsedSeconds();
+        RuleOutcome outcome = RuleDecisionEngine.decide(scene, elapsed, counts, rules);
+        if (subject.simulated()) {
+            return simulatedOutcome(scene, subject, outcome);
+        }
         for (RuleHit hit : outcome.hits()) {
             recordRuleHit(scene, subject, hit);
         }
         return new RiskVerdict(outcome.verdict());
+    }
+
+    private RiskVerdict simulatedOutcome(RiskScene scene, RiskSubject subject, RuleOutcome outcome) {
+        List<RuleHit> observed = new ArrayList<>();
+        for (RuleHit hit : outcome.hits()) {
+            if (hit.code() == RiskRuleCode.RC || hit.code() == RiskRuleCode.RD) {
+                observed.add(new RuleHit(hit.code(), hit.hitValue(), hit.threshold(), RiskAction.MARK));
+            }
+        }
+        for (RuleHit hit : observed) {
+            recordRuleHit(scene, subject, hit);
+        }
+        return new RiskVerdict(observed.isEmpty() ? RiskAction.PASS : RiskAction.MARK);
     }
 
     private WindowCounts collectCounts(RiskScene scene, RiskSubject subject, List<RuleSpec> rules) {
@@ -120,10 +137,13 @@ public class RiskCheckPortImpl implements RiskCheckPort {
         String device = subject.deviceId() == null
                 ? null
                 : RiskListImportParser.normalizeOrNull(RiskDimension.DEVICE, subject.deviceId());
-        Long ra = windowCount(RiskRuleCode.RA, RiskCntKeys.DIM_USER, userDim(subject), rules, now);
-        Long rb = windowCount(RiskRuleCode.RB, RiskCntKeys.DIM_USER, userDim(subject), rules, now);
         Long rc = windowCount(RiskRuleCode.RC, RiskCntKeys.DIM_IP, ip, rules, now);
         Long rd = windowCount(RiskRuleCode.RD, RiskCntKeys.DIM_DEVICE, device, rules, now);
+        if (subject.simulated()) {
+            return new WindowCounts(null, null, rc, rd, null);
+        }
+        Long ra = windowCount(RiskRuleCode.RA, RiskCntKeys.DIM_USER, userDim(subject), rules, now);
+        Long rb = windowCount(RiskRuleCode.RB, RiskCntKeys.DIM_USER, userDim(subject), rules, now);
         Long rf = rfCount(scene, ip, rules, now);
         return new WindowCounts(ra, rb, rc, rd, rf);
     }
@@ -210,6 +230,7 @@ public class RiskCheckPortImpl implements RiskCheckPort {
         ctx.put("ip", subject.ip());
         ctx.put("deviceId", subject.deviceId());
         ctx.put("elapsedSeconds", subject.elapsedSeconds());
+        ctx.put("simulated", subject.simulated());
         return ctx;
     }
 

@@ -14,7 +14,13 @@ public class PointsPortImpl implements PointsPort {
 
     @Override
     public long earn(long userId, int pointsAmount, Instant expireAt, String sourceType, String sourceId) {
-        return points.earn(userId, pointsAmount, expireAt, sourceType, sourceId);
+        return earn(userId, pointsAmount, expireAt, sourceType, sourceId, false);
+    }
+
+    @Override
+    public long earn(
+            long userId, int pointsAmount, Instant expireAt, String sourceType, String sourceId, boolean simulated) {
+        return points.earn(userId, pointsAmount, expireAt, sourceType, sourceId, simulated);
     }
 
     @Override

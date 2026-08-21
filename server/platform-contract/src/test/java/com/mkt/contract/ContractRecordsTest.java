@@ -34,6 +34,8 @@ class ContractRecordsTest {
                 .isInstanceOf(IllegalArgumentException.class);
         RiskSubject subject = new RiskSubject(1L, "127.0.0.1", null, null);
         assertThat(subject.ip()).isEqualTo("127.0.0.1");
+        assertThat(subject.simulated()).isFalse();
+        assertThat(new RiskSubject(1L, "127.0.0.1", "dev", 3L, true).simulated()).isTrue();
     }
 
     @Test

@@ -20,6 +20,7 @@ class FullSchemaScriptTest {
     private static String v5;
     private static String v6;
     private static String v61;
+    private static String v62;
     private static String all;
 
     @BeforeAll
@@ -30,6 +31,7 @@ class FullSchemaScriptTest {
         v5 = loadSql("V5__sgn_signin.sql");
         v6 = loadSql("V6__act_activity.sql");
         v61 = loadSql("V6_1__mtr_metrics.sql");
+        v62 = loadSql("V6_2__simulate_permissions.sql");
         all = v2 + "\n" + v3 + "\n" + v4 + "\n" + loadSql("V1__sys_baseline.sql");
     }
 
@@ -106,6 +108,18 @@ class FullSchemaScriptTest {
         assertThat(v61.toLowerCase()).doesNotContain("foreign key");
         assertThat(v2 + v3 + v4 + v5 + v6).doesNotContain("CREATE TABLE mtr_");
         assertThat(v61).doesNotContain("CREATE TABLE ad_");
+    }
+
+    @Test
+    void v62AddsSimulatePermissionsWithoutNewTablesOrTouchingV1ToV61() {
+        assertThat(tableNames(v62, "")).isEmpty();
+        assertThat(v62).contains("simulate:task");
+        assertThat(v62).contains("simulate:flow");
+        assertThat(v62).contains("simulate/index");
+        assertThat(v62).doesNotContain("CREATE TABLE");
+        assertThat(v62.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5 + v6 + v61).doesNotContain("simulate:task");
+        assertThat(v62).doesNotContain("CREATE TABLE ad_");
     }
 
     @Test

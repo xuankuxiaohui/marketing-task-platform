@@ -412,6 +412,7 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 命中与处置 | `/risk/cases` | `risk/case/index` | §4.6 hits/cases |
 | 埋点元数据 | `/track/metadata` | `track/metadata/index` | §4.7 metadata |
 | 事件调试 | `/track/events` | `track/event/index` | §4.7 调试查询 |
+| 任务模拟器 | `/simulate` | `simulate/index` | §4.4.2 list/detail/start/click/callback/progress/flow/reverse |
 
 <!-- §4.4 P1 metrics -->
 #### 4.4.1 指标端点（R23，任务 46）
@@ -425,3 +426,24 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 **GET /admin/metrics/risk** · `records: [{period, dimKey, hitCount, interceptCount, interceptRate?}]`
 
 **GET /admin/metrics/ad** · `records: [{period, dimKey, exposureCount, clickCount, ctr?}]`
+
+<!-- §4.4.2 P1 simulate -->
+#### 4.4.2 模拟器端点（R24，任务 47）
+
+进程内调用领域服务（§5.1 / RewardPort），不跨应用 HTTP。写路径一律 `GrantContext.simulated=true`，落库 `simulated=1`。权限：list/detail/start/click/callback/progress/reverse = `simulate:task`；flow = `simulate:flow`。非 GET 全量审计。平台头固定 `SIMULATOR`。
+
+**GET /admin/simulate/task/list** · 参数 `userId` `category?` `page?` `pageSize?` · 出参同 §4.9 C 端任务列表（该用户视角可见性）
+
+**GET /admin/simulate/task/detail** · 参数 `userId` `taskId` · 出参同 §4.9 C 端详情
+
+**POST /admin/simulate/task/start** · 入参 `{userId, taskId}` · 出参同 C 端 start（实例 `simulated=1`）
+
+**POST /admin/simulate/task/click** · 入参 `{userId, instanceId, stepCode}` · 出参同 C 端 click
+
+**POST /admin/simulate/task/callback** · 入参 `{userId, instanceId, stepCode, bizNo?}` · 出参同 internal callback（无 HMAC）
+
+**POST /admin/simulate/task/progress** · 入参 `{userId, instanceId, stepCode, value, reportId}` · 出参同 internal progress（无 HMAC）
+
+**POST /admin/simulate/task/flow** · 入参 `{userId, taskId}` · 出参 `{instanceId, instanceStatus, steps:[{stepCode, type, action, stepStatus}], grantRecordIds:[]}`（开始 → 全步骤 → 发奖）
+
+**POST /admin/simulate/task/reverse** · 入参 `{instanceId}` · 出参 `{instanceId, pointsReversed, stockRestored, sendingMarked, channelRevoked}`。冲正该模拟实例产生的积分 `REVERSAL` + 库存回补（`SIMULATE_REVERSE` 留痕）；`SENDING` 只回补+标记；`channelRevoked` 恒为 `false`（不调渠道撤销）。幂等。

@@ -85,7 +85,7 @@ public class RiskHitRecorder {
         entity.setHitValue(hitValue);
         entity.setThreshold(threshold);
         entity.setActionResult(actionResult);
-        entity.setSimulated(0);
+        entity.setSimulated(simulatedFlag(context));
         entity.setOccurredAt(RiskTime.toUtc(now));
         entity.setCreatedAt(RiskTime.toUtc(now));
         hitLogStore.insert(entity);
@@ -94,6 +94,18 @@ public class RiskHitRecorder {
         payload.put("scene", context == null ? null : context.get("scene"));
         payload.put("source", ruleCode);
         payload.put("action", actionResult);
+        payload.put("simulated", entity.getSimulated() != null && entity.getSimulated() == 1);
         eventPublisher.append(EventCodes.RISK_HIT_RECORDED, "risk_hit_log", String.valueOf(entity.getId()), payload);
+    }
+
+    private static int simulatedFlag(Map<String, Object> context) {
+        if (context == null) {
+            return 0;
+        }
+        Object value = context.get("simulated");
+        if (Boolean.TRUE.equals(value) || Integer.valueOf(1).equals(value)) {
+            return 1;
+        }
+        return 0;
     }
 }

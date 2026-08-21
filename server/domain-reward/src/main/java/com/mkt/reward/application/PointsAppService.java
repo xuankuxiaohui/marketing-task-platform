@@ -60,11 +60,17 @@ public class PointsAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public long earn(long userId, int points, Instant expireAt, String sourceType, String sourceId) {
+        return earn(userId, points, expireAt, sourceType, sourceId, false);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public long earn(
+            long userId, int points, Instant expireAt, String sourceType, String sourceId, boolean simulated) {
         if (points <= 0) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
         store.insertIgnoreAccount(userId);
-        return apply(userId, PointTypes.EARN, points, sourceType, sourceId, expireAt, null, 0, true);
+        return apply(userId, PointTypes.EARN, points, sourceType, sourceId, expireAt, null, simulated ? 1 : 0, true);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -77,10 +83,17 @@ public class PointsAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public long reverse(long userId, int points, String sourceType, String sourceId, String remark) {
+        return reverse(userId, points, sourceType, sourceId, remark, false);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public long reverse(
+            long userId, int points, String sourceType, String sourceId, String remark, boolean simulated) {
         if (points <= 0) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
-        return apply(userId, PointTypes.REVERSAL, -points, sourceType, sourceId, null, remark, 0, false);
+        return apply(
+                userId, PointTypes.REVERSAL, -points, sourceType, sourceId, null, remark, simulated ? 1 : 0, false);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

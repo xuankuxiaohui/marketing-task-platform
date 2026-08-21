@@ -115,8 +115,8 @@
 | 45 | R22 | 活动页 + 富文本消毒验收 | `ActivityHtmlSanitizerTest` / `ActivityPage.spec.ts` / `ActivityManagePage.spec.ts` | 已交付 · 服务端白名单消毒，C 端只渲染 richText |
 | 46 | R23.1 | 聚合幂等 | `metrics AggregationIdempotentIT` | 已交付 · 同窗重放 3 次计数不变，排除 simulated |
 | 46 | R23 | 看板页（漏斗 / 成本 / 风控 / 广告） | `MetricsPage.spec.ts` / `DashboardPage.spec.ts` | 已交付 · ECharts + 转化率 0 分母为 — |
-| 47 | R24.1 | 模拟隔离 | `simulate SimulationIsolationIT` | 占位 · P0 完成后填充 |
-| 47 | R24 | 模拟器页 list/detail/flow | （待补） | 占位 · P0 完成后填充 |
+| 47 | R24.1 | 模拟隔离 | `simulate SimulationIsolationIT` | 已交付 · 聚合/风控统计排除 simulated；R-a/b/f 不统计、R-e skip、R-c/d 观察不拦截 |
+| 47 | R24 | 模拟器页 list/detail/flow | `SimulatePage.spec.ts` | 已交付 · list/flow/reverse，冲正不调渠道 |
 | 48 | R30.1 | 广告频控不超限 | `ad AdFrequencyIT`（C-11） | 占位 · P0 完成后填充 |
 | 48 | R30.2 | 排期正确 | `ad AdScheduleIT` | 占位 · P0 完成后填充 |
 | 48 | R30 | 接线 `ad:position` + 门户广告组件 | （待补；P0 只占位 ns） | 占位 · P0 完成后填充 |

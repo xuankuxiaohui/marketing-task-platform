@@ -134,6 +134,12 @@ public class TaskClaimAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskStartResponse start(long taskId, long userId, String ip, String deviceId, String platform) {
+        return start(taskId, userId, ip, deviceId, platform, false);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public TaskStartResponse start(
+            long taskId, long userId, String ip, String deviceId, String platform, boolean simulated) {
         if (users == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
         }
@@ -154,6 +160,10 @@ public class TaskClaimAppService {
                 now);
         TaskInstanceEntity existing = instances.getByUserTaskCycle(userId, taskId, cycleKey);
         if (existing != null) {
+            boolean existingSimulated = existing.getSimulated() != null && existing.getSimulated() == 1;
+            if (simulated && !existingSimulated) {
+                throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
+            }
             return toStart(existing, platform);
         }
         SnapshotContent snapshot = requireSnapshot(definition);
@@ -161,10 +171,10 @@ public class TaskClaimAppService {
         if (!visibility.visible()) {
             throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
         }
-        checkRisk(userId, ip, deviceId);
+        checkRisk(userId, ip, deviceId, simulated);
         checkMutex(definition, userId, cycleKey);
         checkDailyLimit(userId, now);
-        Inserted inserted = insertInstance(definition, snapshot, userId, cycleKey, now);
+        Inserted inserted = insertInstance(definition, snapshot, userId, cycleKey, now, simulated);
         if (!inserted.created()) {
             return toStart(inserted.row(), platform);
         }
@@ -175,7 +185,11 @@ public class TaskClaimAppService {
                     EventCodes.TASK_INSTANCE_START,
                     "task_instance",
                     String.valueOf(inserted.row().getId()),
-                    Map.of("instanceId", inserted.row().getId(), "taskId", taskId, "userId", userId));
+                    Map.of(
+                            "instanceId", inserted.row().getId(),
+                            "taskId", taskId,
+                            "userId", userId,
+                            "simulated", simulated));
         }
         TaskInstanceEntity fresh = instances.getById(inserted.row().getId());
         return toStart(fresh == null ? inserted.row() : fresh, platform);
@@ -186,7 +200,8 @@ public class TaskClaimAppService {
             SnapshotContent snapshot,
             long userId,
             String cycleKey,
-            Instant now) {
+            Instant now,
+            boolean simulated) {
         Instant cycleEnd = CycleKeyResolver.cycleEnd(
                 definition.getCycleType(),
                 definition.getCronExpr(),
@@ -210,7 +225,7 @@ public class TaskClaimAppService {
         row.setStatus(InstanceStatuses.IN_PROGRESS);
         row.setExpireAt(TaskTime.toUtc(expireAt));
         row.setStartedAt(TaskTime.toUtc(now));
-        row.setSimulated(0);
+        row.setSimulated(simulated ? 1 : 0);
         row.setCreatedAt(TaskTime.toUtc(now));
         try {
             instances.insert(row);
@@ -239,12 +254,13 @@ public class TaskClaimAppService {
 
     private record Inserted(TaskInstanceEntity row, boolean created) {}
 
-    private void checkRisk(long userId, String ip, String deviceId) {
+    private void checkRisk(long userId, String ip, String deviceId, boolean simulated) {
         if (risk == null) {
             return;
         }
         String resolvedIp = ip == null || ip.isBlank() ? "0.0.0.0" : ip;
-        RiskVerdict verdict = risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null));
+        RiskVerdict verdict =
+                risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null, simulated));
         if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
             throw new BusinessException(TaskErrorCodes.RISK_BLOCKED_GENERIC);
         }

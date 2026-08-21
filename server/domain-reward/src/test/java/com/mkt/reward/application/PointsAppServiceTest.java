@@ -39,6 +39,17 @@ class PointsAppServiceTest {
         assertThat(store.listChronological(9L).getFirst().getType()).isEqualTo(PointTypes.EARN);
         assertThat(store.listChronological(9L).getFirst().getAmount()).isEqualTo(40L);
         assertThat(store.listChronological(9L).getFirst().getBalanceAfter()).isEqualTo(40L);
+        assertThat(store.listChronological(9L).getFirst().getSimulated()).isEqualTo(0);
+    }
+
+    @Test
+    void simulatedEarnAndReverseKeepSimulatedFlag() {
+        points.earn(9L, 20, null, "TASK_STEP", "s-sim", true);
+        assertThat(store.listChronological(9L).getFirst().simulatedFlag()).isTrue();
+        points.reverse(9L, 20, "TASK_STEP", "sim-rev:1", "simulate reverse", true);
+        assertThat(store.listChronological(9L).get(1).getType()).isEqualTo(PointTypes.REVERSAL);
+        assertThat(store.listChronological(9L).get(1).simulatedFlag()).isTrue();
+        assertThat(points.balanceOrZero(9L)).isZero();
     }
 
     @Test

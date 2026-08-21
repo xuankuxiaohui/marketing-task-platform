@@ -482,15 +482,13 @@ public final class StepEngine {
         instance.setCompletedAt(TaskTime.toUtc(now));
         instance.setCostSeconds(cost);
         if (events != null) {
-            events.append(
-                    EventCodes.TASK_INSTANCE_COMPLETE,
-                    "task_instance",
-                    String.valueOf(instance.getId()),
-                    Map.of(
-                            "instanceId", instance.getId(),
-                            "taskId", instance.getTaskId(),
-                            "userId", instance.getUserId(),
-                            "costSeconds", cost));
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("instanceId", instance.getId());
+            payload.put("taskId", instance.getTaskId());
+            payload.put("userId", instance.getUserId());
+            payload.put("costSeconds", cost);
+            payload.put("simulated", simulated(instance));
+            events.append(EventCodes.TASK_INSTANCE_COMPLETE, "task_instance", String.valueOf(instance.getId()), payload);
         }
     }
 
@@ -498,15 +496,18 @@ public final class StepEngine {
         if (events == null) {
             return;
         }
-        events.append(
-                EventCodes.TASK_STEP_COMPLETE,
-                "task_instance",
-                String.valueOf(instance.getId()),
-                Map.of(
-                        "instanceId", instance.getId(),
-                        "taskId", instance.getTaskId(),
-                        "stepCode", step.getStepCode(),
-                        "seq", seqOf(step)));
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("instanceId", instance.getId());
+        payload.put("taskId", instance.getTaskId());
+        payload.put("stepCode", step.getStepCode());
+        payload.put("seq", seqOf(step));
+        payload.put("userId", instance.getUserId());
+        payload.put("simulated", simulated(instance));
+        events.append(EventCodes.TASK_STEP_COMPLETE, "task_instance", String.valueOf(instance.getId()), payload);
+    }
+
+    private static boolean simulated(TaskInstanceEntity instance) {
+        return instance.getSimulated() != null && instance.getSimulated() == 1;
     }
 
     private StepAdvanceResult snapshotOf(

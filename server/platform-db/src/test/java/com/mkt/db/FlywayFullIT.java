@@ -13,7 +13,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * V1–V6.1 migrate + validate + second migrate is a no-op (design §6.9). Requires Docker; leave for CI.
+ * V1–V6.2 migrate + validate + second migrate is a no-op (design §6.9). Requires Docker; leave for CI.
  */
 @Testcontainers
 class FlywayFullIT {
@@ -32,7 +32,7 @@ class FlywayFullIT {
                 .load();
 
         MigrateResult first = flyway.migrate();
-        assertThat(first.migrationsExecuted).isEqualTo(7);
+        assertThat(first.migrationsExecuted).isEqualTo(8);
         flyway.validate();
 
         MigrateResult second = flyway.migrate();
@@ -72,6 +72,12 @@ class FlywayFullIT {
         Integer metricsView = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM sys_permission WHERE code = 'metrics:dashboard:view'", Integer.class);
         assertThat(metricsView).isEqualTo(1);
+        Integer simulatePerms = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM sys_permission WHERE id BETWEEN 50 AND 52", Integer.class);
+        assertThat(simulatePerms).isEqualTo(3);
+        Integer simulateTask = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM sys_permission WHERE code = 'simulate:task'", Integer.class);
+        assertThat(simulateTask).isEqualTo(1);
 
         assertThat(columnExists(jdbc, "task_instance_step", "skip_reason")).isTrue();
         assertThat(columnExists(jdbc, "task_instance_step", "last_biz_no")).isTrue();

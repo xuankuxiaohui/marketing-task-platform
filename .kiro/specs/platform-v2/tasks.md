@@ -724,10 +724,10 @@ _测试：§7.3 R23.1_
 
 ### 任务 47：模拟器（编组 J，P1）
 
-- [ ] `/admin/simulate/**` 端点清单：list / detail / start / click / callback / progress / flow
-- [ ] `GrantContext.simulated` 贯穿实例 / 发放 / 流水 / 事件 / 命中
-- [ ] 统计查询排除 simulated；R-a/R-b/R-e/R-f 不统计、R-c/R-d 观察不拦截
-- [ ] 冲正：回补库存 / 反向积分流水；`SENDING` 桩只回补+标记；**不调渠道撤销**
+- [x] `/admin/simulate/**` 端点清单：list / detail / start / click / callback / progress / flow
+- [x] `GrantContext.simulated` 贯穿实例 / 发放 / 流水 / 事件 / 命中
+- [x] 统计查询排除 simulated；R-a/R-b/R-e/R-f 不统计、R-c/R-d 观察不拦截
+- [x] 冲正：回补库存 / 反向积分流水；`SENDING` 桩只回补+标记；**不调渠道撤销**
 
 _需求：R24_
 _设计：design §2.2.3 GrantContext、§3.11、§5.9 simulated 排除_

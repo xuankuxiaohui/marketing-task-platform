@@ -109,6 +109,14 @@ class TaskClaimAppServiceTest {
     }
 
     @Test
+    void simulatedStartPersistsSimulatedFlag() {
+        long taskId = publish("sim_go", "NONE", null);
+        TaskStartResponse started = service.start(taskId, 9L, "203.0.113.1", null, "WEB", true);
+        TaskInstanceEntity row = instances.getById(started.instanceId());
+        assertThat(row.getSimulated()).isEqualTo(1);
+    }
+
+    @Test
     void startUsesReadCommitted() throws Exception {
         Transactional tx = TaskClaimAppService.class
                 .getMethod("start", long.class, long.class, String.class, String.class, String.class)

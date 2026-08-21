@@ -131,7 +131,7 @@ graph TD
 | check | `RiskVerdict check(RiskScene scene, RiskSubject subject)` | 执行 §5.9 判定链。`REGISTER`/`LOGIN` **只跑名单、跳过 R-a–R-f**（R26.3）。**不抛业务异常**，拒绝语义由 verdict 表达、调用方决定错误码映射；命中留痕（risk_hit_log REQUIRES_NEW + risk.hit.recorded 事件）在端口实现内完成 |
 | userSummary | `UserRiskSummary userSummary(long userId)` | **只读**（D-13 / R5.6）：`hitCount`、`listStatus[]`。不跑判定链、不写命中 |
 | RiskScene | 枚举 | REGISTER / LOGIN / CLAIM / GRANT（= §5.9 场景集） |
-| RiskSubject | 记录 | `userId?: long、ip: string、deviceId?: string、elapsedSeconds?: Long`（null = 跳过 R-e，D-09） |
+| RiskSubject | 记录 | `userId?: long、ip: string、deviceId?: string、elapsedSeconds?: Long`（null = 跳过 R-e，D-09）、`simulated: boolean`（默认 false；P1 模拟器 CLAIM/GRANT 传入，R24.5） |
 | RiskVerdict | 记录 | `action: PASS\|REJECT\|SILENT_REJECT\|MARK`（步骤冻结不经本端口） |
 
 **UserAttributePort**（提供方 domain-identity；调用方 domain-task / domain-reward）：门户用户画像与账号状态。用户表在 identity 域，task 做过滤/灰度/分支/领取锁、reward 做限领地域/等级/标签与 `USER_INVALID` 判定时**不得直查 `sys_portal_user`**（RL-03）。一次返回全部字段，调用方在内存计算 `hasTag` / `registerWithinDays`。
@@ -577,7 +577,7 @@ Relay（admin-app 与 portal-app 各一，锁键分应用：outbox:relay:admin /
 - 端点：`/admin/simulate/task/{list|detail|start|click|callback|progress|flow}`（权限 `simulate:task` / `simulate:flow`）。
 - 一律 `GrantContext.simulated=true`；进程内调领域服务（§5.1 / RewardPort），不跨应用 HTTP。
 - 落库打 `simulated=1`（实例 / 发放 / 积分流水 / 服务端事件）。
-- 冲正：该模拟批次积分 `REVERSAL` + 库存回补并留痕；**不调渠道撤销**。
+- 冲正：`POST /admin/simulate/task/reverse`；该模拟实例积分 `REVERSAL` + 库存回补并留痕（`rwd_stock_log.change_type=SIMULATE_REVERSE`）；**不调渠道撤销**。`SENDING` 桩只回补+标记。
 - 风控：R-e 对 simulated GRANT **直接 skip**；R-a / R-b / R-f 不统计；R-c / R-d 观察不拦截（R24.5）。
 
 #### 3.11.5 广告（`ad_`，R30）

@@ -345,7 +345,8 @@ public class FulfillmentService {
                     amount,
                     expireAt,
                     record.getGrantSource(),
-                    record.getSourceId());
+                    record.getSourceId(),
+                    record.getSimulated() != null && record.getSimulated() == 1);
         } catch (RuntimeException ex) {
             throw new RetryableGrantException(RetryableGrantReason.SYSTEM_ERROR);
         }
@@ -387,6 +388,8 @@ public class FulfillmentService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("recordId", record.getId());
         payload.put("prizeId", record.getPrizeId());
+        payload.put("userId", record.getUserId());
+        payload.put("simulated", record.getSimulated() != null && record.getSimulated() == 1);
         if (EventCodes.REWARD_FULFILL_ARRIVED.equals(eventCode)) {
             payload.put("fulfillmentRef", record.getFulfillmentRef());
         } else {

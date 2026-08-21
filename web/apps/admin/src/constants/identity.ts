@@ -121,6 +121,8 @@ export const PERMS = {
   ACTIVITY_OFFLINE: "activity:offline",
   ACTIVITY_PARTICIPATION_QUERY: "activity:participation:query",
   METRICS_DASHBOARD_VIEW: "metrics:dashboard:view",
+  SIMULATE_TASK: "simulate:task",
+  SIMULATE_FLOW: "simulate:flow",
 } as const;
 
 export const CONFIG_VALUE_TYPES = ["STRING", "NUMBER", "BOOL", "JSON"] as const;
