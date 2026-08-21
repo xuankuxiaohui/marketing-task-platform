@@ -6,7 +6,13 @@ export type Json = Record<string, unknown>;
 export type AdminSession = {
   cookie: string;
   csrfToken: string;
+  password: string;
 };
+
+/** Distinct from the init password and still satisfies R1.5. */
+export function unlockedAdminPassword(initPassword: string): string {
+  return initPassword.endsWith("!") ? `${initPassword.slice(0, -1)}?` : `${initPassword}!`;
+}
 
 function cookieHeader(setCookies: string[]): string {
   return setCookies
@@ -60,14 +66,15 @@ export async function captcha(path: string, realm: "admin" | "portal"): Promise<
   return { captchaId, code };
 }
 
-export async function adminLogin(): Promise<AdminSession> {
-  const env = loadDotEnv();
-  const password = env.MKT_INIT_ADMIN_PASSWORD;
+type AdminLoginBody = {
+  code?: unknown;
+  message?: string;
+  data?: { csrfToken?: string; mustChangePassword?: boolean };
+};
+
+async function loginAdminOnce(password: string): Promise<{ body: AdminLoginBody; cookie: string }> {
   const { captchaId, code } = await captcha("/admin/captcha", "admin");
-  const { body, cookie } = await api<{
-    code: unknown;
-    data?: { csrfToken?: string };
-  }>("/admin/auth/login", {
+  return api<AdminLoginBody>("/admin/auth/login", {
     method: "POST",
     body: JSON.stringify({
       username: "admin",
@@ -76,12 +83,39 @@ export async function adminLogin(): Promise<AdminSession> {
       captchaCode: code,
     }),
   });
+}
+
+export async function adminLogin(): Promise<AdminSession> {
+  const env = loadDotEnv();
+  const initPassword = env.MKT_INIT_ADMIN_PASSWORD;
+  const unlockedPassword = unlockedAdminPassword(initPassword);
+  let { body, cookie } = await loginAdminOnce(initPassword);
+  let usedPassword = initPassword;
+  if (body.code !== 0) {
+    const retry = await loginAdminOnce(unlockedPassword);
+    body = retry.body;
+    cookie = retry.cookie;
+    usedPassword = unlockedPassword;
+  }
   requireOk(body, "admin login");
   const csrfToken = body.data?.csrfToken;
   if (!cookie || !csrfToken) {
     throw new Error("admin login missing cookie/csrf");
   }
-  return { cookie, csrfToken };
+  if (body.data?.mustChangePassword) {
+    const changed = await api<{ code?: unknown; message?: string }>("/admin/auth/password", {
+      method: "PUT",
+      cookie,
+      csrf: csrfToken,
+      body: JSON.stringify({
+        oldPassword: usedPassword,
+        newPassword: unlockedPassword,
+      }),
+    });
+    requireOk(changed.body, "admin change password");
+    usedPassword = unlockedPassword;
+  }
+  return { cookie, csrfToken, password: usedPassword };
 }
 
 export async function ensurePrize(session: AdminSession, code: string, claimMode: "AUTO" | "MANUAL"): Promise<number> {

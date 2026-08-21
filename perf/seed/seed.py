@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -131,21 +132,48 @@ def cookie_header() -> str:
     return "; ".join(f"{c.name}={c.value}" for c in jar)
 
 
-def admin_login() -> dict:
+def unlocked_admin_password(init: str) -> str:
+    return (init[:-1] + "?") if init.endswith("!") else (init + "!")
+
+
+def try_admin_login(password: str) -> dict:
     captcha_id, code = captcha("/admin/captcha", "admin")
-    login = require_ok(
-        load(
+    try:
+        return load(
             BASE + "/admin/auth/login",
             {
                 "username": "admin",
-                "password": ENV["MKT_INIT_ADMIN_PASSWORD"],
+                "password": password,
                 "captchaId": captcha_id,
                 "captchaCode": code,
             },
-        ),
-        "admin login",
-    )
-    return {"cookie": cookie_header(), "csrfToken": login["csrfToken"]}
+        )
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode()
+        return json.loads(raw) if raw else {"code": exc.code}
+
+
+def admin_login() -> dict:
+    init = ENV["MKT_INIT_ADMIN_PASSWORD"]
+    unlocked = unlocked_admin_password(init)
+    login = try_admin_login(init)
+    used = init
+    if login.get("code") != 0:
+        login = try_admin_login(unlocked)
+        used = unlocked
+    data = require_ok(login, "admin login")
+    session = {"cookie": cookie_header(), "csrfToken": data["csrfToken"]}
+    if data.get("mustChangePassword"):
+        require_ok(
+            load(
+                BASE + "/admin/auth/password",
+                {"oldPassword": used, "newPassword": unlocked},
+                headers=admin_headers(session),
+                method="PUT",
+            ),
+            "admin change password",
+        )
+    return session
 
 
 def admin_headers(admin: dict) -> dict:

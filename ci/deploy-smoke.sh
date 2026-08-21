@@ -85,6 +85,7 @@ import http.cookiejar
 import json
 import subprocess
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -136,21 +137,46 @@ def captcha(path, realm):
     return data["captchaId"], code
 
 
-captcha_id, code = captcha("/admin/captcha", "admin")
-login = require_ok(
-    load(
-        base + "/admin/auth/login",
-        {
-            "username": "admin",
-            "password": admin_password,
-            "captchaId": captcha_id,
-            "captchaCode": code,
-        },
-    ),
-    "admin login",
-)
+def unlocked_admin_password(init):
+    return (init[:-1] + "?") if init.endswith("!") else (init + "!")
+
+
+def try_admin_login(password):
+    captcha_id, code = captcha("/admin/captcha", "admin")
+    try:
+        return load(
+            base + "/admin/auth/login",
+            {
+                "username": "admin",
+                "password": password,
+                "captchaId": captcha_id,
+                "captchaCode": code,
+            },
+        )
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode()
+        return json.loads(raw) if raw else {"code": exc.code}
+
+
+unlocked = unlocked_admin_password(admin_password)
+login = try_admin_login(admin_password)
+used_password = admin_password
+if login.get("code") != 0:
+    login = try_admin_login(unlocked)
+    used_password = unlocked
+login = require_ok(login, "admin login")
 csrf = login["csrfToken"]
 admin_headers = {"X-CSRF-Token": csrf}
+if login.get("mustChangePassword"):
+    require_ok(
+        load(
+            base + "/admin/auth/password",
+            {"oldPassword": used_password, "newPassword": unlocked},
+            headers=admin_headers,
+            method="PUT",
+        ),
+        "admin change password",
+    )
 
 prizes = require_ok(load(base + "/admin/reward/prizes?code=smoke_pts&page=1&pageSize=5"), "prize page")
 records = prizes.get("records") or []

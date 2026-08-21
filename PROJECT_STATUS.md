@@ -31,6 +31,8 @@
 - `server/domain-signin` / `server/domain-activity`（门户写路径传 IP/device）
 - `web/apps/admin`（改密页、规则页 PUT、守卫）
 - `web/apps/client`（改密守卫、登录 `mustChangePassword`）
+- `web/packages/shared`（portal/admin OpenAPI `mustChangePassword`）
+- `web/e2e` / `ci/deploy-smoke.sh` / `perf/seed/seed.py`（init admin 先改密再写）
 
 ## 测试与验证
 
@@ -41,7 +43,7 @@
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38 至任务 49 PR #66、本必须项 PR **#67** 均未合 master；叠链 29 → … → 48 → 49 → 本必须项
-- PR #65 `3f38b4f` 全 CI 绿；PR #66 已开，5 分钟 k6 不进例行 CI；PR #67 已开
+- PR #65 `3f38b4f` 全 CI 绿；PR #66 已开，5 分钟 k6 不进例行 CI；PR #67 跟进 portal OpenAPI + smoke 改密
 - `GET /admin/reward/records` 仍未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
 - 编组 F 评审必须项 #41 已在任务 31 分支修；待 CI 绿后关 #41

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { E2E_PORTAL_PASSWORD, registerPortalUser, startTask } from "./helpers/backend";
+import { E2E_PORTAL_PASSWORD, registerPortalUser, startTask, unlockedAdminPassword } from "./helpers/backend";
 import { loadDotEnv } from "./helpers/env";
 import { readE2EState } from "./helpers/state";
 import { fillAdminCaptcha } from "./helpers/ui";
@@ -26,11 +26,19 @@ test.describe("journey-admin", () => {
 
   test("login to the admin console", async () => {
     const env = loadDotEnv();
+    const state = readE2EState();
+    const password = state.adminPassword ?? env.MKT_INIT_ADMIN_PASSWORD;
     await page.goto("/login");
     await page.getByTestId("login-username").fill("admin");
-    await page.getByTestId("login-password").fill(env.MKT_INIT_ADMIN_PASSWORD);
+    await page.getByTestId("login-password").fill(password);
     await fillAdminCaptcha(page);
     await page.getByTestId("login-submit").click();
+    await expect(page).toHaveURL(/\/(dashboard|change-password)/);
+    if (/\/change-password/.test(page.url())) {
+      await page.getByTestId("change-password-old").fill(password);
+      await page.getByTestId("change-password-new").fill(unlockedAdminPassword(password));
+      await page.getByTestId("change-password-submit").click();
+    }
     await expect(page).toHaveURL(/\/dashboard/);
   });
 

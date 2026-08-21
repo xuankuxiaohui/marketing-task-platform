@@ -438,6 +438,7 @@ export interface components {
             /** Format: int64 */
             userId?: number;
             nickname?: string;
+            mustChangePassword?: boolean;
         };
         ResultPortalAuthResponse: {
             code?: unknown;
@@ -664,6 +665,7 @@ export interface components {
             tags?: string[];
             /** Format: int64 */
             pointsBalance?: number;
+            mustChangePassword?: boolean;
         };
         ResultPortalProfileResponse: {
             code?: unknown;

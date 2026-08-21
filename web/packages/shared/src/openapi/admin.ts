@@ -3588,6 +3588,7 @@ export interface components {
             nickname?: string;
             roles?: string[];
             permissions?: string[];
+            mustChangePassword?: boolean;
         };
         ResultAdminProfileResponse: {
             code?: unknown;

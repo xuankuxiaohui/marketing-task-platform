@@ -14,6 +14,7 @@ export type E2EState = {
   taskId: number;
   loginUsername: string;
   loginPassword: string;
+  adminPassword: string;
 };
 
 export default async function globalSetup(): Promise<void> {
@@ -40,6 +41,7 @@ export default async function globalSetup(): Promise<void> {
     taskId,
     loginUsername,
     loginPassword: E2E_PORTAL_PASSWORD,
+    adminPassword: session.password,
   };
   writeFileSync(statePath(), `${JSON.stringify(state, null, 2)}\n`);
 }

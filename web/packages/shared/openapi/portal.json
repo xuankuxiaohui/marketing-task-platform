@@ -1030,6 +1030,9 @@
           },
           "nickname": {
             "type": "string"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
           }
         }
       },
@@ -1647,6 +1650,9 @@
           "pointsBalance": {
             "type": "integer",
             "format": "int64"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
           }
         }
       },

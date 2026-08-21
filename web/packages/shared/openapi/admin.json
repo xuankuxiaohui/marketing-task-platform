@@ -9626,6 +9626,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "mustChangePassword": {
+            "type": "boolean"
           }
         }
       },
