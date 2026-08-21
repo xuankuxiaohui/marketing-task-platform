@@ -57,6 +57,7 @@ class PortalAuthServiceTransactionalTest {
                 hasher,
                 new SessionService(),
                 risk,
+                Mockito.mock(com.mkt.contract.RewardPort.class),
                 new EventPublisher(new MemoryOutboxStore(), OutboxProducer.PORTAL),
                 (key, def) -> def,
                 clock);

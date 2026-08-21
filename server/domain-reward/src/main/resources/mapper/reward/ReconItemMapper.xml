@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.ReconItemMapper">
+
+    <sql id="itemFilter">
+        WHERE batch_id = #{batchId}
+        <if test="result != null and result != ''">AND result = #{result}</if>
+        <if test="reviewStatus != null and reviewStatus != ''">AND review_status = #{reviewStatus}</if>
+    </sql>
+
+    <select id="listByBatch" resultType="com.mkt.reward.entity.ReconItemEntity">
+        SELECT * FROM rwd_recon_item
+        <include refid="itemFilter"/>
+        ORDER BY id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByBatch" resultType="long">
+        SELECT COUNT(*) FROM rwd_recon_item
+        <include refid="itemFilter"/>
+    </select>
+
+    <select id="listAllByBatch" resultType="com.mkt.reward.entity.ReconItemEntity">
+        SELECT * FROM rwd_recon_item
+        WHERE batch_id = #{batchId}
+        ORDER BY id ASC
+    </select>
+
+    <update id="casAction">
+        UPDATE rwd_recon_item
+        SET action = #{row.action},
+            action_ref = #{row.actionRef},
+            remark = #{row.remark},
+            updated_at = #{row.updatedAt}
+        WHERE id = #{row.id}
+          AND action = 'NONE'
+    </update>
+
+    <update id="casReview">
+        UPDATE rwd_recon_item
+        SET review_status = #{row.reviewStatus},
+            reviewer_id = #{row.reviewerId},
+            reviewed_at = #{row.reviewedAt},
+            review_remark = #{row.reviewRemark},
+            updated_at = #{row.updatedAt}
+        WHERE id = #{row.id}
+          AND review_status = 'PENDING_REVIEW'
+    </update>
+</mapper>

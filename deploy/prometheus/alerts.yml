@@ -1,0 +1,75 @@
+# NFR 可观测性 3 baseline. Grafana dashboards are deferred (task 42).
+# Thresholds are starting points; tune after k6 (task 43) on staging.
+groups:
+  - name: mkt-nfr-observability
+    rules:
+      - alert: HttpErrorRateHigh
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+          clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 0.001)
+            > 0.05
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: HTTP 5xx rate above 5% (NFR 可观测性 3)
+
+      - alert: HttpP95High
+        expr: |
+          histogram_quantile(0.95, sum by (le, uri, app) (rate(http_server_requests_seconds_bucket[5m]))) > 0.8
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: HTTP P95 above 800ms (admin NFR 性能 7; portal lists are tighter)
+
+      - alert: OutboxBacklogHigh
+        expr: mkt_outbox_backlog > 1000
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: Outbox backlog above 1000 (NFR 可观测性 3)
+
+      - alert: GrantPermanentFailure
+        expr: increase(mkt_grant_fail_total{reason="PERMANENT"}[5m]) > 0
+        labels:
+          severity: page
+        annotations:
+          summary: Permanent grant failure occurred (NFR 可观测性 3)
+
+      - alert: PrizeStockLow
+        expr: mkt_prize_stock_ratio < 0.10
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Prize remaining/total ≤ 10% (NFR 可观测性 3)
+
+      - alert: RedisUnavailable
+        expr: up{job=~"admin-app|portal-app"} == 0 or mkt_degrade_total{component="session"} > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Redis fault or instance down (NFR 可观测性 3 / §6.8)
+
+      - alert: DegradeEvent
+        expr: increase(mkt_degrade_total[5m]) > 0
+        labels:
+          severity: ticket
+        annotations:
+          summary: Degradation counter incremented (NFR 可观测性 3)
+
+      - alert: TrackDropRateHigh
+        expr: |
+          sum(rate(mkt_track_drop_total[5m]))
+            /
+          clamp_min(sum(rate(mkt_track_drop_total[5m])) + sum(rate(http_server_requests_seconds_count{uri=~".*/track/batch"}[5m])), 0.001)
+            > 0.001
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Track drop rate > 0.1% (NFR 可观测性 3)

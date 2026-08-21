@@ -372,7 +372,28 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 字典值失效回显 | 引用停用字典项的存量数据按原值回显（label 取不到时显示 value 原文），不报错 | R7.5 |
 | 空态引导 | 各列表空态文案与引导（"暂无进行中的任务，去看看任务列表"） | R33.4 |
 
-> P1 端点：`/api/common/ad/**`（R30）、`/api/common/signin/**`（R21/R36）。契约要点由对应需求条款封闭（匿名访问、频控主键、素材输出、签到唯一约束）；端点明细随 P1 任务写入，不在本章 P0 范围。
+#### 4.9.5 ad（R30，任务 48）
+
+匿名 / 可选登录：`GET /api/common/ad/positions/{code}`、`POST /api/common/ad/materials/{id}/dismiss`（登录绑 userId，否则 X-Device-Id）。头 `X-Client-Platform`（缺省 WEB）。
+
+**GET /api/common/ad/positions/{code}**
+- 过滤：排期（素材∧投放）+ 端 +（登录才灰度；人群包列存储、匿名不生效、不直访 `task_`）+ 日频控 Redis `ad:freq:{userId|dev}:{materialId}:{yyyyMMdd}`
+- 弹窗：冷却键 `ad:popup:cd:{subject}`，渲染时刻起算
+- 输出 R30.5：轮播 weight 降序并列 materialId 升序，条数 ≤ `ad.carousel.max-items`；单图/开屏/弹窗/悬浮取 weight 最大一条（并列 ID 小者）
+- `data`: `{code, form, materials:[{materialId, trackId, title, subtitle, imageUrl, jumpType, jumpParams, weight}], splashDurationSeconds?, carouselIntervalSeconds?}`
+- 错误：`ad.position.not-found`(404)
+
+**POST /api/common/ad/materials/{id}/dismiss** · 入参 `{positionCode}`。仅 FLOAT：将该主体该素材当日频控打满（R30.11）。
+
+<!-- §4.10 P1 ad admin -->
+#### 4.3.1 广告位管理端（R30，任务 48）
+
+权限附录 B。非 GET `@Audited` + CSRF。
+
+**GET/POST /admin/ad/positions** · **GET/DELETE /admin/ad/positions/{id}** · **POST /admin/ad/positions/{id}/materials** · **DELETE /admin/ad/positions/{id}/materials/{materialId}**
+**GET/POST /admin/ad/materials** · **GET/DELETE /admin/ad/materials/{id}**
+
+详情含 `placements` 与 `overlapCount`（重叠排期对数，轮换合法）。写后 `evict(ad:position:{code})`，TTL 60s。
 
 ---
 
@@ -384,7 +405,8 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 页面 | 路由（菜单 route） | component | 数据来源 |
 |------|-------------------|-----------|---------|
 | 登录 | `/login` | `login/index` | §4.2 登录/验证码（匿名） |
-| 工作台 | `/dashboard` | `dashboard/index` | P0 静态欢迎页（无聚合指标，P1 看板替换） |
+| 工作台 | `/dashboard` | `dashboard/index` | GET `/admin/metrics/**` 摘要（R23） |
+| 运营看板 | `/metrics` | `metrics/index` | GET `/admin/metrics/funnel|spend|risk|ad` |
 | 后台用户 | `/system/users` | `system/user/index` | §4.2 users |
 | 角色权限 | `/system/roles` | `system/role/index` | §4.2 roles/permissions/tree |
 | 会话管理 | `/system/sessions` | `system/session/index` | §4.2 sessions/kick |
@@ -411,3 +433,40 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 命中与处置 | `/risk/cases` | `risk/case/index` | §4.6 hits/cases |
 | 埋点元数据 | `/track/metadata` | `track/metadata/index` | §4.7 metadata |
 | 事件调试 | `/track/events` | `track/event/index` | §4.7 调试查询 |
+| 任务模拟器 | `/simulate` | `simulate/index` | §4.4.2 list/detail/start/click/callback/progress/flow/reverse |
+| 广告位 | `/ad/positions` | `ad/position/index` | `/admin/ad/positions` CRUD + 投放绑定 |
+| 广告素材 | `/ad/materials` | `ad/material/index` | `/admin/ad/materials` CRUD |
+
+<!-- §4.4 P1 metrics -->
+#### 4.4.1 指标端点（R23，任务 46）
+
+权限一律 `metrics:dashboard:view`。查询走 `mtr_*` 聚合表（非原始事件）。参数：`from?` `to?`（ISO-8601）、`grain?`=`DAY|WEEK|MONTH`（默认 DAY）、`dimKey?`（漏斗=taskId，成本=category_code，风控=rule_code，广告=positionCode 前缀）。上环节为 0 时转化率 / CTR / 拦截率为 `null`（前端展示 —）。
+
+**GET /admin/metrics/funnel** · `records: [{period, dimKey, exposureCount, startCount, completeCount, startRate?, completeRate?}]`
+
+**GET /admin/metrics/spend** · `records: [{period, dimKey, arrivedCount, arrivedCostFen, sendingCount, sendingCostFen, remainingStock, totalStock}]`（库存水位为当前 `rwd_prize` 快照）
+
+**GET /admin/metrics/risk** · `records: [{period, dimKey, hitCount, interceptCount, interceptRate?}]`
+
+**GET /admin/metrics/ad** · `records: [{period, dimKey, exposureCount, clickCount, ctr?}]`
+
+<!-- §4.4.2 P1 simulate -->
+#### 4.4.2 模拟器端点（R24，任务 47）
+
+进程内调用领域服务（§5.1 / RewardPort），不跨应用 HTTP。写路径一律 `GrantContext.simulated=true`，落库 `simulated=1`。权限：list/detail/start/click/callback/progress/reverse = `simulate:task`；flow = `simulate:flow`。非 GET 全量审计。平台头固定 `SIMULATOR`。
+
+**GET /admin/simulate/task/list** · 参数 `userId` `category?` `page?` `pageSize?` · 出参同 §4.9 C 端任务列表（该用户视角可见性）
+
+**GET /admin/simulate/task/detail** · 参数 `userId` `taskId` · 出参同 §4.9 C 端详情
+
+**POST /admin/simulate/task/start** · 入参 `{userId, taskId}` · 出参同 C 端 start（实例 `simulated=1`）
+
+**POST /admin/simulate/task/click** · 入参 `{userId, instanceId, stepCode}` · 出参同 C 端 click
+
+**POST /admin/simulate/task/callback** · 入参 `{userId, instanceId, stepCode, bizNo?}` · 出参同 internal callback（无 HMAC）
+
+**POST /admin/simulate/task/progress** · 入参 `{userId, instanceId, stepCode, value, reportId}` · 出参同 internal progress（无 HMAC）
+
+**POST /admin/simulate/task/flow** · 入参 `{userId, taskId}` · 出参 `{instanceId, instanceStatus, steps:[{stepCode, type, action, stepStatus}], grantRecordIds:[]}`（开始 → 全步骤 → 发奖）
+
+**POST /admin/simulate/task/reverse** · 入参 `{instanceId}` · 出参 `{instanceId, pointsReversed, stockRestored, sendingMarked, channelRevoked}`。冲正该模拟实例产生的积分 `REVERSAL` + 库存回补（`SIMULATE_REVERSE` 留痕）；`SENDING` 只回补+标记；`channelRevoked` 恒为 `false`（不调渠道撤销）。幂等。

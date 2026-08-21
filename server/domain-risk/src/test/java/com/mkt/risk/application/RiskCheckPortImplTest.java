@@ -124,6 +124,31 @@ class RiskCheckPortImplTest {
     }
 
     @Test
+    void simulatedGrantSkipsReAndDoesNotWriteRf() {
+        rules.disableAllExcept(RiskRuleCode.RE);
+        rules.replace(new RuleSpec(RiskRuleCode.RE, true, 5, null, RiskAction.REJECT));
+        rules.replace(new RuleSpec(RiskRuleCode.RF, true, 1, 60L, RiskAction.REJECT));
+        RiskSubject simulated = new RiskSubject(9L, "203.0.113.10", "dev-sim", 1L, true);
+        assertThat(port.check(RiskScene.GRANT, simulated).action()).isEqualTo(RiskAction.PASS);
+        assertThat(hits.countByQuery("R-e", "RULE", null, 9L, null, null, null)).isZero();
+        assertThat(kv.zcount("risk:cnt:R-f:IP:203.0.113.10", Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY))
+                .isZero();
+    }
+
+    @Test
+    void simulatedClaimObservesRcWithoutReject() {
+        rules.disableAllExcept(RiskRuleCode.RC);
+        rules.replace(new RuleSpec(RiskRuleCode.RC, true, 1, 86400L, RiskAction.REJECT));
+        RiskCntConsumer consumer = new RiskCntConsumer(new RiskCntWindow(kv), clock);
+        consumer.consume(authRow(11L, "10.0.0.8", "Dev-1"));
+        RiskSubject simulated = new RiskSubject(13L, "10.0.0.8", "Dev-1", null, true);
+        assertThat(port.check(RiskScene.CLAIM, simulated).action()).isEqualTo(RiskAction.MARK);
+        assertThat(hits.countByQuery("R-c", "RULE", null, 13L, "MARKED", null, null)).isEqualTo(1);
+        assertThat(hits.listByQuery("R-c", "RULE", null, 13L, "MARKED", null, null, 0, 8).getFirst().getSimulated())
+                .isEqualTo(1);
+    }
+
+    @Test
     void consumerDeviceWriteHitsRdOnMixedCaseCheck() {
         rules.disableAllExcept(RiskRuleCode.RD);
         rules.replace(new RuleSpec(RiskRuleCode.RD, true, 2, 86400L, RiskAction.REJECT));

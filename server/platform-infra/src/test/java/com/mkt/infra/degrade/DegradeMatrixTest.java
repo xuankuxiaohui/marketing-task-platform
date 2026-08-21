@@ -16,6 +16,11 @@ class DegradeMatrixTest {
         assertThat(DegradeMatrix.action(DegradeComponent.RATE_LIMIT)).isEqualTo(DegradeAction.ALLOW);
         assertThat(DegradeMatrix.action(DegradeComponent.NONCE)).isEqualTo(DegradeAction.REJECT);
         assertThat(DegradeMatrix.action(DegradeComponent.CLAIM_LOCK)).isEqualTo(DegradeAction.FALLBACK_CAS);
+        assertThat(DegradeMatrix.action(DegradeComponent.CACHE)).isEqualTo(DegradeAction.L1_OR_DB);
+        assertThat(DegradeMatrix.action(DegradeComponent.DISTRIBUTED_LOCK)).isEqualTo(DegradeAction.SKIP_ROUND);
+        assertThat(DegradeMatrix.action(DegradeComponent.RISK)).isEqualTo(DegradeAction.POLICY);
+        assertThat(DegradeMatrix.action(DegradeComponent.OUTBOX_RELAY)).isEqualTo(DegradeAction.SKIP_ROUND);
+        assertThat(DegradeMatrix.action(DegradeComponent.TRACKING)).isEqualTo(DegradeAction.ALLOW);
         assertThat(DegradeMatrix.rejectOnFailure(DegradeComponent.SESSION)).isTrue();
         assertThat(DegradeMatrix.allowOnFailure(DegradeComponent.RATE_LIMIT)).isTrue();
         assertThat(DegradeMatrix.rejectOnFailure(DegradeComponent.NONCE)).isTrue();

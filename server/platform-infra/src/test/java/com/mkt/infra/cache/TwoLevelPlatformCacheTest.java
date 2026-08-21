@@ -70,18 +70,23 @@ class TwoLevelPlatformCacheTest {
     }
 
     @Test
-    void adPositionIsPlaceholderNoL2() {
+    void adPositionWritesL2AndEvicts() {
         cache.put(CacheNamespace.AD_POSITION, "home", "payload");
-        assertThat(store.get("ad:position:home")).isNull();
+        assertThat(store.get("ad:position:home")).isNotNull();
         AtomicInteger loads = new AtomicInteger();
-        String value = cache.get(CacheNamespace.AD_POSITION, "home", String.class, () -> {
+        String cached = cache.get(CacheNamespace.AD_POSITION, "home", String.class, () -> {
             loads.incrementAndGet();
             return "live";
         });
-        assertThat(value).isEqualTo("live");
+        assertThat(cached).isEqualTo("payload");
         cache.evict(CacheNamespace.AD_POSITION, "home");
+        String after = cache.get(CacheNamespace.AD_POSITION, "home", String.class, () -> {
+            loads.incrementAndGet();
+            return "live";
+        });
+        assertThat(after).isEqualTo("live");
         cache.evictNamespace(CacheNamespace.AD_POSITION);
-        assertThat(cache.stats(CacheNamespace.AD_POSITION).keyCount()).isEqualTo("0");
+        assertThat(store.get("ad:position:home")).isNull();
         assertThat(loads.get()).isEqualTo(1);
     }
 

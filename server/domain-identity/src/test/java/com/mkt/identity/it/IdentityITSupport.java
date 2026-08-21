@@ -232,9 +232,6 @@ public final class IdentityITSupport implements AutoCloseable {
                 return new UserRiskSummary(0, List.of());
             }
         };
-        PortalAuthService portalAuth = TransactionalProxies.proxy(
-                new PortalAuthService(portalUsers, captchas, rates, hasher, sessions, pass, publisher, configs, clock),
-                txm);
         RewardPort rewards = new RewardPort() {
             @Override
             public com.mkt.contract.GrantResult grant(
@@ -255,7 +252,16 @@ public final class IdentityITSupport implements AutoCloseable {
             public boolean prizeEnabled(long prizeId) {
                 return false;
             }
+
+            @Override
+            public long consume(long userId, int points, String sourceType, String sourceId, String remark) {
+                throw new UnsupportedOperationException("reward stub");
+            }
         };
+        PortalAuthService portalAuth = TransactionalProxies.proxy(
+                new PortalAuthService(
+                        portalUsers, captchas, rates, hasher, sessions, pass, rewards, publisher, configs, clock),
+                txm);
         TaskReadPort taskReads = userId -> new com.mkt.contract.InstanceCounts(0L, 0L);
         AdminUserAppService adminUserApp = TransactionalProxies.proxy(
                 new AdminUserAppService(

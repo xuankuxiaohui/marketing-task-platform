@@ -434,7 +434,7 @@ match(batch):
 | AMOUNT_MISMATCH | — | 仅 `ABSORB` | — |
 | 任一 | `review_status=REJECTED` | 仅 `ABSORB` | — |
 
-> **缺口（v2.13 登记，未选边）**：`fulfill_fail_reason ∈ {CALLBACK_FAILED, MANUAL}` 未出现在上表。任务 34 补行或写明「未列 = `action-forbidden`」之前，实现禁止按 ADAPTER_ERROR 类推。场景见 [feasibility-recon.md](feasibility-recon.md) §2 末。
+未列组合（含 `FULFILL_FAILED` + `CALLBACK_FAILED` / `MANUAL`，以及任何未出现在上表的结果/履约/原因）一律拒绝 `reward.recon.action-forbidden`。不得按 `ADAPTER_ERROR` 类推自动 `REFULFILL`。`MANUAL` 原单已关，禁止第二次 `MANUAL_GRANT`。
 
 核渠（§4.5 `POST .../review`）：`PENDING_REVIEW` → `CONFIRMED`（备注必填：已核渠、渠道未出款）或 `REJECTED`（渠道已出款 / 无需处理）。`CONFIRMED` 不自动补发，操作人再点动作。
 

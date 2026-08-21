@@ -1,0 +1,4 @@
+com.mkt.signin.SigninAutoConfiguration
+com.mkt.signin.SigninAdminAutoConfiguration
+com.mkt.signin.SigninAdminSupportAutoConfiguration
+com.mkt.signin.SigninPortalAutoConfiguration

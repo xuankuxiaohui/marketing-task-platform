@@ -121,7 +121,26 @@ public final class MemoryKeyValueStore implements KeyValueStore {
     @Override
     public boolean setIfAbsent(String key, String value, Duration ttl) {
         requireAvailable();
-        return values.putIfAbsent(key, value) == null;
+        boolean created = values.putIfAbsent(key, value) == null;
+        if (created && ttl != null && !ttl.isZero() && !ttl.isNegative()) {
+            ttlSecondsByKey.put(key, Math.max(1L, ttl.toSeconds()));
+        }
+        return created;
+    }
+
+    @Override
+    public long incr(String key, Duration ttlIfFirst) {
+        requireAvailable();
+        long[] next = new long[1];
+        values.compute(key, (ignored, current) -> {
+            long n = (current == null ? 0L : Long.parseLong(current)) + 1L;
+            next[0] = n;
+            if (n == 1L && ttlIfFirst != null && !ttlIfFirst.isZero() && !ttlIfFirst.isNegative()) {
+                ttlSecondsByKey.put(key, Math.max(1L, ttlIfFirst.toSeconds()));
+            }
+            return String.valueOf(n);
+        });
+        return next[0];
     }
 
     @Override

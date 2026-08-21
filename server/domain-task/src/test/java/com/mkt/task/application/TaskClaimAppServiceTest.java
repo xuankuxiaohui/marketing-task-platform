@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,13 +41,18 @@ import com.mkt.task.testsupport.MemoryTaskDefinitionStore;
 import com.mkt.task.testsupport.MemoryTaskInstanceStore;
 import com.mkt.task.testsupport.MemoryTaskMutexGroupStore;
 import com.mkt.task.testsupport.MemoryTaskVersionSnapshotStore;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import org.apache.ibatis.exceptions.PersistenceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 class TaskClaimAppServiceTest {
 
@@ -98,6 +106,109 @@ class TaskClaimAppServiceTest {
         assertThat(instances.listSteps(started.instanceId()))
                 .anyMatch(step -> "go".equals(step.getStepCode()) && StepStatuses.COMPLETED.equals(step.getStatus()));
         verify(events).append(eq("task.instance.start"), eq("task_instance"), any(), any());
+    }
+
+    @Test
+    void simulatedStartPersistsSimulatedFlag() {
+        long taskId = publish("sim_go", "NONE", null);
+        TaskStartResponse started = service.start(taskId, 9L, "203.0.113.1", null, "WEB", true);
+        TaskInstanceEntity row = instances.getById(started.instanceId());
+        assertThat(row.getSimulated()).isEqualTo(1);
+    }
+
+    @Test
+    void startUsesReadCommitted() throws Exception {
+        Transactional five = TaskClaimAppService.class
+                .getMethod("start", long.class, long.class, String.class, String.class, String.class)
+                .getAnnotation(Transactional.class);
+        Transactional six = TaskClaimAppService.class
+                .getMethod(
+                        "start",
+                        long.class,
+                        long.class,
+                        String.class,
+                        String.class,
+                        String.class,
+                        boolean.class)
+                .getAnnotation(Transactional.class);
+        assertThat(five.isolation()).isEqualTo(Isolation.READ_COMMITTED);
+        assertThat(six.isolation()).isEqualTo(Isolation.READ_COMMITTED);
+    }
+
+    @Test
+    void ukConflictFromMybatisPersistenceExceptionReturnsExisting() {
+        long taskId = publish("uk_pe", "NONE", null);
+        TaskStartResponse first = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        MemoryTaskInstanceStore spyStore = spy(instances);
+        service = new TaskClaimAppService(
+                definitions,
+                snapshots,
+                spyStore,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                settings);
+        doReturn(null).doCallRealMethod().when(spyStore).getByUserTaskCycle(eq(9L), eq(taskId), any());
+        doThrow(new PersistenceException(new SQLIntegrityConstraintViolationException(
+                        "Duplicate entry for key 'uk_user_task_cycle'", "23000", 1062)))
+                .when(spyStore)
+                .insert(any());
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        assertThat(again.instanceId()).isEqualTo(first.instanceId());
+        assertThat(instances.rows).hasSize(1);
+    }
+
+    @Test
+    void ukConflictFromDuplicateKeyExceptionReturnsExisting() {
+        long taskId = publish("uk_dk", "NONE", null);
+        TaskStartResponse first = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        MemoryTaskInstanceStore spyStore = spy(instances);
+        service = new TaskClaimAppService(
+                definitions,
+                snapshots,
+                spyStore,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                settings);
+        doReturn(null).doCallRealMethod().when(spyStore).getByUserTaskCycle(eq(9L), eq(taskId), any());
+        doThrow(new DuplicateKeyException("uk_user_task_cycle")).when(spyStore).insert(any());
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        assertThat(again.instanceId()).isEqualTo(first.instanceId());
+        assertThat(instances.rows).hasSize(1);
+    }
+
+    @Test
+    void simulatedStartUkConflictFromMybatisPersistenceExceptionReturnsExisting() {
+        long taskId = publish("uk_sim", "NONE", null);
+        TaskStartResponse first = service.start(taskId, 9L, "1.1.1.1", null, "WEB", true);
+        MemoryTaskInstanceStore spyStore = spy(instances);
+        service = new TaskClaimAppService(
+                definitions,
+                snapshots,
+                spyStore,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                settings);
+        doReturn(null).doCallRealMethod().when(spyStore).getByUserTaskCycle(eq(9L), eq(taskId), any());
+        doThrow(new PersistenceException(new SQLIntegrityConstraintViolationException(
+                        "Duplicate entry for key 'uk_user_task_cycle'", "23000", 1062)))
+                .when(spyStore)
+                .insert(any());
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB", true);
+        assertThat(again.instanceId()).isEqualTo(first.instanceId());
+        assertThat(instances.rows).hasSize(1);
+        assertThat(instances.getById(again.instanceId()).getSimulated()).isEqualTo(1);
     }
 
     @Test
@@ -164,11 +275,9 @@ class TaskClaimAppServiceTest {
         group.setName("互斥");
         group.setCrossCycle(0);
         mutex.insert(group);
-        long first = publish("a", "NONE", null);
-        definitions.getById(first).setMutexGroupId(group.getId());
+        long first = publish("a", "NONE", null, "mutex_a");
         service.start(first, 9L, "1.1.1.1", null, "WEB");
-        long second = publish("b", "NONE", null);
-        definitions.getById(second).setMutexGroupId(group.getId());
+        long second = publish("b", "NONE", null, "mutex_a");
         assertThatThrownBy(() -> service.start(second, 9L, "1.1.1.1", null, "WEB"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
@@ -185,6 +294,17 @@ class TaskClaimAppServiceTest {
     }
 
     @Test
+    void publishedDraftCycleDoesNotChangeClaimCycleKey() {
+        long taskId = publish("cyc", "DAILY", null);
+        TaskDefinitionEntity definition = definitions.getById(taskId);
+        definition.setCycleType("NONE");
+        definitions.update(definition);
+        TaskStartResponse started = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        TaskInstanceEntity row = instances.getById(started.instanceId());
+        assertThat(row.getCycleKey()).isEqualTo("20260819");
+    }
+
+    @Test
     void expireAtIsNowPlusDaysWhenUnbounded() {
         long taskId = publishOpen("open");
         TaskStartResponse started = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
@@ -193,14 +313,25 @@ class TaskClaimAppServiceTest {
     }
 
     private long publish(String code, String cycleType, TaskGrayCommand gray) {
-        return publish(code, cycleType, gray, Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"));
+        return publish(code, cycleType, gray, Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"), null);
+    }
+
+    private long publish(String code, String cycleType, TaskGrayCommand gray, String mutexGroupCode) {
+        return publish(
+                code,
+                cycleType,
+                gray,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2027-01-01T00:00:00Z"),
+                mutexGroupCode);
     }
 
     private long publishOpen(String code) {
-        return publish(code, "NONE", null, null, null);
+        return publish(code, "NONE", null, null, null, null);
     }
 
-    private long publish(String code, String cycleType, TaskGrayCommand gray, Instant start, Instant end) {
+    private long publish(
+            String code, String cycleType, TaskGrayCommand gray, Instant start, Instant end, String mutexGroupCode) {
         TaskDefinitionEntity entity = new TaskDefinitionEntity();
         entity.setCode(code);
         entity.setName(code);
@@ -225,7 +356,7 @@ class TaskClaimAppServiceTest {
                 null,
                 null,
                 null,
-                null,
+                mutexGroupCode,
                 gray == null ? new TaskGrayCommand("NONE", null, null, null, null) : gray,
                 new TaskFilterCommand(null, List.of(), List.of()),
                 List.of(

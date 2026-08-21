@@ -97,4 +97,70 @@
             cost_seconds = #{costSeconds}
         WHERE id = #{id} AND status = 'IN_PROGRESS'
     </update>
+
+    <sql id="adminWhere">
+        <where>
+            <if test="taskId != null">
+                AND task_id = #{taskId}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="simulated != null">
+                AND simulated = #{simulated}
+            </if>
+            <if test="from != null">
+                AND started_at &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND started_at &lt;= #{to}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectAdminPage" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        <include refid="adminWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminPage" resultType="long">
+        SELECT COUNT(*)
+        FROM task_instance
+        <include refid="adminWhere"/>
+    </select>
+
+    <select id="selectDueToExpire" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE status = 'IN_PROGRESS'
+          AND expire_at IS NOT NULL
+          AND expire_at &lt;= #{now}
+        ORDER BY expire_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="abandonCas">
+        UPDATE task_instance
+        SET status = 'ABANDONED',
+            abandon_source = #{source},
+            abandoned_at = #{abandonedAt},
+            cost_seconds = #{costSeconds}
+        WHERE id = #{id} AND status = 'IN_PROGRESS'
+    </update>
+
+    <update id="expireCas">
+        UPDATE task_instance
+        SET status = 'EXPIRED',
+            cost_seconds = #{costSeconds}
+        WHERE id = #{id}
+          AND status = 'IN_PROGRESS'
+          AND expire_at IS NOT NULL
+          AND expire_at &lt;= #{now}
+    </update>
 </mapper>

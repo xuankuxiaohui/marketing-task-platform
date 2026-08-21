@@ -28,7 +28,19 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-spring-boot4-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -48,7 +60,17 @@
             <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Production: identity / task / risk / tracking. domain-reward is test-scoped until task 32. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Production: identity / task / reward / risk / tracking. -->
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-identity</artifactId>
@@ -60,7 +82,6 @@
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-reward</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.mkt</groupId>
@@ -69,6 +90,18 @@
         <dependency>
             <groupId>com.mkt</groupId>
             <artifactId>domain-tracking</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-signin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-activity</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mkt</groupId>
+            <artifactId>domain-ad</artifactId>
         </dependency>
     </dependencies>
 

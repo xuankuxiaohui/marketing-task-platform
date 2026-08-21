@@ -17,7 +17,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** C-1 / R13.1: concurrent start of the same (user, task, cycleKey) yields one instance. */
+/** C-1 / R13.1 / #61: concurrent start of the same (user, task, cycleKey) yields one instance. */
 @Testcontainers
 class InstanceUniquenessIT {
 

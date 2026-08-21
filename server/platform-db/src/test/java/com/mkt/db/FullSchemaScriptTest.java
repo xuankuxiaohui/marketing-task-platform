@@ -17,6 +17,11 @@ class FullSchemaScriptTest {
     private static String v2;
     private static String v3;
     private static String v4;
+    private static String v5;
+    private static String v6;
+    private static String v61;
+    private static String v62;
+    private static String v7;
     private static String all;
 
     @BeforeAll
@@ -24,6 +29,11 @@ class FullSchemaScriptTest {
         v2 = loadSql("V2__task_core.sql");
         v3 = loadSql("V3__reward_points.sql");
         v4 = loadSql("V4__risk_tracking.sql");
+        v5 = loadSql("V5__sgn_signin.sql");
+        v6 = loadSql("V6__act_activity.sql");
+        v61 = loadSql("V6_1__mtr_metrics.sql");
+        v62 = loadSql("V6_2__simulate_permissions.sql");
+        v7 = loadSql("V7__ad_position.sql");
         all = v2 + "\n" + v3 + "\n" + v4 + "\n" + loadSql("V1__sys_baseline.sql");
     }
 
@@ -58,6 +68,74 @@ class FullSchemaScriptTest {
                         "risk_list_item", "risk_rule_config", "risk_hit_log", "risk_handle_log");
         assertThat(tableNames(v4, "evt_")).containsExactlyInAnyOrder("evt_event_log", "evt_event_metadata");
         assertThat(tableNames(all, "")).hasSize(39);
+    }
+
+    @Test
+    void v5CreatesThreeSgnTablesWithoutTouchingV1ToV4() {
+        assertThat(tableNames(v5, "sgn_"))
+                .containsExactlyInAnyOrder("sgn_activity", "sgn_activity_snapshot", "sgn_record");
+        assertThat(v5).contains("UNIQUE KEY uk_activity_user_date (activity_id, user_id, sign_date)");
+        assertThat(v5).contains("UNIQUE KEY uk_activity_version (activity_id, version)");
+        assertThat(v5).contains("CHECK (source IN ('CHECKIN','CATCHUP'))");
+        assertThat(v5).contains("signin:config:query");
+        assertThat(v5).contains("signin:record:query");
+        assertThat(v5).contains("utf8mb4_0900_ai_ci");
+        assertThat(v5.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4).doesNotContain("CREATE TABLE sgn_");
+    }
+
+    @Test
+    void v6CreatesTwoActTablesWithoutTouchingV1ToV5() {
+        assertThat(tableNames(v6, "act_")).containsExactlyInAnyOrder("act_activity", "act_participation");
+        assertThat(v6).contains("CHECK (result IN ('PASS','REJECT'))");
+        assertThat(v6).contains("CHECK (status IN ('DRAFT','SCHEDULED','PUBLISHED','OFFLINE'))");
+        assertThat(v6).contains("activity:query");
+        assertThat(v6).contains("activity:participation:query");
+        assertThat(v6).contains("utf8mb4_0900_ai_ci");
+        assertThat(v6.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5).doesNotContain("CREATE TABLE act_");
+    }
+
+    @Test
+    void v61CreatesFourMtrTablesWithoutTouchingV1ToV6() {
+        assertThat(tableNames(v61, "mtr_"))
+                .containsExactlyInAnyOrder(
+                        "mtr_task_funnel_d",
+                        "mtr_reward_spend_d",
+                        "mtr_risk_hit_d",
+                        "mtr_ad_material_d");
+        assertThat(v61).contains("UNIQUE KEY uk_day_dim (day, dim_key)");
+        assertThat(v61).contains("metrics:dashboard:view");
+        assertThat(v61).contains("utf8mb4_0900_ai_ci");
+        assertThat(v61.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5 + v6).doesNotContain("CREATE TABLE mtr_");
+        assertThat(v61).doesNotContain("CREATE TABLE ad_");
+    }
+
+    @Test
+    void v62AddsSimulatePermissionsWithoutNewTablesOrTouchingV1ToV61() {
+        assertThat(tableNames(v62, "")).isEmpty();
+        assertThat(v62).contains("simulate:task");
+        assertThat(v62).contains("simulate:flow");
+        assertThat(v62).contains("simulate/index");
+        assertThat(v62).doesNotContain("CREATE TABLE");
+        assertThat(v62.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5 + v6 + v61).doesNotContain("simulate:task");
+        assertThat(v62).doesNotContain("CREATE TABLE ad_");
+    }
+
+    @Test
+    void v7CreatesThreeAdTablesWithoutTouchingV1ToV62() {
+        assertThat(tableNames(v7, "ad_"))
+                .containsExactlyInAnyOrder("ad_position", "ad_material", "ad_position_material");
+        assertThat(v7).contains("UNIQUE KEY uk_code (code)");
+        assertThat(v7).contains("UNIQUE KEY uk_position_material (position_id, material_id)");
+        assertThat(v7).contains("CHECK (form IN ('CAROUSEL','IMAGE','SPLASH','POPUP','FLOAT'))");
+        assertThat(v7).contains("ad:position:query");
+        assertThat(v7).contains("ad:material:query");
+        assertThat(v7).contains("utf8mb4_0900_ai_ci");
+        assertThat(v7.toLowerCase()).doesNotContain("foreign key");
+        assertThat(v2 + v3 + v4 + v5 + v6 + v61 + v62).doesNotContain("CREATE TABLE ad_");
     }
 
     @Test

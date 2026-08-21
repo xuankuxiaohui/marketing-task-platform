@@ -18,6 +18,10 @@ public class PortalUserStore {
         this.mapper = mapper;
     }
 
+    public PortalUserEntity getById(long id) {
+        return mapper.selectById(id);
+    }
+
     public PortalUserEntity getByUsername(String username) {
         return mapper.selectOne(
                 new LambdaQueryWrapper<PortalUserEntity>()

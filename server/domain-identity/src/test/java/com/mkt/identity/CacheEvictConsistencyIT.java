@@ -21,7 +21,7 @@ class CacheEvictConsistencyIT {
     static final MySQLContainer<?> MYSQL = IdentityITSupport.mysql();
 
     @Test
-    void namespaceEvictRebuildsPeerAndAdPositionIsNoop() {
+    void namespaceEvictRebuildsPeerAndAdPositionEvicts() {
         Instant now = Instant.parse("2026-08-19T12:00:00Z");
         try (IdentityITSupport env = IdentityITSupport.start(MYSQL, now)) {
             env.platformCache.put(CacheNamespace.DICT, "province", "stale");
@@ -39,8 +39,9 @@ class CacheEvictConsistencyIT {
             assertThat(after).isEqualTo("fresh");
             assertThat(loads.get()).isEqualTo(1);
 
+            env.platformCache.put(CacheNamespace.AD_POSITION, "home", "payload");
             var ad = env.cacheAdmin.evict(new CacheEvictCommand("KEY", "ad:position", null, "home"));
-            assertThat(ad.evictedRedis()).isZero();
+            assertThat(ad.evictedRedis()).isEqualTo(1);
         }
     }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -13,11 +14,15 @@ import static org.mockito.Mockito.when;
 
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
+import com.mkt.contract.PrizeSummary;
+import com.mkt.contract.RewardPort;
 import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskSubject;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.UserRewardSummary;
+import com.mkt.identity.command.ChangePasswordCommand;
 import com.mkt.identity.command.PortalLoginCommand;
 import com.mkt.identity.command.PortalRegisterCommand;
 import com.mkt.identity.convert.IdentityTime;
@@ -43,6 +48,7 @@ class PortalAuthServiceTest {
     private final PortalUserStore users = Mockito.mock(PortalUserStore.class);
     private final CaptchaService captchas = Mockito.mock(CaptchaService.class);
     private final RiskCheckPort risk = Mockito.mock(RiskCheckPort.class);
+    private final RewardPort rewards = Mockito.mock(RewardPort.class);
     private final MemoryOutboxStore outbox = new MemoryOutboxStore();
     private final MutableClock clock = new MutableClock(Instant.parse("2026-08-19T12:00:00Z"));
     private PortalAuthService service;
@@ -59,6 +65,7 @@ class PortalAuthServiceTest {
                 new PasswordHasher(),
                 new SessionService(),
                 risk,
+                rewards,
                 new EventPublisher(outbox, OutboxProducer.PORTAL),
                 (key, def) -> def,
                 clock);
@@ -168,6 +175,43 @@ class PortalAuthServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(AuthErrorCodes.RISK_BLOCKED_REGISTER);
+    }
+
+    @Test
+    void profileAndNicknameAndPassword() {
+        PortalUserEntity user = new PortalUserEntity();
+        user.setId(7L);
+        user.setUsername("bob_01");
+        user.setNickname("用户7");
+        user.setPasswordHash(new PasswordHasher().hash("abcdefg1"));
+        user.setProvince("BJ");
+        user.setUserLevel("3");
+        user.setUserRole("vip");
+        user.setTags("[\"a\"]");
+        user.setStatus("ENABLED");
+        user.setDeleted(0);
+        when(users.getById(7L)).thenReturn(user);
+        when(rewards.userSummary(7L)).thenReturn(new UserRewardSummary(42L, new PrizeSummary(0L, 0L)));
+        var profile = service.profile(7L);
+        assertThat(profile.pointsBalance()).isEqualTo(42L);
+        assertThat(profile.tags()).containsExactly("a");
+        service.updateNickname(7L, "新昵称");
+        verify(users).updateNickname(7L, "新昵称");
+        assertThatThrownBy(() -> service.updateNickname(7L, "bad nick"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.PROFILE_NICKNAME_INVALID);
+        String token = "client:keep";
+        service.changePassword(7L, new ChangePasswordCommand("abcdefg1", "newpass12"), token);
+        verify(users).updatePassword(eq(7L), anyString());
+        assertThatThrownBy(() -> service.changePassword(7L, new ChangePasswordCommand("wrong", "newpass12"), token))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.PASSWORD_OLD_MISMATCH);
+        assertThatThrownBy(() -> service.changePassword(7L, new ChangePasswordCommand("abcdefg1", "short"), token))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(AuthErrorCodes.PASSWORD_POLICY_VIOLATED);
     }
 
     private static RiskScene eqScene() {

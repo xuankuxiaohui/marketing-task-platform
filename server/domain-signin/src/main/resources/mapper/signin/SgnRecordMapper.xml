@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.signin.mapper.SgnRecordMapper">
+
+    <sql id="cols">
+        id, activity_id, user_id, sign_date, source, snapshot_id, simulated, created_at
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sgn_record (activity_id, user_id, sign_date, source, snapshot_id, simulated, created_at)
+        VALUES (#{activityId}, #{userId}, #{signDate}, #{source}, #{snapshotId}, #{simulated}, #{createdAt})
+    </insert>
+
+    <select id="selectByUk" resultType="com.mkt.signin.entity.SgnRecordEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_record
+        WHERE activity_id = #{activityId} AND user_id = #{userId} AND sign_date = #{signDate}
+    </select>
+
+    <select id="listSignDates" resultType="java.time.LocalDate">
+        SELECT sign_date
+        FROM sgn_record
+        WHERE activity_id = #{activityId} AND user_id = #{userId}
+        ORDER BY sign_date DESC
+    </select>
+
+    <select id="listInRange" resultType="com.mkt.signin.entity.SgnRecordEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_record
+        WHERE activity_id = #{activityId} AND user_id = #{userId}
+          AND sign_date &gt;= #{from} AND sign_date &lt;= #{to}
+        ORDER BY sign_date ASC
+    </select>
+
+    <select id="countCatchupBetween" resultType="int">
+        SELECT COUNT(*)
+        FROM sgn_record
+        WHERE activity_id = #{activityId}
+          AND user_id = #{userId}
+          AND source = 'CATCHUP'
+          AND created_at &gt;= #{from}
+          AND created_at &lt; #{to}
+    </select>
+
+    <sql id="adminWhere">
+        <where>
+            <if test="activityId != null">
+                AND activity_id = #{activityId}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="from != null">
+                AND sign_date &gt;= #{from}
+            </if>
+            <if test="to != null">
+                AND sign_date &lt;= #{to}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM sgn_record
+        <include refid="adminWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.signin.entity.SgnRecordEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_record
+        <include refid="adminWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

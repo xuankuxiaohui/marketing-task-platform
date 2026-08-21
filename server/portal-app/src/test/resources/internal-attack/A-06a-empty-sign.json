@@ -1,0 +1,1 @@
+{"id":"A-06a","mutation":"EMPTY_SIGN","expect":"internal.sign.invalid-signature","http":401}

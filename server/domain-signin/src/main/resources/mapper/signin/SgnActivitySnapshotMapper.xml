@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.signin.mapper.SgnActivitySnapshotMapper">
+
+    <sql id="cols">
+        id, activity_id, version, content, published_at, published_by
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sgn_activity_snapshot (activity_id, version, content, published_at, published_by)
+        VALUES (#{activityId}, #{version}, CAST(#{content} AS JSON), #{publishedAt}, #{publishedBy})
+    </insert>
+
+    <select id="selectById" resultType="com.mkt.signin.entity.SgnActivitySnapshotEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity_snapshot
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByActivityAndVersion" resultType="com.mkt.signin.entity.SgnActivitySnapshotEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity_snapshot
+        WHERE activity_id = #{activityId} AND version = #{version}
+    </select>
+
+    <select id="selectByActivityId" resultType="com.mkt.signin.entity.SgnActivitySnapshotEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity_snapshot
+        WHERE activity_id = #{activityId}
+        ORDER BY version DESC
+    </select>
+</mapper>

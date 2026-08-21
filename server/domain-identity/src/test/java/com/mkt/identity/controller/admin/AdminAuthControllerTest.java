@@ -99,7 +99,7 @@ class AdminAuthControllerTest {
         when(menus.menus(1L)).thenReturn(List.of());
         when(menus.profile(1L))
                 .thenReturn(new com.mkt.identity.response.AdminProfileResponse(
-                        1L, "admin", "超管", List.of("super-admin"), List.of("identity:role:query")));
+                        1L, "admin", "超管", List.of("super-admin"), List.of("identity:role:query"), false));
         mvc.perform(get("/admin/auth/menus"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));

@@ -20,12 +20,19 @@ import com.mkt.task.application.MybatisTaskCrowdStore;
 import com.mkt.task.application.MybatisTaskDefinitionStore;
 import com.mkt.task.application.MybatisTaskInstanceStore;
 import com.mkt.task.application.MybatisTaskMutexGroupStore;
+import com.mkt.task.application.JdbcInstanceEventStore;
+import com.mkt.task.application.MybatisTaskProgressReportStore;
 import com.mkt.task.application.MybatisTaskVersionSnapshotStore;
 import com.mkt.task.application.TaskClaimAppService;
 import com.mkt.task.application.TaskDefinitionAppService;
+import com.mkt.task.application.TaskInstanceAppService;
 import com.mkt.task.application.TaskPortalAppService;
 import com.mkt.task.application.TaskPublishAppService;
+import com.mkt.task.application.TaskStepAppService;
 import com.mkt.task.command.PublishCommand;
+import com.mkt.task.command.TaskDefinitionSaveCommand;
+import com.mkt.task.command.TaskStepCommand;
+import com.mkt.task.command.TaskTransitionCommand;
 import com.mkt.task.mapper.TaskCrowdItemMapper;
 import com.mkt.task.mapper.TaskCrowdMapper;
 import com.mkt.task.mapper.TaskDefinitionMapper;
@@ -33,6 +40,7 @@ import com.mkt.task.mapper.TaskInstanceMapper;
 import com.mkt.task.mapper.TaskInstanceStepMapper;
 import com.mkt.task.mapper.TaskMutexGroupMapper;
 import com.mkt.task.mapper.TaskPlatformActionMapper;
+import com.mkt.task.mapper.TaskProgressReportMapper;
 import com.mkt.task.mapper.TaskStepMapper;
 import com.mkt.task.mapper.TaskStepPlatformActionMapper;
 import com.mkt.task.mapper.TaskStepTransitionMapper;
@@ -40,6 +48,7 @@ import com.mkt.task.mapper.TaskVersionSnapshotMapper;
 import com.mkt.task.support.AlertWebhook;
 import com.mkt.task.support.TaskSettings;
 import com.mkt.task.testsupport.MemoryPrizeEnabledLookup;
+import com.mkt.task.testsupport.MemoryRewardPort;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
@@ -54,6 +63,7 @@ import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.MySQLContainer;
 
@@ -64,9 +74,12 @@ final class ClaimITSupport implements AutoCloseable {
     final TaskDefinitionAppService defs;
     final TaskPublishAppService publishes;
     final TaskClaimAppService claims;
+    final TaskStepAppService steps;
     final TaskPortalAppService portal;
+    final TaskInstanceAppService instanceAdmin;
     final TransactionTemplate tx;
     final EventPublisher publisher;
+    final MemoryRewardPort rewards = new MemoryRewardPort();
     final Clock clock = Clock.fixed(Instant.parse("2026-08-19T00:00:00Z"), ZoneOffset.UTC);
 
     ClaimITSupport(MySQLContainer<?> mysql, UserAttributePort users, RiskCheckPort risk, EventPublisher publisher)
@@ -114,8 +127,11 @@ final class ClaimITSupport implements AutoCloseable {
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
         DataSourceTransactionManager txm = new DataSourceTransactionManager(dataSource);
         tx = new TransactionTemplate(txm);
+        tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         JdbcOutboxStore outbox = new JdbcOutboxStore(jdbc);
         this.publisher = publisher != null ? publisher : new EventPublisher(outbox, OutboxProducer.PORTAL);
+        MybatisTaskProgressReportStore progress =
+                new MybatisTaskProgressReportStore(sql.getMapper(TaskProgressReportMapper.class));
         claims = new TaskClaimAppService(
                 definitions,
                 snapshots,
@@ -125,9 +141,30 @@ final class ClaimITSupport implements AutoCloseable {
                 users,
                 risk,
                 this.publisher,
+                rewards,
+                clock,
+                settings);
+        steps = new TaskStepAppService(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                progress,
+                users,
+                risk,
+                this.publisher,
+                rewards,
                 clock,
                 settings);
         portal = new TaskPortalAppService(definitions, snapshots, instances, crowds, users, risk, clock);
+        instanceAdmin = new TaskInstanceAppService(
+                instances,
+                snapshots,
+                new JdbcInstanceEventStore(jdbc),
+                this.publisher,
+                risk,
+                clock,
+                tx);
         UserContext.set(new UserPrincipal(1L, "admin", "op"));
     }
 
@@ -165,9 +202,38 @@ final class ClaimITSupport implements AutoCloseable {
     }
 
     long publishLegal(String code) {
-        long taskId = tx.execute(status -> defs.saveAggregate(PublishITSupport.legal(code)).id());
+        return publish(PublishITSupport.legal(code));
+    }
+
+    long publish(TaskDefinitionSaveCommand command) {
+        long taskId = tx.execute(status -> defs.saveAggregate(command).id());
         tx.executeWithoutResult(status -> publishes.publish(taskId, new PublishCommand(null, null)));
         return taskId;
+    }
+
+    long publishSteps(String code, List<TaskStepCommand> stepDefs, List<TaskTransitionCommand> transitions) {
+        TaskDefinitionSaveCommand base = PublishITSupport.legal(code);
+        return publish(new TaskDefinitionSaveCommand(
+                base.id(),
+                base.code(),
+                base.name(),
+                base.description(),
+                base.category(),
+                base.iconUrl(),
+                base.badgeText(),
+                base.startTime(),
+                base.endTime(),
+                base.sortWeight(),
+                base.cycleType(),
+                base.cronExpr(),
+                base.specialStart(),
+                base.specialEnd(),
+                base.mutexGroupId(),
+                base.gray(),
+                base.filter(),
+                stepDefs,
+                transitions,
+                base.actions()));
     }
 
     @Override
@@ -198,6 +264,7 @@ final class ClaimITSupport implements AutoCloseable {
         configuration.addMapper(TaskVersionSnapshotMapper.class);
         configuration.addMapper(TaskInstanceMapper.class);
         configuration.addMapper(TaskInstanceStepMapper.class);
+        configuration.addMapper(TaskProgressReportMapper.class);
         factoryBean.setConfiguration(configuration);
         GlobalConfig globalConfig = new GlobalConfig();
         GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();

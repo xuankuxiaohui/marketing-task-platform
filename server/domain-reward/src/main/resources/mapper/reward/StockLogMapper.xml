@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.StockLogMapper">
+
+    <select id="selectCountByPrize" resultType="long">
+        SELECT COUNT(*) FROM rwd_stock_log WHERE prize_id = #{prizeId}
+    </select>
+
+    <select id="selectPageByPrize" resultType="com.mkt.reward.entity.StockLogEntity">
+        SELECT id, prize_id, change_type, amount, before_value, after_value,
+               biz_source, biz_id, operator_id, created_at
+        FROM rwd_stock_log
+        WHERE prize_id = #{prizeId}
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

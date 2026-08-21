@@ -26,6 +26,9 @@ public final class AnonymousPaths {
         if (isInfra(path)) {
             return true;
         }
+        if ("/internal".equals(path) || path.startsWith("/internal/")) {
+            return true;
+        }
         if ("GET".equalsIgnoreCase(method) && "/api/common/captcha".equals(path)) {
             return true;
         }
@@ -49,7 +52,12 @@ public final class AnonymousPaths {
         if ("POST".equalsIgnoreCase(method) && "/api/common/track/batch".equals(path)) {
             return true;
         }
-        return "GET".equalsIgnoreCase(method) && path.startsWith("/api/common/ad/positions/");
+        if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/common/ad/positions/")) {
+            return true;
+        }
+        return "POST".equalsIgnoreCase(method)
+                && path.startsWith("/api/common/ad/materials/")
+                && path.endsWith("/dismiss");
     }
 
     public static boolean isInfra(String path) {

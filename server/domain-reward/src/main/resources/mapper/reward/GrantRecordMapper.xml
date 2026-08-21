@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.GrantRecordMapper">
+
+    <select id="countActiveByUserPrize" resultType="long">
+        SELECT COUNT(*) FROM rwd_grant_record
+        WHERE user_id = #{userId}
+          AND prize_id = #{prizeId}
+          AND status IN ('GRANTED', 'WON', 'CLAIMING', 'RETRY_PENDING')
+          <if test="from != null">AND created_at &gt;= #{from}</if>
+    </select>
+
+    <update id="markPermanentFailed">
+        UPDATE rwd_grant_record
+        SET status = 'PERMANENT_FAILED'
+        WHERE id = #{id}
+          AND status IN ('GRANTED', 'WON', 'CLAIMING', 'RETRY_PENDING', 'PENDING')
+    </update>
+
+    <select id="selectByIdempotent" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE grant_source = #{grantSource}
+          AND source_id = #{sourceId}
+          AND prize_id = #{prizeId}
+        LIMIT 1
+    </select>
+
+    <update id="updateIfStatus">
+        UPDATE rwd_grant_record
+        SET prize_code = #{row.prizeCode},
+            category_code = #{row.categoryCode},
+            face_fen = #{row.faceFen},
+            cost_fen = #{row.costFen},
+            recon_status = #{row.reconStatus},
+            status = #{row.status},
+            fulfillment_status = #{row.fulfillmentStatus},
+            fulfillment_ref = #{row.fulfillmentRef},
+            fail_reason = #{row.failReason},
+            fulfill_fail_reason = #{row.fulfillFailReason},
+            retry_count = #{row.retryCount},
+            next_retry_at = #{row.nextRetryAt},
+            next_fulfill_retry_at = #{row.nextFulfillRetryAt},
+            expire_at = #{row.expireAt},
+            claimed_at = #{row.claimedAt},
+            granted_at = #{row.grantedAt},
+            fulfilled_at = #{row.fulfilledAt},
+            simulated = #{row.simulated},
+            updated_at = #{row.updatedAt}
+        WHERE id = #{row.id}
+          AND status = #{expectedStatus}
+    </update>
+
+    <update id="updateFulfillmentRef">
+        UPDATE rwd_grant_record
+        SET fulfillment_ref = #{fulfillmentRef}
+        WHERE id = #{id}
+          AND fulfillment_ref IS NULL
+    </update>
+
+    <select id="listDueRetry" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status = 'RETRY_PENDING'
+          AND next_retry_at &lt;= #{now}
+          AND (expire_at IS NULL OR expire_at &gt; #{now})
+        ORDER BY next_retry_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="casClaimStart">
+        UPDATE rwd_grant_record
+        SET status = 'CLAIMING',
+            retry_count = CASE WHEN status = 'RETRY_PENDING' THEN retry_count + 1 ELSE retry_count END,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status IN ('WON', 'RETRY_PENDING')
+          AND (expire_at IS NULL OR expire_at &gt; #{now})
+          AND (status &lt;&gt; 'RETRY_PENDING' OR retry_count &lt; #{retryMax})
+    </update>
+
+    <update id="casExpireOne">
+        UPDATE rwd_grant_record
+        SET status = 'EXPIRED',
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status IN ('WON', 'RETRY_PENDING', 'CLAIMING')
+          AND expire_at IS NOT NULL
+          AND expire_at &lt;= #{now}
+    </update>
+
+    <update id="casPermanentFromRetry">
+        UPDATE rwd_grant_record
+        SET status = 'PERMANENT_FAILED',
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'RETRY_PENDING'
+          AND retry_count &gt;= #{retryMax}
+    </update>
+
+    <select id="selectByFulfillmentRef" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE fulfillment_ref = #{fulfillmentRef}
+        LIMIT 1
+    </select>
+
+    <update id="updateIfFulfillment">
+        UPDATE rwd_grant_record
+        SET fulfillment_status = #{row.fulfillmentStatus},
+            fulfill_fail_reason = #{row.fulfillFailReason},
+            fulfillment_ref = #{row.fulfillmentRef},
+            fulfilled_at = #{row.fulfilledAt},
+            recon_status = #{row.reconStatus},
+            retry_count = #{row.retryCount},
+            next_fulfill_retry_at = #{row.nextFulfillRetryAt},
+            updated_at = #{row.updatedAt}
+        WHERE id = #{row.id}
+          AND fulfillment_status = #{expectedFulfillment}
+    </update>
+
+    <update id="closeAsManual">
+        UPDATE rwd_grant_record
+        SET fulfillment_status = 'FULFILL_FAILED',
+            fulfill_fail_reason = 'MANUAL',
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND fulfillment_status IN ('SENDING', 'FULFILL_FAILED')
+    </update>
+
+    <select id="listClaimingTimeout" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status = 'CLAIMING'
+          AND updated_at &lt; #{cutoff}
+        ORDER BY updated_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="rollbackClaiming">
+        UPDATE rwd_grant_record
+        SET status = 'WON',
+            retry_count = retry_count + 1,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'CLAIMING'
+    </update>
+
+    <select id="listPrizeExpireDue" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status IN ('WON', 'RETRY_PENDING')
+          AND expire_at IS NOT NULL
+          AND expire_at &lt;= #{now}
+        ORDER BY expire_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="listFulfillRetryDue" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status = 'GRANTED'
+          AND fulfillment_status = 'SENDING'
+          AND next_fulfill_retry_at IS NOT NULL
+          AND next_fulfill_retry_at &lt;= #{now}
+        ORDER BY next_fulfill_retry_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="listSendingTimeout" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status = 'GRANTED'
+          AND fulfillment_status = 'SENDING'
+          AND updated_at &lt; #{cutoff}
+        ORDER BY updated_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="listCrossDaySending" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE status = 'GRANTED'
+          AND fulfillment_status = 'SENDING'
+          AND recon_status = 'NONE'
+          AND granted_at IS NOT NULL
+          AND granted_at &lt; #{dayStart}
+        ORDER BY granted_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markReconPending">
+        UPDATE rwd_grant_record
+        SET recon_status = 'PENDING',
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND recon_status = 'NONE'
+    </update>
+
+    <select id="listPlatformRecon" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE category_code = #{categoryCode}
+          AND recon_status = 'PENDING'
+          AND simulated = 0
+          AND fulfillment_status IN ('ARRIVED', 'SENDING', 'FULFILL_FAILED')
+          AND granted_at &gt;= #{from}
+          AND granted_at &lt; #{to}
+        ORDER BY id ASC
+    </select>
+
+    <select id="listPortalPrizes" resultType="com.mkt.reward.entity.GrantRecordEntity">
+        SELECT * FROM rwd_grant_record
+        WHERE user_id = #{userId}
+        <if test="pendingOnly">
+          AND (status IN ('WON', 'CLAIMING', 'RETRY_PENDING')
+            OR (status = 'GRANTED' AND fulfillment_status IN ('SENDING', 'FULFILL_FAILED')))
+        </if>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPortalPrizes" resultType="long">
+        SELECT COUNT(*) FROM rwd_grant_record
+        WHERE user_id = #{userId}
+        <if test="pendingOnly">
+          AND (status IN ('WON', 'CLAIMING', 'RETRY_PENDING')
+            OR (status = 'GRANTED' AND fulfillment_status IN ('SENDING', 'FULFILL_FAILED')))
+        </if>
+    </select>
+
+    <select id="sumSpend" resultType="com.mkt.reward.response.SpendRowView">
+        SELECT category_code AS categoryCode,
+               CAST(SUM(CASE WHEN fulfillment_status = 'ARRIVED' THEN 1 ELSE 0 END) AS SIGNED) AS arrivedCount,
+               CAST(SUM(CASE WHEN fulfillment_status = 'ARRIVED' THEN cost_fen ELSE 0 END) AS SIGNED) AS arrivedCostFen,
+               CAST(SUM(CASE WHEN fulfillment_status = 'SENDING' THEN 1 ELSE 0 END) AS SIGNED) AS sendingCount,
+               CAST(SUM(CASE WHEN fulfillment_status = 'SENDING' THEN cost_fen ELSE 0 END) AS SIGNED) AS sendingCostFen
+        FROM rwd_grant_record
+        WHERE simulated = 0
+          AND fulfillment_status IN ('ARRIVED', 'SENDING')
+          <if test="categoryCode != null and categoryCode != ''">AND category_code = #{categoryCode}</if>
+          <if test="prizeId != null">AND prize_id = #{prizeId}</if>
+          <if test="from != null">AND granted_at &gt;= #{from}</if>
+          <if test="to != null">AND granted_at &lt; #{to}</if>
+        GROUP BY category_code
+        ORDER BY category_code ASC
+    </select>
+
+    <select id="countByUserStatus" resultType="long">
+        SELECT COUNT(*) FROM rwd_grant_record
+        WHERE user_id = #{userId} AND status = #{status}
+    </select>
+</mapper>

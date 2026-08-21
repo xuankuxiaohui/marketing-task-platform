@@ -51,6 +51,12 @@ public interface KeyValueStore {
 
     boolean setIfAbsent(String key, String value, Duration ttl);
 
+    /**
+     * Atomic INCR. When the key is created, {@code ttlIfFirst} is applied (EXPIRE). Missing TTL
+     * leaves a persistent counter.
+     */
+    long incr(String key, Duration ttlIfFirst);
+
     Long eval(String lua, List<String> keys, List<String> argv);
 
     boolean tryLock(String key, Duration lease);

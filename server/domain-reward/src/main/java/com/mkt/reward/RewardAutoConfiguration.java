@@ -1,0 +1,55 @@
+package com.mkt.reward;
+
+import com.mkt.contract.RewardPort;
+import com.mkt.reward.application.GrantAppService;
+import com.mkt.reward.application.GrantRecordStore;
+import com.mkt.reward.application.PointsAppService;
+import com.mkt.reward.application.PrizeStore;
+import com.mkt.reward.points.PointsPort;
+import com.mkt.reward.points.PointsPortImpl;
+import com.mkt.reward.port.RewardPortImpl;
+import com.mkt.reward.support.RewardGrantSettings;
+import com.mkt.reward.support.RewardRuntimeSettings;
+import javax.sql.DataSource;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+
+/**
+ * Reward domain beans. Persistence scan is imported so this class can keep
+ * {@code @ConditionalOnBean(DataSource)} without pairing {@code @ComponentScan}.
+ */
+@AutoConfiguration
+@AutoConfigureBefore(name = "com.mkt.identity.IdentityAutoConfiguration")
+@ConditionalOnBean(DataSource.class)
+@Import(RewardPersistenceScan.class)
+public class RewardAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    RewardGrantSettings rewardGrantSettings() {
+        return new RewardGrantSettings();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    RewardRuntimeSettings rewardRuntimeSettings() {
+        return new RewardRuntimeSettings();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PointsPort.class)
+    PointsPort pointsPort(PointsAppService points) {
+        return new PointsPortImpl(points);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(RewardPort.class)
+    RewardPort rewardPort(
+            GrantAppService grants, PrizeStore prizes, PointsAppService points, GrantRecordStore records) {
+        return new RewardPortImpl(grants, prizes, points, records);
+    }
+}

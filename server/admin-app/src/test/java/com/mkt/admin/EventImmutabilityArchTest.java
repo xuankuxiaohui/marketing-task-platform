@@ -19,7 +19,7 @@ class EventImmutabilityArchTest {
                 .haveSimpleNameEndingWith("Mapper")
                 .and()
                 .areDeclaredInClassesThat()
-                .haveNameMatching(".*(AuditLog|EventLog|HitLog|VersionSnapshot).*")
+                .haveNameMatching(".*(AuditLog|EventLog|HitLog|VersionSnapshot|ActivitySnapshot).*")
                 .should()
                 .haveNameNotMatching("^(insert|select).*")
                 .allowEmptyShould(true)

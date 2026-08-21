@@ -39,4 +39,35 @@ public interface TaskInstanceStore {
     int activateStep(long id, LocalDateTime activatedAt);
 
     int completeStep(long id, LocalDateTime completedAt);
+
+    TaskInstanceStepEntity getStep(long instanceId, String stepCode);
+
+    TaskInstanceStepEntity getStepById(long id);
+
+    int completeStepCas(long id, int version, LocalDateTime completedAt, Integer progressCurrent);
+
+    int skipStepCas(long id, int version, LocalDateTime completedAt, String skipReason);
+
+    int addProgressCas(long id, int version, int progressCurrent);
+
+    int updateLastBizNo(long id, String lastBizNo);
+
+    List<TaskInstanceEntity> listAdmin(
+            Long taskId,
+            Long userId,
+            String status,
+            Integer simulated,
+            LocalDateTime from,
+            LocalDateTime to,
+            long offset,
+            int limit);
+
+    long countAdmin(
+            Long taskId, Long userId, String status, Integer simulated, LocalDateTime from, LocalDateTime to);
+
+    List<TaskInstanceEntity> listDueToExpire(LocalDateTime now, int limit);
+
+    int abandonCas(long id, String source, LocalDateTime abandonedAt, int costSeconds);
+
+    int expireCas(long id, LocalDateTime now, int costSeconds);
 }

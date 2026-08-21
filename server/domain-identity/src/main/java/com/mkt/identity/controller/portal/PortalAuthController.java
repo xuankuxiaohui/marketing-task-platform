@@ -2,21 +2,26 @@ package com.mkt.identity.controller.portal;
 
 import com.mkt.identity.application.AuthAttemptContext;
 import com.mkt.identity.application.PortalAuthService;
+import com.mkt.identity.command.ChangePasswordCommand;
 import com.mkt.identity.command.PortalLoginCommand;
+import com.mkt.identity.command.PortalNicknameCommand;
 import com.mkt.identity.command.PortalRegisterCommand;
 import com.mkt.identity.domain.DeviceIds;
 import com.mkt.identity.response.OkResponse;
 import com.mkt.identity.response.PortalAuthResponse;
+import com.mkt.identity.response.PortalProfileResponse;
 import com.mkt.identity.response.UsernameAvailableResponse;
 import com.mkt.identity.support.AuthCookies;
 import com.mkt.identity.support.ClientIp;
 import com.mkt.kernel.Result;
+import com.mkt.kernel.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,6 +68,28 @@ public class PortalAuthController {
     @Operation(summary = "门户登出")
     public Result<OkResponse> logout(HttpServletRequest request) {
         authService.logout(AuthCookies.readBearer(request));
+        return Result.ok(OkResponse.yes());
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "门户档案")
+    public Result<PortalProfileResponse> profile() {
+        return Result.ok(authService.profile(UserContext.require().userId()));
+    }
+
+    @PutMapping("/profile")
+    @Operation(summary = "修改昵称")
+    public Result<OkResponse> updateProfile(@Valid @RequestBody PortalNicknameCommand command) {
+        authService.updateNickname(UserContext.require().userId(), command.nickname());
+        return Result.ok(OkResponse.yes());
+    }
+
+    @PutMapping("/password")
+    @Operation(summary = "修改密码")
+    public Result<OkResponse> changePassword(
+            @Valid @RequestBody ChangePasswordCommand command, HttpServletRequest request) {
+        authService.changePassword(
+                UserContext.require().userId(), command, AuthCookies.readBearer(request));
         return Result.ok(OkResponse.yes());
     }
 

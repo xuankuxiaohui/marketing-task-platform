@@ -43,7 +43,8 @@ public class ListLookup {
                 subject.userId(),
                 ip == null ? subject.ip() : ip,
                 device,
-                subject.elapsedSeconds());
+                subject.elapsedSeconds(),
+                subject.simulated());
     }
 
     public ListEntry find(RiskDimension dimension, RiskListType listType, String listValue) {

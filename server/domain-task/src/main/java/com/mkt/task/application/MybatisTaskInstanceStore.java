@@ -102,4 +102,68 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
     public int completeStep(long id, LocalDateTime completedAt) {
         return steps.complete(id, completedAt);
     }
+
+    @Override
+    public TaskInstanceStepEntity getStep(long instanceId, String stepCode) {
+        return steps.selectByInstanceAndCode(instanceId, stepCode);
+    }
+
+    @Override
+    public TaskInstanceStepEntity getStepById(long id) {
+        return steps.selectById(id);
+    }
+
+    @Override
+    public int completeStepCas(long id, int version, LocalDateTime completedAt, Integer progressCurrent) {
+        return steps.completeCas(id, version, completedAt, progressCurrent);
+    }
+
+    @Override
+    public int skipStepCas(long id, int version, LocalDateTime completedAt, String skipReason) {
+        return steps.skipCas(id, version, completedAt, skipReason);
+    }
+
+    @Override
+    public int addProgressCas(long id, int version, int progressCurrent) {
+        return steps.addProgressCas(id, version, progressCurrent);
+    }
+
+    @Override
+    public int updateLastBizNo(long id, String lastBizNo) {
+        return steps.updateLastBizNo(id, lastBizNo);
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listAdmin(
+            Long taskId,
+            Long userId,
+            String status,
+            Integer simulated,
+            LocalDateTime from,
+            LocalDateTime to,
+            long offset,
+            int limit) {
+        return instances.selectAdminPage(taskId, userId, status, simulated, from, to, offset, limit);
+    }
+
+    @Override
+    public long countAdmin(
+            Long taskId, Long userId, String status, Integer simulated, LocalDateTime from, LocalDateTime to) {
+        return instances.countAdminPage(taskId, userId, status, simulated, from, to);
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listDueToExpire(LocalDateTime now, int limit) {
+        return instances.selectDueToExpire(now, limit);
+    }
+
+    @Override
+    public int abandonCas(long id, String source, LocalDateTime abandonedAt, int costSeconds) {
+        return instances.abandonCas(id, source, abandonedAt, costSeconds);
+    }
+
+    @Override
+    public int expireCas(long id, LocalDateTime now, int costSeconds) {
+        return instances.expireCas(id, now, costSeconds);
+    }
 }

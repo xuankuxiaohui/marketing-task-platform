@@ -1,0 +1,35 @@
+{
+  "name": "@mkt/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./openapi/admin": {
+      "types": "./src/openapi/admin.ts",
+      "import": "./src/openapi/admin.ts"
+    },
+    "./openapi/portal": {
+      "types": "./src/openapi/portal.ts",
+      "import": "./src/openapi/portal.ts"
+    },
+    "./openapi/internal": {
+      "types": "./src/openapi/internal.ts",
+      "import": "./src/openapi/internal.ts"
+    }
+  },
+  "scripts": {
+    "gen:api": "node ./scripts/gen-api.mjs",
+    "gen:api:fetch": "node ./scripts/gen-api.mjs --fetch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.9.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

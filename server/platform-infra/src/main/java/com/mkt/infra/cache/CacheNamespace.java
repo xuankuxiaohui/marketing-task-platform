@@ -15,7 +15,7 @@ public enum CacheNamespace {
     RISK_RULE("risk:rule", Duration.ofMinutes(5), 10_000, CacheNamespaceKind.MANAGED),
     IDENTITY_USER_ATTR("identity:user-attr", Duration.ofMinutes(5), 1_000, CacheNamespaceKind.MANAGED),
     IDENTITY_SESSION("identity:session", Duration.ZERO, 0, CacheNamespaceKind.SA_TOKEN),
-    AD_POSITION("ad:position", Duration.ofSeconds(60), 1_000, CacheNamespaceKind.PLACEHOLDER);
+    AD_POSITION("ad:position", Duration.ofSeconds(60), 1_000, CacheNamespaceKind.MANAGED);
 
     private final String id;
     private final Duration ttl;

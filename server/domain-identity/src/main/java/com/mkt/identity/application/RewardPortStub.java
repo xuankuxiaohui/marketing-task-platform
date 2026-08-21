@@ -7,7 +7,7 @@ import com.mkt.contract.PrizeSummary;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserRewardSummary;
 
-/** Placeholder until domain-reward wires {@link RewardPort} (task 32). */
+/** Placeholder when domain-reward is not on the classpath. */
 public class RewardPortStub implements RewardPort {
 
     @Override
@@ -23,5 +23,10 @@ public class RewardPortStub implements RewardPort {
     @Override
     public boolean prizeEnabled(long prizeId) {
         return false;
+    }
+
+    @Override
+    public long consume(long userId, int points, String sourceType, String sourceId, String remark) {
+        throw new UnsupportedOperationException("RewardPort is not assembled");
     }
 }

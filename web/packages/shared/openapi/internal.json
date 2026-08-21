@@ -1,0 +1,315 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/internal/task/progress": {
+      "post": {
+        "tags": [
+          "internal-task"
+        ],
+        "summary": "PROGRESS 进度上报",
+        "description": "HMAC 四头；reportId 去重",
+        "operationId": "progress",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalProgressCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultTaskProgressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/task/callback": {
+      "post": {
+        "tags": [
+          "internal-task"
+        ],
+        "summary": "CALLBACK 步骤回调",
+        "description": "HMAC 四头；bizNo 覆盖 last_biz_no",
+        "operationId": "callback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalCallbackCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultTaskCallbackResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/reward/fulfillment/callback": {
+      "post": {
+        "tags": [
+          "internal-reward"
+        ],
+        "summary": "第三方履约回执",
+        "description": "HMAC 四头；SUCCESS→ARRIVED，FAILED 计次",
+        "operationId": "callback_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FulfillmentCallbackCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultFulfillmentCallbackResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "InternalProgressCommand": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "taskCode": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "cycleKey": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 0
+          },
+          "stepCode": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 1000,
+            "minimum": 1
+          },
+          "reportId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "reportId",
+          "stepCode",
+          "value"
+        ]
+      },
+      "ResultTaskProgressResponse": {
+        "type": "object",
+        "properties": {
+          "code": {},
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TaskProgressResponse"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskProgressResponse": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "stepCode": {
+            "type": "string"
+          },
+          "progressCurrent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progressTarget": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stepStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "InternalCallbackCommand": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "taskCode": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "cycleKey": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 0
+          },
+          "stepCode": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "bizNo": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "stepCode"
+        ]
+      },
+      "ResultTaskCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "code": {},
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TaskCallbackResponse"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "stepCode": {
+            "type": "string"
+          },
+          "stepStatus": {
+            "type": "string"
+          },
+          "instanceStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "FulfillmentCallbackCommand": {
+        "type": "object",
+        "properties": {
+          "fulfillmentRef": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          },
+          "result": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 0
+          },
+          "failReason": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "fulfillmentRef",
+          "result"
+        ]
+      },
+      "FulfillmentCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "fulfillmentStatus": {
+            "type": "string"
+          },
+          "superseded": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ResultFulfillmentCallbackResponse": {
+        "type": "object",
+        "properties": {
+          "code": {},
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/FulfillmentCallbackResponse"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

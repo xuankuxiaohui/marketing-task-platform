@@ -41,6 +41,7 @@ replay_pid*
 .env.local
 .env.vm
 deploy/.env
+deploy/backups/
 .tmp_*.py
 
 # Maven
@@ -49,3 +50,19 @@ deploy/.env
 # jqwik local store
 .jqwik-database
 **/.jqwik-database
+
+# Frontend
+node_modules/
+web/**/dist/
+web/**/coverage/
+web/**/.eslintcache
+web/**/*.tsbuildinfo
+web/**/.vite/
+web/**/playwright-report/
+web/**/test-results/
+web/**/blob-report/
+web/**/playwright/.cache/
+web/.e2e-state.json
+perf/state.json
+perf/reports/*
+!perf/reports/.gitkeep

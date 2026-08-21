@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.reward.mapper.PrizeMapper">
+
+    <sql id="Filter">
+        WHERE deleted = 0
+        <if test="code != null">AND code = #{code}</if>
+        <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
+        <if test="categoryCode != null">AND category_code = #{categoryCode}</if>
+        <if test="status != null">AND status = #{status}</if>
+        <if test="groupId != null">AND group_id = #{groupId}</if>
+    </sql>
+
+    <select id="selectByCode" resultType="com.mkt.reward.entity.PrizeEntity">
+        SELECT id, code, name, image_url, description, category_code, type_params,
+               reward_target, fulfillment_mode, unit_cost_fen, total_stock, remaining_stock,
+               daily_claim_limit, total_claim_limit, region_limit, level_limit, tag_limit,
+               claim_mode, recon_action_policy, expire_hours, group_id, status, ext_config,
+               deleted, created_at, updated_at
+        FROM rwd_prize
+        WHERE code = #{code} AND deleted = 0
+    </select>
+
+    <select id="selectCountFiltered" resultType="long">
+        SELECT COUNT(*) FROM rwd_prize
+        <include refid="Filter"/>
+    </select>
+
+    <select id="selectPageFiltered" resultType="com.mkt.reward.entity.PrizeEntity">
+        SELECT id, code, name, image_url, description, category_code, type_params,
+               reward_target, fulfillment_mode, unit_cost_fen, total_stock, remaining_stock,
+               daily_claim_limit, total_claim_limit, region_limit, level_limit, tag_limit,
+               claim_mode, recon_action_policy, expire_hours, group_id, status, ext_config,
+               deleted, created_at, updated_at
+        FROM rwd_prize
+        <include refid="Filter"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectCountByCategory" resultType="long">
+        SELECT COUNT(*) FROM rwd_prize WHERE category_code = #{categoryCode} AND deleted = 0
+    </select>
+
+    <update id="deductOne">
+        UPDATE rwd_prize
+        SET remaining_stock = remaining_stock - 1
+        WHERE id = #{id}
+          AND remaining_stock &gt;= 1
+          AND deleted = 0
+          AND status = 'ENABLED'
+    </update>
+
+    <update id="restoreOne">
+        UPDATE rwd_prize
+        SET remaining_stock = remaining_stock + 1
+        WHERE id = #{id}
+          AND deleted = 0
+          AND remaining_stock + 1 &lt;= total_stock
+    </update>
+
+    <update id="replenish">
+        UPDATE rwd_prize
+        SET remaining_stock = remaining_stock + #{amount},
+            total_stock = total_stock + #{amount}
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <update id="updateIgnoringRemainingStock">
+        UPDATE rwd_prize
+        SET code = #{code},
+            name = #{name},
+            image_url = #{imageUrl},
+            description = #{description},
+            category_code = #{categoryCode},
+            type_params = #{typeParams},
+            reward_target = #{rewardTarget},
+            fulfillment_mode = #{fulfillmentMode},
+            unit_cost_fen = #{unitCostFen},
+            total_stock = #{totalStock},
+            daily_claim_limit = #{dailyClaimLimit},
+            total_claim_limit = #{totalClaimLimit},
+            region_limit = #{regionLimit},
+            level_limit = #{levelLimit},
+            tag_limit = #{tagLimit},
+            claim_mode = #{claimMode},
+            recon_action_policy = #{reconActionPolicy},
+            expire_hours = #{expireHours},
+            group_id = #{groupId},
+            status = #{status},
+            ext_config = #{extConfig},
+            deleted = #{deleted},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="resetDraftStock">
+        UPDATE rwd_prize
+        SET remaining_stock = total_stock
+        WHERE id = #{id}
+          AND deleted = 0
+          AND status = 'DRAFT'
+    </update>
+</mapper>

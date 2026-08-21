@@ -475,12 +475,12 @@ _测试：§7.3 R13.1–R13.4、R5.1、§7.4 C-1_
 
 ### 任务 29：步骤引擎（编组 F）
 
-- [ ] 四入口前置检查 + 完成 CAS + 级联（含 REWARD 三分支）
-- [ ] 已完成步骤重复 click/callback → 200 幂等；乱序/INACTIVE → 400 `state-mismatch`；progress 重试耗尽 → 400 `task.progress.processing`
-- [ ] REWARD 单测用 `RewardPort` 测试替身；真实现在任务 40 闭环
-- [ ] 进度去重表 `(instance, step, reportId)` 唯一约束同事务
-- [ ] 调度 7 `sched:progress-clean`（7 天前，分批 5000）
-- [ ] 发出 `task.step.complete` / `task.instance.complete`
+- [x] 四入口前置检查 + 完成 CAS + 级联（含 REWARD 三分支）
+- [x] 已完成步骤重复 click/callback → 200 幂等；乱序/INACTIVE → 400 `state-mismatch`；progress 重试耗尽 → 400 `task.progress.processing`
+- [x] REWARD 单测用 `RewardPort` 测试替身；真实现在任务 40 闭环
+- [x] 进度去重表 `(instance, step, reportId)` 唯一约束同事务
+- [x] 调度 7 `sched:progress-clean`（7 天前，分批 5000）
+- [x] 发出 `task.step.complete` / `task.instance.complete`
 
 _需求：R14_
 _设计：design §3.3.7–8、§4.8、§4.9、§5.1、§5.2_
@@ -488,10 +488,10 @@ _测试：§7.3 R14.1–R14.4、§7.4 C-2/C-3_
 
 ### 任务 30：internal 回调端点（编组 F）
 
-- [ ] HMAC §4.8 全文：签名串、容差、nonce、常量时间比较
-- [ ] appId 限流；`sys_internal_app` 失效 / 双密钥窗口
-- [ ] `last_biz_no` 覆盖留痕
-- [ ] A-01~A-06 攻击样本全部拒绝且业务表零变化
+- [x] HMAC §4.8 全文：签名串、容差、nonce、常量时间比较
+- [x] appId 限流；`sys_internal_app` 失效 / 双密钥窗口
+- [x] `last_biz_no` 覆盖留痕
+- [x] A-01~A-06 攻击样本全部拒绝且业务表零变化
 
 _需求：R15_
 _设计：design §3.2.8、§4.8、§7.7_
@@ -499,10 +499,10 @@ _测试：§7.3 R15.1、§7.7 A-01~A-06_
 
 ### 任务 31：实例管理与平台动作（编组 F）
 
-- [ ] 后台实例查询 / 详情事件时间线 / 终止
-- [ ] 过期调度 2：按任务 28 已写入的 `expire_at` 翻转（含 NULL 口径复验）
-- [ ] 动作合并回退链；`NONE` 占位不再回退；实例只读快照
-- [ ] `task.instance.abandon` / `expire` 事件（`start` 已在任务 28 领取事务内发出）
+- [x] 后台实例查询 / 详情事件时间线 / 终止
+- [x] 过期调度 2：按任务 28 已写入的 `expire_at` 翻转（含 NULL 口径复验）
+- [x] 动作合并回退链；`NONE` 占位不再回退；实例只读快照
+- [x] `task.instance.abandon` / `expire` 事件（`start` 已在任务 28 领取事务内发出）
 
 _需求：R16、R14.8–14.11_
 _设计：design §3.3、§4.4、§4.9、§5.3 末、§5.5 末_
@@ -510,13 +510,13 @@ _测试：§7.3 R16.1–R16.4、R14.4_
 
 ### 任务 32：奖品配置与库存（编组 G）
 
-- [ ] 奖品分类 CRUD；内置 7 类种子；内置不可删
-- [ ] 分类 `reconActionPolicy`：`REVIEW`|`AUTO`；须对账内置三类（支付宝红包/微信红包/话费）种子 = `REVIEW`；启用后仍可改
-- [ ] 奖品 CRUD / 停用二次确认 / enable / `stock-replenish`；分类决定目标/履约/成本算法
-- [ ] 奖品 `reconActionPolicy` 可空（空 = 继承分类）；启用后仍可改（运营策略，不冻结）
-- [ ] `unitCostFen` / `faceFen` / `points` 按分类校验
-- [ ] §5.7 库存原子扣减；限领 = READ COMMITTED + 库存行锁内 COUNT
-- [ ] `rwd_stock_log` 扣减 / 回补留痕
+- [x] 奖品分类 CRUD；内置 7 类种子；内置不可删
+- [x] 分类 `reconActionPolicy`：`REVIEW`|`AUTO`；须对账内置三类（支付宝红包/微信红包/话费）种子 = `REVIEW`；启用后仍可改
+- [x] 奖品 CRUD / 停用二次确认 / enable / `stock-replenish`；分类决定目标/履约/成本算法
+- [x] 奖品 `reconActionPolicy` 可空（空 = 继承分类）；启用后仍可改（运营策略，不冻结）
+- [x] `unitCostFen` / `faceFen` / `points` 按分类校验
+- [x] §5.7 库存原子扣减；限领 = READ COMMITTED + 库存行锁内 COUNT
+- [x] `rwd_stock_log` 扣减 / 回补留痕
 
 _需求：R17、R37.7_
 _设计：design §3.4、§4.5、§5.7、§5.11 有效政策_
@@ -524,12 +524,12 @@ _测试：§7.3 R17.1–R17.3、§7.4 C-4/C-5_
 
 ### 任务 33：发放引擎（编组 G）
 
-- [ ] 实现 `RewardPort.grant`；领取七态全量迁移表
-- [ ] 规则链首步：`UserAttributePort.attributes` 非 ACTIVE → `USER_INVALID`；地域/等级/标签同一份属性，禁止直查用户表
-- [ ] 进入 GRANTED 时 `startFulfillment`：INSTANT 同事务到账（POINTS 调任务 35 的 `PointsPort.earn`）；ASYNC 记 SENDING；写入 costFen/faceFen/recon_status
-- [ ] 可重试失败：REQUIRES_NEW 先留痕（含 `reward.grant.failed` Outbox）再回滚主事务；`next_retry_at`；RETRY_PENDING 不短路
-- [ ] 成功后按 sourceId 反查步骤 → CAS 完成 → 续级联；终态实例权益保留不复活
-- [ ] 规则链尾接 `RiskCheckPort`；调度 3 + retry / manual-grant 端点
+- [x] 实现 `RewardPort.grant`；领取七态全量迁移表
+- [x] 规则链首步：`UserAttributePort.attributes` 非 ACTIVE → `USER_INVALID`；地域/等级/标签同一份属性，禁止直查用户表
+- [x] 进入 GRANTED 时 `startFulfillment`：INSTANT 同事务到账（POINTS 调任务 35 的 `PointsPort.earn`）；ASYNC 记 SENDING；写入 costFen/faceFen/recon_status
+- [x] 可重试失败：REQUIRES_NEW 先留痕（含 `reward.grant.failed` Outbox）再回滚主事务；`next_retry_at`；RETRY_PENDING 不短路
+- [x] 成功后按 sourceId 反查步骤 → CAS 完成 → 续级联；终态实例权益保留不复活
+- [x] 规则链尾接 `RiskCheckPort`；调度 3 + retry / manual-grant 端点
 
 _需求：R18_
 _设计：design §2.2.3、§3.4.2、§4.5、§5.6、§6.7-3、D-12_
@@ -537,13 +537,13 @@ _测试：§7.3 R18.1–R18.2、§7.4 C-6_
 
 ### 任务 34：领取与过期（编组 G）
 
-- [ ] claim 前置含 RETRY_PENDING；领取锁退化 CAS（§6.8）；claim 成功后启动履约
-- [ ] CLAIMING 超时调度 4；WON / RETRY_PENDING 过期调度 5；履约调度 10（超时写 `fulfill_fail_reason=TIMEOUT`，须对账则 `recon_status=PENDING`）
-- [ ] `POST /internal/reward/fulfillment/callback`；后台 fulfill-confirm / fulfill-retry
-- [ ] 花销查询 `/admin/reward/spend`；对账批次导入/匹配（平台集含 `FULFILL_FAILED`）
-- [ ] 对账核渠 `POST .../items/{id}/review` + 差异动作门禁（§5.11）：`TIMEOUT`/`SENDING` 未 CONFIRMED 拒补发与履约重试；`MANUAL_GRANT` 永不自动；`AUTO` 仅 REFULFILL 且受 `reward.recon.auto-refulfill-enabled`
-- [ ] 补发成功同事务关原单：`FULFILL_FAILED` + `fulfill_fail_reason=MANUAL`；原 `fulfillmentRef` 回调 / confirm 200 不改态（R37.5）
-- [ ] C 端 prize 端点组：领取状态 × 履约状态（已到账 / 发送中 / 发送失败）
+- [x] claim 前置含 RETRY_PENDING；领取锁退化 CAS（§6.8）；claim 成功后启动履约
+- [x] CLAIMING 超时调度 4；WON / RETRY_PENDING 过期调度 5；履约调度 10（超时写 `fulfill_fail_reason=TIMEOUT`，须对账则 `recon_status=PENDING`）
+- [x] `POST /internal/reward/fulfillment/callback`；后台 fulfill-confirm / fulfill-retry
+- [x] 花销查询 `/admin/reward/spend`；对账批次导入/匹配（平台集含 `FULFILL_FAILED`）
+- [x] 对账核渠 `POST .../items/{id}/review` + 差异动作门禁（§5.11）：`TIMEOUT`/`SENDING` 未 CONFIRMED 拒补发与履约重试；`MANUAL_GRANT` 永不自动；`AUTO` 仅 REFULFILL 且受 `reward.recon.auto-refulfill-enabled`
+- [x] 补发成功同事务关原单：`FULFILL_FAILED` + `fulfill_fail_reason=MANUAL`；原 `fulfillmentRef` 回调 / confirm 200 不改态（R37.5）
+- [x] C 端 prize 端点组：领取状态 × 履约状态（已到账 / 发送中 / 发送失败）
 
 _需求：R19、R18.3、R37、R35 后端_
 _设计：design §4.5、§4.8、§4.9.3、§5.6、§5.11、§6.7-4/5/10；[feasibility-recon.md](feasibility-recon.md)_
@@ -551,10 +551,10 @@ _测试：§7.3 R19.1–R19.2、R35.1、R37.1–R37.3、§7.4 C-6/C-7；对账 2
 
 ### 任务 35：积分域（编组 G）
 
-- [ ] 实现 `PointsPort.earn`；账户 `INSERT IGNORE` 懒创建
-- [ ] 实现 `RewardPort.userSummary`（D-13：余额 + 奖品 won/granted 计数）
-- [ ] 流水轧平；adjust 端点；过期调度 6 批量 5000（`EXPIRE.biz_id` 反指 EARN）
-- [ ] C 端 points 端点组
+- [x] 实现 `PointsPort.earn`；账户 `INSERT IGNORE` 懒创建
+- [x] 实现 `RewardPort.userSummary`（D-13：余额 + 奖品 won/granted 计数）
+- [x] 流水轧平；adjust 端点；过期调度 6 批量 5000（`EXPIRE.biz_id` 反指 EARN）
+- [x] C 端 points 端点组
 
 _需求：R20_
 _设计：design §3.5、§4.5、§4.9.3、§5.8、§6.7-6_
@@ -562,9 +562,9 @@ _测试：§7.3 R20.1–R20.2、§7.4 C-8_
 
 ### 任务 36：admin 前端骨架（编组 H）
 
-- [ ] vue-pure-admin-thin：动态路由 + 权限指令；菜单种子 = §4.10
-- [ ] OpenAPI 类型生成管线（消费任务 11 两应用导出的 admin/portal/internal JSON，**不用** spike/5）
-- [ ] 登录页 + 工作台空壳
+- [x] vue-pure-admin-thin：动态路由 + 权限指令；菜单种子 = §4.10
+- [x] OpenAPI 类型生成管线（消费任务 11 两应用导出的 admin/portal/internal JSON，**不用** spike/5）
+- [x] 登录页 + 工作台空壳
 
 _需求：R1、R2_
 _设计：design §2.7.2、§4.10、§7.9_
@@ -574,8 +574,8 @@ _测试：登录页 Vitest；路由守卫单测_
 
 > 正式子号。可独立提交 / 验收。无对应端点不画空页。
 
-- [ ] 用户 / 角色 / 会话 / 门户用户 / internal-apps / 字典 / 配置 / 缓存 / 审计（§4.10 系统 9 页）
-- [ ] 掩码配置编辑、停用二次确认按契约
+- [x] 用户 / 角色 / 会话 / 门户用户 / internal-apps / 字典 / 配置 / 缓存 / 审计（§4.10 系统 9 页）
+- [x] 掩码配置编辑、停用二次确认按契约
 
 _需求：R2–R10_
 _设计：design §4.10、§7.9_
@@ -583,9 +583,9 @@ _测试：各页关键交互 Vitest；见 verification-matrix 任务 37.1_
 
 ### 任务 37.2：admin 任务+奖励页（编组 H）
 
-- [ ] 定义画布（vue-flow）/ 版本 / 互斥 / 人群 / 实例
-- [ ] 分类 / 奖品 / 发放 / 对账 / 积分账户与流水
-- [ ] 发布影响面两段确认、奖品停用二次确认按契约
+- [x] 定义画布（vue-flow）/ 版本 / 互斥 / 人群 / 实例
+- [x] 分类 / 奖品 / 发放 / 对账 / 积分账户与流水
+- [x] 发布影响面两段确认、奖品停用二次确认按契约
 
 _需求：R11–R12、R17–R20、R37_
 _设计：design §4.10、§7.9_
@@ -593,8 +593,8 @@ _测试：画布 / 两段确认 / 停用确认 Vitest；见 verification-matrix 
 
 ### 任务 37.3：admin 风控+埋点页（编组 H）
 
-- [ ] 名单 / 规则 / 命中与处置
-- [ ] 元数据 / 调试查询
+- [x] 名单 / 规则 / 命中与处置
+- [x] 元数据 / 调试查询
 
 _需求：R25–R29_
 _设计：design §4.10、§7.9_
@@ -604,8 +604,8 @@ _测试：名单 / 规则 / 调试 Vitest；见 verification-matrix 任务 37.3_
 
 > 正式子号。本任务交付 H5 骨架（Vant 4 + 底栏），后续 38.2 / 38.3 依赖本任务。
 
-- [ ] Vant 4 + R33.1 信息架构（底部导航：首页 / 我的）
-- [ ] 登录 / 注册 / 改密 / 档案 / 退出；§4.9.4 会话体验注记
+- [x] Vant 4 + R33.1 信息架构（底部导航：首页 / 我的）
+- [x] 登录 / 注册 / 改密 / 档案 / 退出；§4.9.4 会话体验注记
 
 _需求：R32–R33_
 _设计：design §4.9、§7.9_
@@ -613,8 +613,8 @@ _测试：§7.3 R32.1 / R33.1；验证码 / 协议 / 空态 Vitest_
 
 ### 任务 38.2：portal 任务浏览与参与（编组 H）
 
-- [ ] 列表 / 详情 / 领取 / 推进 / 放弃
-- [ ] §4.9.4 任务相关注记：按钮状态机 / 时间线 / 占位图 / 空态 / 冻结展示
+- [x] 列表 / 详情 / 领取 / 推进 / 放弃
+- [x] §4.9.4 任务相关注记：按钮状态机 / 时间线 / 占位图 / 空态 / 冻结展示
 
 _需求：R34_
 _设计：design §4.9、§7.9_
@@ -622,8 +622,8 @@ _测试：§7.3 R34.1；任务状态机 Vitest_
 
 ### 任务 38.3：portal 奖品积分 + 埋点 SDK（编组 H）
 
-- [ ] 我的奖品（领取状态机 + 倒计时）+ 积分余额 / 流水
-- [ ] 埋点 SDK：本地聚合 20 条 / 5 秒、sendBeacon、补发（对接任务 19 的 `/api/common/track/batch`）
+- [x] 我的奖品（领取状态机 + 倒计时）+ 积分余额 / 流水
+- [x] 埋点 SDK：本地聚合 20 条 / 5 秒、sendBeacon、补发（对接任务 19 的 `/api/common/track/batch`）
 
 _需求：R35、R28.10/13/14_
 _设计：design §4.9、§7.9_
@@ -631,9 +631,9 @@ _测试：§7.3 R35.1 `PrizeButtonStateTest`；SDK Vitest_
 
 ### 任务 39：前端测试与类型门禁（编组 H）
 
-- [ ] Vitest 组件单测覆盖 §7.9 点位
-- [ ] Playwright 用例骨架（正式旅程在任务 43）
-- [ ] `openapi-typescript` diff CI 门禁：后端契约变前端未更则失败
+- [x] Vitest 组件单测覆盖 §7.9 点位
+- [x] Playwright 用例骨架（正式旅程在任务 43）
+- [x] `openapi-typescript` diff CI 门禁：后端契约变前端未更则失败
 
 _需求：NFR 可维护性 2_
 _设计：design §7.9_
@@ -641,9 +641,9 @@ _测试：类型 diff CI 红灯样例一条_
 
 ### 任务 40：ScenarioMatrixIT 场景矩阵全量（编组 I）
 
-- [ ] feasibility §2 的 scenario01–23 落地；场景号 → 期望行为映射常量
-- [ ] REWARD 分支接真实 `RewardPort`
-- [ ] 场景 24（定时发布恰一）归任务 41；禁止再出现 scenario25
+- [x] feasibility §2 的 scenario01–23 落地；场景号 → 期望行为映射常量
+- [x] REWARD 分支接真实 `RewardPort`
+- [x] 场景 24（定时发布恰一）归任务 41；禁止再出现 scenario25
 
 _需求：R14、R18_
 _设计：design §7.5、feasibility §2_
@@ -651,11 +651,11 @@ _测试：ScenarioMatrixIT 23/23 绿_
 
 ### 任务 41：双实例拓扑与故障注入（编组 I）
 
-- [ ] 拓扑 B：TwoAdminAppIT + PortalAssemblyIT（RL-05：portal-app 装配 task 与 reward）+ NamespaceIsolationIT
-- [ ] scenario24 定时发布多实例恰一（feasibility §2 末行，TwoAdminAppIT）
-- [ ] Redis pause 按 §6.8 矩阵逐行
-- [ ] §7.4 **P0**：C-1~C-8、C-12；`awaitOutboxDrain`
-- [ ] **本任务不跑 P1**：C-9 归任务 44、C-10 归任务 45、C-11 归任务 48（签到 / 活动 / 广告表未建，跑则红）
+- [x] 拓扑 B：TwoAdminAppIT + PortalAssemblyIT（RL-05：portal-app 装配 task 与 reward）+ NamespaceIsolationIT
+- [x] scenario24 定时发布多实例恰一（feasibility §2 末行，TwoAdminAppIT）
+- [x] Redis pause 按 §6.8 矩阵逐行
+- [x] §7.4 **P0**：C-1~C-8、C-12；`awaitOutboxDrain`
+- [x] **本任务不跑 P1**：C-9 归任务 44、C-10 归任务 45、C-11 归任务 48（签到 / 活动 / 广告表未建，跑则红）
 
 _需求：NFR 可用性 4、可维护性 4_
 _设计：design §7.2、§7.4、§7.6_
@@ -663,10 +663,10 @@ _测试：上述 P0 IT 全绿_
 
 ### 任务 42：部署编排（编组 I）
 
-- [ ] compose：MySQL / Redis / Nginx 前缀路由 / 双应用；健康检查与启动顺序
-- [ ] Prometheus 抓取两应用 `/actuator/prometheus`（内网）；Grafana 看板可后置，告警项按 NFR 可观测性 3 列出
-- [ ] `.env.example` 无真实密钥；密钥只走环境变量
-- [ ] Flyway 仅 admin-app；备份恢复演练；R31 上线清单
+- [x] compose：MySQL / Redis / Nginx 前缀路由 / 双应用；健康检查与启动顺序
+- [x] Prometheus 抓取两应用 `/actuator/prometheus`（内网）；Grafana 看板可后置，告警项按 NFR 可观测性 3 列出
+- [x] `.env.example` 无真实密钥；密钥只走环境变量
+- [x] Flyway 仅 admin-app；备份恢复演练；R31 上线清单
 
 _需求：R31_
 _设计：design §2.4、§2.6、§6.9_
@@ -674,9 +674,9 @@ _测试：compose 拉起后健康检查 + 登录冒烟_
 
 ### 任务 43：Playwright E2E + k6 性能基线（编组 I）
 
-- [ ] `journey-core`（匿名→注册→领任务→完成→领奖→积分）
-- [ ] `journey-admin`（登录→编排→发布→实例查询）
-- [ ] k6：NFR 性能 1–8 的 P0 子集，对 staging compose 执行
+- [x] `journey-core`（匿名→注册→领任务→完成→领奖→积分）
+- [x] `journey-admin`（登录→编排→发布→实例查询）
+- [x] k6：NFR 性能 1–8 的 P0 子集，对 staging compose 执行
 
 _需求：R32–R35、NFR 性能、R31_
 _设计：design §7.8、§7.9_
@@ -684,13 +684,13 @@ _测试：两条旅程绿；k6 门槛不破_
 
 ### 任务 44：签到域（编组 J，P1）
 
-- [ ] 父 POM 加 `domain-signin`；ArchUnit RL-02 域名单扩包；**禁止**打进 V1–V4
-- [ ] V5：`sgn_activity` / `sgn_activity_snapshot` / `sgn_record`（uk(`activity_id`,`user_id`,`sign_date`)）
-- [ ] 管理端 + §4.9 signin 端点组
-- [ ] 连签自然日 UTC+8；事实源 = `sgn_record`（含补签）
-- [ ] 补签与积分 `CONSUME` 同事务；窗口 / 日限 / 消耗读附录 A
-- [ ] `SIGNIN_DAY` 发放复用 `RewardPort`；每档 `sourceId` 不重复（断链重攒不重复发放）
-- [ ] §7.4 C-9（本任务交付，不在任务 41）
+- [x] 父 POM 加 `domain-signin`；ArchUnit RL-02 域名单扩包；**禁止**打进 V1–V4
+- [x] V5：`sgn_activity` / `sgn_activity_snapshot` / `sgn_record`（uk(`activity_id`,`user_id`,`sign_date`)）
+- [x] 管理端 + §4.9 signin 端点组
+- [x] 连签自然日 UTC+8；事实源 = `sgn_record`（含补签）
+- [x] 补签与积分 `CONSUME` 同事务；窗口 / 日限 / 消耗读附录 A
+- [x] `SIGNIN_DAY` 发放复用 `RewardPort`；每档 `sourceId` 不重复（断链重攒不重复发放）
+- [x] §7.4 C-9（本任务交付，不在任务 41）
 
 _需求：R21、R36_
 _设计：design §3.11、§2.9 sgn_ 前缀、§5.6 复用_
@@ -698,13 +698,13 @@ _测试：§7.3 R21.1、R36.1、§7.4 C-9_
 
 ### 任务 45：活动域（编组 J，P1）
 
-- [ ] 父 POM 加 `domain-activity`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
-- [ ] V6：`act_activity` / `act_participation`
-- [ ] 管理端 + C 端活动页
-- [ ] 限量 CAS（全局日限量 / 用户当日 / 累计）
-- [ ] 富文本 HTML 白名单消毒
-- [ ] 活动参与规则在本域实现（**不**复用任务领取 §5.5）；`ACTIVITY_PARTICIPATION` 发放来源
-- [ ] §7.4 C-10（本任务交付，不在任务 41）
+- [x] 父 POM 加 `domain-activity`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
+- [x] V6：`act_activity` / `act_participation`
+- [x] 管理端 + C 端活动页
+- [x] 限量 CAS（全局日限量 / 用户当日 / 累计）
+- [x] 富文本 HTML 白名单消毒
+- [x] 活动参与规则在本域实现（**不**复用任务领取 §5.5）；`ACTIVITY_PARTICIPATION` 发放来源
+- [x] §7.4 C-10（本任务交付，不在任务 41）
 
 _需求：R22_
 _设计：design §3.11、§8.1 R22 落点_
@@ -712,11 +712,11 @@ _测试：§7.3 R22.1、§7.4 C-10_
 
 ### 任务 46：聚合看板（编组 J，P1）
 
-- [ ] 按日聚合表 `mtr_task_funnel_d` / `mtr_reward_spend_d` / `mtr_risk_hit_d` / `mtr_ad_material_d`，uk(`day`,`dim_key`)；保留 ≥ 1 年；排除 `simulated`
-- [ ] 事件条数口径（曝光 / 领取 / 完成等按 evt 行计，不按用户去重除非条款另述）
-- [ ] 增量聚合调度恰一（Redisson tryLock(0)，§6.7 增）
-- [ ] 延迟 ≤ 附录 A `metrics.aggregate.max-delay-minutes`
-- [ ] 指标端点 + ECharts 页（漏斗 / 成本 / 风控 / 广告）
+- [x] 按日聚合表 `mtr_task_funnel_d` / `mtr_reward_spend_d` / `mtr_risk_hit_d` / `mtr_ad_material_d`，uk(`day`,`dim_key`)；保留 ≥ 1 年；排除 `simulated`
+- [x] 事件条数口径（曝光 / 领取 / 完成等按 evt 行计，不按用户去重除非条款另述）
+- [x] 增量聚合调度恰一（Redisson tryLock(0)，§6.7 增）
+- [x] 延迟 ≤ 附录 A `metrics.aggregate.max-delay-minutes`
+- [x] 指标端点 + ECharts 页（漏斗 / 成本 / 风控 / 广告）
 
 _需求：R23_
 _设计：design §3.11、§6.7 增聚合调度、§7.3 R23.1_
@@ -724,10 +724,10 @@ _测试：§7.3 R23.1_
 
 ### 任务 47：模拟器（编组 J，P1）
 
-- [ ] `/admin/simulate/**` 端点清单：list / detail / start / click / callback / progress / flow
-- [ ] `GrantContext.simulated` 贯穿实例 / 发放 / 流水 / 事件 / 命中
-- [ ] 统计查询排除 simulated；R-a/R-b/R-e/R-f 不统计、R-c/R-d 观察不拦截
-- [ ] 冲正：回补库存 / 反向积分流水；`SENDING` 桩只回补+标记；**不调渠道撤销**
+- [x] `/admin/simulate/**` 端点清单：list / detail / start / click / callback / progress / flow
+- [x] `GrantContext.simulated` 贯穿实例 / 发放 / 流水 / 事件 / 命中
+- [x] 统计查询排除 simulated；R-a/R-b/R-e/R-f 不统计、R-c/R-d 观察不拦截
+- [x] 冲正：回补库存 / 反向积分流水；`SENDING` 桩只回补+标记；**不调渠道撤销**
 
 _需求：R24_
 _设计：design §2.2.3 GrantContext、§3.11、§5.9 simulated 排除_
@@ -735,13 +735,13 @@ _测试：§7.3 R24.1_
 
 ### 任务 48：广告位域（编组 J，P1）
 
-- [ ] 父 POM 加 `domain-ad`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
-- [ ] V7：`ad_position` / `ad_material` / `ad_position_material`
-- [ ] §4.9 ad 端点组；**接线** `ad:position`（P0 任务 15 只占位，本任务才写 L2 / evict / 拉取）
-- [ ] Redis 频控：`ad:freq:{userId|dev}:{materialId}:{yyyyMMdd}`；弹窗冷却 `ad:popup:cd:{subject}`；登录 userId / 匿名 deviceId
-- [ ] R30.5 输出：轮播 weight 降序（并列 id 升序）；单图 / 开屏 / 弹窗取 weight 最大一条（并列 id 小者）
-- [ ] 门户 ad 组件（开屏 / 弹窗 / 轮播 / 悬浮）
-- [ ] §7.4 C-11（本任务交付，不在任务 41）
+- [x] 父 POM 加 `domain-ad`；ArchUnit RL-02 扩包；**禁止**打进 V1–V4
+- [x] V7：`ad_position` / `ad_material` / `ad_position_material`
+- [x] §4.9 ad 端点组；**接线** `ad:position`（P0 任务 15 只占位，本任务才写 L2 / evict / 拉取）
+- [x] Redis 频控：`ad:freq:{userId|dev}:{materialId}:{yyyyMMdd}`；弹窗冷却 `ad:popup:cd:{subject}`；登录 userId / 匿名 deviceId
+- [x] R30.5 输出：轮播 weight 降序（并列 id 升序）；单图 / 开屏 / 弹窗取 weight 最大一条（并列 id 小者）
+- [x] 门户 ad 组件（开屏 / 弹窗 / 轮播 / 悬浮）
+- [x] §7.4 C-11（本任务交付，不在任务 41）
 
 _需求：R30_
 _设计：design §3.11、§3.10、§6.2、§4.9 ad_
@@ -749,12 +749,12 @@ _测试：§7.3 R30.1–R30.2、§7.4 C-11_
 
 ### 任务 49：P1 压测与容量复验（编组 J，P1）
 
-- [ ] k6 全量 NFR 性能 1–8
-- [ ] 容量假设（§2.6 100 万用户 / 3000 eps）复验 + 慢查询复盘
+- [x] k6 全量 NFR 性能 1–8
+- [x] 容量假设（§2.6 100 万用户 / 3000 eps）复验 + 慢查询复盘
 
 _需求：NFR 性能 1–8_
 _设计：design §2.6、§7.8_
-_测试：k6 全量门槛报告归档_
+_测试：k6 全量门槛报告归档（`perf/run-full.sh`，不进例行 CI）+ `PerfCapacityTest`_
 
 ## 备注
 

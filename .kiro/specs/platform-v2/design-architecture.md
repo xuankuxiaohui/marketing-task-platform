@@ -131,7 +131,7 @@ graph TD
 | check | `RiskVerdict check(RiskScene scene, RiskSubject subject)` | 执行 §5.9 判定链。`REGISTER`/`LOGIN` **只跑名单、跳过 R-a–R-f**（R26.3）。**不抛业务异常**，拒绝语义由 verdict 表达、调用方决定错误码映射；命中留痕（risk_hit_log REQUIRES_NEW + risk.hit.recorded 事件）在端口实现内完成 |
 | userSummary | `UserRiskSummary userSummary(long userId)` | **只读**（D-13 / R5.6）：`hitCount`、`listStatus[]`。不跑判定链、不写命中 |
 | RiskScene | 枚举 | REGISTER / LOGIN / CLAIM / GRANT（= §5.9 场景集） |
-| RiskSubject | 记录 | `userId?: long、ip: string、deviceId?: string、elapsedSeconds?: Long`（null = 跳过 R-e，D-09） |
+| RiskSubject | 记录 | `userId?: long、ip: string、deviceId?: string、elapsedSeconds?: Long`（null = 跳过 R-e，D-09）、`simulated: boolean`（默认 false；P1 模拟器 CLAIM/GRANT 传入，R24.5） |
 | RiskVerdict | 记录 | `action: PASS\|REJECT\|SILENT_REJECT\|MARK`（步骤冻结不经本端口） |
 
 **UserAttributePort**（提供方 domain-identity；调用方 domain-task / domain-reward）：门户用户画像与账号状态。用户表在 identity 域，task 做过滤/灰度/分支/领取锁、reward 做限领地域/等级/标签与 `USER_INVALID` 判定时**不得直查 `sys_portal_user`**（RL-03）。一次返回全部字段，调用方在内存计算 `hasTag` / `registerWithinDays`。
@@ -410,7 +410,7 @@ graph TB
 | task:crowd | 10min + 导入失效 | 人群包成员判定 | R11.9 |
 | risk:rule | 5min + 变更即失效 | 规则配置 | R26.6 |
 | identity:session | Sa-Token 自管 | 会话（非本组件管理，**禁止经 cache evict 清理**，R9.2） | R6 |
-| ad:position | 60s（接线后） | **P1 预留名**（R9.1 封闭清单占位，避免 P0 占用该字符串）。**P0（任务 15/24）**：登记该 ns；`/admin/system/cache/stats` 返回键数 0 或 N/A；`evict` 空操作合法、不 400。**禁止**广告拉取、频控、素材装配、L2 写入。接线与 TTL=60s = 任务 48 | R30 |
+| ad:position | 60s | 广告位目录（code → 位+投放+素材快照）。写后 evict；C 端拉取再按排期/端/灰度/频控过滤。L1 容量 1000 | R30 |
 | identity:user-attr | 5min + 变更即失效 | 用户画像属性（UserAttributePort 数据源，§2.2.3） | R9.1 |
 
 task:crowd 的 L2 结构 = Redis **SET**（key = `task:crowd:{crowdId}`，成员 = userId）；缓存未命中时从 `task_crowd_item` 按 5000/批 SADD 装载并以 SETEX 包裹；容量上限 = `crowd.max-size`（10 万），导入超限即拒（§4.4）。L1/Caffeine 统一缺省：全部命名空间 L1 开启、容量 10000（task:snapshot / task:published-index / identity:user-attr / ad:position 为 1000）；指标标签 = Micrometer tag `ns=<命名空间>`；identity:session 行在 `/admin/system/cache/stats` 返回 N/A（Sa-Token 自管，不纳入本组件计数）。
@@ -501,6 +501,7 @@ Relay（admin-app 与 portal-app 各一，锁键分应用：outbox:relay:admin /
 | 7 | 进度去重清理（§3.3.8） | 每日 04:00 | sched:progress-clean | `DELETE ... WHERE created_at < NOW()-7d` 分批 5000 行 |
 | 8 | 事件表分区预建 + 过期清理（R31/NFR 容量） | 每日 03:00 | sched:evt-partition | information_schema 判断预建未来 3 个月；DROP 分区 < 90 天（retention.event-days） |
 | 9 | 审计保留清理 | 每日 03:30 | sched:audit-clean | `DELETE WHERE created_at < NOW()-retention.audit-days` 分批 5000 行 |
+| 11 | 看板增量聚合（R23） | 1min | sched:metrics-aggregate | 按 UTC+8 日 COUNT 源数据后 uk(`day`,`dim_key`) upsert（重跑覆盖不累加）；排除 `simulated=1`；删除 `day < today-retention.metrics-days` 分批 5000 行 |
 
 调度规范：`tryLock(0)` 获取失败即跳过本轮（不等待）；执行体包裹 try/finally 释放；多实例部署下恰一执行（双实例测试验证，§7）；任务执行时长/结果暴露指标（NFR 可观测 1）。
 
@@ -576,7 +577,7 @@ Relay（admin-app 与 portal-app 各一，锁键分应用：outbox:relay:admin /
 - 端点：`/admin/simulate/task/{list|detail|start|click|callback|progress|flow}`（权限 `simulate:task` / `simulate:flow`）。
 - 一律 `GrantContext.simulated=true`；进程内调领域服务（§5.1 / RewardPort），不跨应用 HTTP。
 - 落库打 `simulated=1`（实例 / 发放 / 积分流水 / 服务端事件）。
-- 冲正：该模拟批次积分 `REVERSAL` + 库存回补并留痕；**不调渠道撤销**。
+- 冲正：`POST /admin/simulate/task/reverse`；该模拟实例积分 `REVERSAL` + 库存回补并留痕（`rwd_stock_log.change_type=SIMULATE_REVERSE`）；**不调渠道撤销**。`SENDING` 桩只回补+标记。
 - 风控：R-e 对 simulated GRANT **直接 skip**；R-a / R-b / R-f 不统计；R-c / R-d 观察不拦截（R24.5）。
 
 #### 3.11.5 广告（`ad_`，R30）

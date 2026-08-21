@@ -6,6 +6,7 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskSubject;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.event.EventCodes;
@@ -18,7 +19,6 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.CycleKeyResolver;
-import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.domain.ExpireAtCalculator;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
@@ -36,16 +36,19 @@ import com.mkt.task.response.CurrentStepView;
 import com.mkt.task.response.TaskStartResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -73,6 +76,7 @@ public class TaskClaimAppService {
             ObjectProvider<UserAttributePort> users,
             ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<EventPublisher> events,
+            ObjectProvider<RewardPort> rewards,
             Clock clock,
             TaskSettings settings) {
         this(
@@ -84,6 +88,7 @@ public class TaskClaimAppService {
                 users.getIfAvailable(),
                 risk.getIfAvailable(),
                 events.getIfAvailable(),
+                rewards.getIfAvailable(),
                 clock,
                 settings);
     }
@@ -99,6 +104,21 @@ public class TaskClaimAppService {
             EventPublisher events,
             Clock clock,
             TaskSettings settings) {
+        this(definitions, snapshots, instances, crowds, mutexGroups, users, risk, events, null, clock, settings);
+    }
+
+    public TaskClaimAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskMutexGroupStore mutexGroups,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            EventPublisher events,
+            RewardPort rewards,
+            Clock clock,
+            TaskSettings settings) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -109,11 +129,17 @@ public class TaskClaimAppService {
         this.events = events;
         this.clock = clock;
         this.settings = settings;
-        this.enter = new ClaimEnterEngine(instances, events, clock, settings);
+        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewards);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskStartResponse start(long taskId, long userId, String ip, String deviceId, String platform) {
+        return start(taskId, userId, ip, deviceId, platform, false);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public TaskStartResponse start(
+            long taskId, long userId, String ip, String deviceId, String platform, boolean simulated) {
         if (users == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
         }
@@ -126,36 +152,42 @@ public class TaskClaimAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         Instant now = clock.instant();
-        String cycleKey = CycleKeyResolver.resolve(
-                definition.getCycleType(),
-                definition.getCronExpr(),
-                TaskTime.toInstant(definition.getSpecialStart()),
-                TaskTime.toInstant(definition.getSpecialEnd()),
-                now);
+        SnapshotContent snapshot = snapshotOf(definition);
+        String cycleKey = cycleKeyOf(snapshot, definition, now);
         TaskInstanceEntity existing = instances.getByUserTaskCycle(userId, taskId, cycleKey);
         if (existing != null) {
+            boolean existingSimulated = existing.getSimulated() != null && existing.getSimulated() == 1;
+            if (simulated && !existingSimulated) {
+                throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
+            }
             return toStart(existing, platform);
         }
-        SnapshotContent snapshot = requireSnapshot(definition);
+        if (snapshot == null) {
+            throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
+        }
         VisibilityResult visibility = visibility(definition, snapshot, userId, attrs, now);
         if (!visibility.visible()) {
             throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
         }
-        checkRisk(userId, ip, deviceId);
-        checkMutex(definition, userId, cycleKey);
+        checkRisk(userId, ip, deviceId, simulated);
+        checkMutex(snapshot, userId, cycleKey);
         checkDailyLimit(userId, now);
-        Inserted inserted = insertInstance(definition, snapshot, userId, cycleKey, now);
+        Inserted inserted = insertInstance(definition, snapshot, userId, cycleKey, now, simulated);
         if (!inserted.created()) {
             return toStart(inserted.row(), platform);
         }
         CrowdResolver resolver = new StoreCrowdResolver(crowds, users, userId);
-        enter.enter(inserted.row(), snapshot, attrs, resolver);
+        enter.enter(inserted.row(), snapshot, attrs, resolver, ip, deviceId);
         if (events != null) {
             events.append(
                     EventCodes.TASK_INSTANCE_START,
                     "task_instance",
                     String.valueOf(inserted.row().getId()),
-                    Map.of("instanceId", inserted.row().getId(), "taskId", taskId, "userId", userId));
+                    Map.of(
+                            "instanceId", inserted.row().getId(),
+                            "taskId", taskId,
+                            "userId", userId,
+                            "simulated", simulated));
         }
         TaskInstanceEntity fresh = instances.getById(inserted.row().getId());
         return toStart(fresh == null ? inserted.row() : fresh, platform);
@@ -166,12 +198,13 @@ public class TaskClaimAppService {
             SnapshotContent snapshot,
             long userId,
             String cycleKey,
-            Instant now) {
+            Instant now,
+            boolean simulated) {
         Instant cycleEnd = CycleKeyResolver.cycleEnd(
-                definition.getCycleType(),
-                definition.getCronExpr(),
-                TaskTime.toInstant(definition.getSpecialStart()),
-                TaskTime.toInstant(definition.getSpecialEnd()),
+                snapshot.cycleType(),
+                snapshot.cronExpr(),
+                snapshot.specialStart(),
+                snapshot.specialEnd(),
                 now);
         Instant expireAt = ExpireAtCalculator.compute(
                 snapshot.endTime(),
@@ -190,11 +223,14 @@ public class TaskClaimAppService {
         row.setStatus(InstanceStatuses.IN_PROGRESS);
         row.setExpireAt(TaskTime.toUtc(expireAt));
         row.setStartedAt(TaskTime.toUtc(now));
-        row.setSimulated(0);
+        row.setSimulated(simulated ? 1 : 0);
         row.setCreatedAt(TaskTime.toUtc(now));
         try {
             instances.insert(row);
-        } catch (DuplicateKeyException ex) {
+        } catch (RuntimeException ex) {
+            if (!duplicateKey(ex)) {
+                throw ex;
+            }
             TaskInstanceEntity winner = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey);
             if (winner != null) {
                 return new Inserted(winner, false);
@@ -204,32 +240,58 @@ public class TaskClaimAppService {
         return new Inserted(row, true);
     }
 
+    private static boolean duplicateKey(Throwable ex) {
+        while (ex != null) {
+            if (ex instanceof DuplicateKeyException || ex instanceof SQLIntegrityConstraintViolationException) {
+                return true;
+            }
+            ex = ex.getCause();
+        }
+        return false;
+    }
+
     private record Inserted(TaskInstanceEntity row, boolean created) {}
 
-    private void checkRisk(long userId, String ip, String deviceId) {
+    private void checkRisk(long userId, String ip, String deviceId, boolean simulated) {
         if (risk == null) {
             return;
         }
-        String resolvedIp = ip == null || ip.isBlank() ? "0.0.0.0" : ip;
-        RiskVerdict verdict = risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null));
+        String resolvedIp = ip == null || ip.isBlank() || "0.0.0.0".equals(ip) ? null : ip;
+        RiskVerdict verdict =
+                risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null, simulated));
         if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
             throw new BusinessException(TaskErrorCodes.RISK_BLOCKED_GENERIC);
         }
     }
 
-    private void checkMutex(TaskDefinitionEntity definition, long userId, String cycleKey) {
-        if (definition.getMutexGroupId() == null) {
+    private void checkMutex(SnapshotContent snapshot, long userId, String cycleKey) {
+        String mutexCode = snapshot.mutexGroupCode();
+        if (mutexCode == null || mutexCode.isBlank()) {
             return;
         }
-        List<Long> groupTaskIds = definitions.listIdsByMutexGroup(definition.getMutexGroupId());
-        if (groupTaskIds == null || groupTaskIds.isEmpty()) {
+        TaskMutexGroupEntity group = mutexGroups.getByCode(mutexCode);
+        if (group == null) {
             return;
         }
-        TaskMutexGroupEntity group = mutexGroups.getById(definition.getMutexGroupId());
-        String matchCycle = group != null && group.crossCycleFlag() ? null : cycleKey;
+        List<Long> groupTaskIds = liveMutexTaskIds(mutexCode);
+        if (groupTaskIds.isEmpty()) {
+            return;
+        }
+        String matchCycle = group.crossCycleFlag() ? null : cycleKey;
         if (instances.existsInProgress(userId, groupTaskIds, matchCycle)) {
             throw new BusinessException(TaskErrorCodes.CLAIM_MUTEX_BLOCKED);
         }
+    }
+
+    private List<Long> liveMutexTaskIds(String mutexGroupCode) {
+        List<Long> ids = new ArrayList<>();
+        for (TaskDefinitionEntity published : definitions.listPublished()) {
+            SnapshotContent content = snapshotOf(published);
+            if (content != null && mutexGroupCode.equals(content.mutexGroupCode())) {
+                ids.add(published.getId());
+            }
+        }
+        return ids;
     }
 
     private void checkDailyLimit(long userId, Instant now) {
@@ -265,17 +327,28 @@ public class TaskClaimAppService {
                 EvalContexts.filter(attrs, now, resolver));
     }
 
-    private SnapshotContent requireSnapshot(TaskDefinitionEntity definition) {
-        if (!DefinitionStatuses.PUBLISHED.equals(definition.getStatus())
-                || definition.getVersion() == null
-                || definition.getVersion() < 1) {
-            throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
+    private SnapshotContent snapshotOf(TaskDefinitionEntity definition) {
+        if (definition.getVersion() == null || definition.getVersion() < 1) {
+            return null;
         }
         TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(definition.getId(), definition.getVersion());
         if (snap == null || snap.getContent() == null) {
-            throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
+            return null;
         }
         return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+    }
+
+    private static String cycleKeyOf(SnapshotContent snapshot, TaskDefinitionEntity definition, Instant now) {
+        if (snapshot != null) {
+            return CycleKeyResolver.resolve(
+                    snapshot.cycleType(), snapshot.cronExpr(), snapshot.specialStart(), snapshot.specialEnd(), now);
+        }
+        return CycleKeyResolver.resolve(
+                definition.getCycleType(),
+                definition.getCronExpr(),
+                TaskTime.toInstant(definition.getSpecialStart()),
+                TaskTime.toInstant(definition.getSpecialEnd()),
+                now);
     }
 
     private TaskStartResponse toStart(TaskInstanceEntity instance, String platform) {

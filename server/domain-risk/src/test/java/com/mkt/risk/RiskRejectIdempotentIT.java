@@ -7,12 +7,15 @@ import com.mkt.contract.RiskListType;
 import com.mkt.contract.RiskScene;
 import com.mkt.contract.RiskSubject;
 import com.mkt.contract.RiskVerdict;
+import com.mkt.kernel.UserContext;
+import com.mkt.kernel.UserPrincipal;
 import com.mkt.risk.command.RiskListItemCreateCommand;
 import com.mkt.risk.domain.RiskDimension;
 import com.mkt.risk.it.RiskITSupport;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -27,9 +30,15 @@ class RiskRejectIdempotentIT {
     @Container
     static final MySQLContainer<?> MYSQL = RiskITSupport.mysql();
 
+    @AfterEach
+    void clear() {
+        UserContext.clear();
+    }
+
     @Test
     void tenRejectedClaimsLeaveZeroInstancesAndTenHits() throws Exception {
         try (RiskITSupport env = RiskITSupport.start(MYSQL, Instant.parse("2026-08-19T12:00:00Z"))) {
+            UserContext.set(new UserPrincipal(1L, "admin", "op"));
             env.tx.executeWithoutResult(status -> env.lists.add(new RiskListItemCreateCommand(
                     RiskDimension.USER, RiskListType.BLACK, "8801", "bot", null, false, null)));
             List<RiskVerdict> verdicts = new ArrayList<>(10);

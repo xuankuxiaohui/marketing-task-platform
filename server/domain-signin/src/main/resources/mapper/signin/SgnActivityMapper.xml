@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mkt.signin.mapper.SgnActivityMapper">
+
+    <sql id="cols">
+        id, code, name, start_time, end_time, status, version, schedule_publish_at,
+        draft_content, pending_revision, deleted, created_by, created_at, updated_at
+    </sql>
+
+    <sql id="queryWhere">
+        <where>
+            deleted = 0
+            <if test="code != null and code != ''">
+                AND code = #{code}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectByCode" resultType="com.mkt.signin.entity.SgnActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity
+        WHERE code = #{code} AND deleted = 0
+    </select>
+
+    <select id="selectCountByQuery" resultType="long">
+        SELECT COUNT(*)
+        FROM sgn_activity
+        <include refid="queryWhere"/>
+    </select>
+
+    <select id="selectByQuery" resultType="com.mkt.signin.entity.SgnActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity
+        <include refid="queryWhere"/>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectByIdForUpdate" resultType="com.mkt.signin.entity.SgnActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity
+        WHERE id = #{id} AND deleted = 0
+        FOR UPDATE
+    </select>
+
+    <select id="selectPublished" resultType="com.mkt.signin.entity.SgnActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity
+        WHERE deleted = 0 AND status = 'PUBLISHED'
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectDueScheduled" resultType="com.mkt.signin.entity.SgnActivityEntity">
+        SELECT <include refid="cols"/>
+        FROM sgn_activity
+        WHERE deleted = 0 AND status = 'SCHEDULED' AND schedule_publish_at IS NOT NULL
+          AND schedule_publish_at &lt;= #{now}
+        ORDER BY schedule_publish_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="casPublish">
+        UPDATE sgn_activity
+        SET status = 'PUBLISHED',
+            version = #{nextVersion},
+            pending_revision = 0,
+            schedule_publish_at = NULL,
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+          AND deleted = 0
+          AND status = #{expectedStatus}
+          AND version = #{expectedVersion}
+          AND pending_revision = #{expectedPending}
+    </update>
+</mapper>

@@ -1,0 +1,4 @@
+com.mkt.activity.ActivityAutoConfiguration
+com.mkt.activity.ActivityAdminAutoConfiguration
+com.mkt.activity.ActivityAdminSupportAutoConfiguration
+com.mkt.activity.ActivityPortalAutoConfiguration

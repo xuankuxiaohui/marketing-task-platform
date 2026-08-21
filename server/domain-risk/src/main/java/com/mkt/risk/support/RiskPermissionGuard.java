@@ -40,4 +40,12 @@ public interface RiskPermissionGuard {
     default void requireCaseHandle() {
         require(RiskListPermissions.CASE_HANDLE);
     }
+
+    default void requireRuleQuery() {
+        require(RiskListPermissions.RULE_QUERY);
+    }
+
+    default void requireRuleConfig() {
+        require(RiskListPermissions.RULE_CONFIG);
+    }
 }

@@ -15,6 +15,8 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
 
     public final ConcurrentHashMap<Long, TaskInstanceEntity> rows = new ConcurrentHashMap<>();
     public final ConcurrentHashMap<Long, List<TaskInstanceStepEntity>> steps = new ConcurrentHashMap<>();
+    public int remainingCompleteCasFailures;
+    public int remainingAddProgressCasFailures;
     private final AtomicLong seq = new AtomicLong(1);
     private final AtomicLong stepSeq = new AtomicLong(1);
     private final ConcurrentHashMap<String, Long> unique = new ConcurrentHashMap<>();
@@ -165,6 +167,180 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
         row.setCompletedAt(completedAt);
         row.setVersion((row.getVersion() == null ? 0 : row.getVersion()) + 1);
         return 1;
+    }
+
+    @Override
+    public TaskInstanceStepEntity getStep(long instanceId, String stepCode) {
+        List<TaskInstanceStepEntity> list = steps.get(instanceId);
+        if (list == null) {
+            return null;
+        }
+        for (TaskInstanceStepEntity row : list) {
+            if (stepCode.equals(row.getStepCode())) {
+                return row;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public TaskInstanceStepEntity getStepById(long id) {
+        return step(id);
+    }
+
+    @Override
+    public synchronized int completeStepCas(
+            long id, int version, LocalDateTime completedAt, Integer progressCurrent) {
+        if (remainingCompleteCasFailures > 0) {
+            remainingCompleteCasFailures--;
+            return 0;
+        }
+        TaskInstanceStepEntity row = step(id);
+        if (row == null || !"ACTIVE".equals(row.getStatus()) || versionOf(row) != version) {
+            return 0;
+        }
+        row.setStatus("COMPLETED");
+        row.setCompletedAt(completedAt);
+        row.setVersion(version + 1);
+        if (progressCurrent != null) {
+            row.setProgressCurrent(progressCurrent);
+        }
+        return 1;
+    }
+
+    @Override
+    public synchronized int skipStepCas(long id, int version, LocalDateTime completedAt, String skipReason) {
+        TaskInstanceStepEntity row = step(id);
+        if (row == null || !"ACTIVE".equals(row.getStatus()) || versionOf(row) != version) {
+            return 0;
+        }
+        row.setStatus("SKIPPED");
+        row.setSkipReason(skipReason);
+        row.setCompletedAt(completedAt);
+        row.setVersion(version + 1);
+        return 1;
+    }
+
+    @Override
+    public synchronized int addProgressCas(long id, int version, int progressCurrent) {
+        if (remainingAddProgressCasFailures > 0) {
+            remainingAddProgressCasFailures--;
+            return 0;
+        }
+        TaskInstanceStepEntity row = step(id);
+        if (row == null || !"ACTIVE".equals(row.getStatus()) || versionOf(row) != version) {
+            return 0;
+        }
+        row.setProgressCurrent(progressCurrent);
+        row.setVersion(version + 1);
+        return 1;
+    }
+
+    @Override
+    public int updateLastBizNo(long id, String lastBizNo) {
+        TaskInstanceStepEntity row = step(id);
+        if (row == null) {
+            return 0;
+        }
+        row.setLastBizNo(lastBizNo);
+        return 1;
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listAdmin(
+            Long taskId,
+            Long userId,
+            String status,
+            Integer simulated,
+            LocalDateTime from,
+            LocalDateTime to,
+            long offset,
+            int limit) {
+        return rows.values().stream()
+                .filter(row -> matchesAdmin(row, taskId, userId, status, simulated, from, to))
+                .sorted(Comparator.comparing(TaskInstanceEntity::getId).reversed())
+                .skip(offset)
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public long countAdmin(
+            Long taskId, Long userId, String status, Integer simulated, LocalDateTime from, LocalDateTime to) {
+        return rows.values().stream()
+                .filter(row -> matchesAdmin(row, taskId, userId, status, simulated, from, to))
+                .count();
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listDueToExpire(LocalDateTime now, int limit) {
+        return rows.values().stream()
+                .filter(row -> "IN_PROGRESS".equals(row.getStatus()))
+                .filter(row -> row.getExpireAt() != null && !row.getExpireAt().isAfter(now))
+                .sorted(Comparator.comparing(TaskInstanceEntity::getExpireAt)
+                        .thenComparing(TaskInstanceEntity::getId))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public int abandonCas(long id, String source, LocalDateTime abandonedAt, int costSeconds) {
+        TaskInstanceEntity row = rows.get(id);
+        if (row == null || !"IN_PROGRESS".equals(row.getStatus())) {
+            return 0;
+        }
+        row.setStatus("ABANDONED");
+        row.setAbandonSource(source);
+        row.setAbandonedAt(abandonedAt);
+        row.setCostSeconds(costSeconds);
+        return 1;
+    }
+
+    @Override
+    public int expireCas(long id, LocalDateTime now, int costSeconds) {
+        TaskInstanceEntity row = rows.get(id);
+        if (row == null || !"IN_PROGRESS".equals(row.getStatus())) {
+            return 0;
+        }
+        if (row.getExpireAt() == null || row.getExpireAt().isAfter(now)) {
+            return 0;
+        }
+        row.setStatus("EXPIRED");
+        row.setCostSeconds(costSeconds);
+        return 1;
+    }
+
+    private static boolean matchesAdmin(
+            TaskInstanceEntity row,
+            Long taskId,
+            Long userId,
+            String status,
+            Integer simulated,
+            LocalDateTime from,
+            LocalDateTime to) {
+        if (taskId != null && (row.getTaskId() == null || row.getTaskId() != taskId)) {
+            return false;
+        }
+        if (userId != null && (row.getUserId() == null || row.getUserId() != userId)) {
+            return false;
+        }
+        if (status != null && !status.equals(row.getStatus())) {
+            return false;
+        }
+        if (simulated != null && (row.getSimulated() == null || !simulated.equals(row.getSimulated()))) {
+            return false;
+        }
+        if (from != null && (row.getStartedAt() == null || row.getStartedAt().isBefore(from))) {
+            return false;
+        }
+        if (to != null && (row.getStartedAt() == null || row.getStartedAt().isAfter(to))) {
+            return false;
+        }
+        return true;
+    }
+
+    private static int versionOf(TaskInstanceStepEntity row) {
+        return row.getVersion() == null ? 0 : row.getVersion();
     }
 
     private TaskInstanceStepEntity step(long id) {

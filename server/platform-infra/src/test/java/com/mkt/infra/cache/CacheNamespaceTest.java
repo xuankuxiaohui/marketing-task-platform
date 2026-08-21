@@ -26,7 +26,7 @@ class CacheNamespaceTest {
                         "ad:position");
         assertThat(CacheNamespace.values()).hasSize(10);
         assertThat(CacheNamespace.IDENTITY_SESSION.kind()).isEqualTo(CacheNamespaceKind.SA_TOKEN);
-        assertThat(CacheNamespace.AD_POSITION.kind()).isEqualTo(CacheNamespaceKind.PLACEHOLDER);
+        assertThat(CacheNamespace.AD_POSITION.kind()).isEqualTo(CacheNamespaceKind.MANAGED);
         assertThat(CacheNamespace.require("identity:user-attr")).isEqualTo(CacheNamespace.IDENTITY_USER_ATTR);
     }
 }

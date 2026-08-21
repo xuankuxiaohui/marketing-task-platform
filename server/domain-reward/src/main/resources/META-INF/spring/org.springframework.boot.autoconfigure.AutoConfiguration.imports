@@ -1,0 +1,4 @@
+com.mkt.reward.RewardAutoConfiguration
+com.mkt.reward.RewardAdminAutoConfiguration
+com.mkt.reward.RewardAdminSupportAutoConfiguration
+com.mkt.reward.RewardPortalAutoConfiguration

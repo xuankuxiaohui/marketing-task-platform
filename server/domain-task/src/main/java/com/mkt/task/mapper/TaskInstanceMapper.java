@@ -45,4 +45,33 @@ public interface TaskInstanceMapper extends BaseMapper<TaskInstanceEntity> {
             @Param("id") long id,
             @Param("completedAt") LocalDateTime completedAt,
             @Param("costSeconds") int costSeconds);
+
+    List<TaskInstanceEntity> selectAdminPage(
+            @Param("taskId") Long taskId,
+            @Param("userId") Long userId,
+            @Param("status") String status,
+            @Param("simulated") Integer simulated,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("offset") long offset,
+            @Param("limit") int limit);
+
+    long countAdminPage(
+            @Param("taskId") Long taskId,
+            @Param("userId") Long userId,
+            @Param("status") String status,
+            @Param("simulated") Integer simulated,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    List<TaskInstanceEntity> selectDueToExpire(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    int abandonCas(
+            @Param("id") long id,
+            @Param("source") String source,
+            @Param("abandonedAt") LocalDateTime abandonedAt,
+            @Param("costSeconds") int costSeconds);
+
+    int expireCas(
+            @Param("id") long id, @Param("now") LocalDateTime now, @Param("costSeconds") int costSeconds);
 }
