@@ -1,7 +1,7 @@
 # 任务列表（营销任务平台 v2）
 
 > 版本：**v2.9**　需求：[requirements.md](requirements.md) v3.9　设计：[design.md](design.md) v2.13
-> 施工进度见仓库根 [PROJECT_STATUS.md](../../../PROJECT_STATUS.md)。v1 已上 master `6d03ef5`（**测试阶段**，尚未 preview）。本文件是规格交付清单，不是下一题队列。
+> 施工进度见仓库根 [PROJECT_STATUS.md](../../../PROJECT_STATUS.md)。本文件是规格交付清单，不是下一题队列。
 > 输入：requirements 验收标准 = 任务完成定义；design §2–§7 为实现锚点（分册见 design §0）；component-selection §6 = Spike 八项；三份 feasibility §2 = 步骤 24 + 对账 28 + 风控 30
 > 验收对照：[../../docs/verification-matrix.md](../../docs/verification-matrix.md)
 > 格式：可勾选动作 + 三行元信息（`_需求：_` / `_设计：_` / `_测试：_`）；依赖只写在《任务总览》与文末《任务依赖图》

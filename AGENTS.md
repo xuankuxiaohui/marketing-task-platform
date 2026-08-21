@@ -32,6 +32,10 @@
   `admin-app` / `portal-app`
 - **禁止** `domain-points`（积分是 `com.mkt.reward.points`）。P1 域（signin / activity / ad）与 `web/` 已在树上。当前阶段只看 [PROJECT_STATUS.md](PROJECT_STATUS.md)
 
+## 测试阶段正规流
+
+从 `origin/master` 开 `fix/<slug>`（文档可用 `docs/<slug>`）。对着打开的 issue 做，requirements > design，先测后审。PR 到 master；除非点名，不要 merge / push / force-push `master`。STATUS 是当前阶段指针，不要再叠 `task/*`，不要自动开下一题。
+
 ## 动手前读什么
 
 1. [PROJECT_STATUS.md](PROJECT_STATUS.md)（一页现状）
@@ -63,7 +67,7 @@
 
 ## 硬停止（AI 高频翻车）
 
-- 当前阶段与待修只看 [PROJECT_STATUS.md](PROJECT_STATUS.md)。不要再执行过期的「禁止建 P1/web」硬停止
+- 当前阶段与待修只看 [PROJECT_STATUS.md](PROJECT_STATUS.md)
 - 不要发明表、错误码、缓存命名空间、权限码、匿名端点
 - 不要引入反选型：RuoYi、Spring Cloud、XXL-Job、Drools、H2、完整 Spring Security（只许 `spring-security-crypto`）、Hutool JSON/HTTP/DB
 - 不要 `new ObjectMapper()`；不要 evict `identity:session`（踢人走 R6）。**细则只在 05-security.md**，本条不扩写
@@ -72,7 +76,7 @@
 - 乐观锁：要么实体 `@Version`，要么 XML 里 `version+1` 一次。`rwd_prize` **没有** version 列，库存 SQL 听 design §5.7
 - `Result.code`：成功是数字 `0`，失败是字符串。前端用 `isOk` / `isFail`
 - 本机无 Docker：单元测试可跑；`*IT` 留 CI，禁止为了本地绿改 H2 或削弱断言
-- 测试与实现同 PR 交付。issue + PR 走常规 v1 流程；不要自动合 master
+- 测试与实现同 PR 交付。issue + PR；先测后审；除非点名，不要自动合 master
 
 ## 命令
 

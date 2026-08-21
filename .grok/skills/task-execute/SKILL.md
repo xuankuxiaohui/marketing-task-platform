@@ -1,14 +1,14 @@
 ---
 name: task-execute
 description: >
-  v1 已在 master。新工作从 origin/master 开 fix/<slug>，走 issue+PR。
-  不要再叠 task/*，不要自动合 master。阶段只看 PROJECT_STATUS.md。
-  Use when implementing a v1 fix or continuing from PROJECT_STATUS.md.
+  测试阶段正规流。新工作从 origin/master 开 fix/<slug>，走 issue+PR。
+  不要再叠 task/*，不要自动合 master，不要自动开下一题。
+  阶段只看 PROJECT_STATUS.md。
 ---
 
 # task-execute
 
-0→1 施工循环已结束。当前阶段、打开的 issue、下一步只看仓库根 `PROJECT_STATUS.md`。硬停止读 `AGENTS.md` + `docs/standards/`。规格只认 `.kiro/specs/platform-v2/`。
+当前阶段、打开的 issue、下一步只看仓库根 `PROJECT_STATUS.md`。硬停止读 `AGENTS.md` + `docs/standards/`。规格只认 `.kiro/specs/platform-v2/`。
 
 权威链：requirements.md > design.md > 打开的 issue > docs/standards > verification-matrix > AGENTS.md。禁止发明表/错误码。禁止创建 `main`。**禁止 merge / push / force-push master**（人类点名除外）。
 
@@ -16,8 +16,8 @@ description: >
 
 1. 读 `PROJECT_STATUS.md`。不要按 `tasks.md` 下一空勾开新题，不要叠 `task/*`。
 2. 从 `origin/master` 开 `fix/<slug>`（文档用 `docs/<slug>`）。
-3. issue + PR 到 master。不要自动合 master。
-4. 当前是**测试阶段**（尚未 preview）。演示箱另走，不挡本仓库。
+3. requirements > design。先测后审。issue + PR 到 master。不要自动合 master。
+4. STATUS 是当前阶段指针。不要自动开下一题。
 
 git author：`xuankuxiaohui` + GitHub `users.noreply`。禁止个人邮箱。
 

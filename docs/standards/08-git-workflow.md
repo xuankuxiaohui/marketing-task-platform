@@ -10,14 +10,14 @@
 |------|------|
 | `master` | 唯一长期分支。随时可构建。禁止直接 `push`（有远端保护后） |
 
-**MUST NOT** 再建 `develop` / `release` / 按人命名的长期分支。v1 用 issue 区分，不靠长期分支隔离。
+**MUST NOT** 再建 `develop` / `release` / 按人命名的长期分支。新工作用 issue 区分，不靠长期分支隔离。
 
 ## 2. 短命分支
 
-默认从最新 `origin/master` 拉出，合入后删除。v1 已在 master `6d03ef5`；**不要再叠 `task/*` 施工链**。新工作用 `fix/<slug>`（文档用 `docs/<slug>`），走 issue + PR。
+默认从最新 `origin/master` 拉出，合入后删除。不要再叠 `task/*` 施工链。新工作用 `fix/<slug>`（文档用 `docs/<slug>`），走 issue + PR。
 
 ```text
-fix/<slug>          缺陷 / 常规 v1 改动
+fix/<slug>          缺陷 / 测试阶段改动
 docs/<slug>         仅文档或规格
 spike/<n>-<slug>    历史编组 A 冒烟（不要新开 task/* 施工链）
 ```
@@ -41,7 +41,7 @@ spike/<n>-<slug>    历史编组 A 冒烟（不要新开 task/* 施工链）
 2. 标题与 squash 后的提交说明同一套 Conventional Commits。
 3. 描述里写：issue 号、触及的需求/设计条款、测试怎么跑。
 4. 合入方式：**squash merge**，保持 `master` 线性。
-5. 门禁见 04 §10。开发会话在 PR 上做两轮分开的代码评审，有问题开 issue 并直接修；不要等人签字。主分支健康检查由每 3 小时定时任务做，不挡开发。
+5. 门禁见 04 §10。先测后审。除非点名，不要合 `master`。
 6. 契约变更（Controller / Command / Response / ErrorCode）：**MUST** 同 PR 提交 `packages/shared` 生成物。
 
 ## 5. 保护与 CODEOWNERS
@@ -69,4 +69,4 @@ deploy/                             @owner
 - [ ] 未把 spike 工程拷进 `server/`
 - [ ] 提交说明有 `Refs:`
 - [ ] 未 force-push `master`，未提交密钥
-- [ ] PR 已做两轮分开评审，评审 issue 已修完（不等人类点头）
+- [ ] 已测；评审按打开的 issue 处理，不要自动合 master

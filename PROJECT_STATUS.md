@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**v1 测试阶段**（尚未 preview） / 基线：master `6d03ef5` / 更新：2026-08-21
+> 阶段：**测试阶段**（preview 之前，版本未到 0.0.1） / 基线：master `6d03ef5` / 更新：2026-08-21
 
 ## 项目一句话
 
@@ -7,23 +7,24 @@
 
 ## 现在做到哪
 
-- v1 已上 master `6d03ef5`。当前是**测试阶段**，不是 preview，不是 GA。
-- 打开的 issue：[#69](https://github.com/xuankuxiaohui/marketing-task-platform/issues/69)、[#70](https://github.com/xuankuxiaohui/marketing-task-platform/issues/70) 为 P1，[#71](https://github.com/xuankuxiaohui/marketing-task-platform/issues/71) 为 P2。本 docs PR 之前 open PR = 0。远端只有 `master`。
+- 已走出 0→1 叠链口径。任务 29–49 **已在** master `6d03ef5`，不是「29–49 未合」。
+- 主干 `6d03ef5` 是 0→1 第一刀，还没过测审。当前是**测试阶段**（preview 之前，版本未到 0.0.1）。
+- 打开的 issue：[#69](https://github.com/xuankuxiaohui/marketing-task-platform/issues/69)、[#70](https://github.com/xuankuxiaohui/marketing-task-platform/issues/70) 为 P1 待修，[#71](https://github.com/xuankuxiaohui/marketing-task-platform/issues/71) 为 P2。远端只有 `master`。新工作从 `origin/master` 开 `fix/<slug>`，先测后审；除非点名，不要合 master。修完再接下一条。
 - 进行中：领取 / 步骤 / 发奖 / 风控 常规测。
-- 腾讯云 Lighthouse 演示箱另走，不挡 v1。
+- 腾讯云 Lighthouse 演示箱另走，还没起来，不挡本仓库测试。
 
 ## 待修 P1（不是「记账不修」）
 
-1. #69 互斥只扫已发布任务，OFFLINE 但仍 IN_PROGRESS 的组员拦不住新领取（R13.6 / 架构：互斥周期读已发布快照 vs R11.6 未删除定义全集）
-2. #70 下线不重算在途实例 expire_at（R14.10）
+1. #69 互斥扫不到 OFFLINE 在途：互斥只扫已发布任务，OFFLINE 但仍 IN_PROGRESS 的组员拦不住新领取（R13.6）
+2. #70 下线不重算 expire_at：任务下线后在途实例 expire_at 仍按领取窗口（R14.10）
 
 ## 也已知
 
-- callback/progress 级联 GRANT 不带 IP/设备，这两条上 R-f 空（#71）
+- callback/progress 级联 GRANT 不带 IP/设备，这两条上 R-f 空（已知漂移）
 - CrowdPort / 看板直读他域表
 
 ## 下一步（最多 3 步）
 
-1. 修 #69 / #70
-2. 继续 v1 条款测
-3. 演示箱另走，不挡本仓库 v1
+1. 从 `origin/master` 开 `fix/<slug>` 修 #69 / #70
+2. 继续领取 / 步骤 / 发奖 / 风控 常规测
+3. 演示箱另走，不挡测试
