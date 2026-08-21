@@ -52,11 +52,13 @@ test.describe("journey-admin", () => {
     await page.getByTestId("task-name").fill("e2e admin journey");
     await page.getByTestId("step-code").fill("clk");
     await page.getByTestId("step-name").fill("click");
-    await page.getByTestId("step-type").selectOption("CLICK");
+    await page.getByTestId("step-type").click();
+    await page.getByRole("option", { name: "CLICK", exact: true }).click();
     await page.getByTestId("step-add").click();
     await page.getByTestId("step-code").fill("rwd");
     await page.getByTestId("step-name").fill("reward");
-    await page.getByTestId("step-type").selectOption("REWARD");
+    await page.getByTestId("step-type").click();
+    await page.getByRole("option", { name: "REWARD", exact: true }).click();
     await page.getByTestId("step-prize").fill(String(state.prizeId));
     await page.getByTestId("step-add").click();
     await page.getByTestId("edge-from").fill("clk");

@@ -164,69 +164,70 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="list-item-page">
     <h2>{{ zhCN.list.title }}</h2>
-    <div class="admin-toolbar">
-      <select v-model="filters.dimension" data-testid="filter-dimension">
-        <option value="">{{ zhCN.list.dimension }}</option>
-        <option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <select v-model="filters.listType" data-testid="filter-list-type">
-        <option value="">{{ zhCN.list.listType }}</option>
-        <option v-for="item in RISK_LIST_TYPES" :key="item" :value="item">{{ item }}</option>
-      </select>
-      <input v-model="filters.value" data-testid="filter-value" :placeholder="zhCN.list.listValue" />
-      <input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <button type="button" data-testid="list-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-if="canAdd" type="button" data-testid="list-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-select v-model="filters.dimension" data-testid="filter-dimension">
+        <el-option value="" :label="zhCN.list.dimension" />
+        <el-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-select v-model="filters.listType" data-testid="filter-list-type">
+        <el-option value="" :label="zhCN.list.listType" />
+        <el-option v-for="item in RISK_LIST_TYPES" :key="item" :value="item" :label="item" />
+      </el-select>
+      <el-input v-model="filters.value" data-testid="filter-value" :placeholder="zhCN.list.listValue" />
+      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
+      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
+      <el-button data-testid="list-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-if="canAdd" data-testid="list-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-      <button v-auth="PERMS.RISK_BLACK_IMPORT" type="button" data-testid="list-import" @click="openImport">
+      </el-button>
+      <el-button v-auth="PERMS.RISK_BLACK_IMPORT" data-testid="list-import" @click="openImport">
         {{ zhCN.list.import }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="list-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.list.dimension }}</th>
-          <th>{{ zhCN.list.listType }}</th>
-          <th>{{ zhCN.list.listValue }}</th>
-          <th>{{ zhCN.list.reason }}</th>
-          <th>{{ zhCN.list.denyLogin }}</th>
-          <th>{{ zhCN.list.effectiveAt }}</th>
-          <th>{{ zhCN.list.expireAt }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.dimension }}</td>
-          <td>{{ row.listType }}</td>
-          <td>{{ row.listValue }}</td>
-          <td>{{ row.reason }}</td>
-          <td>{{ row.denyLogin ? zhCN.common.enabled : zhCN.common.disabled }}</td>
-          <td>{{ formatDateTime(row.effectiveAt) }}</td>
-          <td>{{ formatDateTime(row.expireAt) }}</td>
-          <td class="row-actions">
-            <button
+    <el-table v-else :data="records" class="data-table" data-testid="list-table" stripe>
+      <el-table-column :label="zhCN.list.dimension">
+        <template #default="{ row }">{{ row.dimension }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.list.listType">
+        <template #default="{ row }">{{ row.listType }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.list.listValue">
+        <template #default="{ row }">{{ row.listValue }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.list.reason">
+        <template #default="{ row }">{{ row.reason }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.list.denyLogin">
+        <template #default="{ row }">{{ row.denyLogin ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.list.effectiveAt">
+        <template #default="{ row }">{{ formatDateTime(row.effectiveAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.list.expireAt">
+        <template #default="{ row }">{{ formatDateTime(row.expireAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button
               v-auth="removePerm(row)"
-              type="button"
               data-testid="list-remove"
               @click="openRemove(row)"
             >
               {{ zhCN.list.remove }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="formOpen"
@@ -235,39 +236,32 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.list.dimension }}</span>
-        <select v-model="form.dimension" data-testid="list-dimension">
-          <option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.list.listType }}</span>
-        <select v-model="form.listType" data-testid="list-type">
-          <option v-if="hasAuth(PERMS.RISK_BLACK_ADD)" value="BLACK">{{ zhCN.list.black }}</option>
-          <option v-if="hasAuth(PERMS.RISK_WHITE_ADD)" value="WHITE">{{ zhCN.list.white }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.list.listValue }}</span>
-        <input v-model="form.listValue" data-testid="list-value" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.list.reason }}</span>
-        <input v-model="form.reason" data-testid="list-reason" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.list.expireAt }}</span>
-        <input v-model="form.expireAt" data-testid="list-expire" type="datetime-local" />
-      </label>
-      <label v-if="showDenyLogin" class="field">
-        <span>{{ zhCN.list.denyLogin }}</span>
-        <input v-model="form.denyLogin" data-testid="list-deny-login" type="checkbox" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.common.remark }}</span>
-        <input v-model="form.remark" data-testid="list-remark" />
-      </label>
+      <el-form-item :label="zhCN.list.dimension">
+        <el-select v-model="form.dimension" data-testid="list-dimension">
+        <el-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.list.listType">
+        <el-select v-model="form.listType" data-testid="list-type">
+        <el-option v-if="hasAuth(PERMS.RISK_BLACK_ADD)" value="BLACK" :label="zhCN.list.black" />
+        <el-option v-if="hasAuth(PERMS.RISK_WHITE_ADD)" value="WHITE" :label="zhCN.list.white" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.list.listValue">
+        <el-input v-model="form.listValue" data-testid="list-value" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.list.reason">
+        <el-input v-model="form.reason" data-testid="list-reason" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.list.expireAt">
+        <el-input v-model="form.expireAt" data-testid="list-expire" type="datetime-local" />
+      </el-form-item>
+      <el-form-item v-if="showDenyLogin" :label="zhCN.list.denyLogin">
+        <el-checkbox v-model="form.denyLogin" data-testid="list-deny-login" />
+      </el-form-item>
+      <el-form-item :label="zhCN.common.remark">
+        <el-input v-model="form.remark" data-testid="list-remark" />
+      </el-form-item>
     </FormDialog>
     <FormDialog
       :visible="importOpen"
@@ -276,20 +270,17 @@ onMounted(() => {
       @submit="submitImport"
       @cancel="importOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.list.dimension }}</span>
-        <select v-model="form.dimension" data-testid="import-dimension">
-          <option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.list.content }}</span>
-        <textarea v-model="form.listValue" data-testid="import-content" rows="8" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.list.reason }}</span>
-        <input v-model="form.reason" data-testid="import-reason" required />
-      </label>
+      <el-form-item :label="zhCN.list.dimension">
+        <el-select v-model="form.dimension" data-testid="import-dimension">
+        <el-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.list.content">
+        <el-input v-model="form.listValue" type="textarea" data-testid="import-content" :rows="8" required  />
+      </el-form-item>
+      <el-form-item :label="zhCN.list.reason">
+        <el-input v-model="form.reason" data-testid="import-reason" required />
+      </el-form-item>
       <p v-if="importHint" data-testid="import-result">{{ importHint }}</p>
     </FormDialog>
     <FormDialog
@@ -299,10 +290,9 @@ onMounted(() => {
       @submit="submitRemove"
       @cancel="removeOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.list.removeReason }}</span>
-        <input v-model="removeReason" data-testid="remove-reason" required />
-      </label>
+      <el-form-item :label="zhCN.list.removeReason">
+        <el-input v-model="removeReason" data-testid="remove-reason" required />
+      </el-form-item>
     </FormDialog>
   </section>
 </template>

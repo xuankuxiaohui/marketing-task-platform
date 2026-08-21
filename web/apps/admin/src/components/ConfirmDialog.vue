@@ -21,10 +21,10 @@ const emit = defineEmits<{
       <h3>{{ title || zhCN.confirm.title }}</h3>
       <p data-testid="confirm-message">{{ message }}</p>
       <div class="confirm-card__actions">
-        <button type="button" data-testid="confirm-cancel" @click="emit('cancel')">{{ zhCN.common.cancel }}</button>
-        <button type="button" class="confirm-card__ok" data-testid="confirm-ok" @click="emit('confirm')">
+        <el-button data-testid="confirm-cancel" @click="emit('cancel')">{{ zhCN.common.cancel }}</el-button>
+        <el-button type="primary" data-testid="confirm-ok" @click="emit('confirm')">
           {{ zhCN.common.confirm }}
-        </button>
+        </el-button>
       </div>
     </div>
   </div>

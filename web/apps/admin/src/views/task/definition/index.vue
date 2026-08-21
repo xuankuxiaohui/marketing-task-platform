@@ -230,133 +230,120 @@ onMounted(async () => {
 <template>
   <section class="admin-page" data-testid="task-definition-page">
     <h2>{{ zhCN.task.title }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.task.code" />
-      <input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.task.name" />
-      <select v-model="filters.status" data-testid="filter-status">
-        <option value="">{{ zhCN.common.status }}</option>
-        <option v-for="status in Object.values(DEFINITION_STATUS)" :key="status" :value="status">{{ status }}</option>
-      </select>
-      <input v-model="filters.category" data-testid="filter-category" :placeholder="zhCN.task.category" />
-      <button type="button" data-testid="task-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.TASK_DEF_CREATE" type="button" data-testid="task-create" @click="goCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.task.code" />
+      <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.task.name" />
+      <el-select v-model="filters.status" data-testid="filter-status">
+        <el-option value="" :label="zhCN.common.status" />
+        <el-option v-for="status in Object.values(DEFINITION_STATUS)" :key="status" :value="status" :label="status" />
+      </el-select>
+      <el-input v-model="filters.category" data-testid="filter-category" :placeholder="zhCN.task.category" />
+      <el-button data-testid="task-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.TASK_DEF_CREATE" data-testid="task-create" @click="goCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="task-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.task.code }}</th>
-          <th>{{ zhCN.task.name }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.task.version }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.version }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.TASK_DEF_UPDATE" type="button" data-testid="task-edit" @click="goEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="task-table" stripe>
+      <el-table-column :label="zhCN.task.code">
+        <template #default="{ row }">{{ row.code }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.task.name">
+        <template #default="{ row }">{{ row.name }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.task.version">
+        <template #default="{ row }">{{ row.version }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-edit" @click="goEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button v-auth="PERMS.TASK_DEF_QUERY" type="button" data-testid="task-versions" @click="goVersions(row)">
+            </el-button>
+            <el-button v-auth="PERMS.TASK_DEF_QUERY" data-testid="task-versions" @click="goVersions(row)">
               {{ zhCN.task.versionTitle }}
-            </button>
-            <button v-auth="PERMS.TASK_DEF_PUBLISH" type="button" data-testid="task-publish" @click="onPublish(row)">
+            </el-button>
+            <el-button v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish(row)">
               {{ zhCN.task.publish }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === DEFINITION_STATUS.SCHEDULED"
               v-auth="PERMS.TASK_DEF_PUBLISH"
-              type="button"
               data-testid="task-publish-early"
               @click="onPublish(row, true)"
             >
               {{ zhCN.task.publishEarly }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === DEFINITION_STATUS.DRAFT"
               v-auth="PERMS.TASK_DEF_SCHEDULE"
-              type="button"
               data-testid="task-schedule"
               @click="openSchedule(row)"
             >
               {{ zhCN.task.schedule }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === DEFINITION_STATUS.SCHEDULED"
               v-auth="PERMS.TASK_DEF_SCHEDULE"
-              type="button"
               data-testid="task-cancel-schedule"
               @click="onCancelSchedule(row)"
             >
               {{ zhCN.task.cancelSchedule }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === DEFINITION_STATUS.PUBLISHED"
               v-auth="PERMS.TASK_DEF_OFFLINE"
-              type="button"
               data-testid="task-offline"
               @click="onOffline(row)"
             >
               {{ zhCN.task.offline }}
-            </button>
-            <button v-auth="PERMS.TASK_DEF_COPY" type="button" data-testid="task-copy" @click="openCopy(row)">
+            </el-button>
+            <el-button v-auth="PERMS.TASK_DEF_COPY" data-testid="task-copy" @click="openCopy(row)">
               {{ zhCN.task.copy }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === DEFINITION_STATUS.DRAFT"
               v-auth="PERMS.TASK_DEF_DELETE"
-              type="button"
               data-testid="task-delete"
               @click="askDelete(row)"
             >
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <h3>{{ zhCN.task.scheduleFailures }}</h3>
     <p v-if="failures.length === 0" data-testid="failure-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="failure-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.task.code }}</th>
-          <th>{{ zhCN.task.reason }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in failures" :key="row.id">
-          <td>{{ row.taskCode }}</td>
-          <td>{{ row.reason }}</td>
-          <td>{{ formatDateTime(row.createdAt) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <el-table v-else :data="failures" class="data-table" data-testid="failure-table" stripe>
+      <el-table-column :label="zhCN.task.code">
+        <template #default="{ row }">{{ row.taskCode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.task.reason">
+        <template #default="{ row }">{{ row.reason }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      </el-table-column>
+    </el-table>
     <FormDialog :visible="copyOpen" :title="zhCN.task.copy" :saving="saving" @submit="submitCopy" @cancel="copyOpen = false">
-      <label class="field">
-        <span>{{ zhCN.task.newCode }}</span>
-        <input v-model="copyForm.code" data-testid="copy-code" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.task.newName }}</span>
-        <input v-model="copyForm.name" data-testid="copy-name" required />
-      </label>
+      <el-form-item :label="zhCN.task.newCode">
+        <el-input v-model="copyForm.code" data-testid="copy-code" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.task.newName">
+        <el-input v-model="copyForm.name" data-testid="copy-name" required />
+      </el-form-item>
     </FormDialog>
     <FormDialog
       :visible="scheduleOpen"
@@ -365,10 +352,9 @@ onMounted(async () => {
       @submit="submitSchedule"
       @cancel="scheduleOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.task.publishAt }}</span>
-        <input v-model="scheduleAt" data-testid="schedule-at" type="datetime-local" required />
-      </label>
+      <el-form-item :label="zhCN.task.publishAt">
+        <el-input v-model="scheduleAt" data-testid="schedule-at" type="datetime-local" required />
+      </el-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("echarts", () => ({
@@ -105,8 +106,8 @@ describe("MetricsDashboardPage", () => {
 
   it("queries with grain and dimKey", async () => {
     const wrapper = await mountPage();
-    await wrapper.get('[data-testid="filter-grain"]').setValue("WEEK");
-    await wrapper.get('[data-testid="filter-dim"]').setValue("1");
+    await setControl(wrapper, "filter-grain", "WEEK");
+    await setControl(wrapper, "filter-dim", "1");
     await wrapper.get('[data-testid="metrics-query"]').trigger("click");
     await flushPromises();
     expect(funnelMock).toHaveBeenLastCalledWith(

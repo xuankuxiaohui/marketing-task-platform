@@ -144,17 +144,17 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="metrics-page">
     <h2>{{ zhCN.metrics.title }}</h2>
-    <div class="admin-toolbar">
-      <select v-model="filters.grain" data-testid="filter-grain">
-        <option value="DAY">{{ zhCN.metrics.day }}</option>
-        <option value="WEEK">{{ zhCN.metrics.week }}</option>
-        <option value="MONTH">{{ zhCN.metrics.month }}</option>
-      </select>
-      <input v-model="filters.dimKey" data-testid="filter-dim" :placeholder="zhCN.metrics.dimKey" />
-      <input v-model="filters.from" type="date" data-testid="filter-from" />
-      <input v-model="filters.to" type="date" data-testid="filter-to" />
-      <button type="button" data-testid="metrics-query" @click="load">{{ zhCN.common.query }}</button>
-    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-select v-model="filters.grain" data-testid="filter-grain">
+        <el-option value="DAY" :label="zhCN.metrics.day" />
+        <el-option value="WEEK" :label="zhCN.metrics.week" />
+        <el-option value="MONTH" :label="zhCN.metrics.month" />
+      </el-select>
+      <el-input v-model="filters.dimKey" data-testid="filter-dim" :placeholder="zhCN.metrics.dimKey" />
+      <el-input v-model="filters.from" type="date" data-testid="filter-from" />
+      <el-input v-model="filters.to" type="date" data-testid="filter-to" />
+      <el-button data-testid="metrics-query" @click="load">{{ zhCN.common.query }}</el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <div v-else class="metrics-grid">
@@ -163,30 +163,29 @@ onMounted(() => {
         <p v-if="funnel.length === 0" data-testid="funnel-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="funnelOption()" />
-          <table class="data-table" data-testid="funnel-table">
-            <thead>
-              <tr>
-                <th>{{ zhCN.metrics.period }}</th>
-                <th>{{ zhCN.metrics.dimKey }}</th>
-                <th>{{ zhCN.metrics.exposure }}</th>
-                <th>{{ zhCN.metrics.start }}</th>
-                <th>{{ zhCN.metrics.complete }}</th>
-                <th>{{ zhCN.metrics.startRate }}</th>
-                <th>{{ zhCN.metrics.completeRate }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in funnel" :key="`${row.period}-${row.dimKey}`">
-                <td>{{ row.period }}</td>
-                <td>{{ row.dimKey }}</td>
-                <td>{{ row.exposureCount }}</td>
-                <td>{{ row.startCount }}</td>
-                <td>{{ row.completeCount }}</td>
-                <td>{{ formatRate(row.startRate) }}</td>
-                <td>{{ formatRate(row.completeRate) }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <el-table :data="funnel" class="data-table" data-testid="funnel-table" stripe>
+      <el-table-column :label="zhCN.metrics.period">
+        <template #default="{ row }">{{ row.period }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.dimKey">
+        <template #default="{ row }">{{ row.dimKey }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.exposure">
+        <template #default="{ row }">{{ row.exposureCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.start">
+        <template #default="{ row }">{{ row.startCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.complete">
+        <template #default="{ row }">{{ row.completeCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.startRate">
+        <template #default="{ row }">{{ formatRate(row.startRate) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.completeRate">
+        <template #default="{ row }">{{ formatRate(row.completeRate) }}</template>
+      </el-table-column>
+    </el-table>
         </template>
       </article>
       <article data-testid="spend-panel">
@@ -194,28 +193,26 @@ onMounted(() => {
         <p v-if="spend.length === 0" data-testid="spend-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="spendOption()" />
-          <table class="data-table" data-testid="spend-table">
-            <thead>
-              <tr>
-                <th>{{ zhCN.metrics.period }}</th>
-                <th>{{ zhCN.metrics.dimKey }}</th>
-                <th>{{ zhCN.metrics.arrivedCount }}</th>
-                <th>{{ zhCN.metrics.arrivedCost }}</th>
-                <th>{{ zhCN.metrics.sendingCost }}</th>
-                <th>{{ zhCN.metrics.stock }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in spend" :key="`${row.period}-${row.dimKey}`">
-                <td>{{ row.period }}</td>
-                <td>{{ row.dimKey }}</td>
-                <td>{{ row.arrivedCount }}</td>
-                <td>{{ row.arrivedCostFen }}</td>
-                <td>{{ row.sendingCostFen }}</td>
-                <td>{{ row.remainingStock }}/{{ row.totalStock }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <el-table :data="spend" class="data-table" data-testid="spend-table" stripe>
+      <el-table-column :label="zhCN.metrics.period">
+        <template #default="{ row }">{{ row.period }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.dimKey">
+        <template #default="{ row }">{{ row.dimKey }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.arrivedCount">
+        <template #default="{ row }">{{ row.arrivedCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.arrivedCost">
+        <template #default="{ row }">{{ row.arrivedCostFen }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.sendingCost">
+        <template #default="{ row }">{{ row.sendingCostFen }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.stock">
+        <template #default="{ row }">{{ row.remainingStock }}/{{ row.totalStock }}</template>
+      </el-table-column>
+    </el-table>
         </template>
       </article>
       <article data-testid="risk-panel">
@@ -223,26 +220,23 @@ onMounted(() => {
         <p v-if="risk.length === 0" data-testid="risk-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="riskOption()" />
-          <table class="data-table" data-testid="risk-table">
-            <thead>
-              <tr>
-                <th>{{ zhCN.metrics.period }}</th>
-                <th>{{ zhCN.metrics.dimKey }}</th>
-                <th>{{ zhCN.metrics.hits }}</th>
-                <th>{{ zhCN.metrics.intercepts }}</th>
-                <th>{{ zhCN.metrics.interceptRate }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in risk" :key="`${row.period}-${row.dimKey}`">
-                <td>{{ row.period }}</td>
-                <td>{{ row.dimKey }}</td>
-                <td>{{ row.hitCount }}</td>
-                <td>{{ row.interceptCount }}</td>
-                <td>{{ formatRate(row.interceptRate) }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <el-table :data="risk" class="data-table" data-testid="risk-table" stripe>
+      <el-table-column :label="zhCN.metrics.period">
+        <template #default="{ row }">{{ row.period }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.dimKey">
+        <template #default="{ row }">{{ row.dimKey }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.hits">
+        <template #default="{ row }">{{ row.hitCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.intercepts">
+        <template #default="{ row }">{{ row.interceptCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.interceptRate">
+        <template #default="{ row }">{{ formatRate(row.interceptRate) }}</template>
+      </el-table-column>
+    </el-table>
         </template>
       </article>
       <article data-testid="ad-panel">
@@ -250,26 +244,23 @@ onMounted(() => {
         <p v-if="ads.length === 0" data-testid="ad-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="adOption()" />
-          <table class="data-table" data-testid="ad-table">
-            <thead>
-              <tr>
-                <th>{{ zhCN.metrics.period }}</th>
-                <th>{{ zhCN.metrics.dimKey }}</th>
-                <th>{{ zhCN.metrics.adExposure }}</th>
-                <th>{{ zhCN.metrics.adClick }}</th>
-                <th>{{ zhCN.metrics.ctr }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in ads" :key="`${row.period}-${row.dimKey}`">
-                <td>{{ row.period }}</td>
-                <td>{{ row.dimKey }}</td>
-                <td>{{ row.exposureCount }}</td>
-                <td>{{ row.clickCount }}</td>
-                <td>{{ formatRate(row.ctr) }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <el-table :data="ads" class="data-table" data-testid="ad-table" stripe>
+      <el-table-column :label="zhCN.metrics.period">
+        <template #default="{ row }">{{ row.period }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.dimKey">
+        <template #default="{ row }">{{ row.dimKey }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.adExposure">
+        <template #default="{ row }">{{ row.exposureCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.adClick">
+        <template #default="{ row }">{{ row.clickCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.metrics.ctr">
+        <template #default="{ row }">{{ formatRate(row.ctr) }}</template>
+      </el-table-column>
+    </el-table>
         </template>
       </article>
     </div>

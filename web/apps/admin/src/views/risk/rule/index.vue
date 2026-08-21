@@ -82,30 +82,28 @@ onMounted(() => {
     <h2>{{ zhCN.rule.title }}</h2>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading">{{ zhCN.common.loading }}</p>
-    <table v-else class="admin-table">
-      <thead>
-        <tr>
-          <th>code</th>
-          <th>{{ zhCN.rule.enabled }}</th>
-          <th>{{ zhCN.rule.threshold }}</th>
-          <th>{{ zhCN.rule.windowSeconds }}</th>
-          <th>{{ zhCN.rule.action }}</th>
-          <th v-if="hasAuth(PERMS.RISK_RULE_CONFIG)">{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.ruleCode">
-          <td>{{ row.ruleCode }}</td>
-          <td>{{ row.enabled ? zhCN.common.enabled : zhCN.common.disabled }}</td>
-          <td>{{ row.threshold }}</td>
-          <td>{{ row.windowSeconds ?? "-" }}</td>
-          <td>{{ row.action }}</td>
-          <td v-if="hasAuth(PERMS.RISK_RULE_CONFIG)">
-            <button type="button" data-testid="rule-edit" @click="openEdit(row)">{{ zhCN.common.edit }}</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <el-table v-else :data="records" class="data-table" stripe>
+      <el-table-column label="code">
+        <template #default="{ row }">{{ row.ruleCode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.rule.enabled">
+        <template #default="{ row }">{{ row.enabled ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.rule.threshold">
+        <template #default="{ row }">{{ row.threshold }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.rule.windowSeconds">
+        <template #default="{ row }">{{ row.windowSeconds ?? "-" }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.rule.action">
+        <template #default="{ row }">{{ row.action }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <el-button v-if="hasAuth(PERMS.RISK_RULE_CONFIG)" data-testid="rule-edit" @click="openEdit(row)">{{ zhCN.common.edit }}</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
     <FormDialog
       :visible="formOpen"
       :title="zhCN.common.edit"
@@ -115,21 +113,21 @@ onMounted(() => {
     >
       <label>
         <span>{{ zhCN.rule.enabled }}</span>
-        <input v-model="form.enabled" data-testid="rule-enabled" type="checkbox" />
+        <el-checkbox v-model="form.enabled" data-testid="rule-enabled" />
       </label>
       <label>
         <span>{{ zhCN.rule.threshold }}</span>
-        <input v-model.number="form.threshold" data-testid="rule-threshold" type="number" required />
+        <el-input v-model.number="form.threshold" data-testid="rule-threshold" type="number" required />
       </label>
       <label>
         <span>{{ zhCN.rule.windowSeconds }}</span>
-        <input v-model="form.windowSeconds" data-testid="rule-window" type="number" />
+        <el-input v-model="form.windowSeconds" data-testid="rule-window" type="number" />
       </label>
       <label>
         <span>{{ zhCN.rule.action }}</span>
-        <select v-model="form.action" data-testid="rule-action">
-          <option v-for="action in ACTIONS" :key="action" :value="action">{{ action }}</option>
-        </select>
+        <el-select v-model="form.action" data-testid="rule-action">
+        <el-option v-for="action in ACTIONS" :key="action" :value="action" :label="action" />
+      </el-select>
       </label>
     </FormDialog>
   </section>

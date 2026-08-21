@@ -25,6 +25,10 @@ export const zhCN = {
     logout: "退出",
     emptyMenu: "暂无菜单权限",
     tags: "已打开页面",
+    close: "关闭当前",
+    closeOthers: "关闭其他",
+    closeLeft: "关闭左侧",
+    closeRight: "关闭右侧",
   },
   placeholder: {
     title: "功能尚未装配",

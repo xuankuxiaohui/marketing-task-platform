@@ -17,18 +17,18 @@ const emit = defineEmits<{
 
 <template>
   <div v-if="visible" class="form-mask" data-testid="form-dialog">
-    <form class="form-card" @submit.prevent="emit('submit')">
+    <el-form class="form-card" label-position="top" @submit.prevent="emit('submit')">
       <h3>{{ title }}</h3>
       <div class="form-card__body">
         <slot />
       </div>
       <div class="form-card__actions">
-        <button type="button" data-testid="form-cancel" @click="emit('cancel')">{{ zhCN.common.cancel }}</button>
-        <button type="submit" class="form-card__ok" data-testid="form-submit" :disabled="saving">
+        <el-button data-testid="form-cancel" @click="emit('cancel')">{{ zhCN.common.cancel }}</el-button>
+        <el-button type="primary" native-type="submit" data-testid="form-submit" :disabled="saving">
           {{ zhCN.common.save }}
-        </button>
+        </el-button>
       </div>
-    </form>
+    </el-form>
   </div>
 </template>
 
@@ -64,16 +64,5 @@ const emit = defineEmits<{
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
-}
-.form-card__ok {
-  background: #2563eb;
-  color: #fff;
-  border: 0;
-  border-radius: 4px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-.form-card__ok:disabled {
-  opacity: 0.6;
 }
 </style>

@@ -62,25 +62,19 @@ onMounted(() => {
     <h2>{{ zhCN.task.versionTitle }}</h2>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="versions.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="version-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.task.version }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in versions" :key="row.version">
-          <td>{{ row.version }}</td>
-          <td>{{ formatDateTime(row.publishedAt) }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="admin-toolbar">
-      <input v-model="left" data-testid="diff-left" :placeholder="zhCN.task.version" />
-      <input v-model="right" data-testid="diff-right" :placeholder="zhCN.task.version" />
-      <button type="button" data-testid="diff-run" @click="loadDiff">对比</button>
-    </div>
+    <el-table v-else :data="versions" class="data-table" data-testid="version-table" stripe>
+      <el-table-column :label="zhCN.task.version">
+        <template #default="{ row }">{{ row.version }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.publishedAt) }}</template>
+      </el-table-column>
+    </el-table>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="left" data-testid="diff-left" :placeholder="zhCN.task.version" />
+      <el-input v-model="right" data-testid="diff-right" :placeholder="zhCN.task.version" />
+      <el-button data-testid="diff-run" @click="loadDiff">对比</el-button>
+    </el-form>
     <pre v-if="diff" data-testid="diff-result">{{ JSON.stringify(diff, null, 2) }}</pre>
   </section>
 </template>

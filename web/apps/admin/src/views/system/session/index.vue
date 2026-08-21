@@ -65,53 +65,55 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="session-page">
     <h2>{{ zhCN.session.title }}</h2>
-    <div class="admin-toolbar">
-      <select v-model="filters.accountType" data-testid="filter-account-type">
-        <option value="">{{ zhCN.session.accountType }}</option>
-        <option :value="ACCOUNT_TYPE.ADMIN">{{ zhCN.session.typeAdmin }}</option>
-        <option :value="ACCOUNT_TYPE.PORTAL">{{ zhCN.session.typePortal }}</option>
-      </select>
-      <input v-model="filters.account" data-testid="filter-account" :placeholder="zhCN.session.account" />
-      <button type="button" data-testid="session-query" @click="load">{{ zhCN.common.query }}</button>
-    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-select v-model="filters.accountType" data-testid="filter-account-type">
+        <el-option value="" :label="zhCN.session.accountType" />
+        <el-option :value="ACCOUNT_TYPE.ADMIN" :label="zhCN.session.typeAdmin" />
+        <el-option :value="ACCOUNT_TYPE.PORTAL" :label="zhCN.session.typePortal" />
+      </el-select>
+      <el-input v-model="filters.account" data-testid="filter-account" :placeholder="zhCN.session.account" />
+      <el-button data-testid="session-query" @click="load">{{ zhCN.common.query }}</el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="session-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.session.account }}</th>
-          <th>{{ zhCN.session.accountType }}</th>
-          <th>{{ zhCN.session.tokenLast4 }}</th>
-          <th>{{ zhCN.session.loginAt }}</th>
-          <th>{{ zhCN.session.lastActiveAt }}</th>
-          <th>{{ zhCN.session.ip }}</th>
-          <th>{{ zhCN.session.deviceId }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(row, index) in records" :key="`${row.account}-${row.tokenLast4}-${index}`">
-          <td>{{ row.account }}</td>
-          <td>{{ row.accountType }}</td>
-          <td>{{ row.tokenLast4 }}</td>
-          <td>{{ formatDateTime(row.loginAt) }}</td>
-          <td>{{ formatDateTime(row.lastActiveAt) }}</td>
-          <td>{{ row.ip }}</td>
-          <td>{{ row.deviceId || "—" }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.SESSION_KICK" type="button" data-testid="session-kick" @click="pendingKick = row">
+    <el-table v-else :data="records" class="data-table" data-testid="session-table" stripe>
+      <el-table-column :label="zhCN.session.account">
+        <template #default="{ row }">{{ row.account }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.session.accountType">
+        <template #default="{ row }">{{ row.accountType }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.session.tokenLast4">
+        <template #default="{ row }">{{ row.tokenLast4 }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.session.loginAt">
+        <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.session.lastActiveAt">
+        <template #default="{ row }">{{ formatDateTime(row.lastActiveAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.session.ip">
+        <template #default="{ row }">{{ row.ip }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.session.deviceId">
+        <template #default="{ row }">{{ row.deviceId || "—" }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.SESSION_KICK" data-testid="session-kick" @click="pendingKick = row">
               {{ zhCN.session.kick }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <ConfirmDialog
       :visible="pendingKick != null"

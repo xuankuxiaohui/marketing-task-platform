@@ -79,49 +79,40 @@ onMounted(() => {
     <p v-if="success" class="hint" data-testid="cache-success">{{ success }}</p>
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="cache-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.cache.namespace }}</th>
-          <th>{{ zhCN.cache.keyCount }}</th>
-          <th>{{ zhCN.cache.hitRate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.namespace">
-          <td>
-            {{ row.namespace }}
+    <el-table v-else :data="records" class="data-table" data-testid="cache-table" stripe>
+      <el-table-column :label="zhCN.cache.namespace" min-width="240">
+        <template #default="{ row }">
+          {{ row.namespace }}
             <span v-if="row.namespace === SESSION_NAMESPACE" class="hint">({{ zhCN.cache.sessionForbidden }})</span>
-          </td>
-          <td>{{ row.keyCount }}</td>
-          <td>{{ row.hitRate }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <form class="evict-form" data-testid="cache-evict-form" @submit.prevent="submitEvict">
-      <label class="field">
-        <span>{{ zhCN.cache.level }}</span>
-        <select v-model="form.level" data-testid="evict-level" @change="onLevelChange">
-          <option v-for="item in CACHE_EVICT_LEVELS" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.cache.namespace }}</span>
-        <select v-model="form.namespace" data-testid="evict-namespace">
-          <option value="">{{ zhCN.cache.namespace }}</option>
-          <option v-for="row in records" :key="row.namespace" :value="row.namespace">{{ row.namespace }}</option>
-        </select>
-      </label>
-      <label v-if="showPrefix" class="field">
-        <span>{{ zhCN.cache.prefix }}</span>
-        <input v-model="form.prefix" data-testid="evict-prefix" />
-      </label>
-      <label v-if="showKey" class="field">
-        <span>{{ zhCN.cache.key }}</span>
-        <input v-model="form.key" data-testid="evict-key" />
-      </label>
-      <button v-auth="PERMS.CACHE_EVICT" type="submit" data-testid="cache-evict">{{ zhCN.cache.evict }}</button>
-    </form>
+        </template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cache.keyCount">
+        <template #default="{ row }">{{ row.keyCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.cache.hitRate">
+        <template #default="{ row }">{{ row.hitRate }}</template>
+      </el-table-column>
+    </el-table>
+    <el-form class="evict-form" data-testid="cache-evict-form" @submit.prevent="submitEvict">
+      <el-form-item :label="zhCN.cache.level">
+        <el-select v-model="form.level" data-testid="evict-level" @change="onLevelChange">
+        <el-option v-for="item in CACHE_EVICT_LEVELS" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.cache.namespace">
+        <el-select v-model="form.namespace" data-testid="evict-namespace">
+        <el-option value="" :label="zhCN.cache.namespace" />
+        <el-option v-for="row in records" :key="row.namespace" :value="row.namespace" :label="row.namespace" />
+      </el-select>
+      </el-form-item>
+      <el-form-item v-if="showPrefix" :label="zhCN.cache.prefix">
+        <el-input v-model="form.prefix" data-testid="evict-prefix" />
+      </el-form-item>
+      <el-form-item v-if="showKey" :label="zhCN.cache.key">
+        <el-input v-model="form.key" data-testid="evict-key" />
+      </el-form-item>
+      <el-button v-auth="PERMS.CACHE_EVICT" native-type="submit" type="primary" data-testid="cache-evict">{{ zhCN.cache.evict }}</el-button>
+    </el-form>
   </section>
 </template>
 

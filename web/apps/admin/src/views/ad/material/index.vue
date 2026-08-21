@@ -144,41 +144,39 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="ad-material-page">
     <h2>{{ zhCN.ad.materialTitle }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.title" data-testid="filter-title" :placeholder="zhCN.ad.title" />
-      <button type="button" data-testid="ad-material-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.AD_MATERIAL_CREATE" type="button" data-testid="ad-material-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.title" data-testid="filter-title" :placeholder="zhCN.ad.title" />
+      <el-button data-testid="ad-material-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.AD_MATERIAL_CREATE" data-testid="ad-material-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="ad-material-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.ad.title }}</th>
-          <th>{{ zhCN.ad.weight }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.title }}</td>
-          <td>{{ row.weight }}</td>
-          <td>{{ row.status }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.AD_MATERIAL_UPDATE" type="button" data-testid="ad-material-edit" @click="openEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="ad-material-table" stripe>
+      <el-table-column :label="zhCN.ad.title">
+        <template #default="{ row }">{{ row.title }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.ad.weight">
+        <template #default="{ row }">{{ row.weight }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.AD_MATERIAL_UPDATE" data-testid="ad-material-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button v-auth="PERMS.AD_MATERIAL_DELETE" type="button" data-testid="ad-material-delete" @click="askDelete(row)">
+            </el-button>
+            <el-button v-auth="PERMS.AD_MATERIAL_DELETE" data-testid="ad-material-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -186,26 +184,21 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.ad.title }}</span>
-        <input v-model="form.title" data-testid="ad-material-title" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.ad.imageUrl }}</span>
-        <input v-model="form.imageUrl" data-testid="ad-material-image" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.ad.weight }}</span>
-        <input v-model="form.weight" data-testid="ad-material-weight" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.ad.startTime }}</span>
-        <input v-model="form.startTime" type="datetime-local" data-testid="ad-material-start" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.ad.endTime }}</span>
-        <input v-model="form.endTime" type="datetime-local" data-testid="ad-material-end" required />
-      </label>
+      <el-form-item :label="zhCN.ad.title">
+        <el-input v-model="form.title" data-testid="ad-material-title" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.ad.imageUrl">
+        <el-input v-model="form.imageUrl" data-testid="ad-material-image" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.ad.weight">
+        <el-input v-model="form.weight" data-testid="ad-material-weight" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.ad.startTime">
+        <el-input v-model="form.startTime" type="datetime-local" data-testid="ad-material-start" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.ad.endTime">
+        <el-input v-model="form.endTime" type="datetime-local" data-testid="ad-material-end" required />
+      </el-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

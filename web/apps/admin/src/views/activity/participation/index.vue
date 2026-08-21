@@ -53,16 +53,16 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="activity-participation-page">
     <h2>{{ zhCN.activity.participationTitle }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.activityId" data-testid="filter-activity" :placeholder="zhCN.activity.activityId" />
-      <input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.activity.userId" />
-      <select v-model="filters.result" data-testid="filter-result">
-        <option value="">{{ zhCN.activity.result }}</option>
-        <option value="PASS">PASS</option>
-        <option value="REJECT">REJECT</option>
-      </select>
-      <button type="button" data-testid="activity-participation-query" @click="load">{{ zhCN.common.query }}</button>
-    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.activityId" data-testid="filter-activity" :placeholder="zhCN.activity.activityId" />
+      <el-input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.activity.userId" />
+      <el-select v-model="filters.result" data-testid="filter-result">
+        <el-option value="" :label="zhCN.activity.result" />
+        <el-option value="PASS" label="PASS" />
+        <el-option value="REJECT" label="REJECT" />
+      </el-select>
+      <el-button data-testid="activity-participation-query" @click="load">{{ zhCN.common.query }}</el-button>
+    </el-form>
     <p v-if="stats" data-testid="activity-stats">
       {{ zhCN.activity.stats }} {{ stats.total }} / {{ zhCN.activity.passRate }}
       {{ Math.round(stats.passRate * 100) }}%
@@ -70,33 +70,31 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="activity-participation-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.activity.activityId }}</th>
-          <th>{{ zhCN.activity.userId }}</th>
-          <th>{{ zhCN.activity.periodKey }}</th>
-          <th>{{ zhCN.activity.result }}</th>
-          <th>{{ zhCN.activity.hitRule }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.activityId }}</td>
-          <td>{{ row.userId }}</td>
-          <td>{{ row.periodKey }}</td>
-          <td>{{ row.result }}</td>
-          <td>{{ row.hitRule }}</td>
-          <td>{{ formatDateTime(row.createdAt) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <el-table v-else :data="records" class="data-table" data-testid="activity-participation-table" stripe>
+      <el-table-column :label="zhCN.activity.activityId">
+        <template #default="{ row }">{{ row.activityId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.activity.userId">
+        <template #default="{ row }">{{ row.userId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.activity.periodKey">
+        <template #default="{ row }">{{ row.periodKey }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.activity.result">
+        <template #default="{ row }">{{ row.result }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.activity.hitRule">
+        <template #default="{ row }">{{ row.hitRule }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
   </section>
 </template>

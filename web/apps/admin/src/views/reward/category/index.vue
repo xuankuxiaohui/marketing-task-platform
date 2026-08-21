@@ -165,75 +165,73 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="category-page">
     <h2>{{ zhCN.category.title }}</h2>
-    <div class="admin-toolbar">
-      <button type="button" data-testid="category-query" @click="load">{{ zhCN.common.query }}</button>
-      <button v-auth="PERMS.REWARD_CAT_CREATE" type="button" data-testid="category-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-button data-testid="category-query" @click="load">{{ zhCN.common.query }}</el-button>
+      <el-button v-auth="PERMS.REWARD_CAT_CREATE" data-testid="category-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="category-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.category.code }}</th>
-          <th>{{ zhCN.category.name }}</th>
-          <th>{{ zhCN.category.rewardTarget }}</th>
-          <th>{{ zhCN.category.fulfillmentMode }}</th>
-          <th>{{ zhCN.category.reconActionPolicy }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.code">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.rewardTarget }}</td>
-          <td>{{ row.fulfillmentMode }}</td>
-          <td>{{ row.reconActionPolicy }}</td>
-          <td>{{ row.status }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.REWARD_CAT_UPDATE" type="button" data-testid="category-edit" @click="openEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="category-table" stripe>
+      <el-table-column :label="zhCN.category.code">
+        <template #default="{ row }">{{ row.code }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.category.name">
+        <template #default="{ row }">{{ row.name }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.category.rewardTarget">
+        <template #default="{ row }">{{ row.rewardTarget }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.category.fulfillmentMode">
+        <template #default="{ row }">{{ row.fulfillmentMode }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.category.reconActionPolicy">
+        <template #default="{ row }">{{ row.reconActionPolicy }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.REWARD_CAT_UPDATE" data-testid="category-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === STATUS.ENABLED"
               v-auth="PERMS.REWARD_CAT_DISABLE"
-              type="button"
               data-testid="category-disable"
               @click="onDisable(row)"
             >
               {{ zhCN.common.disable }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="row.status === STATUS.DISABLED"
               v-auth="PERMS.REWARD_CAT_ENABLE"
-              type="button"
               data-testid="category-enable"
               @click="onEnable(row)"
             >
               {{ zhCN.common.enable }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="!row.builtin"
               v-auth="PERMS.REWARD_CAT_DELETE"
-              type="button"
               data-testid="category-delete"
               @click="askDelete(row)"
             >
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="formOpen"
@@ -242,46 +240,38 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <label class="field">
-        <span>{{ zhCN.category.code }}</span>
-        <input v-model="form.code" data-testid="category-code" :disabled="editing != null" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.name }}</span>
-        <input v-model="form.name" data-testid="category-name" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.rewardTarget }}</span>
-        <select v-model="form.rewardTarget">
-          <option v-for="item in REWARD_TARGETS" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.fulfillmentMode }}</span>
-        <select v-model="form.fulfillmentMode">
-          <option v-for="item in FULFILLMENT_MODES" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.costMode }}</span>
-        <select v-model="form.costMode">
-          <option v-for="item in COST_MODES" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.reconRequired }}</span>
-        <input v-model="form.reconRequired" type="checkbox" />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.reconActionPolicy }}</span>
-        <select v-model="form.reconActionPolicy">
-          <option v-for="item in RECON_POLICIES" :key="item" :value="item">{{ item }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>{{ zhCN.category.adapterCode }}</span>
-        <input v-model="form.adapterCode" />
-      </label>
+      <el-form-item :label="zhCN.category.code">
+        <el-input v-model="form.code" data-testid="category-code" :disabled="editing != null" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.category.name">
+        <el-input v-model="form.name" data-testid="category-name" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.category.rewardTarget">
+        <el-select v-model="form.rewardTarget">
+        <el-option v-for="item in REWARD_TARGETS" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.category.fulfillmentMode">
+        <el-select v-model="form.fulfillmentMode">
+        <el-option v-for="item in FULFILLMENT_MODES" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.category.costMode">
+        <el-select v-model="form.costMode">
+        <el-option v-for="item in COST_MODES" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.category.reconRequired">
+        <el-checkbox v-model="form.reconRequired" />
+      </el-form-item>
+      <el-form-item :label="zhCN.category.reconActionPolicy">
+        <el-select v-model="form.reconActionPolicy">
+        <el-option v-for="item in RECON_POLICIES" :key="item" :value="item" :label="item" />
+      </el-select>
+      </el-form-item>
+      <el-form-item :label="zhCN.category.adapterCode">
+        <el-input v-model="form.adapterCode" />
+      </el-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

@@ -45,41 +45,38 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="signin-record-page">
     <h2>{{ zhCN.signin.recordTitle }}</h2>
-    <div class="admin-toolbar">
-      <input v-model="filters.activityId" data-testid="filter-activity" :placeholder="zhCN.signin.activityId" />
-      <input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.signin.userId" />
-      <input v-model="filters.from" type="date" data-testid="filter-from" />
-      <input v-model="filters.to" type="date" data-testid="filter-to" />
-      <button type="button" data-testid="signin-record-query" @click="load">{{ zhCN.common.query }}</button>
-    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-input v-model="filters.activityId" data-testid="filter-activity" :placeholder="zhCN.signin.activityId" />
+      <el-input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.signin.userId" />
+      <el-input v-model="filters.from" type="date" data-testid="filter-from" />
+      <el-input v-model="filters.to" type="date" data-testid="filter-to" />
+      <el-button data-testid="signin-record-query" @click="load">{{ zhCN.common.query }}</el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="signin-record-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.signin.activityId }}</th>
-          <th>{{ zhCN.signin.userId }}</th>
-          <th>{{ zhCN.signin.signDate }}</th>
-          <th>{{ zhCN.signin.source }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.activityId }}</td>
-          <td>{{ row.userId }}</td>
-          <td>{{ row.signDate }}</td>
-          <td>{{ row.source }}</td>
-          <td>{{ formatDateTime(row.createdAt) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <el-table v-else :data="records" class="data-table" data-testid="signin-record-table" stripe>
+      <el-table-column :label="zhCN.signin.activityId">
+        <template #default="{ row }">{{ row.activityId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.signin.userId">
+        <template #default="{ row }">{{ row.userId }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.signin.signDate">
+        <template #default="{ row }">{{ row.signDate }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.signin.source">
+        <template #default="{ row }">{{ row.source }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
   </section>
 </template>

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { useSessionStore } from "@/store/session";
+import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/risk", () => ({
@@ -55,8 +56,8 @@ describe("RiskCasePage", () => {
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="hit-table"]').text()).toContain("R-a");
     await wrapper.get('[data-testid="case-handle"]').trigger("click");
-    await wrapper.get('[data-testid="handle-reason"]').setValue("false-hit");
-    await wrapper.get('[data-testid="handle-action"]').setValue("MARK_FALSE_POSITIVE");
+    await setControl(wrapper, "handle-reason", "false-hit");
+    await setControl(wrapper, "handle-action", "MARK_FALSE_POSITIVE");
     await wrapper.get('[data-testid="form-dialog"] form').trigger("submit.prevent");
     await flushPromises();
     expect(handleMock).toHaveBeenCalledWith({

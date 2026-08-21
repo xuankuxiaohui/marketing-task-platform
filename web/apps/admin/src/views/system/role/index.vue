@@ -160,63 +160,61 @@ onMounted(() => {
 <template>
   <section class="admin-page" data-testid="role-page">
     <h2>{{ zhCN.role.title }}</h2>
-    <div class="admin-toolbar">
-      <button v-auth="PERMS.ROLE_CREATE" type="button" data-testid="role-create" @click="openCreate">
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-button v-auth="PERMS.ROLE_CREATE" data-testid="role-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </button>
-    </div>
+      </el-button>
+    </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <table v-else class="data-table" data-testid="role-table">
-      <thead>
-        <tr>
-          <th>{{ zhCN.role.code }}</th>
-          <th>{{ zhCN.role.name }}</th>
-          <th>{{ zhCN.common.status }}</th>
-          <th>{{ zhCN.role.userCount }}</th>
-          <th>{{ zhCN.common.createdAt }}</th>
-          <th>{{ zhCN.common.actions }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in records" :key="row.id">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.userCount }}</td>
-          <td>{{ formatDateTime(row.createdAt) }}</td>
-          <td class="row-actions">
-            <button v-auth="PERMS.ROLE_UPDATE" type="button" data-testid="role-edit" @click="openEdit(row)">
+    <el-table v-else :data="records" class="data-table" data-testid="role-table" stripe>
+      <el-table-column :label="zhCN.role.code">
+        <template #default="{ row }">{{ row.code }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.role.name">
+        <template #default="{ row }">{{ row.name }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.status">
+        <template #default="{ row }">{{ row.status }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.role.userCount">
+        <template #default="{ row }">{{ row.userCount }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.createdAt">
+        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column :label="zhCN.common.actions" min-width="240">
+        <template #default="{ row }">
+          <div class="row-actions">
+            <el-button v-auth="PERMS.ROLE_UPDATE" data-testid="role-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="!isBuiltIn(row)"
               v-auth="PERMS.ROLE_ASSIGN"
-              type="button"
               data-testid="role-assign"
               @click="openAssign(row)"
             >
               {{ zhCN.role.assign }}
-            </button>
-            <button
+            </el-button>
+            <el-button
               v-if="!isBuiltIn(row)"
               v-auth="PERMS.ROLE_DELETE"
-              type="button"
               data-testid="role-delete"
               @click="askDelete(row)"
             >
               {{ zhCN.common.delete }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </el-button>
+          </div>
+        </template>
+      </el-table-column>
+    </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <button type="button" :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
       <span>{{ page }}</span>
-      <button type="button" :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
     <FormDialog
       :visible="formOpen"
@@ -225,25 +223,21 @@ onMounted(() => {
       @submit="submitForm"
       @cancel="formOpen = false"
     >
-      <label v-if="!editing" class="field">
-        <span>{{ zhCN.role.code }}</span>
-        <input v-model="form.code" data-testid="role-code" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.role.name }}</span>
-        <input v-model="form.name" data-testid="role-name" required />
-      </label>
-      <label class="field">
-        <span>{{ zhCN.role.description }}</span>
-        <input v-model="form.description" data-testid="role-description" />
-      </label>
-      <label v-if="editing" class="field">
-        <span>{{ zhCN.common.status }}</span>
-        <select v-model="form.status" data-testid="role-status">
-          <option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</option>
-          <option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</option>
-        </select>
-      </label>
+      <el-form-item v-if="!editing" :label="zhCN.role.code">
+        <el-input v-model="form.code" data-testid="role-code" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.role.name">
+        <el-input v-model="form.name" data-testid="role-name" required />
+      </el-form-item>
+      <el-form-item :label="zhCN.role.description">
+        <el-input v-model="form.description" data-testid="role-description" />
+      </el-form-item>
+      <el-form-item v-if="editing" :label="zhCN.common.status">
+        <el-select v-model="form.status" data-testid="role-status">
+        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
+        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
+      </el-select>
+      </el-form-item>
     </FormDialog>
     <FormDialog
       :visible="assignOpen"
@@ -254,12 +248,10 @@ onMounted(() => {
     >
       <p class="hint">{{ zhCN.role.assignHint }}</p>
       <label v-for="node in flatPermissions" :key="node.id" class="perm-item" :style="{ paddingLeft: `${node.depth * 16}px` }">
-        <input
-          type="checkbox"
+        <el-checkbox
           :data-testid="`perm-${node.id}`"
-          :checked="selectedIds.includes(node.id)"
-          @change="togglePermission(node.id, ($event.target as HTMLInputElement).checked)"
-        />
+          :model-value="selectedIds.includes(node.id)"
+          @update:model-value="(val: boolean) => togglePermission(node.id, val)" />
         {{ node.name }} <span v-if="node.code" class="hint">{{ node.code }}</span>
       </label>
     </FormDialog>
