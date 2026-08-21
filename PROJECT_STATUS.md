@@ -27,6 +27,7 @@
 - Compose bake 按 **context** 解析 dockerfile。三处 app build context 改为仓库根，`dockerfile: deploy/docker/Dockerfile`
 - 容器默认堆是 cgroup 的 25%。1G limit 下 admin-app 启动即死，compose 在 ~15s 报 unhealthy。镜像/编排设 `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0`，app limit 1536M；JRE 装 fontconfig + fonts-dejavu-core（EasyCaptcha）；`HOME=/app`。smoke/e2e 失败 dump admin-app 日志
 - JDBC `characterEncoding` 必须是 Java 字符集 `UTF-8`。Connector/J 不认 `utf8mb4`（Flyway `SQLException: Unsupported character encoding 'utf8mb4'`）。库/表/mysqld 仍用 utf8mb4。compose 注入 `MKT_DATASOURCE_URL`，admin/portal 默认 URL 与 `.env.example` 同步改
+- V1 超管 `password_hash=''`，由 admin-app `InitAdminPasswordRunner` 读 `MKT_INIT_ADMIN_PASSWORD` 写入 BCrypt。该 runner **禁止** `@ConditionalOnBean(DataSource)`：扫描期 DataSource 尚未注册，bean 被跳过，哈希保持空串，compose/e2e 登录得到 `auth.login.invalid-credential`。`.env.example` 占位密码须满足 R1.5（含特殊字符）
 
 ## 改过的核心文件
 
@@ -38,25 +39,24 @@
 - `server/domain-reward` `PrizeClaimExactlyOnceIT` / `PrizeExpireIT` / `ClaimAppServiceTest`
 - `server/domain-risk` `RiskRejectIdempotentIT` / `RiskITSupport`
 - `deploy/docker-compose.yml`、`deploy/docker/Dockerfile`、`.dockerignore`
-- `deploy/.env.example`（JDBC `characterEncoding=UTF-8`）
+- `deploy/.env.example`（JDBC `characterEncoding=UTF-8`；`MKT_INIT_ADMIN_PASSWORD` 满足 R1.5）
 - `ci/deploy-smoke.sh`、`ci/e2e-compose.sh`
 - `server/admin-app` / `portal-app` `application.yml`（JDBC URL）
-- `server/admin-app` `DeployComposeTest`
-- `server/pom.xml`、`admin-app/pom.xml`、`portal-app/pom.xml`
+- `server/admin-app` `InitAdminPasswordRunner` / `InitAdminPasswordRunnerTest` / `DeployComposeTest`
 - `web/apps/admin/src/views/signin/**`、`web/apps/client/src/views/signin/**`
 - `.kiro/specs/platform-v2/tasks.md`（任务 44 勾选）
 - `docs/verification-matrix.md`（R21.1 / R36.1 / SigninPage 已交付）
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test` 此前本机 exit 0；本轮只跑 `DeployComposeTest` 锁 JDBC UTF-8
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R13.4 操作者上下文、R31.1 compose 启动 / JDBC 编码
-- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；无 Docker，admin-app Flyway 栈等 CI dump
+- 命令与结果：`cd server && mvn -q -DskipITs test` 本轮 exit 0；web 本轮未改前端源码（CI web 已绿）
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R13.4 操作者上下文、R31.1 compose 启动 / JDBC 编码、R3.6 超管哈希注入
+- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；e2e / deploy-smoke 等 PR #60 CI
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
-- PR #60 `ce32356` 后 e2e/deploy-smoke：`mkt-admin-app-1` Flyway `SQLException: Unsupported character encoding 'utf8mb4'`（JDBC `characterEncoding` 不能用 MySQL 字符集名）。本会话扫 JDBC/datasource URL 与 compose env，改为 `UTF-8`
+- PR #60 `18d9a96` 后 compose 已健康；e2e/deploy-smoke 登录 `auth.login.invalid-credential`。根因：`InitAdminPasswordRunner` 带 `@ConditionalOnBean(DataSource)` 未注册，V1 空哈希未写入。本会话去掉该条件，`.env.example` 占位密码补特殊字符
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
@@ -103,6 +103,7 @@
 - 不要建 P1 域 activity / ad
 - 不要把 `SIGNIN_DAY` sourceId 改成仅 recordId（断链重攒会重复发放）
 - 不要把 JDBC `characterEncoding` 写成 `utf8mb4`（库/表字符集仍是 utf8mb4）
+- 不要给 `InitAdminPasswordRunner` 加回 `@ConditionalOnBean(DataSource)`
 
 ## 下一步开发顺序（最多 3 步）
 

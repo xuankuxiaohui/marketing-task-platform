@@ -2,6 +2,7 @@ package com.mkt.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.mkt.identity.domain.PasswordPolicies;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ class DeployComposeTest {
         assertThat(compose).contains("JAVA_TOOL_OPTIONS");
         assertThat(compose).contains("MaxRAMPercentage");
         assertThat(compose).contains("MKT_DATASOURCE_URL: ${MKT_DATASOURCE_URL}");
+        assertThat(compose).contains("MKT_INIT_ADMIN_PASSWORD: ${MKT_INIT_ADMIN_PASSWORD}");
         assertThat(compose).doesNotContain("characterEncoding=utf8mb4");
         String dockerfile = read("deploy/docker/Dockerfile");
         assertThat(dockerfile).contains("fontconfig");
@@ -103,6 +105,9 @@ class DeployComposeTest {
             if (key.contains("PASSWORD") || key.contains("SECRET") || key.contains("AES_KEY")) {
                 assertThat(value).isNotBlank();
                 assertThat(value).containsAnyOf("CHANGE_ME", "0123456789abcdef");
+            }
+            if ("MKT_INIT_ADMIN_PASSWORD".equals(key)) {
+                assertThat(PasswordPolicies.adminSatisfied(value)).isTrue();
             }
         }
     }

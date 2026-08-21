@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,10 +13,12 @@ import org.springframework.stereotype.Component;
 
 /**
  * Fills the V1 empty super-admin hash from {@code MKT_INIT_ADMIN_PASSWORD} (design §3.1).
+ *
+ * <p>Do not add {@code @ConditionalOnBean(DataSource)}: component-scan evaluates that before
+ * DataSource auto-config and skips this runner.
  */
 @Component
 @Order(0)
-@ConditionalOnBean(DataSource.class)
 public class InitAdminPasswordRunner implements ApplicationRunner {
 
     static final String ENV_PASSWORD = "MKT_INIT_ADMIN_PASSWORD";

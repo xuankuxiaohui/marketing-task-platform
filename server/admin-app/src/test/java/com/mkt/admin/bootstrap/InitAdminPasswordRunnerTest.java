@@ -10,7 +10,10 @@ import static org.mockito.Mockito.when;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 class InitAdminPasswordRunnerTest {
 
@@ -45,5 +48,12 @@ class InitAdminPasswordRunnerTest {
         ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
         verify(jdbc).update(anyString(), hash.capture(), eq("admin"));
         assertThat(hash.getValue()).startsWith("$2a$12$");
+    }
+
+    @Test
+    void scannedRunnerMustNotUseOnBeanCondition() {
+        assertThat(InitAdminPasswordRunner.class.getAnnotation(Component.class)).isNotNull();
+        assertThat(InitAdminPasswordRunner.class.getAnnotation(ConditionalOnBean.class)).isNull();
+        assertThat(ApplicationRunner.class.isAssignableFrom(InitAdminPasswordRunner.class)).isTrue();
     }
 }
