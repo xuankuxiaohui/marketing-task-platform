@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { E2E_PORTAL_PASSWORD, registerPortalUser, startTask, unlockedAdminPassword } from "./helpers/backend";
+import { startTask, unlockedAdminPassword } from "./helpers/backend";
 import { loadDotEnv } from "./helpers/env";
 import { readE2EState } from "./helpers/state";
 import { fillAdminCaptcha } from "./helpers/ui";
@@ -102,8 +102,8 @@ test.describe("journey-admin", () => {
   });
 
   test("R14.9 query instances after publish", async () => {
-    const user = await registerPortalUser(`e2einst${Date.now()}`, E2E_PORTAL_PASSWORD);
-    await startTask(user.token, taskId);
+    const state = readE2EState();
+    await startTask(state.portalToken, taskId);
     await page.goto("/task/instances");
     await expect(page.getByTestId("instance-page")).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("filter-task-id").fill(String(taskId));

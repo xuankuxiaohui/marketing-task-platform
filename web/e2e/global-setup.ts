@@ -14,6 +14,7 @@ export type E2EState = {
   taskId: number;
   loginUsername: string;
   loginPassword: string;
+  portalToken: string;
   adminPassword: string;
 };
 
@@ -34,13 +35,14 @@ export default async function globalSetup(): Promise<void> {
     transitions: [{ fromStepCode: "clk", toStepCode: "rwd" }],
   });
   const loginUsername = "e2e_login1";
-  await registerPortalUser(loginUsername, E2E_PORTAL_PASSWORD);
+  const portal = await registerPortalUser(loginUsername, E2E_PORTAL_PASSWORD);
   const state: E2EState = {
     apiBase: apiBase(),
     prizeId,
     taskId,
     loginUsername,
     loginPassword: E2E_PORTAL_PASSWORD,
+    portalToken: portal.token,
     adminPassword: session.password,
   };
   writeFileSync(statePath(), `${JSON.stringify(state, null, 2)}\n`);

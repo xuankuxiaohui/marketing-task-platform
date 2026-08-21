@@ -2,8 +2,8 @@
 export const LOGIN_RATE_LIMITED = "auth.login.rate-limited";
 export const REGISTER_RATE_LIMITED = "auth.register.rate-limited";
 
-/** 3 retries after a rate-limited response. */
-export const AUTH_RATE_LIMIT_BACKOFFS_MS = [5_000, 10_000, 20_000] as const;
+/** One wait past the 60s IP window. 5/10/20s retries still land in the same bucket. */
+export const AUTH_RATE_LIMIT_BACKOFFS_MS = [63_000] as const;
 
 export function isAuthRateLimited(payload: { code?: unknown } | null | undefined): boolean {
   return payload?.code === LOGIN_RATE_LIMITED || payload?.code === REGISTER_RATE_LIMITED;

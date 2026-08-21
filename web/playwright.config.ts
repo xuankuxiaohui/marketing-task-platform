@@ -16,7 +16,7 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   reporter: "list",
-  timeout: 60_000,
+  timeout: 120_000,
   globalSetup: "./e2e/global-setup.ts",
   use: {
     trace: "off",
