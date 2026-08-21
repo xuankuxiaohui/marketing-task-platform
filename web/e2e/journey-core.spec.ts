@@ -45,11 +45,20 @@ test.describe("journey-core registered path", () => {
     await page.goto("/register");
     await page.getByTestId("register-username").locator("input").fill(username);
     await page.getByTestId("register-username").locator("input").blur();
+    await expect(page.getByTestId("register-username-hint")).toContainText(/可用/);
     await page.getByTestId("register-password").locator("input").fill(E2E_PORTAL_PASSWORD);
     await fillPortalCaptcha(page);
     await page.getByTestId("register-agree").click();
+    await expect(page.getByTestId("register-agree")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("register-submit")).toBeEnabled();
+    const pending = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/common/auth/register") && response.request().method() === "POST",
+    );
     await page.getByTestId("register-submit").click();
-    await expect(page).toHaveURL(/\/home$/);
+    const body = (await (await pending).json()) as { code?: unknown; message?: string };
+    expect(body.code, body.message ?? JSON.stringify(body)).toBe(0);
+    await expect(page).toHaveURL(/\/home$/, { timeout: 15_000 });
   });
 
   test("R34.5 home list emits task.card.exposure via POST /api/common/track/batch", async () => {

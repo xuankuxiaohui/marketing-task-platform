@@ -8,7 +8,7 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master）
-- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI（run 32432266368 e2e job 96626195604），未开任务 45**
+- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI（run 32433320742 e2e job 96629393266），未开任务 45**
 - 下一步：下一会话从本分支 tip 开 `task/45-activity` 做编组 J 第二题。**禁止在本分支继续写 45+。禁止 merge / push / force-push master**
 - Git：工作分支 `task/44-signin`（基线 `origin/task/43-e2e-k6` @ `9ac6168` / 其上叠 43 → 42 → 41 → 40 → 39 → 38.3 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
 
@@ -31,6 +31,7 @@
 - Vue Router 动态路由：`addRoute` 后必须 `replace` 原 path，否则刷新 / Playwright `goto` 仍走未匹配记录，画布列表不挂载，`task-create` 永远点不到。vue-pure-admin-thin 同模式
 - Vue Router `stringifyQuery` 用 `encodeURI`，`redirect=/mine` 不会变成 `%2Fmine`。R32.1 e2e 用 `URLSearchParams.get("redirect")`，两种编码都认
 - 首次 DRAFT 发布 `requiresConfirm=false`，不弹确认框；确认框只给已发布修订
+- Playwright 填验证码必须先等到 `login-captcha-image` 可见（onMounted 的 GET 已结束），再 click refresh 并 waitForResponse。否则 waitForResponse 会吃到进行中的首次 GET，refresh 换了 `captchaId`，提交仍用旧码，注册停在 `/register`
 
 ## 改过的核心文件
 
@@ -48,20 +49,21 @@
 - `server/admin-app` `InitAdminPasswordRunner` / `InitAdminPasswordRunnerTest` / `DeployComposeTest`
 - `web/apps/admin/src/views/signin/**`、`web/apps/client/src/views/signin/**`
 - `web/apps/admin/src/router/guards.ts` / `index.ts` / `guards.spec.ts`（动态路由 replace 再解析）
-- `web/e2e/journey-core.spec.ts`、`web/e2e/journey-admin.spec.ts`
+- `web/e2e/helpers/ui.ts`、`web/e2e/journey-core.spec.ts`、`web/e2e/journey-admin.spec.ts`
 - `.kiro/specs/platform-v2/tasks.md`（任务 44 勾选）
 - `docs/verification-matrix.md`（R21.1 / R36.1 / SigninPage 已交付）
 
 ## 测试与验证
 
-- 命令与结果：`cd web/apps/admin && pnpm exec vitest run` 64 绿；`packages/shared` `e2e-skeleton.spec.ts` 2 绿。`cd server && mvn -q -DskipITs test` 本轮未改 Java，未重跑
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R32.1 回跳路径、R14.9 后台画布/发布 e2e
-- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；e2e / deploy-smoke 等 PR #60 CI
+- 命令与结果：本轮只改 e2e helper / R32.4 断言 / compose 失败 dump。`cd web/apps/admin && pnpm exec vitest run` 与 `cd server && mvn -q -DskipITs test` 未重跑（未改 Vue 实现 / Java）
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R32.4 注册自动登录 e2e
+- 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；e2e / deploy-smoke 等 PR #60 CI。run 32433320742：web 绿、deploy-smoke 绿、e2e job 96629393266 红（R32.4）
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
-- PR #60 `4cb77bc`（run 32432266368）e2e job 96626195604：compose 已健康，Playwright 2 失败。门户 R32.1 实际 URL 是 `login?redirect=/mine`，断言写了 `%2Fmine`。后台登录到 dashboard 后 `goto /task/definitions` 全页刷新，动态路由 `addRoute` 后未 replace，列表页不挂载，60s 等不到 `task-create`
+- PR #60 `c444d44`（run 32433320742）e2e job 96629393266：compose 已健康，admin 5 绿，R32.1 绿。R32.4 提交后 URL 仍是 `/register`（5s）。根因：`fillPortalCaptcha` 的 waitForResponse 吃到 onMounted 进行中的 GET，refresh 换了 `captchaId`，提交验证码与 id 不一致
+- 此前 `4cb77bc`（run 32432266368）e2e job 96626195604：门户 R32.1 实际 URL 是 `login?redirect=/mine`，断言写了 `%2Fmine`。后台登录到 dashboard 后 `goto /task/definitions` 全页刷新，动态路由 `addRoute` 后未 replace，列表页不挂载，60s 等不到 `task-create`
 - 此前 `e9a18ff`（run 32431360120）e2e / deploy-smoke：compose `mkt-admin-app-1 is unhealthy`。根因：去掉 `@ConditionalOnBean` 后 runner 被扫描，但 `DataSource` 与包可见测试构造并存，Spring 找无参构造失败（`NoSuchMethodException: InitAdminPasswordRunner.<init>()`）。已收成单构造器
 - 此前 `18d9a96` 后 compose 已健康，但登录 `auth.login.invalid-credential`：`@ConditionalOnBean(DataSource)` 扫描期跳过 runner，V1 空哈希未写入
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
@@ -114,6 +116,7 @@
 - 不要给 `InitAdminPasswordRunner` 加回 `@ConditionalOnBean(DataSource)`
 - 不要给 `InitAdminPasswordRunner` 再加第二个构造器（即使包可见 / 测用）
 - 不要把动态路由安装后的导航改回 `{ type: "next" }`（刷新会再次白屏）
+- 不要在首次 captcha GET 仍在飞行时就 waitForResponse + click refresh
 
 ## 下一步开发顺序（最多 3 步）
 

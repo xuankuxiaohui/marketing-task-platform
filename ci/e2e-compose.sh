@@ -31,9 +31,10 @@ fi
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$ROOT/deploy/docker-compose.yml")
 
 dump_stack() {
-  echo "compose failed; dumping admin-app / mysql / redis" >&2
+  echo "compose failed; dumping admin-app / portal-app / mysql / redis" >&2
   "${COMPOSE[@]}" ps -a || true
   "${COMPOSE[@]}" logs --no-color --tail=400 admin-app || true
+  "${COMPOSE[@]}" logs --no-color --tail=200 portal-app-1 portal-app-2 || true
   "${COMPOSE[@]}" logs --no-color --tail=80 mysql redis || true
 }
 trap dump_stack ERR
