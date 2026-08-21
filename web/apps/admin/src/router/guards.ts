@@ -7,6 +7,7 @@ export type GuardTo = {
 
 export type GuardDecision =
   | { type: "next" }
+  | { type: "replace"; path: string }
   | { type: "redirect"; path: string; query?: Record<string, string> };
 
 export type GuardDeps = {
@@ -21,7 +22,9 @@ export function isPublicPath(path: string): boolean {
 
 /**
  * Auth navigation for vue-pure-admin-thin style dynamic routes.
- * Session token stays in HttpOnly cookie; this only decides next/redirect.
+ * Session token stays in HttpOnly cookie; this only decides next/redirect/replace.
+ * After addRoute, Vue Router must re-resolve the original location (replace),
+ * otherwise a refresh of /task/definitions stays unmatched.
  */
 export async function resolveAuthNavigation(to: GuardTo, deps: GuardDeps): Promise<GuardDecision> {
   if (isPublicPath(to.path)) {
@@ -40,5 +43,5 @@ export async function resolveAuthNavigation(to: GuardTo, deps: GuardDeps): Promi
   if (!ok) {
     return { type: "redirect", path: "/login", query: { redirect: to.fullPath } };
   }
-  return { type: "next" };
+  return { type: "replace", path: to.path };
 }

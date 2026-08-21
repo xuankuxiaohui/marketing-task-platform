@@ -37,6 +37,7 @@ test.describe("journey-admin", () => {
   test("save a task aggregate on the canvas", async () => {
     const state = readE2EState();
     await page.goto("/task/definitions");
+    await expect(page.getByTestId("task-definition-page")).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("task-create").click();
     await expect(page.getByTestId("task-edit-page")).toBeVisible();
     await page.getByTestId("task-code").fill(taskCode);
@@ -54,7 +55,7 @@ test.describe("journey-admin", () => {
     await page.getByTestId("edge-to").fill("rwd");
     await page.getByTestId("edge-add").click();
     await page.getByTestId("task-save").click();
-    await expect(page).toHaveURL(/\/task\/definitions\/edit\/\d+/);
+    await expect(page).toHaveURL(/\/task\/definitions\/edit\/\d+/, { timeout: 15_000 });
     const match = page.url().match(/edit\/(\d+)/);
     taskId = Number(match?.[1]);
     expect(taskId).toBeGreaterThan(0);
@@ -71,10 +72,24 @@ test.describe("journey-admin", () => {
   });
 
   test("publish a task version", async () => {
+    const pending = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/admin\/task\/definitions\/\d+\/publish/.test(response.url()),
+    );
     await page.getByTestId("task-publish").click();
-    await expect(page.getByTestId("confirm-dialog")).toBeVisible();
-    await page.getByTestId("confirm-ok").click();
-    await expect(page.getByTestId("confirm-dialog")).toHaveCount(0);
+    const payload = (await (await pending).json()) as { data?: { requiresConfirm?: boolean } };
+    if (payload.data?.requiresConfirm) {
+      await expect(page.getByTestId("confirm-dialog")).toBeVisible();
+      const confirmed = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          /\/admin\/task\/definitions\/\d+\/publish/.test(response.url()),
+      );
+      await page.getByTestId("confirm-ok").click();
+      await confirmed;
+      await expect(page.getByTestId("confirm-dialog")).toHaveCount(0);
+    }
     await expect(page.getByTestId("page-error")).toHaveCount(0);
   });
 
@@ -82,6 +97,7 @@ test.describe("journey-admin", () => {
     const user = await registerPortalUser(`e2einst${Date.now()}`, E2E_PORTAL_PASSWORD);
     await startTask(user.token, taskId);
     await page.goto("/task/instances");
+    await expect(page.getByTestId("instance-page")).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("filter-task-id").fill(String(taskId));
     await page.getByTestId("instance-query").click();
     await expect(page.getByTestId("instance-table")).toBeVisible({ timeout: 15_000 });

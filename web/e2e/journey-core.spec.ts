@@ -18,7 +18,8 @@ test.describe("journey-core", () => {
   }) => {
     const state = readE2EState();
     await page.goto("/mine");
-    await expect(page).toHaveURL(/\/login\?redirect=%2Fmine/);
+    await expect(page).toHaveURL(/\/login/);
+    expect(new URL(page.url()).searchParams.get("redirect")).toBe("/mine");
     await page.getByTestId("login-username").locator("input").fill(state.loginUsername);
     await page.getByTestId("login-password").locator("input").fill(state.loginPassword);
     await fillPortalCaptcha(page);

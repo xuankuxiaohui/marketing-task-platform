@@ -8,7 +8,7 @@
 ## 现在做到哪
 
 - 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master）
-- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI（run 32431360120 e2e/deploy-smoke），未开任务 45**
+- 进行中：无。**编组 J（44–49）进行中，任务 44 已交付；本会话只修 PR #60 CI（run 32432266368 e2e job 96626195604），未开任务 45**
 - 下一步：下一会话从本分支 tip 开 `task/45-activity` 做编组 J 第二题。**禁止在本分支继续写 45+。禁止 merge / push / force-push master**
 - Git：工作分支 `task/44-signin`（基线 `origin/task/43-e2e-k6` @ `9ac6168` / 其上叠 43 → 42 → 41 → 40 → 39 → 38.3 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
 
@@ -28,6 +28,9 @@
 - 容器默认堆是 cgroup 的 25%。1G limit 下 admin-app 启动即死，compose 在 ~15s 报 unhealthy。镜像/编排设 `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0`，app limit 1536M；JRE 装 fontconfig + fonts-dejavu-core（EasyCaptcha）；`HOME=/app`。smoke/e2e 失败 dump admin-app 日志
 - JDBC `characterEncoding` 必须是 Java 字符集 `UTF-8`。Connector/J 不认 `utf8mb4`（Flyway `SQLException: Unsupported character encoding 'utf8mb4'`）。库/表/mysqld 仍用 utf8mb4。compose 注入 `MKT_DATASOURCE_URL`，admin/portal 默认 URL 与 `.env.example` 同步改
 - V1 超管 `password_hash=''`，由 admin-app `InitAdminPasswordRunner` 读 `MKT_INIT_ADMIN_PASSWORD` 写入 BCrypt。该 runner **禁止** `@ConditionalOnBean(DataSource)`：扫描期 DataSource 尚未注册，bean 被跳过。**必须恰好一个构造器**：第二个构造器（即使包可见）让 Spring 回退无参构造，compose 报 `No default constructor found`，admin-app unhealthy。生产构造注入 `JdbcTemplate` + `@Value("${MKT_INIT_ADMIN_PASSWORD:}")`。`.env.example` 占位密码须满足 R1.5（含特殊字符）
+- Vue Router 动态路由：`addRoute` 后必须 `replace` 原 path，否则刷新 / Playwright `goto` 仍走未匹配记录，画布列表不挂载，`task-create` 永远点不到。vue-pure-admin-thin 同模式
+- Vue Router `stringifyQuery` 用 `encodeURI`，`redirect=/mine` 不会变成 `%2Fmine`。R32.1 e2e 用 `URLSearchParams.get("redirect")`，两种编码都认
+- 首次 DRAFT 发布 `requiresConfirm=false`，不弹确认框；确认框只给已发布修订
 
 ## 改过的核心文件
 
@@ -44,19 +47,22 @@
 - `server/admin-app` / `portal-app` `application.yml`（JDBC URL）
 - `server/admin-app` `InitAdminPasswordRunner` / `InitAdminPasswordRunnerTest` / `DeployComposeTest`
 - `web/apps/admin/src/views/signin/**`、`web/apps/client/src/views/signin/**`
+- `web/apps/admin/src/router/guards.ts` / `index.ts` / `guards.spec.ts`（动态路由 replace 再解析）
+- `web/e2e/journey-core.spec.ts`、`web/e2e/journey-admin.spec.ts`
 - `.kiro/specs/platform-v2/tasks.md`（任务 44 勾选）
 - `docs/verification-matrix.md`（R21.1 / R36.1 / SigninPage 已交付）
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test` 本轮 exit 0；web 本轮未改前端源码（CI web 已绿）
-- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R13.4 操作者上下文、R31.1 compose 启动 / JDBC 编码、R3.6 超管哈希注入
+- 命令与结果：`cd web/apps/admin && pnpm exec vitest run` 64 绿；`packages/shared` `e2e-skeleton.spec.ts` 2 绿。`cd server && mvn -q -DskipITs test` 本轮未改 Java，未重跑
+- 矩阵覆盖：verification-matrix 任务 44（R21.1 C-9 `SigninUniqueIT`、R36.1 `signin-calendar-state.spec.ts`、H5 `SigninPage.spec.ts`）；本轮补 R32.1 回跳路径、R14.9 后台画布/发布 e2e
 - 未跑项及原因：`*IT` 本机 `-DskipITs` 留给 CI；未削弱断言，未用 H2 / Embedded Redis。本机未起 compose（禁止动 3308 / Redis / 8080 / 8081）；e2e / deploy-smoke 等 PR #60 CI
 
 ## 已知问题（只写已证实）
 
 - 任务 29 PR #38、任务 30 PR #39、任务 31 PR #40、任务 32 PR #42、任务 33 PR #43、任务 34 PR #46、任务 35 PR #47、任务 36 PR #48、任务 37.1 PR #49、任务 37.2 PR #50、任务 37.3 PR #51、任务 38.1 PR #52、任务 38.2 PR #53、任务 38.3 PR #54、任务 39 PR #55、任务 40 PR #56、任务 41 PR #57、任务 42 PR #58、任务 43 PR #59、任务 44 PR #60 均未合 master；叠链 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37.1 → 37.2 → 37.3 → 38.1 → 38.2 → 38.3 → 39 → 40 → 41 → 42 → 43 → 44
-- PR #60 `e9a18ff`（run 32431360120）e2e job 96623401080 / deploy-smoke 96623400908：compose `mkt-admin-app-1 is unhealthy`。根因：去掉 `@ConditionalOnBean` 后 runner 被扫描，但 `DataSource` 与包可见测试构造并存，Spring 找无参构造失败（`NoSuchMethodException: InitAdminPasswordRunner.<init>()`）。本会话收成单构造器
+- PR #60 `4cb77bc`（run 32432266368）e2e job 96626195604：compose 已健康，Playwright 2 失败。门户 R32.1 实际 URL 是 `login?redirect=/mine`，断言写了 `%2Fmine`。后台登录到 dashboard 后 `goto /task/definitions` 全页刷新，动态路由 `addRoute` 后未 replace，列表页不挂载，60s 等不到 `task-create`
+- 此前 `e9a18ff`（run 32431360120）e2e / deploy-smoke：compose `mkt-admin-app-1 is unhealthy`。根因：去掉 `@ConditionalOnBean` 后 runner 被扫描，但 `DataSource` 与包可见测试构造并存，Spring 找无参构造失败（`NoSuchMethodException: InitAdminPasswordRunner.<init>()`）。已收成单构造器
 - 此前 `18d9a96` 后 compose 已健康，但登录 `auth.login.invalid-credential`：`@ConditionalOnBean(DataSource)` 扫描期跳过 runner，V1 空哈希未写入
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
@@ -107,6 +113,7 @@
 - 不要把 JDBC `characterEncoding` 写成 `utf8mb4`（库/表字符集仍是 utf8mb4）
 - 不要给 `InitAdminPasswordRunner` 加回 `@ConditionalOnBean(DataSource)`
 - 不要给 `InitAdminPasswordRunner` 再加第二个构造器（即使包可见 / 测用）
+- 不要把动态路由安装后的导航改回 `{ type: "next" }`（刷新会再次白屏）
 
 ## 下一步开发顺序（最多 3 步）
 

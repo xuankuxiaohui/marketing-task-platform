@@ -41,6 +41,9 @@ router.beforeEach(async (to) => {
   if (decision.type === "redirect") {
     return { path: decision.path, query: decision.query };
   }
+  if (decision.type === "replace") {
+    return { path: decision.path, query: to.query, hash: to.hash, replace: true };
+  }
   return true;
 });
 
