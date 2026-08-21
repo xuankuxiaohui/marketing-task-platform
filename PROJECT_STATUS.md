@@ -1,5 +1,5 @@
 # PROJECT_STATUS
-> 阶段：**编组 J 进行中** / 当前任务：**48 广告位域，已交付；PR #65 CI 修复已推** / 更新：2026-08-21
+> 阶段：**编组 J 待验收** / 当前任务：**49 P1 压测与容量复验，已交付** / 更新：2026-08-21
 
 ## 项目一句话
 
@@ -7,45 +7,38 @@
 
 ## 现在做到哪
 
-- 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47、48**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 48 PR 均未合 master）
-- 进行中：无。**编组 J（44–49）进行中，任务 48 已交付。禁止在本分支继续写 49**
-- 下一步：下一会话从本分支 tip 开 `task/49-perf` 做编组 J 第六题（P1 压测）。**禁止 merge / push / force-push master**
-- Git：工作分支 `task/48-ads`（基线 `origin/task/47-simulate` @ `a23e68a` / 其上叠 47 → 46 → … → 29）。PR **#65** 目标 **master**。唯一长期分支是 **master**
+- 已勾选任务：**1–36、37.1、37.2、37.3、38.1、38.2、38.3、39、40、41、42、43、44、45、46、47、48、49**（任务 22–28 已 squash 合 master，#36 → `d7a02eb`；任务 29 PR #38 至任务 49 PR 均未合 master）
+- 进行中：无。**编组 J（44–49）已交付，待人类验收。禁止在本分支继续写新任务。**
+- 下一步：人类验收编组 J。合入前 squash 顺序 29 PR #38 → … → 48 PR #65 → 49。**禁止 merge / push / force-push master**。不要开任务 50 或其它新分支开发。
+- Git：工作分支 `task/49-perf`（基线 `origin/task/48-ads` @ `3f38b4f` / 其上叠 48 → 47 → … → 29）。PR 目标 **master**。唯一长期分支是 **master**
 
 ## 关键技术决策（本轮新发生的）
 
-- 新模块 `domain-ad`（`com.mkt.ad`），admin-app / portal-app 装配；ArchUnit RL-02 扩包
-- Flyway **V7**：`ad_position` / `ad_material` / `ad_position_material` + 权限 id 53–62（`ad:position:*` / `ad:material:*`）；**未**改 V1–V6_2
-- `ad:position` 从 PLACEHOLDER 改为 MANAGED：L2 TTL 60s、L1 1000、写后 evict；目录缓存不含频控结果
-- 频控 Redis：`ad:freq:{userId}:{materialId}:{yyyyMMdd}` / `ad:freq:dev:{deviceId}:{materialId}:{yyyyMMdd}`；弹窗 `ad:popup:cd:{subject}`；日键 UTC+8；INCR 原子（C-11）
-- R30.5：轮播 weight 降序并列 materialId 升序；单图/开屏/弹窗/悬浮取 weight 最大（并列 ID 小）
-- 匿名 GET `/api/common/ad/positions/{code}` 与 POST dismiss 为可选登录；人群定向列存储、匿名不生效、不直访 `task_`（无 CrowdPort）
-- 门户组件：开屏 `app_splash`、弹窗 `home_popup`、轮播 `home_banner`、悬浮 `home_float`；关闭悬浮打满当日额度
-- `AdMaterialMapper.selectByIds` 与 MyBatis-Plus `BaseMapper.selectByIds` 同名：foreach / `@Param` 必须用 `coll`（Constants.COLL）。`@Param("ids")` + `collection="ids"` 在 IT 的 `addMapper` 路径下会 BindingException（available `ids/param1`，SQL 要 `coll`）。domain-ad 仅此一处 foreach
+- k6 全量 NFR 性能 1–8：P0 脚本保留；新增 `perf/ad.js`（性能 6：300 QPS、P95 ≤ 100 ms）；`perf/run-full.sh` 跑 1–8 + 容量断言 + EXPLAIN
+- 性能 8 种子 `--scale p1`：SQL 归档 100 万门户用户（`capu*` 不登录）+ 50 万实例 + 500 万 `evt_event_log` 行 + 当前月起分区；k6 token 池仍 2000 HTTP 注册
+- 峰值口径 3000 eps；性能 5 仍按 2 倍余量 6000 eps 施压
+- 慢查询复盘：热路径对照 design §3 已有索引；**不加 V8 / 不改 V1–V4**。积分后台无 `user_id` 的 `ORDER BY created_at` 记为已知形态
+- **5 分钟 k6 不进例行 PR CI**（`run-full.sh` 在 `GITHUB_ACTIONS` 且未设 `ALLOW_K6_SOAK=1` 时直接退出；`PerfCapacityTest` 断言 `ci.yml` 不含 k6）
 
 ## 改过的核心文件
 
-- `server/platform-db/src/main/resources/db/migration/V7__ad_position.sql`
-- `server/domain-ad/**`
-- `server/domain-ad/src/main/java/com/mkt/ad/mapper/AdMaterialMapper.java`（`@Param("coll")`）
-- `server/domain-ad/src/main/resources/mapper/ad/AdMaterialMapper.xml`（`collection="coll"`）
-- `server/platform-infra/.../CacheNamespace.java`、`KeyValueStore.incr`
-- `server/domain-identity/.../AnonymousPaths.java`
-- `web/apps/admin/src/views/ad/**`、`api/ad.ts`
-- `web/apps/client/src/components/Ad{Splash,Popup,Carousel,Float}.vue`、`api/ad.ts`
-- `.kiro/specs/platform-v2/tasks.md`（任务 48 勾选）、`design-api.md` §4.9.5 / §4.10、`design-architecture.md` §6.2
-- `docs/verification-matrix.md`（R30.1 / R30.2 / 门户组件已交付）
+- `perf/ad.js`、`perf/run-full.sh`、`perf/slow-query-review.md`
+- `perf/seed/seed.py`（p1 容量、广告位、分区）、`capacity_check.py`、`explain.sql`、`explain_hot.py`
+- `server/admin-app/src/test/java/com/mkt/admin/PerfCapacityTest.java`
+- `.kiro/specs/platform-v2/tasks.md`（任务 49 勾选）
+- `docs/verification-matrix.md`（任务 49 已交付）
+- `deploy/R31-go-live-checklist.md`（P1 性能 6/8 签署项）
 
 ## 测试与验证
 
-- 命令与结果：`cd server && mvn -q -DskipITs test` 绿；`cd web && pnpm test` 绿（admin 74 / client 93）；`pnpm lint` 绿
-- 矩阵覆盖：verification-matrix 任务 48（R30.1 `AdFrequencyIT` C-11、R30.2 `AdScheduleIT`、门户组件 `AdCarousel`/`AdFloat`/`AdPositionPage`）
-- PR #65 server 曾红：`AdScheduleIT` / `AdFrequencyIT` `BindingException: Parameter 'coll' not found. Available parameters are [ids, param1]`。已把 `selectByIds` 的 `@Param` 与 XML foreach 改为 `coll`。本机未跑 `*IT`（无 Docker / 禁止动 3308 / Redis / 8080 / 8081）；未削弱断言，未用 H2 / Embedded Redis
+- 命令与结果：`cd server && mvn -q -DskipITs test`（本会话跑）；`cd web && pnpm test` 未改前端，不重跑
+- 矩阵覆盖：verification-matrix 任务 49（NFR 性能 1–8 / `PerfCapacityTest` / `run-full.sh` / 慢查询复盘）
+- 5 分钟 k6 与 p1 千万级种子走 staging compose 签署（`SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh`）。本机无 Docker，未跑 soak；未把 k6 灌进 `.github/workflows/ci.yml`；未用 H2 / Embedded Redis；未杀 3308 / Redis / 8080 / 8081
 
 ## 已知问题（只写已证实）
 
-- 任务 29 PR #38 至任务 47 PR #64 均未合 master；叠链 29 → … → 47 → 48
-- PR #64 `a23e68a` 全 CI 绿（本分支基线）；PR #65 web / e2e / deploy-smoke 绿，server 修复已推、等再跑
+- 任务 29 PR #38 至任务 48 PR #65 均未合 master；叠链 29 → … → 48 → 49
+- PR #65 `3f38b4f` 全 CI 绿（本分支基线）
 - `GET/PUT /admin/risk/rules` 未在后端/OpenAPI 导出；规则页不发明读写契约（R26.6）；k6 性能 4 用 SQL 切换 `risk_rule_config.enabled`
 - `GET /admin/reward/records` 未在后端/OpenAPI 导出；k6 后台列表用已有 `/admin/task/instances` `/admin/task/definitions` `/admin/points/transactions`
 - portal `PrizeCardView.sourceTaskId` / `PointsPortalTxView.sourceTaskId` 后端现返回 null；有值才跳转
@@ -62,9 +55,9 @@
 - `GET /admin/system/dict-types/{code}/entries` 不回 id，字典项更新/删除端点存在但列表无法定位
 - Grafana 看板后置；Redis 哨兵/≥4GB 是生产目标（R31.5），P0 compose 用单实例 Redis 7
 - 备份演练脚本已交付；staging 真人 PITR 签字在上线清单
-- 本任务未 `gen:api:fetch`（本机 8080/8081 是旧进程，禁止杀/重启）；前端广告走手写 `api/ad.ts`
 - 活动允许名单的人群包编码可配置，但跨域无 CrowdPort，参与判定只认用户 ID 列表
 - 广告投放 `crowd_id` 可存；匿名不生效；登录态不直访 `task_crowd`（无 CrowdPort）
+- 积分后台无筛选列表可能 filesort（`idx_user_time` 最左列是 `user_id`）；种子流水很少，破 P95 再单独立项补索引
 
 ## 尝试过但失败的方案
 
@@ -76,19 +69,19 @@
 ## 明确禁止下一会话做的事
 
 - 不要合 master，不要 push 到 master
-- 不要改 V1–V6_2
+- 不要改 V1–V4
 - 不要 evict `identity:session`
 - 不要用 H2 / Embedded Redis 让 IT 本地变绿
 - 不要再创建或推送 `main`
 - 不要削弱 CSRF 双重提交断言
 - 不要用 REQUIRES_NEW 修登录失败落库（05-security §3.4）
 - 不要修任务 22 的 #12 #13、任务 23 的 #15 #16、任务 24 的 #19 #20、任务 25 的 #21 #22、任务 26 的 #26 #27、任务 27 的 #30 #31、任务 28 的 #34 #35
-- 不要在 `task/48-ads` 上继续写任务 49
+- 不要在 `task/49-perf` 上继续写新任务
 - 不要做多轮代码评审
 - 不要杀本机 MySQL 3308 / Redis / admin 8080 / portal 8081
 - 不要发明 `GET/PUT /admin/risk/rules` 或 `GET /admin/reward/records`
 - 不要发明 portal `claimMode` 或改发放/积分后端只为补来源任务 ID
-- 不要把 k6 5 分钟全量灌进例行 PR CI（§7.1 发布签署，不进例行 CI）
+- 不要把 k6 5 分钟全量灌进例行 PR CI（§7.8 发布签署，不进例行 CI）
 - 不要在 compose 里把 `/internal` 暴露到公网 Nginx
 - 不要把真实密钥写进 `.env.example`
 - 不要给广告域加 CrowdPort 或直访 `task_crowd`
@@ -106,9 +99,10 @@
 - 不要建 `domain-metrics`
 - 不要给模拟冲正调渠道撤销 / 履约适配器
 - 不要发明模拟器错误码；缺参走 `common.param-invalid`
+- 不要为慢查询复盘擅自加 V8 索引
 
 ## 下一步开发顺序（最多 3 步）
 
-1. 等 PR #65 CI 再跑绿。下一会话从本分支 tip 开 `task/49-perf`（未合则叠在 48 上），做 P1 压测与容量复验
-2. 合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 47 PR #64 → 48
-3. **停止本会话。不要在本分支写 49。不要合 master。**
+1. 人类验收编组 J（44–49）。合入前不要从过期 master 另开分支；squash 顺序 29 PR #38 → … → 48 PR #65 → 49
+2. staging 签署：`SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh`（portal ×2），归档 `perf/reports/<日期>/`
+3. **停止本会话。不要写任务 50。不要合 master。**

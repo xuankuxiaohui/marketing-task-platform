@@ -1,6 +1,6 @@
 # R31 上线检查清单（签署项）
 
-上线前逐项打勾并签字。k6 P0 脚本：`perf/list.js` `advance.js` `complete.js` `risk-delta.js` `track.js` `admin-list.js`；执行 `perf/run-p0.sh`（不进例行 CI，签署项）。
+上线前逐项打勾并签字。k6 P0 脚本：`perf/list.js` `advance.js` `complete.js` `risk-delta.js` `track.js` `admin-list.js`；执行 `perf/run-p0.sh`。P1 全量（含性能 6/8）：`perf/ad.js` + `perf/run-full.sh`（`--scale p1`，100 万用户 / 3000 eps）。**均不进例行 PR CI**（§7.8 发布签署项）。
 
 ## 安全（R31.2 / NFR 安全）
 
@@ -37,9 +37,10 @@
 - [ ] 告警项已加载 `deploy/prometheus/alerts.yml`（HTTP 5xx/P95、Outbox 积压、发放永久失败、库存 ≤10%、Redis 故障、降级事件、埋点丢弃 >0.1%）
 - [ ] Grafana 看板可后置
 
-## 性能（R31.2，任务 43 签署）
+## 性能（R31.2，任务 43 / 49 签署）
 
 - [ ] k6 NFR 性能 1–5、7 在 staging compose（portal ×2）通过（`perf/run-p0.sh`，报告 `perf/reports/<日期>/`）
+- [ ] k6 NFR 性能 1–8 全量 + 容量 100 万用户 / 3000 eps + 慢查询复盘（`perf/run-full.sh`，P1 任务 49；不进例行 PR CI）
 
 ## 部署幂等（R31.1）
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed staging compose for k6 P0 (design §7.8). Writes perf/state.json."""
+"""Seed staging compose for k6 P0/P1 (design §7.8). Writes perf/state.json."""
 from __future__ import annotations
 
 import argparse
@@ -11,6 +11,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -82,8 +83,20 @@ def redis_get(key: str) -> str:
     return out.decode().strip()
 
 
+# Seed-only hash; capu* rows never log in. Token pool still uses HTTP register.
+SEED_PASSWORD_HASH = "$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW"
+EVENT_ID_BASE = 9_000_000_000_000
+AD_POSITIONS = (
+    ("home_banner", "CAROUSEL"),
+    ("home_popup", "POPUP"),
+    ("home_float", "FLOAT"),
+    ("app_splash", "SPLASH"),
+    ("home_image", "IMAGE"),
+)
+
+
 def mysql(sql: str) -> str:
-    return subprocess.check_output(
+    proc = subprocess.run(
         COMPOSE
         + [
             "exec",
@@ -97,8 +110,13 @@ def mysql(sql: str) -> str:
             "-e",
             sql,
         ],
-        stderr=subprocess.DEVNULL,
-    ).decode()
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(f"mysql failed rc={proc.returncode}: {proc.stderr or proc.stdout}\nSQL: {sql[:400]}")
+    return proc.stdout
 
 
 def captcha(path: str, realm: str) -> tuple[str, str]:
@@ -321,9 +339,189 @@ def set_risk(enabled: int) -> None:
     mysql(f"UPDATE risk_rule_config SET enabled={int(enabled)}")
 
 
+def ensure_seq(rows: int = 1_000_000) -> None:
+    mysql("CREATE TABLE IF NOT EXISTS perf_seq (n INT NOT NULL PRIMARY KEY)")
+    existing = int(mysql("SELECT COUNT(*) FROM perf_seq").strip() or "0")
+    if existing >= rows:
+        return
+    mysql(
+        """
+        INSERT IGNORE INTO perf_seq (n)
+        SELECT a.i + b.i*10 + c.i*100 + d.i*1000 + e.i*10000 + f.i*100000 + 1
+        FROM
+          (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) a,
+          (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) b,
+          (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) c,
+          (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) d,
+          (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) e,
+          (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) f
+        """
+    )
+    print(f"perf_seq {mysql('SELECT COUNT(*) FROM perf_seq').strip()}", flush=True)
+
+
+def ensure_event_partitions() -> None:
+    now = datetime.now(timezone.utc)
+    existing = {
+        name.strip()
+        for name in mysql(
+            "SELECT PARTITION_NAME FROM information_schema.PARTITIONS "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='evt_event_log' "
+            "AND PARTITION_NAME IS NOT NULL"
+        ).split()
+        if name.strip()
+    }
+    year, month = now.year, now.month
+    for _ in range(4):
+        name = f"p{year:04d}{month:02d}"
+        ny, nm = year, month + 1
+        if nm > 12:
+            nm = 1
+            ny += 1
+        bound = f"{ny:04d}-{nm:02d}-01 00:00:00"
+        if name not in existing:
+            mysql(
+                f"ALTER TABLE evt_event_log ADD PARTITION (PARTITION {name} VALUES LESS THAN ('{bound}'))"
+            )
+            existing.add(name)
+            print(f"added partition {name}", flush=True)
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+
+
+def bulk_users(count: int) -> None:
+    if count <= 0:
+        return
+    ensure_seq(min(count, 1_000_000))
+    mysql(
+        f"""
+        INSERT IGNORE INTO sys_portal_user
+          (username, nickname, password_hash, status, deleted, registered_at)
+        SELECT CONCAT('capu', LPAD(s.n, 7, '0')),
+               CONCAT('用户', LPAD(s.n, 6, '0')),
+               '{SEED_PASSWORD_HASH}',
+               'ENABLED', 0, UTC_TIMESTAMP(3)
+        FROM perf_seq s
+        WHERE s.n <= {int(count)}
+        """
+    )
+    print(f"bulk users target={count} now={mysql('SELECT COUNT(*) FROM sys_portal_user').strip()}", flush=True)
+
+
+def bulk_events(count: int) -> None:
+    if count <= 0:
+        return
+    ensure_seq(1_000_000)
+    ensure_event_partitions()
+    batches = (count + 999_999) // 1_000_000
+    for batch in range(batches):
+        offset = batch * 1_000_000
+        take = min(1_000_000, count - offset)
+        mysql(
+            f"""
+            INSERT IGNORE INTO evt_event_log
+              (id, source, event_code, device_id, platform, app_version, events,
+               batch_size, registered, simulated, server_time)
+            SELECT {EVENT_ID_BASE + offset} + s.n,
+                   'CLIENT',
+                   IF(s.n % 2 = 0, 'page.view', 'task.card.exposure'),
+                   CONCAT('cap-dev-', {offset} + s.n),
+                   'WEB',
+                   '0.1.0',
+                   CAST('[{"code":"page.view","props":{"route":"/home"}}]' AS JSON),
+                   1, 1, 0, UTC_TIMESTAMP(3)
+            FROM perf_seq s
+            WHERE s.n <= {int(take)}
+            """
+        )
+        print(f"events batch {batch + 1}/{batches}", flush=True)
+    print(f"event rows now={mysql('SELECT COUNT(*) FROM evt_event_log').strip()}", flush=True)
+
+
+def ensure_ads(admin: dict) -> list[str]:
+    start = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    codes: list[str] = []
+    for code, form in AD_POSITIONS:
+        page = require_ok(
+            load(BASE + f"/admin/ad/positions?code={code}&page=1&pageSize=5"),
+            "ad positions",
+        )
+        records = page.get("records") or []
+        if records:
+            position_id = int(records[0]["id"])
+        else:
+            saved = require_ok(
+                load(
+                    BASE + "/admin/ad/positions",
+                    {
+                        "code": code,
+                        "name": code,
+                        "form": form,
+                        "platforms": ["WEB"],
+                        "status": "ENABLED",
+                    },
+                    headers=admin_headers(admin),
+                ),
+                f"ad position {code}",
+            )
+            position_id = int(saved["id"])
+        mats = require_ok(
+            load(BASE + f"/admin/ad/materials?title=perf-{code}&page=1&pageSize=5"),
+            "ad materials",
+        )
+        mrec = mats.get("records") or []
+        if mrec:
+            material_id = int(mrec[0]["id"])
+        else:
+            created = require_ok(
+                load(
+                    BASE + "/admin/ad/materials",
+                    {
+                        "title": f"perf-{code}",
+                        "imageUrl": "https://example.com/perf-ad.png",
+                        "jumpType": "NONE",
+                        "weight": 50,
+                        "startTime": start,
+                        "endTime": end,
+                        "status": "ENABLED",
+                    },
+                    headers=admin_headers(admin),
+                ),
+                f"ad material {code}",
+            )
+            material_id = int(created["id"])
+        require_ok(
+            load(
+                BASE + f"/admin/ad/positions/{position_id}/materials",
+                {
+                    "materialId": material_id,
+                    "weight": 50,
+                    "startTime": start,
+                    "endTime": end,
+                    "platforms": ["WEB"],
+                    "grayType": "NONE",
+                    "status": "ENABLED",
+                },
+                headers=admin_headers(admin),
+            ),
+            f"ad bind {code}",
+        )
+        codes.append(code)
+    return codes
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scale", choices=["p0", "nfr"], default=os.environ.get("SEED_SCALE", "p0"))
+    parser.add_argument("--scale", choices=["p0", "nfr", "p1"], default=os.environ.get("SEED_SCALE", "p0"))
     parser.add_argument("--tokens-only", action="store_true")
     parser.add_argument("--risk", choices=["on", "off"])
     return parser.parse_args()
@@ -339,6 +537,8 @@ def main() -> None:
     list_tasks = 1000
     users_n = 200 if args.scale == "p0" else 2000
     instances = 0 if args.scale == "p0" else 500_000
+    archive_users = 1_000_000 if args.scale == "p1" else 0
+    archive_events = 5_000_000 if args.scale == "p1" else 0
     cascade_n = 20
     password = "Perfuser1"
 
@@ -355,6 +555,7 @@ def main() -> None:
     put_config(admin, "ratelimit.internal.accesskey.per-second", "5000")
     put_config(admin, "ratelimit.track.batch.per-user-per-minute", "1000000")
     put_config(admin, "ratelimit.portal-write.user.per-second", "5000")
+    ad_codes = ensure_ads(admin)
 
     prize_auto = ensure_prize(admin, "perf_auto_pts", "AUTO")
     prize_manual = ensure_prize(admin, "perf_manual_pts", "MANUAL")
@@ -453,6 +654,12 @@ def main() -> None:
     callback_instances = start_instances(users[50:150], callback_id, "cb", 100)
 
     bulk_instances(instances, int(users[0]["userId"]))
+    bulk_users(archive_users)
+    bulk_events(archive_events)
+
+    user_rows = int(mysql("SELECT COUNT(*) FROM sys_portal_user WHERE deleted=0").strip() or "0")
+    instance_rows = int(mysql("SELECT COUNT(*) FROM task_instance").strip() or "0")
+    event_rows = int(mysql("SELECT COUNT(*) FROM evt_event_log").strip() or "0")
 
     state = {
         "admin": admin,
@@ -467,12 +674,22 @@ def main() -> None:
         "users": users,
         "progressInstances": progress_instances,
         "callbackInstances": callback_instances,
+        "adCodes": ad_codes,
+        "peakEps": 3000,
+        "capacity": {
+            "users": user_rows,
+            "instances": instance_rows,
+            "events": event_rows,
+        },
         "scale": args.scale,
         "seededAt": int(time.time()),
     }
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     STATE_PATH.write_text(json.dumps(state) + "\n")
-    print(f"wrote {STATE_PATH} users={len(users)} listTasks={len(list_ids)} instancesScale={instances}")
+    print(
+        f"wrote {STATE_PATH} tokenUsers={len(users)} listTasks={len(list_ids)} "
+        f"instancesScale={instances} archiveUsers={archive_users} events={archive_events}"
+    )
 
 
 if __name__ == "__main__":

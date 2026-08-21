@@ -101,10 +101,9 @@
 | 43 | R32–R35 | 核心旅程 | `web/e2e/journey-core.spec.ts`、`journey-admin.spec.ts` | E2E |
 | 43 | NFR 性能 1–5、7 | P0 k6 门槛 | `perf/*.js`（§7.8） | 压测 |
 
-## P1 占位（P0 完成后填充）
+## P1 矩阵（编组 J）
 
-> 任务 44–49。§7.3 已登记的属性 / 测试类名写在下表，**实现与扩场景都等任务 43 验收之后**。
-> 未开 feasibility 的模块（签到 / 活动 / 广告）不要在 P0 期间补场景行。点位以 design §3.11 为准。
+> 任务 44–49 已交付，待人类验收。§7.3 属性 / 测试类名如下。
 
 | 任务 | 需求 | 正确性属性 | 测试类 | 状态 |
 |------|------|------------|--------|------|
@@ -120,7 +119,7 @@
 | 48 | R30.1 | 广告频控不超限 | `ad AdFrequencyIT`（C-11） | 已交付 · 64 线程日上限 10，响应计数 ≤ 10 |
 | 48 | R30.2 | 排期正确 | `ad AdScheduleIT` | 已交付 · MutableClock 拨至排期外不含该素材 |
 | 48 | R30 | 接线 `ad:position` + 门户广告组件 | `AdPortalAppServiceTest` / `AdCarousel.spec.ts` / `AdFloat.spec.ts` / `AdPositionPage.spec.ts` | 已交付 · L2+evict、开屏/弹窗/轮播/悬浮 |
-| 49 | NFR 性能 1–8 | 容量复验 | k6 全量 + 慢查询复盘 | 占位 · P0 完成后填充 |
+| 49 | NFR 性能 1–8 | 容量复验 | `perf/run-full.sh` + `perf/ad.js` + `PerfCapacityTest` + `perf/slow-query-review.md` | 已交付 · 全量 1–8；p1 种子 100 万用户 / 50 万实例 / 500 万事件 / 3000 eps；5 分钟 k6 不进例行 PR CI |
 
 无属性行、但仍须交测试的任务：1–8（Spike 冒烟）、9（`mvn compile`）、12/13/14 的编译与迁移失败即失败。
 
@@ -134,4 +133,4 @@
 
 ## 属性计数
 
-§7.3 声明 66 条。P0 矩阵覆盖 P0 属性 + RL / Outbox / Spike 基建行。P1 六条属性（R21.1 / R22.1 / R23.1 / R24.1 / R30.1–2 / R36.1）在「P1 占位」表，P0 完成后按 §3.11 补前端点位与场景矩阵，再改本表。新增属性必须先改 requirements，再改 §7.3，再改本表。
+§7.3 声明 66 条。P0 矩阵覆盖 P0 属性 + RL / Outbox / Spike 基建行。P1 属性与任务 49 容量复验在「P1 矩阵」表。新增属性必须先改 requirements，再改 §7.3，再改本表。

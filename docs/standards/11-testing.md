@@ -31,7 +31,7 @@
 | 双实例 | 两上下文 | `*IT`（基类 `TwoPortalAppIT` / `TwoAdminAppIT`） | failsafe | 阻断 |
 | 前端组件 | Vitest | `*.spec.ts` | pnpm | 阻断 |
 | E2E | Playwright | `*.spec.ts` | 编组 I | 阻断（**任务 43**） |
-| 压测 | k6 | `perf/*.js` | **任务 43** 跑 P0 子集（NFR 性能 1–5、7）；**任务 49** 为 P1 全量 + 容量复验 | 43 = P0 发布签署；49 = P1 |
+| 压测 | k6 | `perf/*.js` | **任务 43** 跑 P0 子集（NFR 性能 1–5、7）；**任务 49** 为 P1 全量 + 容量复验（`perf/run-full.sh`） | 43 = P0 发布签署；49 = P1 签署。**5 分钟 k6 不进例行 PR CI** |
 
 1. **MUST** 测试与实现同任务交付（tasks.md 纪律 ①）。
 2. **MUST NOT** 用 H2 / Embedded Redis 替代 MySQL 8 / Redis。JSON、CHECK、分区、`utf8mb4_0900_ai_ci` 行为不同。
