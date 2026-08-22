@@ -11,6 +11,7 @@ import com.mkt.infra.ratelimit.SlidingWindowRateLimiter;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.UserContext;
+import com.mkt.kernel.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,18 +45,18 @@ public class ActivityPortalController {
     }
 
     @GetMapping("/activities")
-    @Operation(summary = "C 端进行中活动")
+    @Operation(summary = "C 端进行中活动（匿名可访问，R32.1）")
     public Result<List<PortalActivityView>> activities() {
-        long userId = UserContext.require().userId();
+        Long userId = UserContext.current().map(UserPrincipal::userId).orElse(null);
         return Result.ok(portal.listPublished(userId));
     }
 
     @GetMapping("/{activityId}")
-    @Operation(summary = "C 端活动详情（ETag）")
+    @Operation(summary = "C 端活动详情（ETag；匿名可访问，R32.1）")
     public ResponseEntity<Result<PortalActivityDetailView>> detail(
             @PathVariable long activityId,
             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) {
-        long userId = UserContext.require().userId();
+        Long userId = UserContext.current().map(UserPrincipal::userId).orElse(null);
         PortalActivityDetailView view = portal.detail(activityId, userId);
         String etag = view.contentHash() == null ? "" : view.contentHash();
         if (etagMatches(ifNoneMatch, etag)) {

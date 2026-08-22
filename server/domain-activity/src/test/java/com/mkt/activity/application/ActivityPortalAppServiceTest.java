@@ -76,6 +76,22 @@ class ActivityPortalAppServiceTest {
     }
 
     @Test
+    void anonymousListShowsPublicAndHidesGrayWithout500() {
+        long publicId = publish(10, null);
+        UserContext.set(new UserPrincipal(1L, "admin", "op"));
+        long grayId = admin.save(save("grayed", "<p>g</p>", 10, null, new ActivityGrayCommand("RATIO", 50)))
+                .id();
+        admin.publish(grayId, new ActivityPublishCommand(true, false));
+        UserContext.clear();
+        assertThat(portal.listPublished(null)).extracting(v -> v.code()).containsExactly("act10a");
+        assertThat(portal.detail(publicId, null).code()).isEqualTo("act10a");
+        assertThatThrownBy(() -> portal.detail(grayId, null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(ActivityErrorCodes.NOT_FOUND);
+    }
+
+    @Test
     void unpublishedIsNotFoundOnPortal() {
         UserContext.set(new UserPrincipal(1L, "admin", "op"));
         long id = admin.save(save("hidden", "<p>x</p>", 10, null)).id();
@@ -95,6 +111,11 @@ class ActivityPortalAppServiceTest {
     }
 
     private static ActivitySaveCommand save(String code, String html, long prizeId, Integer globalDaily) {
+        return save(code, html, prizeId, globalDaily, new ActivityGrayCommand("NONE", null));
+    }
+
+    private static ActivitySaveCommand save(
+            String code, String html, long prizeId, Integer globalDaily, ActivityGrayCommand gray) {
         return new ActivitySaveCommand(
                 null,
                 code,
@@ -102,7 +123,7 @@ class ActivityPortalAppServiceTest {
                 Instant.parse("2026-08-01T00:00:00Z"),
                 Instant.parse("2026-08-31T16:00:00Z"),
                 html,
-                new ActivityGrayCommand("NONE", null),
+                gray,
                 List.of(),
                 prizeId,
                 List.of(),

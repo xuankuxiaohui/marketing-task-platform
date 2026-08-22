@@ -78,6 +78,24 @@ class TaskPortalAppServiceTest {
     }
 
     @Test
+    void anonymousListShowsPublicCardsAndHidesPersonalized() {
+        publish("open", 1);
+        publish("hidden", 2, new TaskGrayCommand("RATIO", 100, null, null, null));
+        publishFiltered("filtered", "province() = 'GD'");
+        PageData<TaskCardView> page = service.list(null, null, 1, 20);
+        assertThat(page.records()).extracting(TaskCardView::taskCode).containsExactly("open");
+        assertThat(page.records().get(0).userStatus()).isEqualTo(InstanceStatuses.NOT_STARTED);
+    }
+
+    @Test
+    void anonymousDetailPublicNotStartedGrayOffline() {
+        long open = publish("open", 1);
+        long hidden = publish("hidden", 1, new TaskGrayCommand("RATIO", 0, null, null, null));
+        assertThat(service.detail(open, null, "WEB").status()).isEqualTo(InstanceStatuses.NOT_STARTED);
+        assertThat(service.detail(hidden, null, "WEB").status()).isEqualTo(InstanceStatuses.OFFLINE);
+    }
+
+    @Test
     void blacklistUserGetsEmptyList() {
         publish("a_task", 1);
         when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(1L, List.of(RiskListType.BLACK)));

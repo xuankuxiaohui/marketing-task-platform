@@ -269,7 +269,7 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 
 #### 4.9.0 匿名边界与通用约定（R32.1）
 
-匿名可访问端点封闭清单：`GET /api/common/captcha`、`GET /api/common/auth/username-available`、`POST /api/common/auth/register`、`POST /api/common/auth/login`、`POST /api/common/track/batch`（匿名按 X-Device-Id 身份，R28.3）、P1 的 `GET /api/common/ad/positions/{code}`（R30.6）。**其余门户端点一律登录态**，未携带或无法解析令牌 → 401 `auth.session.missing` + 登录引导（R32.1 属性 1）；已携带但过期/被踢按 R4.3 其余三码。C 端错误码/message 面向用户可读；不暴露灰度/过滤/风控内部原因（R34.6）。
+匿名可访问端点封闭清单：`GET /api/common/captcha`、`GET /api/common/auth/username-available`、`POST /api/common/auth/register`、`POST /api/common/auth/login`、`POST /api/common/track/batch`（匿名按 X-Device-Id 身份，R28.3）、P1 的 `GET /api/common/ad/positions/{code}`（R30.6）、**活动中心浏览** `GET /api/common/activity/activities` / `GET /api/common/activity/{id}`（可选登录；灰度/需用户属性的活动对访客隐藏）、绑卡所需 `GET /api/common/task/list` / `GET /api/common/task/{taskId}/detail`（可选登录；仅公开卡，灰度/过滤对访客隐藏）。**其余门户端点一律登录态**（含 `POST` 活动 participate、任务 start/click/abandon），未携带或无法解析令牌 → 401 `auth.session.missing` + 登录引导（R32.1 属性 1）；已携带但过期/被踢按 R4.3 其余三码。C 端 `/home` `/activity` 未登录可逛。不新增 `/api/h5/**`。C 端错误码/message 面向用户可读；不暴露灰度/过滤/风控内部原因（R34.6）。
 
 #### 4.9.1 auth（R4/R32）
 
@@ -300,19 +300,19 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 
 #### 4.9.2 task（R13/R34）
 
-**GET /api/common/task/list**（登录态）
+**GET /api/common/task/list**（可选登录；活动页绑卡）
 - 参数：`category? page pageSize`；头 `X-Client-Platform`（端解析 R16.4）
-- 判定链（R13.1）：主状态 PUBLISHED ∧ 时间窗 ∧ 灰度 ∧ 过滤；**已有 IN_PROGRESS 实例则仍入列表（即使已不命中灰度/过滤）**；用户黑名单 → 投放列表空（进行中走 /mine）
+- 判定链（R13.1）：主状态 PUBLISHED ∧ 时间窗 ∧ 灰度 ∧ 过滤；**已有 IN_PROGRESS 实例则仍入列表（即使已不命中灰度/过滤）**；用户黑名单 → 投放列表空（进行中走 /mine）。**访客（无 userId）：只返回公开卡**（灰度 NONE 且无过滤表达式/人群）；`userStatus=NOT_STARTED`；不 500
 - 出参 `records`: `[{taskId, taskCode, name, category, iconUrl, badgeText, rewardPreview: {firstName, totalCount}（快照顺序首个 REWARD 奖品名 + "等 N 项"，R34.1）, userStatus: NOT_STARTED|IN_PROGRESS|COMPLETED|ABANDONED|EXPIRED, sortWeight}]`（按钮状态机映射 R34.2）；**排序 = sort_weight ASC, id ASC**（admin 各分页列表缺省排序 = id DESC，未另行声明处按此缺省）
 - 曝光埋点：客户端按 R28.13 口径上报 `task.card.exposure`（附录 D），服务端不在本接口产生埋点写入（R13 属性 3 响应与埋点无关）
 
-**GET /api/common/task/{taskId}/detail**（登录态）
+**GET /api/common/task/{taskId}/detail**（可选登录；活动半屏完成）
 - 出参按用户状态三分（R13.5）：
   - 未开始：`{status: "NOT_STARTED", task: {name, iconUrl, description, category}, stepsPreview: [{seq, name, type, progressTarget?}], rewardPreview}`
   - 进行中：`{status: "IN_PROGRESS", instanceId, steps: [{stepCode, name, type, status, progressCurrent, progressTarget?}], currentStep: {stepCode, name, type, progressCurrent?, progressTarget?, action}}`——`action` 为平台动作合并结果（R16.2 回退链）：`{actionType, params, buttonText} | null`。**回退链 = 步骤级(端)→任务级(端)→步骤级(WEB)→任务级(WEB)→null；actionType=NONE 视为命中并输出无动作占位（不再回退）**
   - 终态：`{status: "COMPLETED"|"ABANDONED"|"EXPIRED", instanceId?}`
   - 有 IN_PROGRESS 实例：忽略任务 OFFLINE，按进行中三分渲染（R13.5）
-  - 无实例且任务已下线/不可见：`{status: "OFFLINE"}`（HTTP 200，R34.6）
+  - 无实例且任务已下线/不可见：`{status: "OFFLINE"}`（HTTP 200，R34.6）。访客对灰度/过滤任务同此，公开任务按未开始三分渲染
 - 进度刷新时机：客户端进入详情页拉取 + 手动刷新入口，停留期间不轮询（R34.4）
 
 **POST /api/common/task/{taskId}/start**（登录态，用户写限流）
@@ -365,6 +365,7 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 | 列表按钮状态机 | NOT_STARTED=领取 / IN_PROGRESS=继续（直达当前步骤）/ 终态置灰文案（已完成/已放弃/已过期），与实例状态严格一致 | R34.2、R34 属性 1 |
 | 详情步骤时间线 | 已完成打勾、当前高亮、未激活置灰；当前步骤按 action 合并渲染；进度步骤展示 x/N 与进度条 | R34.3 |
 | 会话体验 | 401 统一拦截跳登录页含回跳；kicked-concurrent 与 kicked-admin 文案区分（§4.1 D-02 / R4.3） | R32.5 |
+| 活动中心匿名逛 | `/home` `/activity` 未登录可逛；领取/参与/半屏 claim/start 跳登录并保留回跳，禁止 401 toast 空转 | R32.1 |
 | 领取按钮状态 | 按 §4.9.3 状态映射一一对应 | R35 属性 1 |
 | 待领取倒计时 | 待领取奖品显示剩余时间倒计时 | R35.1 |
 | 图片兜底 | 外链图片加载失败统一占位图，不阻塞页面 | 模块 I 基线 |

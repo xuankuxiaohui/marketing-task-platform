@@ -47,6 +47,37 @@ public final class VisibilityEvaluator {
         return VisibilityResult.deny(reasons);
     }
 
+    /** Published + window + no gray/filter that needs a user. Guests must not see personalized cards. */
+    public static boolean publicCard(
+            String status,
+            Instant startTime,
+            Instant endTime,
+            TaskGrayCommand gray,
+            TaskFilterCommand filter,
+            Instant now) {
+        if (!DefinitionStatuses.PUBLISHED.equals(status) || !inWindow(startTime, endTime, now)) {
+            return false;
+        }
+        return !needsIdentity(gray, filter);
+    }
+
+    public static boolean needsIdentity(TaskGrayCommand gray, TaskFilterCommand filter) {
+        if (gray != null && gray.type() != null && !GrayTypes.NONE.equals(gray.type())) {
+            return true;
+        }
+        if (filter == null) {
+            return false;
+        }
+        if (filter.expr() != null && !filter.expr().isBlank()) {
+            return true;
+        }
+        return notEmpty(filter.allowCrowdIds()) || notEmpty(filter.excludeCrowdIds());
+    }
+
+    private static boolean notEmpty(List<Long> ids) {
+        return ids != null && !ids.isEmpty();
+    }
+
     public static boolean inWindow(Instant startTime, Instant endTime, Instant now) {
         if (now == null) {
             return false;

@@ -2,10 +2,28 @@ import { describe, expect, it, vi } from "vitest";
 import { isPublicPath, resolveAuthNavigation, safeRedirect } from "./guards";
 
 describe("portal route guards", () => {
-  it("treats login and register as public", () => {
+  it("treats login, register, home and activity as public", () => {
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/register")).toBe(true);
+    expect(isPublicPath("/home")).toBe(true);
+    expect(isPublicPath("/activity")).toBe(true);
     expect(isPublicPath("/mine")).toBe(false);
+    expect(isPublicPath("/signin")).toBe(false);
+  });
+
+  it("allows anonymous users through the activity hub without probing session", async () => {
+    const ensureSession = vi.fn().mockResolvedValue(false);
+    const home = await resolveAuthNavigation(
+      { path: "/home", fullPath: "/home" },
+      { sessionKnown: false, ensureSession },
+    );
+    const activity = await resolveAuthNavigation(
+      { path: "/activity", fullPath: "/activity?id=3" },
+      { sessionKnown: false, ensureSession },
+    );
+    expect(ensureSession).not.toHaveBeenCalled();
+    expect(home).toEqual({ type: "next" });
+    expect(activity).toEqual({ type: "next" });
   });
 
   it("sends anonymous users from protected routes to login with redirect", async () => {

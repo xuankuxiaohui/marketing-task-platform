@@ -32,7 +32,7 @@ const router = createRouter({
           path: "home",
           name: "HomePage",
           component: () => import("@/views/home/index.vue"),
-          meta: { title: zhCN.home.title, tab: "home" },
+          meta: { title: zhCN.home.title, tab: "home", public: true },
         },
         {
           path: "mine",
@@ -86,7 +86,7 @@ const router = createRouter({
           path: "activity",
           name: "ActivityPage",
           component: () => import("@/views/activity/index.vue"),
-          meta: { title: zhCN.activity.title },
+          meta: { title: zhCN.activity.title, public: true },
         },
       ],
     },

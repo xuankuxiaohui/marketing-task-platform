@@ -19,6 +19,36 @@ class VisibilityEvaluatorTest {
     private static final CrowdMembership NONE = (crowdId, userId) -> false;
 
     @Test
+    void publicCardHidesGrayAndFilterFromGuests() {
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        Instant end = Instant.parse("2027-01-01T00:00:00Z");
+        assertThat(VisibilityEvaluator.publicCard(
+                        DefinitionStatuses.PUBLISHED,
+                        start,
+                        end,
+                        new TaskGrayCommand(GrayTypes.NONE, null, null, null, null),
+                        new TaskFilterCommand(null, List.of(), List.of()),
+                        NOW))
+                .isTrue();
+        assertThat(VisibilityEvaluator.publicCard(
+                        DefinitionStatuses.PUBLISHED,
+                        start,
+                        end,
+                        new TaskGrayCommand(GrayTypes.RATIO, 100, null, null, null),
+                        new TaskFilterCommand(null, List.of(), List.of()),
+                        NOW))
+                .isFalse();
+        assertThat(VisibilityEvaluator.publicCard(
+                        DefinitionStatuses.PUBLISHED,
+                        start,
+                        end,
+                        new TaskGrayCommand(GrayTypes.NONE, null, null, null, null),
+                        new TaskFilterCommand("province() = 'GD'", List.of(), List.of()),
+                        NOW))
+                .isFalse();
+    }
+
+    @Test
     void publishedOpenWindowNoneGrayIsVisible() {
         UserAttributes attrs = attrs("GD", List.of("vip"));
         VisibilityResult result = VisibilityEvaluator.evaluate(

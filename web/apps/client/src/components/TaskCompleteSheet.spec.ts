@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { fail, ok } from "@/test-utils/result";
 import type { TaskDetailView } from "@/api/task";
 
@@ -70,19 +72,27 @@ function inProgress(): TaskDetailView {
   };
 }
 
-async function mountSheet() {
+async function mountSheet(loggedIn = true) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: "/activity", component: { template: "<div />" } },
       { path: "/task/:taskId", component: { template: "<div />" } },
+      { path: "/login", component: { template: "<div />" } },
     ],
   });
   await router.push("/activity");
   await router.isReady();
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  const session = useSessionStore();
+  session.clear();
+  if (loggedIn) {
+    session.setLogin({ token: "client:t", userId: 9, nickname: "bob" });
+  }
   const wrapper = mount(TaskCompleteSheet, {
     props: { show: true, taskId: 5 },
-    global: { plugins: [router] },
+    global: { plugins: [pinia, router] },
   });
   await flushPromises();
   return { wrapper, router };
@@ -109,6 +119,18 @@ describe("TaskCompleteSheet", () => {
     expect(startMock).toHaveBeenCalledWith(5);
     expect(router.currentRoute.value.path).toBe("/activity");
     expect(wrapper.get('[data-testid="task-step-action"]').text()).toBe("去完成");
+  });
+
+  it("sends a guest to login on claim without toasting 401", async () => {
+    detailMock.mockResolvedValue(ok(notStarted()));
+    const { wrapper, router } = await mountSheet(false);
+    expect(wrapper.get('[data-testid="task-claim"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="task-claim"]').trigger("click");
+    await flushPromises();
+    expect(startMock).not.toHaveBeenCalled();
+    expect(failToast).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.path).toBe("/login");
+    expect(router.currentRoute.value.query.redirect).toBe("/activity");
   });
 
   it("keeps 领取 after a generic risk block", async () => {

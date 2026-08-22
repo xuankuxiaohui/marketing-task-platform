@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { ok } from "@/test-utils/result";
 import type { TaskCardView } from "@/api/task";
 
@@ -67,7 +69,7 @@ function card(overrides: Partial<TaskCardView> = {}): TaskCardView {
   };
 }
 
-async function mountPage(query: Record<string, string> = {}) {
+async function mountPage(query: Record<string, string> = {}, loggedIn = true) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -75,11 +77,19 @@ async function mountPage(query: Record<string, string> = {}) {
       { path: "/signin", component: { template: "<div />" } },
       { path: "/task/:taskId", component: { template: "<div />" } },
       { path: "/mine", component: { template: "<div />" } },
+      { path: "/login", component: { template: "<div />" } },
     ],
   });
   await router.push({ path: "/activity", query });
   await router.isReady();
-  const wrapper = mount(ActivityPage, { global: { plugins: [router] } });
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  const session = useSessionStore();
+  session.clear();
+  if (loggedIn) {
+    session.setLogin({ token: "client:t", userId: 9, nickname: "bob" });
+  }
+  const wrapper = mount(ActivityPage, { global: { plugins: [pinia, router] } });
   await flushPromises();
   return { wrapper, router };
 }
@@ -158,6 +168,28 @@ describe("ActivityPage", () => {
     expect(router.currentRoute.value.path).toBe("/activity");
     expect(wrapper.find('[data-testid="task-complete-sheet"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="task-claim"]').exists()).toBe(true);
+  });
+
+  it("sends a guest to login on participate without calling the write API", async () => {
+    listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
+    detailMock.mockResolvedValue(
+      ok({
+        id: 3,
+        code: "summer",
+        name: "夏季专题",
+        richText: "<p>hello</p>",
+        contentHash: "abc",
+        version: 1,
+        submodules: [],
+      }),
+    );
+    const { wrapper, router } = await mountPage({ id: "3" }, false);
+    expect(wrapper.get('[data-testid="activity-detail"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="activity-join"]').trigger("click");
+    await flushPromises();
+    expect(joinMock).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.path).toBe("/login");
+    expect(router.currentRoute.value.query.redirect).toBe("/activity?id=3");
   });
 
   it("routes the activity sign-in card to the calendar", async () => {

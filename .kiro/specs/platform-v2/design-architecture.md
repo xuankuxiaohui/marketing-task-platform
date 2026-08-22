@@ -51,7 +51,7 @@ graph TB
 | 交互方 | 进入点 | 协议与鉴权 | 需求依据 |
 |--------|--------|-----------|---------|
 | 管理后台前端 | `/admin/**`（经 Nginx） | HTTPS + 后台会话 Cookie（HttpOnly + Secure + SameSite=Strict）+ CSRF 防护 | R1.13 |
-| 门户 H5 | `/api/common/**`（经 Nginx） | HTTPS + `Authorization: Bearer <client:...>`；广告位与埋点上报支持匿名 | R1.13、R30.6、R28.3 |
+| 门户 H5 | `/api/common/**`（经 Nginx） | HTTPS + `Authorization: Bearer <client:...>`；广告位、埋点上报、活动中心浏览 GET 支持匿名（领取/参与仍登录） | R1.13、R30.6、R28.3、R32.1 |
 | 外部业务系统 | `/internal/**`（内网直连 portal-app，Nginx 不代理此前缀到公网） | HMAC-SHA256 签名（X-App-Id/X-Timestamp/X-Nonce/X-Sign）+ appId 维度限流 | R15.2、R15.5 |
 | Prometheus | `/actuator/prometheus`（两应用） | 内网抓取 | NFR 可观测性 1 |
 

@@ -12,6 +12,8 @@ import {
   type TaskDetailView,
 } from "@/api/task";
 import { zhCN } from "@/locales/zh-CN";
+import { loginLocation } from "@/router/guards";
+import { useSessionStore } from "@/store/session";
 import { TRACK, track } from "@/tracking";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 import { resolvePortalRoute } from "@/utils/portal-route";
@@ -22,6 +24,7 @@ import { terminalStatusLabel } from "@/utils/task-button";
 export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
   const route = useRoute();
   const router = useRouter();
+  const session = useSessionStore();
   const detail = ref<TaskDetailView | null>(null);
   const loading = ref(false);
   const acting = ref(false);
@@ -109,7 +112,18 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
     });
   }
 
+  function redirectGuestToLogin(): boolean {
+    if (session.authenticated) {
+      return false;
+    }
+    void router.replace(loginLocation(route.fullPath));
+    return true;
+  }
+
   async function onClaim(): Promise<void> {
+    if (redirectGuestToLogin()) {
+      return;
+    }
     track(TRACK.TASK_START_CLICK, { taskId: taskId.value });
     acting.value = true;
     try {
@@ -132,6 +146,9 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
   }
 
   async function onCurrentAction(): Promise<void> {
+    if (redirectGuestToLogin()) {
+      return;
+    }
     const step = detail.value?.currentStep;
     const instanceId = detail.value?.instanceId;
     if (!step || instanceId == null) {
@@ -174,6 +191,9 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
   }
 
   async function onAbandon(): Promise<void> {
+    if (redirectGuestToLogin()) {
+      return;
+    }
     const instanceId = detail.value?.instanceId;
     if (instanceId == null) {
       return;

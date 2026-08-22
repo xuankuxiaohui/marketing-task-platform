@@ -69,6 +69,15 @@ class TaskPortalControllerTest {
     }
 
     @Test
+    void listAndDetailAnonymousDelegateNullUser() {
+        UserContext.clear();
+        when(portal.list(null, null, 1, 20)).thenReturn(new PageData<>(0, List.of()));
+        assertThat(controller.list(null, 1, 20).code()).isEqualTo(0);
+        when(portal.detail(8L, null, "WEB")).thenReturn(null);
+        assertThat(controller.detail(8L, "WEB").code()).isEqualTo(0);
+    }
+
+    @Test
     void startUsesRemoteAddrAndRateLimit() {
         when(limiter.tryAcquire(any(), anyString(), anyInt(), anyInt())).thenReturn(true);
         when(claims.start(anyLong(), anyLong(), anyString(), any(), any()))
