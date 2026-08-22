@@ -73,7 +73,7 @@ onUnmounted(() => {
   max-height: 90vh;
   overflow: auto;
   padding: 0;
-  border-radius: var(--el-border-radius-base, 4px);
+  border-radius: 8px;
   box-shadow: var(--el-box-shadow, 0 12px 32px 4px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.08));
 }
 .form-card__header {

@@ -10,7 +10,7 @@ const title = computed(() => (typeof route.meta.title === "string" ? route.meta.
 </script>
 
 <template>
-  <section class="coming-soon-page" data-testid="coming-soon-page">
+  <section class="admin-page coming-soon-page" data-testid="coming-soon-page">
     <h2>{{ title }}</h2>
     <p>{{ zhCN.placeholder.hint }}</p>
   </section>
@@ -18,7 +18,6 @@ const title = computed(() => (typeof route.meta.title === "string" ? route.meta.
 
 <style scoped>
 .coming-soon-page {
-  padding: 8px;
   color: #475569;
 }
 </style>
