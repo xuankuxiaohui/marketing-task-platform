@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
 import { fetchMineTasks, type MineTaskView } from "@/api/task";
-import { resolveMineStatus, type MineTaskStatus } from "@/utils/mine-status";
+import { type MineTaskStatus } from "@/utils/mine-status";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatBeijing } from "@/utils/datetime";
@@ -34,6 +34,7 @@ const loading = ref(false);
 const finished = ref(false);
 const refreshing = ref(false);
 const loaded = ref(false);
+const statusTabs = ref<{ resize?: () => void } | null>(null);
 
 const empty = computed(() => loaded.value && records.value.length === 0);
 const emptyCopy = computed(() => (activeStatus.value === "IN_PROGRESS" ? zhCN.empty.tasks : zhCN.task.finishedEmpty));
@@ -56,7 +57,7 @@ async function loadPage(reset: boolean): Promise<void> {
   }
   loading.value = true;
   try {
-    const status = resolveMineStatus(activeStatus.value);
+    const status = activeStatus.value;
     const rawCategory = String(activeCategory.value);
     const category = rawCategory === ALL || rawCategory === "0" ? undefined : rawCategory;
     const result = await fetchMineTasks({
@@ -103,34 +104,35 @@ function openTask(row: MineTaskView): void {
   void router.push(`/task/${row.taskId}`);
 }
 
-function onStatusChange(name: string | number): void {
-  const resolved = resolveMineStatus(name);
-  if (resolved) {
-    activeStatus.value = resolved;
-  }
+function selectStatus(name: MineTaskStatus): void {
+  activeStatus.value = name;
 }
 
 watch([activeStatus, activeCategory], () => {
   void loadPage(true);
 });
 
-onMounted(() => {
+onMounted(async () => {
   void loadCategories();
   void loadPage(true);
+  await nextTick();
+  statusTabs.value?.resize?.();
 });
 
-defineExpose({ selectStatus: onStatusChange });
+defineExpose({ selectStatus });
 </script>
 
 <template>
   <section class="mine-tasks">
     <NavBar :title="zhCN.mine.tasks" left-arrow @click-left="router.back()" />
-    <Tabs v-model:active="activeStatus" sticky @change="onStatusChange">
-      <Tab v-for="tab in STATUS_TABS" :key="tab.name" :title="tab.title" :name="tab.name">
-        <template #title>
-          <span :data-testid="'mine-status-' + tab.name">{{ tab.title }}</span>
-        </template>
-      </Tab>
+    <Tabs ref="statusTabs" v-model:active="activeStatus" sticky>
+      <Tab
+        v-for="tab in STATUS_TABS"
+        :key="tab.name"
+        :title="tab.title"
+        :name="tab.name"
+        :data-testid="'mine-status-' + tab.name"
+      />
     </Tabs>
     <Tabs v-model:active="activeCategory" shrink>
       <Tab :title="zhCN.task.all" :name="ALL" />
