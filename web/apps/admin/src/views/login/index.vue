@@ -79,6 +79,7 @@ onMounted(() => {
     <aside class="login-brand">
       <h1>{{ zhCN.appTitle }}</h1>
       <p class="login-brand__sub">{{ zhCN.consoleSubtitle }}</p>
+      <p class="login-brand__hint">{{ zhCN.login.brandHint }}</p>
     </aside>
     <section class="login-panel">
       <el-form class="login-card" label-position="top" @submit.prevent="submit">
@@ -163,6 +164,11 @@ onMounted(() => {
   font-size: 13px;
   color: #94a3b8;
 }
+.login-brand__hint {
+  margin: 24px 0 0;
+  font-size: 13px;
+  color: #cbd5e1;
+}
 .login-panel {
   width: 56%;
   display: flex;
@@ -171,8 +177,13 @@ onMounted(() => {
   background: var(--admin-page-bg);
 }
 .login-card {
-  width: 380px;
+  width: 400px;
   max-width: 100%;
+  padding: 28px 28px 24px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-card-shadow);
 }
 .login-card h2 {
   margin: 0 0 16px;

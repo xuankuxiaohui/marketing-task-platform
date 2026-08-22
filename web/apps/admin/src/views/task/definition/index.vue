@@ -20,6 +20,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { DEFINITION_STATUS } from "@/constants/task";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPublishImpact, isPublishPreview } from "@/utils/publish-confirm";
@@ -253,7 +254,7 @@ onMounted(async () => {
       <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.task.name" />
       <el-select v-model="filters.status" data-testid="filter-status">
         <el-option value="" :label="zhCN.common.status" />
-        <el-option v-for="status in Object.values(DEFINITION_STATUS)" :key="status" :value="status" :label="status" />
+        <el-option v-for="status in Object.values(DEFINITION_STATUS)" :key="status" :value="status" :label="adminStatusLabel(status)" />
       </el-select>
       <el-input v-model="filters.category" data-testid="filter-category" :placeholder="zhCN.task.category" />
       <el-button data-testid="task-query" @click="load">{{ zhCN.common.query }}</el-button>
@@ -277,7 +278,7 @@ onMounted(async () => {
       <el-table-column :label="zhCN.common.status">
         <template #default="{ row }">
           <el-tag size="small" :type="isLiveStatus(row.status) ? 'success' : 'info'" :class="{ 'status-tag--live': isLiveStatus(row.status) }">
-            {{ row.status }}
+            {{ adminStatusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -350,9 +351,9 @@ onMounted(async () => {
     </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
       <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
     </div>
     <h3>{{ zhCN.task.scheduleFailures }}</h3>
     <p v-if="failures.length === 0" data-testid="failure-empty">{{ zhCN.common.empty }}</p>

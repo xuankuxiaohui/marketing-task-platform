@@ -15,6 +15,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 
 defineOptions({ name: "ActivityManagePage" });
@@ -253,10 +254,10 @@ onMounted(() => {
       <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.activity.name" />
       <el-select v-model="filters.status" data-testid="filter-status">
         <el-option value="" :label="zhCN.common.status" />
-        <el-option value="DRAFT" label="DRAFT" />
-        <el-option value="SCHEDULED" label="SCHEDULED" />
-        <el-option value="PUBLISHED" label="PUBLISHED" />
-        <el-option value="OFFLINE" label="OFFLINE" />
+        <el-option value="DRAFT" :label="adminStatusLabel('DRAFT')" />
+        <el-option value="SCHEDULED" :label="adminStatusLabel('SCHEDULED')" />
+        <el-option value="PUBLISHED" :label="adminStatusLabel('PUBLISHED')" />
+        <el-option value="OFFLINE" :label="adminStatusLabel('OFFLINE')" />
       </el-select>
       <el-button data-testid="activity-query" @click="load">{{ zhCN.common.query }}</el-button>
     </el-form>
@@ -282,7 +283,7 @@ onMounted(() => {
             :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
             :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
           >
-            {{ row.status }}
+            {{ adminStatusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -320,9 +321,9 @@ onMounted(() => {
     </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
       <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
     </div>
     <FormDialog
       :visible="formOpen"

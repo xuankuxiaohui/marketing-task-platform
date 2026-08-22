@@ -165,7 +165,7 @@ onMounted(() => {
         <p v-if="funnel.length === 0" data-testid="funnel-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="funnelOption()" />
-          <el-table :data="funnel" class="data-table" data-testid="funnel-table" stripe>
+          <el-table :data="funnel" class="data-table admin-table" data-testid="funnel-table" size="small" stripe>
       <el-table-column :label="zhCN.metrics.period">
         <template #default="{ row }">{{ row.period }}</template>
       </el-table-column>
@@ -195,7 +195,7 @@ onMounted(() => {
         <p v-if="spend.length === 0" data-testid="spend-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="spendOption()" />
-          <el-table :data="spend" class="data-table" data-testid="spend-table" stripe>
+          <el-table :data="spend" class="data-table admin-table" data-testid="spend-table" size="small" stripe>
       <el-table-column :label="zhCN.metrics.period">
         <template #default="{ row }">{{ row.period }}</template>
       </el-table-column>
@@ -222,7 +222,7 @@ onMounted(() => {
         <p v-if="risk.length === 0" data-testid="risk-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="riskOption()" />
-          <el-table :data="risk" class="data-table" data-testid="risk-table" stripe>
+          <el-table :data="risk" class="data-table admin-table" data-testid="risk-table" size="small" stripe>
       <el-table-column :label="zhCN.metrics.period">
         <template #default="{ row }">{{ row.period }}</template>
       </el-table-column>
@@ -246,7 +246,7 @@ onMounted(() => {
         <p v-if="ads.length === 0" data-testid="ad-empty">{{ zhCN.common.empty }}</p>
         <template v-else>
           <MetricsChart :option="adOption()" />
-          <el-table :data="ads" class="data-table" data-testid="ad-table" stripe>
+          <el-table :data="ads" class="data-table admin-table" data-testid="ad-table" size="small" stripe>
       <el-table-column :label="zhCN.metrics.period">
         <template #default="{ row }">{{ row.period }}</template>
       </el-table-column>
@@ -273,10 +273,5 @@ onMounted(() => {
 .metrics-grid {
   display: grid;
   gap: 16px;
-}
-.metrics-grid article {
-  background: #fff;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
 }
 </style>

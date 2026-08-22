@@ -18,6 +18,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { CLAIM_MODES, PRIZE_STATUS, RECON_POLICIES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPrizeImpact, isPrizeImpactPreview } from "@/utils/prize-impact";
 
@@ -271,7 +272,7 @@ onMounted(() => {
       <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
       <el-select v-model="filters.status" data-testid="filter-status">
         <el-option value="" :label="zhCN.common.status" />
-        <el-option v-for="item in Object.values(PRIZE_STATUS)" :key="item" :value="item" :label="item" />
+        <el-option v-for="item in Object.values(PRIZE_STATUS)" :key="item" :value="item" :label="adminStatusLabel(item)" />
       </el-select>
       <el-button data-testid="prize-query" @click="load">{{ zhCN.common.query }}</el-button>
     </el-form>
@@ -300,7 +301,7 @@ onMounted(() => {
             :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
             :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
           >
-            {{ row.status }}
+            {{ adminStatusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -346,9 +347,9 @@ onMounted(() => {
     </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
       <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
     </div>
     <FormDialog
       :visible="formOpen"

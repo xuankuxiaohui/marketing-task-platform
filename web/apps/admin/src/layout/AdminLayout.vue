@@ -306,7 +306,7 @@ function onTagContext(path: string, event: MouseEvent): void {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 16px 20px 24px;
   background: var(--admin-page-bg);
 }
 .admin-layout__aside :deep(.el-menu) {

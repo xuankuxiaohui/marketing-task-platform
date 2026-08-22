@@ -12,6 +12,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { INSTANCE_STATUS } from "@/constants/task";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 
@@ -98,7 +99,7 @@ onMounted(() => {
       <el-input v-model="filters.userId" data-testid="filter-user-id" :placeholder="zhCN.instance.userId" />
       <el-select v-model="filters.status" data-testid="filter-status">
         <el-option value="" :label="zhCN.common.status" />
-        <el-option v-for="item in Object.values(INSTANCE_STATUS)" :key="item" :value="item" :label="item" />
+        <el-option v-for="item in Object.values(INSTANCE_STATUS)" :key="item" :value="item" :label="adminStatusLabel(item)" />
       </el-select>
       <el-select v-model="filters.simulated" data-testid="filter-simulated">
         <el-option value="" :label="zhCN.instance.simulated" />
@@ -129,7 +130,7 @@ onMounted(() => {
             :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
             :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
           >
-            {{ row.status }}
+            {{ adminStatusLabel(row.status) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -156,9 +157,9 @@ onMounted(() => {
     </el-table>
     <div class="pager">
       <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
+      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
       <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
+      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
     </div>
     <div v-if="detail" data-testid="instance-detail-panel">
       <h3>{{ zhCN.instance.steps }}</h3>
@@ -170,7 +171,7 @@ onMounted(() => {
         <template #default="{ row }">{{ row.type }}</template>
       </el-table-column>
       <el-table-column>
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">{{ adminStatusLabel(row.status) }}</template>
       </el-table-column>
       <el-table-column>
         <template #default="{ row }">{{ row.progressCurrent }}/{{ row.progressTarget ?? "-" }}</template>

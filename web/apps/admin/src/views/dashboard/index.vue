@@ -73,11 +73,16 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="admin-page dashboard-page" data-testid="dashboard-page">
+  <section class="admin-page admin-page--flush dashboard-page" data-testid="dashboard-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.dashboard.title }}</h2>
+      <RouterLink data-testid="metrics-link" class="dashboard-metrics-link" to="/metrics">
+        {{ zhCN.metrics.open }}
+      </RouterLink>
     </div>
-    <p>{{ zhCN.dashboard.welcome }}{{ session.nickname ? ` · ${session.nickname}` : "" }}</p>
+    <p class="dashboard-welcome">
+      {{ zhCN.dashboard.welcome }}{{ session.nickname ? ` · ${session.nickname}` : "" }}
+    </p>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <ul v-else class="dashboard-cards" data-testid="dashboard-cards">
@@ -109,13 +114,20 @@ onMounted(() => {
         <li v-for="item in inbox" :key="item.key">{{ item.label }} {{ item.value }}</li>
       </ul>
     </div>
-    <p>
-      <RouterLink data-testid="metrics-link" to="/metrics">{{ zhCN.metrics.open }}</RouterLink>
-    </p>
   </section>
 </template>
 
 <style scoped>
+.dashboard-welcome {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+.dashboard-metrics-link {
+  color: var(--el-color-primary);
+  font-size: 13px;
+  text-decoration: none;
+}
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
