@@ -124,7 +124,7 @@ describe("TaskCompleteSheet", () => {
   it("sends a guest to login on claim without toasting 401", async () => {
     detailMock.mockResolvedValue(ok(notStarted()));
     const { wrapper, router } = await mountSheet(false);
-    expect(wrapper.get('[data-testid="task-claim"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="task-claim"]').exists()).toBe(true);
     await wrapper.get('[data-testid="task-claim"]').trigger("click");
     await flushPromises();
     expect(startMock).not.toHaveBeenCalled();

@@ -184,7 +184,7 @@ describe("ActivityPage", () => {
       }),
     );
     const { wrapper, router } = await mountPage({ id: "3" }, false);
-    expect(wrapper.get('[data-testid="activity-detail"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="activity-detail"]').exists()).toBe(true);
     await wrapper.get('[data-testid="activity-join"]').trigger("click");
     await flushPromises();
     expect(joinMock).not.toHaveBeenCalled();
