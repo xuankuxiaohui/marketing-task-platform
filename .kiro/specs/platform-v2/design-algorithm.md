@@ -606,7 +606,7 @@ UPDATE rwd_grant_record
 
 | 属性 | 类型 | 测试类 | 场景与断言要点 |
 |------|------|--------|---------------|
-| R32.1 匿名不可达不变量 | 集成 | `portal AnonymousBoundaryIT` | 无令牌遍历 §4.9 全部门户业务端点 → 除匿名白名单外全 401；匿名白名单 = captcha / username-available / register / login / track/batch / P1 ad，可达且行为正确。`/api/common/dict/**` 须登录，不在匿名白名单 |
+| R32.1 匿名不可达不变量 | 集成 | `portal AnonymousBoundaryIT` | 无令牌遍历 §4.9 全部门户业务端点 → 除匿名白名单外全 401；匿名白名单 = captcha / username-available / register / login / track/batch / P1 ad / 活动 list+detail GET / 任务 list+detail GET，可达且行为正确。灰度/过滤项对访客不可见。`/api/common/dict/**` 须登录，不在匿名白名单 |
 | R33.1 退出即时失效 | 双实例 | `portal LogoutImmediateIT` | 实例 A 登录 + 登出 → 实例 B 以原令牌调用业务接口 401 |
 | R34.1 列表状态一致性 | 集成 | `portal ListStateConsistencyIT` | 随机推进实例至全部状态枚举（未开始/进行中/COMPLETED/ABANDONED/EXPIRED）→ 列表 `status` 字段与实例状态按 §4.9 状态-按钮映射逐枚举断言 |
 | R35.1 按钮状态一致性 | 前端 Vitest | `web PrizeButtonStateTest` | 领取七态 × 履约四态按钮映射（R35.2：待领取/领取中/已到账/发送中/发送失败/发放重试/永久失败/过期）逐一断言；后端字段契约由 §4.9 契约测试保证 |

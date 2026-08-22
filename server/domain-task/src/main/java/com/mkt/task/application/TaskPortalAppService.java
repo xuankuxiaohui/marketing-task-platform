@@ -87,14 +87,14 @@ public class TaskPortalAppService {
         this.clock = clock;
     }
 
-    public PageData<TaskCardView> list(long userId, String category, Integer page, Integer pageSize) {
-        if (users == null) {
+    public PageData<TaskCardView> list(Long userId, String category, Integer page, Integer pageSize) {
+        if (userId != null && users == null) {
             return new PageData<>(0, List.of());
         }
-        if (blacklisted(userId)) {
+        if (userId != null && blacklisted(userId)) {
             return new PageData<>(0, List.of());
         }
-        UserAttributes attrs = users.attributes(userId);
+        UserAttributes attrs = userId == null ? null : users.attributes(userId);
         Instant now = clock.instant();
         List<TaskDefinitionEntity> published = definitions.listPublished();
         List<TaskCardView> cards = new ArrayList<>();
@@ -104,6 +104,19 @@ public class TaskPortalAppService {
                 continue;
             }
             if (category != null && !category.isBlank() && !category.equals(snapshot.category())) {
+                continue;
+            }
+            if (userId == null) {
+                if (!VisibilityEvaluator.publicCard(
+                        definition.getStatus(),
+                        snapshot.startTime(),
+                        snapshot.endTime(),
+                        snapshot.gray(),
+                        snapshot.filter(),
+                        now)) {
+                    continue;
+                }
+                cards.add(toCard(definition, snapshot, InstanceStatuses.NOT_STARTED));
                 continue;
             }
             String cycleKey = CycleKeyResolver.resolve(
@@ -130,12 +143,15 @@ public class TaskPortalAppService {
         return new PageData<>(total, cards.subList(from, to));
     }
 
-    public TaskDetailResponse detail(long taskId, long userId, String platform) {
+    public TaskDetailResponse detail(long taskId, Long userId, String platform) {
         TaskDefinitionEntity definition = definitions.getById(taskId);
         if (definition == null || definition.deletedFlag()) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         Instant now = clock.instant();
+        if (userId == null) {
+            return anonymousDetail(definition, now);
+        }
         SnapshotContent live = snapshotOf(definition);
         String cycleKey = live == null
                 ? CycleKeyResolver.resolve(
@@ -211,6 +227,28 @@ public class TaskPortalAppService {
             views.add(toMine(row));
         }
         return new PageData<>(total, views);
+    }
+
+    private TaskDetailResponse anonymousDetail(TaskDefinitionEntity definition, Instant now) {
+        SnapshotContent snapshot = snapshotOf(definition);
+        if (snapshot == null
+                || !VisibilityEvaluator.publicCard(
+                        definition.getStatus(),
+                        snapshot.startTime(),
+                        snapshot.endTime(),
+                        snapshot.gray(),
+                        snapshot.filter(),
+                        now)) {
+            return new TaskDetailResponse(InstanceStatuses.OFFLINE, null, null, null, null, null, null);
+        }
+        return new TaskDetailResponse(
+                InstanceStatuses.NOT_STARTED,
+                null,
+                new TaskBriefView(snapshot.name(), snapshot.iconUrl(), snapshot.description(), snapshot.category()),
+                SnapshotViews.stepsPreview(snapshot),
+                SnapshotViews.rewardPreview(snapshot),
+                null,
+                null);
     }
 
     private TaskDetailResponse inProgressDetail(TaskInstanceEntity instance, String platform) {

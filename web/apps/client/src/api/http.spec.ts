@@ -19,6 +19,12 @@ describe("portal http", () => {
     expect(shouldSkipUnauthorized("/api/common/ad/materials/1/dismiss")).toBe(true);
     expect(shouldSkipUnauthorized("/api/common/points/balance")).toBe(true);
     expect(shouldSkipUnauthorized("/api/common/points/transactions")).toBe(false);
+    expect(shouldSkipUnauthorized("/api/common/activity/activities")).toBe(true);
+    expect(shouldSkipUnauthorized("/api/common/activity/3")).toBe(true);
+    expect(shouldSkipUnauthorized("/api/common/task/list")).toBe(true);
+    expect(shouldSkipUnauthorized("/api/common/task/8/detail")).toBe(true);
+    expect(shouldSkipUnauthorized("/api/common/activity/3/participate")).toBe(false);
+    expect(shouldSkipUnauthorized("/api/common/task/8/start")).toBe(false);
     expect(shouldSkipUnauthorized("/api/common/auth/profile")).toBe(false);
   });
 

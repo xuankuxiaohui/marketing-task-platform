@@ -5,6 +5,7 @@ import com.mkt.activity.convert.ActivityFieldCodec;
 import com.mkt.activity.domain.ActivityDates;
 import com.mkt.activity.domain.ActivityStatuses;
 import com.mkt.activity.domain.GrayBuckets;
+import com.mkt.activity.domain.GrayTypes;
 import com.mkt.activity.domain.HitRules;
 import com.mkt.activity.domain.ParticipationRules;
 import com.mkt.activity.entity.ActActivityEntity;
@@ -52,7 +53,7 @@ public class ActivityPortalAppService {
         this.clock = clock;
     }
 
-    public List<PortalActivityView> listPublished(long userId) {
+    public List<PortalActivityView> listPublished(Long userId) {
         Instant now = clock.instant();
         List<PortalActivityView> out = new ArrayList<>();
         for (ActActivityEntity entity : activities.listPublished()) {
@@ -63,7 +64,7 @@ public class ActivityPortalAppService {
         return out;
     }
 
-    public PortalActivityDetailView detail(long activityId, long userId) {
+    public PortalActivityDetailView detail(long activityId, Long userId) {
         ActActivityEntity entity = requirePublished(activityId);
         Instant now = clock.instant();
         if (!visible(entity, userId, now)) {
@@ -148,11 +149,14 @@ public class ActivityPortalAppService {
         return null;
     }
 
-    private boolean visible(ActActivityEntity entity, long userId, Instant now) {
+    private boolean visible(ActActivityEntity entity, Long userId, Instant now) {
         Instant start = ActivityDates.toInstant(entity.getStartTime());
         Instant end = ActivityDates.toInstant(entity.getEndTime());
         if (!ActivityDates.inWindow(start, end, now)) {
             return false;
+        }
+        if (userId == null) {
+            return entity.getGrayType() == null || GrayTypes.NONE.equals(entity.getGrayType());
         }
         return GrayBuckets.hit(entity.getGrayType(), entity.getGrayRatio(), userId, entity.getId());
     }

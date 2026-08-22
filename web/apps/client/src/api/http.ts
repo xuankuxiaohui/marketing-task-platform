@@ -16,6 +16,8 @@ const SKIP_UNAUTHORIZED = [
   "/api/common/track/batch",
   "/api/common/ad/",
   "/api/common/points/balance",
+  "/api/common/activity/activities",
+  "/api/common/task/list",
 ];
 
 export type UnauthorizedPayload = {
@@ -33,7 +35,13 @@ export function shouldSkipUnauthorized(url: string | undefined): boolean {
   if (!url) {
     return false;
   }
-  return SKIP_UNAUTHORIZED.some((path) => url.includes(path));
+  if (SKIP_UNAUTHORIZED.some((path) => url.includes(path))) {
+    return true;
+  }
+  if (/\/api\/common\/activity\/\d+(\?|$)/.test(url)) {
+    return true;
+  }
+  return /\/api\/common\/task\/\d+\/detail/.test(url);
 }
 
 export function attachPortalHeaders(

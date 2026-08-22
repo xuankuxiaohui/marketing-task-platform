@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { fail, ok } from "@/test-utils/result";
 import type { TaskDetailView } from "@/api/task";
 
@@ -72,11 +74,15 @@ async function mountDetail(taskId = 5) {
     routes: [
       { path: "/task/:taskId", component: TaskDetailPage },
       { path: "/home", component: { template: "<div />" } },
+      { path: "/login", component: { template: "<div />" } },
     ],
   });
   await router.push(`/task/${taskId}`);
   await router.isReady();
-  const wrapper = mount(TaskDetailPage, { global: { plugins: [router] } });
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  useSessionStore().setLogin({ token: "client:t", userId: 9, nickname: "bob" });
+  const wrapper = mount(TaskDetailPage, { global: { plugins: [pinia, router] } });
   await flushPromises();
   return { wrapper, router };
 }

@@ -109,4 +109,15 @@ class ActivityPortalControllerTest {
                 .andExpect(jsonPath("$.data.result").value("PASS"))
                 .andExpect(jsonPath("$.data.granted").value(true));
     }
+
+    @Test
+    void listAndDetailWorkWithoutUserContext() throws Exception {
+        UserContext.clear();
+        mvc.perform(get("/api/common/activity/activities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].code").value("summer"));
+        mvc.perform(get("/api/common/activity/" + activityId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.richText").value(org.hamcrest.Matchers.containsString("<p>")));
+    }
 }

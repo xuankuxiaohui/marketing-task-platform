@@ -1,4 +1,4 @@
-export const PUBLIC_PATHS = new Set(["/login", "/register"]);
+export const PUBLIC_PATHS = new Set(["/login", "/register", "/home", "/activity"]);
 export const LOGIN_ROUTE = "/login";
 export const HOME_ROUTE = "/home";
 export const PASSWORD_ROUTE = "/mine/password";
@@ -51,4 +51,8 @@ export async function resolveAuthNavigation(to: GuardTo, deps: GuardDeps): Promi
 
 export function safeRedirect(raw: unknown, fallback = HOME_ROUTE): string {
   return typeof raw === "string" && raw.startsWith("/") && !raw.startsWith("//") ? raw : fallback;
+}
+
+export function loginLocation(fromFullPath: string): { path: string; query: Record<string, string> } {
+  return { path: LOGIN_ROUTE, query: { redirect: fromFullPath } };
 }

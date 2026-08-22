@@ -13,6 +13,14 @@ const PORTAL_TOKEN_KEY = "mkt.portal.token";
 test.describe.configure({ mode: "serial" });
 
 test.describe("journey-core", () => {
+  test("anonymous home stays on the activity hub", async ({ page }) => {
+    await page.goto("/home");
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\/home/);
+    await expect(page.getByTestId("home-signin-card")).toBeVisible();
+    await expect(page.getByTestId("home-activity-list").or(page.getByTestId("home-empty"))).toBeVisible();
+  });
+
   test("R32.1 anonymous visit of a business page redirects to login and keeps the return path", async ({
     page,
   }) => {
@@ -142,11 +150,11 @@ test.describe("journey-core registered path", () => {
     await page.getByTestId("entry-logout").click();
     await page.getByRole("button", { name: "确认" }).click();
     await expect(page).toHaveURL(/\/login/);
-    const replay = await page.request.get("/api/common/task/list", {
+    const replay = await page.request.get("/api/common/task/mine", {
       headers: { Authorization: `Bearer ${oldToken}`, "X-Device-Id": "e2e-device", "X-Client-Platform": "WEB" },
     });
     expect(replay.status()).toBe(401);
-    await page.goto("/home");
+    await page.goto("/mine");
     await expect(page).toHaveURL(/\/login/);
   });
 });

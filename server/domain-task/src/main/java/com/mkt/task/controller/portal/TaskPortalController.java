@@ -6,6 +6,7 @@ import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.UserContext;
+import com.mkt.kernel.UserPrincipal;
 import com.mkt.task.application.TaskClaimAppService;
 import com.mkt.task.application.TaskInstanceAppService;
 import com.mkt.task.application.TaskPortalAppService;
@@ -62,12 +63,12 @@ public class TaskPortalController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "C 端任务投放列表")
+    @Operation(summary = "C 端任务投放列表（匿名可访问公开卡，R32.1）")
     public Result<PageData<TaskCardView>> list(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize) {
-        long userId = UserContext.require().userId();
+        Long userId = UserContext.current().map(UserPrincipal::userId).orElse(null);
         return Result.ok(portal.list(userId, category, page, pageSize));
     }
 
@@ -83,11 +84,11 @@ public class TaskPortalController {
     }
 
     @GetMapping("/{taskId}/detail")
-    @Operation(summary = "C 端任务详情三分渲染")
+    @Operation(summary = "C 端任务详情三分渲染（匿名可访问公开卡，R32.1）")
     public Result<TaskDetailResponse> detail(
             @PathVariable long taskId,
             @RequestHeader(value = "X-Client-Platform", required = false) String platform) {
-        long userId = UserContext.require().userId();
+        Long userId = UserContext.current().map(UserPrincipal::userId).orElse(null);
         return Result.ok(portal.detail(taskId, userId, platforms.resolve(platform)));
     }
 

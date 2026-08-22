@@ -15,6 +15,8 @@ import FallbackImage from "@/components/FallbackImage.vue";
 import TaskCard from "@/components/TaskCard.vue";
 import TaskCompleteSheet from "@/components/TaskCompleteSheet.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { loginLocation } from "@/router/guards";
+import { useSessionStore } from "@/store/session";
 import { activityCover, activityWindow } from "@/utils/activity-cover";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 
@@ -22,6 +24,7 @@ defineOptions({ name: "ActivityPage" });
 
 const route = useRoute();
 const router = useRouter();
+const session = useSessionStore();
 const loading = ref(false);
 const detail = ref<PortalActivityDetailView | null>(null);
 const result = ref<string | null>(null);
@@ -129,6 +132,10 @@ function openSignin(): void {
 }
 
 async function onParticipate(): Promise<void> {
+  if (!session.authenticated) {
+    void router.replace(loginLocation(route.fullPath));
+    return;
+  }
   if (!detail.value) {
     return;
   }

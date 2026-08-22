@@ -39,7 +39,7 @@ class SessionAuthFilterTest {
     void portalMissingTokenOnBusinessPathIs401Missing() throws Exception {
         SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        filter.doFilter(request("GET", "/api/common/task/list"), response, unused());
+        filter.doFilter(request("GET", "/api/common/task/mine"), response, unused());
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("auth.session.missing");
     }
@@ -57,12 +57,18 @@ class SessionAuthFilterTest {
         RecordingChain internal = new RecordingChain();
         filter.doFilter(request("POST", "/internal/task/callback"), new MockHttpServletResponse(), internal);
         assertThat(internal.called).isTrue();
+        RecordingChain activities = new RecordingChain();
+        filter.doFilter(request("GET", "/api/common/activity/activities"), new MockHttpServletResponse(), activities);
+        assertThat(activities.called).isTrue();
+        RecordingChain taskList = new RecordingChain();
+        filter.doFilter(request("GET", "/api/common/task/list"), new MockHttpServletResponse(), taskList);
+        assertThat(taskList.called).isTrue();
     }
 
     @Test
     void adminTokenOnPortalIs401() throws Exception {
         SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
-        MockHttpServletRequest req = request("GET", "/api/common/task/list");
+        MockHttpServletRequest req = request("GET", "/api/common/task/mine");
         req.addHeader("Authorization", "Bearer admin:abc");
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.doFilter(req, response, unused());
@@ -100,7 +106,7 @@ class SessionAuthFilterTest {
     void portalKickReasonIsConcurrent() throws Exception {
         SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
         kicks.write(StpClient.TYPE, "tok", KickReason.CONCURRENT);
-        MockHttpServletRequest req = request("GET", "/api/common/task/list");
+        MockHttpServletRequest req = request("GET", "/api/common/task/mine");
         req.addHeader("Authorization", "Bearer client:tok");
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.doFilter(req, response, unused());
@@ -282,7 +288,7 @@ class SessionAuthFilterTest {
         batch.addHeader("Authorization", "Bearer client:tok");
         filter.doFilter(batch, new MockHttpServletResponse(), new RecordingChain());
 
-        MockHttpServletRequest required = request("GET", "/api/common/task/list");
+        MockHttpServletRequest required = request("GET", "/api/common/task/mine");
         required.addHeader("Authorization", "Bearer client:tok");
         MockHttpServletResponse requiredResponse = new MockHttpServletResponse();
         filter.doFilter(required, requiredResponse, unused());
