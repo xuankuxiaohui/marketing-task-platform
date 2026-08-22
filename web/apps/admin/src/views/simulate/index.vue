@@ -123,7 +123,9 @@ async function reverseRun(): Promise<void> {
 
 <template>
   <section class="admin-page" data-testid="simulate-page">
-    <h2>{{ zhCN.simulate.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.simulate.title }}</h2>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="form.userId" data-testid="simulate-user" :placeholder="zhCN.simulate.userId" />
       <el-input v-model="form.taskId" data-testid="simulate-task" :placeholder="zhCN.simulate.taskId" />

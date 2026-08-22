@@ -143,18 +143,25 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="ad-material-page">
-    <h2>{{ zhCN.ad.materialTitle }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.ad.materialTitle }}</h2>
+      <el-button type="primary" v-auth="PERMS.AD_MATERIAL_CREATE" data-testid="ad-material-create" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.title" data-testid="filter-title" :placeholder="zhCN.ad.title" />
       <el-button data-testid="ad-material-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.AD_MATERIAL_CREATE" data-testid="ad-material-create" @click="openCreate">
-        {{ zhCN.common.create }}
-      </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="ad-material-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.AD_MATERIAL_CREATE" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="ad-material-table" size="small" stripe>
       <el-table-column :label="zhCN.ad.title">
         <template #default="{ row }">{{ row.title }}</template>
       </el-table-column>
@@ -162,15 +169,23 @@ onMounted(() => {
         <template #default="{ row }">{{ row.weight }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.AD_MATERIAL_UPDATE" data-testid="ad-material-edit" @click="openEdit(row)">
+            <el-button text v-auth="PERMS.AD_MATERIAL_UPDATE" data-testid="ad-material-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
-            <el-button v-auth="PERMS.AD_MATERIAL_DELETE" data-testid="ad-material-delete" @click="askDelete(row)">
+            <el-button text v-auth="PERMS.AD_MATERIAL_DELETE" data-testid="ad-material-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
             </el-button>
           </div>

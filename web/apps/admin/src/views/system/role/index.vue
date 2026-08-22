@@ -159,16 +159,21 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="role-page">
-    <h2>{{ zhCN.role.title }}</h2>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button v-auth="PERMS.ROLE_CREATE" data-testid="role-create" @click="openCreate">
+    <div class="admin-page__header">
+      <h2>{{ zhCN.role.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.ROLE_CREATE" data-testid="role-create" @click="openCreate">
         {{ zhCN.common.create }}
       </el-button>
-    </el-form>
+    </div>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="role-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.ROLE_CREATE" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="role-table" size="small" stripe>
       <el-table-column :label="zhCN.role.code">
         <template #default="{ row }">{{ row.code }}</template>
       </el-table-column>
@@ -176,7 +181,15 @@ onMounted(() => {
         <template #default="{ row }">{{ row.name }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.role.userCount">
         <template #default="{ row }">{{ row.userCount }}</template>
@@ -187,10 +200,10 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.ROLE_UPDATE" data-testid="role-edit" @click="openEdit(row)">
+            <el-button text v-auth="PERMS.ROLE_UPDATE" data-testid="role-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="!isBuiltIn(row)"
               v-auth="PERMS.ROLE_ASSIGN"
               data-testid="role-assign"
@@ -198,7 +211,7 @@ onMounted(() => {
             >
               {{ zhCN.role.assign }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="!isBuiltIn(row)"
               v-auth="PERMS.ROLE_DELETE"
               data-testid="role-delete"

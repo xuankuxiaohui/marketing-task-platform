@@ -332,12 +332,20 @@ onMounted(async () => {
 
 <template>
   <section class="admin-page" data-testid="task-edit-page">
-    <h2>{{ zhCN.task.editTitle }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.task.editTitle }}</h2>
+    </div>
     <p v-if="form.pendingRevision" data-testid="pending-revision">{{ zhCN.task.pendingRevision }}</p>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button v-auth="form.id ? PERMS.TASK_DEF_UPDATE : PERMS.TASK_DEF_CREATE" data-testid="task-save" :disabled="saving" @click="save">
+      <el-button
+        type="primary"
+        v-auth="form.id ? PERMS.TASK_DEF_UPDATE : PERMS.TASK_DEF_CREATE"
+        data-testid="task-save"
+        :disabled="saving"
+        @click="save"
+      >
         {{ zhCN.common.save }}
       </el-button>
       <el-button v-if="form.id" v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish">

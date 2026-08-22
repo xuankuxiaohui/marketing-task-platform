@@ -60,7 +60,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="audit-page">
-    <h2>{{ zhCN.audit.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.audit.title }}</h2>
+    </div>
     <p class="hint" data-testid="audit-no-delete">{{ zhCN.audit.noDelete }}</p>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.operatorId" data-testid="filter-operator" :placeholder="zhCN.audit.operatorId" />
@@ -73,8 +75,10 @@ onMounted(() => {
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="audit-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="audit-table" size="small" stripe>
       <el-table-column :label="zhCN.audit.module">
         <template #default="{ row }">{{ row.module }}</template>
       </el-table-column>

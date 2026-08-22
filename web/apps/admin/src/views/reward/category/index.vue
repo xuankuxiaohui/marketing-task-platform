@@ -164,17 +164,24 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="category-page">
-    <h2>{{ zhCN.category.title }}</h2>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button data-testid="category-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.REWARD_CAT_CREATE" data-testid="category-create" @click="openCreate">
+    <div class="admin-page__header">
+      <h2>{{ zhCN.category.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.REWARD_CAT_CREATE" data-testid="category-create" @click="openCreate">
         {{ zhCN.common.create }}
       </el-button>
+    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-button data-testid="category-query" @click="load">{{ zhCN.common.query }}</el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="category-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.REWARD_CAT_CREATE" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="category-table" size="small" stripe>
       <el-table-column :label="zhCN.category.code">
         <template #default="{ row }">{{ row.code }}</template>
       </el-table-column>
@@ -191,15 +198,23 @@ onMounted(() => {
         <template #default="{ row }">{{ row.reconActionPolicy }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.REWARD_CAT_UPDATE" data-testid="category-edit" @click="openEdit(row)">
+            <el-button text v-auth="PERMS.REWARD_CAT_UPDATE" data-testid="category-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.ENABLED"
               v-auth="PERMS.REWARD_CAT_DISABLE"
               data-testid="category-disable"
@@ -207,7 +222,7 @@ onMounted(() => {
             >
               {{ zhCN.common.disable }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.DISABLED"
               v-auth="PERMS.REWARD_CAT_ENABLE"
               data-testid="category-enable"
@@ -215,7 +230,7 @@ onMounted(() => {
             >
               {{ zhCN.common.enable }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="!row.builtin"
               v-auth="PERMS.REWARD_CAT_DELETE"
               data-testid="category-delete"

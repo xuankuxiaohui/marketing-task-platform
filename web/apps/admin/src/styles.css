@@ -53,11 +53,57 @@ textarea {
   font-weight: 600;
   color: var(--admin-ink);
 }
+.admin-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .admin-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+.page-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+.admin-table .el-table__header th.el-table__cell {
+  background: #f6f1e7;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--admin-ink);
+}
+.admin-table .el-table__row {
+  height: var(--admin-row);
+}
+.admin-table td.el-table__cell,
+.admin-table th.el-table__cell {
+  border-right: none;
+}
+.admin-table.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: #faf7f0;
+}
+.status-tag--on,
+.status-tag--live {
+  --el-tag-bg-color: #ccfbf1;
+  --el-tag-border-color: #99f6e4;
+  --el-tag-text-color: #0f766e;
+}
+.status-tag--off {
+  --el-tag-bg-color: #f3f4f6;
+  --el-tag-border-color: #e5e7eb;
+  --el-tag-text-color: #6b7280;
+}
+.row-actions .el-button {
+  padding: 0 4px;
+  height: auto;
+  min-height: 0;
 }
 .data-table {
   width: 100%;

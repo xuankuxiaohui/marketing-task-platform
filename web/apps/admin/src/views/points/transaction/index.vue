@@ -45,7 +45,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="points-tx-page">
-    <h2>{{ zhCN.points.txTitle }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.points.txTitle }}</h2>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.points.userId" />
       <el-select v-model="filters.type" data-testid="filter-type">
@@ -58,8 +60,10 @@ onMounted(() => {
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="tx-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="tx-table" size="small" stripe>
       <el-table-column :label="zhCN.points.userId">
         <template #default="{ row }">{{ row.userId }}</template>
       </el-table-column>

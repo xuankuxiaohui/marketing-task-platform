@@ -99,7 +99,12 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="case-page">
-    <h2>{{ zhCN.cases.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.cases.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.RISK_CASE_HANDLE" data-testid="case-handle-open" @click="openHandle()">
+        {{ zhCN.cases.handle }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-select v-model="filters.ruleCode" data-testid="filter-rule">
         <el-option value="" :label="zhCN.cases.ruleCode" />
@@ -120,14 +125,13 @@ onMounted(() => {
       <el-button v-auth="PERMS.RISK_CASE_QUERY" data-testid="case-query" @click="load">
         {{ zhCN.common.query }}
       </el-button>
-      <el-button v-auth="PERMS.RISK_CASE_HANDLE" data-testid="case-handle-open" @click="openHandle()">
-        {{ zhCN.cases.handle }}
-      </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="hit-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="hit-table" size="small" stripe>
       <el-table-column :label="zhCN.cases.hitType">
         <template #default="{ row }">{{ row.hitType }}</template>
       </el-table-column>
@@ -155,7 +159,7 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.RISK_CASE_HANDLE" data-testid="case-handle" @click="openHandle(row)">
+            <el-button text v-auth="PERMS.RISK_CASE_HANDLE" data-testid="case-handle" @click="openHandle(row)">
               {{ zhCN.cases.handle }}
             </el-button>
           </div>

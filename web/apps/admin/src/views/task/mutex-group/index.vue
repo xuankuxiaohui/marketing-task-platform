@@ -105,17 +105,24 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="mutex-page">
-    <h2>{{ zhCN.mutex.title }}</h2>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button data-testid="mutex-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.TASK_MUTEX_CREATE" data-testid="mutex-create" @click="openCreate">
+    <div class="admin-page__header">
+      <h2>{{ zhCN.mutex.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.TASK_MUTEX_CREATE" data-testid="mutex-create" @click="openCreate">
         {{ zhCN.common.create }}
       </el-button>
+    </div>
+    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
+      <el-button data-testid="mutex-query" @click="load">{{ zhCN.common.query }}</el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="mutex-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.TASK_MUTEX_CREATE" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="mutex-table" size="small" stripe>
       <el-table-column :label="zhCN.mutex.code">
         <template #default="{ row }">{{ row.code }}</template>
       </el-table-column>
@@ -128,10 +135,10 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.TASK_MUTEX_UPDATE" data-testid="mutex-edit" @click="openEdit(row)">
+            <el-button text v-auth="PERMS.TASK_MUTEX_UPDATE" data-testid="mutex-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
-            <el-button v-auth="PERMS.TASK_MUTEX_DELETE" data-testid="mutex-delete" @click="askDelete(row)">
+            <el-button text v-auth="PERMS.TASK_MUTEX_DELETE" data-testid="mutex-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
             </el-button>
           </div>

@@ -59,7 +59,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="task-version-page">
-    <h2>{{ zhCN.task.versionTitle }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.task.versionTitle }}</h2>
+    </div>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="versions.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
     <el-table v-else :data="versions" class="data-table" data-testid="version-table" stripe>

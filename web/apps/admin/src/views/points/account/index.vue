@@ -70,18 +70,25 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="points-account-page">
-    <h2>{{ zhCN.points.accountTitle }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.points.accountTitle }}</h2>
+      <el-button type="primary" v-auth="PERMS.POINTS_ACCOUNT_ADJUST" data-testid="account-adjust" @click="openAdjust()">
+        {{ zhCN.points.adjust }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="userId" data-testid="filter-user" :placeholder="zhCN.points.userId" />
       <el-button data-testid="account-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.POINTS_ACCOUNT_ADJUST" data-testid="account-adjust" @click="openAdjust()">
-        {{ zhCN.points.adjust }}
-      </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="account-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.POINTS_ACCOUNT_ADJUST" text type="primary" @click="openAdjust()">
+        {{ zhCN.points.adjust }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="account-table" size="small" stripe>
       <el-table-column :label="zhCN.points.userId">
         <template #default="{ row }">{{ row.userId }}</template>
       </el-table-column>
@@ -93,9 +100,11 @@ onMounted(() => {
       </el-table-column>
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
-          <el-button v-auth="PERMS.POINTS_ACCOUNT_ADJUST" data-testid="row-adjust" @click="openAdjust(row)">
+          <div class="row-actions">
+            <el-button text v-auth="PERMS.POINTS_ACCOUNT_ADJUST" data-testid="row-adjust" @click="openAdjust(row)">
               {{ zhCN.points.adjust }}
             </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

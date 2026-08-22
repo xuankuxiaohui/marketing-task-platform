@@ -59,7 +59,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="track-event-page">
-    <h2>{{ zhCN.trackEvent.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.trackEvent.title }}</h2>
+    </div>
     <p class="hint" data-testid="debug-no-side-effect">{{ zhCN.trackEvent.hint }}</p>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.trackEvent.eventCode" />
@@ -77,8 +79,10 @@ onMounted(() => {
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="debug-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="debug-table" size="small" stripe>
       <el-table-column :label="zhCN.trackEvent.source">
         <template #default="{ row }">{{ row.source }}</template>
       </el-table-column>

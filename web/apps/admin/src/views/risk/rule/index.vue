@@ -79,15 +79,28 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="rule-page">
-    <h2>{{ zhCN.rule.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.rule.title }}</h2>
+    </div>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading">{{ zhCN.common.loading }}</p>
-    <el-table v-else :data="records" class="data-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" size="small" stripe>
       <el-table-column label="code">
         <template #default="{ row }">{{ row.ruleCode }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.rule.enabled">
-        <template #default="{ row }">{{ row.enabled ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.enabled ? 'success' : 'info'"
+            :class="row.enabled ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.enabled ? zhCN.common.enabled : zhCN.common.disabled }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.rule.threshold">
         <template #default="{ row }">{{ row.threshold }}</template>
@@ -100,7 +113,11 @@ onMounted(() => {
       </el-table-column>
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
-          <el-button v-if="hasAuth(PERMS.RISK_RULE_CONFIG)" data-testid="rule-edit" @click="openEdit(row)">{{ zhCN.common.edit }}</el-button>
+          <div class="row-actions">
+            <el-button text v-if="hasAuth(PERMS.RISK_RULE_CONFIG)" data-testid="rule-edit" @click="openEdit(row)">
+              {{ zhCN.common.edit }}
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

@@ -192,19 +192,26 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="recon-page">
-    <h2>{{ zhCN.recon.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.recon.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.REWARD_RECON_IMPORT" data-testid="recon-create" @click="createOpen = true">
+        {{ zhCN.recon.createBatch }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.recon.category" />
       <el-input v-model="filters.billDate" data-testid="filter-bill" type="date" />
       <el-button data-testid="recon-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.REWARD_RECON_IMPORT" data-testid="recon-create" @click="createOpen = true">
-        {{ zhCN.recon.createBatch }}
-      </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="batches.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="batches" class="data-table" data-testid="recon-table" stripe>
+    <div v-else-if="batches.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.REWARD_RECON_IMPORT" text type="primary" @click="createOpen = true">
+        {{ zhCN.recon.createBatch }}
+      </el-button>
+    </div>
+    <el-table v-else :data="batches" class="data-table admin-table" data-testid="recon-table" size="small" stripe>
       <el-table-column label="ID">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
@@ -215,18 +222,26 @@ onMounted(() => {
         <template #default="{ row }">{{ row.billDate }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.REWARD_RECON_QUERY" data-testid="recon-items" @click="loadItems(row)">
+            <el-button text v-auth="PERMS.REWARD_RECON_QUERY" data-testid="recon-items" @click="loadItems(row)">
               {{ zhCN.recon.items }}
             </el-button>
-            <el-button v-auth="PERMS.REWARD_RECON_IMPORT" data-testid="recon-import" @click="selected = row; importOpen = true">
+            <el-button text v-auth="PERMS.REWARD_RECON_IMPORT" data-testid="recon-import" @click="selected = row; importOpen = true">
               {{ zhCN.recon.import }}
             </el-button>
-            <el-button v-auth="PERMS.REWARD_RECON_MATCH" data-testid="recon-match" @click="onMatch(row)">
+            <el-button text v-auth="PERMS.REWARD_RECON_MATCH" data-testid="recon-match" @click="onMatch(row)">
               {{ zhCN.recon.match }}
             </el-button>
           </div>
@@ -239,7 +254,7 @@ onMounted(() => {
       <span>{{ page }}</span>
       <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
     </div>
-    <el-table :data="items" class="data-table" stripe>
+    <el-table :data="items" class="data-table admin-table" size="small" stripe>
       <el-table-column label="ID">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
@@ -252,7 +267,7 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button
+            <el-button text
               v-if="row.reviewStatus === RECON_REVIEW.PENDING_REVIEW"
               v-auth="PERMS.REWARD_RECON_ACTION"
               data-testid="recon-review"
@@ -260,7 +275,7 @@ onMounted(() => {
             >
               {{ zhCN.recon.review }}
             </el-button>
-            <el-button v-auth="PERMS.REWARD_RECON_ACTION" data-testid="recon-action" @click="openAction(row)">
+            <el-button text v-auth="PERMS.REWARD_RECON_ACTION" data-testid="recon-action" @click="openAction(row)">
               {{ zhCN.recon.action }}
             </el-button>
           </div>
