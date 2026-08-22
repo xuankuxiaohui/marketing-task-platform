@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from "vue-router";
+import type { NavigationGuard, RouteRecordRaw } from "vue-router";
 import type { AdminMenuNode } from "@/api/auth";
 import ComingSoonPage from "@/views/placeholder/ComingSoonPage.vue";
 
@@ -29,8 +29,25 @@ export function isLoginMenu(node: Pick<AdminMenuNode, "route">): boolean {
   return node.route === LOGIN_ROUTE;
 }
 
+/** Vue-router param segment such as `/:id` or `/:id?`. */
+export function isParamRoute(route: string | undefined | null): boolean {
+  return typeof route === "string" && /\/:[^/]+/.test(route);
+}
+
+export function isLiteralRouteParam(value: unknown): boolean {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === "string" && raw.startsWith(":");
+}
+
+const redirectLiteralParams: NavigationGuard = (to) => {
+  if (Object.values(to.params).some(isLiteralRouteParam)) {
+    return { path: "/task/definitions" };
+  }
+  return true;
+};
+
 export function sidebarMenus(nodes: AdminMenuNode[]): AdminMenuNode[] {
-  return nodes.filter((node) => !isLoginMenu(node));
+  return nodes.filter((node) => !isLoginMenu(node) && !isParamRoute(node.route));
 }
 
 export function menusToRoutes(nodes: AdminMenuNode[]): RouteRecordRaw[] {
@@ -49,6 +66,9 @@ export function menusToRoutes(nodes: AdminMenuNode[]): RouteRecordRaw[] {
           backstage: true,
         },
       };
+      if (isParamRoute(node.route)) {
+        record.beforeEnter = redirectLiteralParams;
+      }
       return record;
     });
 }
@@ -68,7 +88,9 @@ export function flattenMenus(nodes: AdminMenuNode[]): AdminMenuNode[] {
 }
 
 export function firstAuthorizedPath(nodes: AdminMenuNode[]): string {
-  const first = flattenMenus(nodes).find((node) => node.route && !isLoginMenu(node));
+  const first = flattenMenus(nodes).find(
+    (node) => node.route && !isLoginMenu(node) && !isParamRoute(node.route),
+  );
   return first?.route ?? DASHBOARD_ROUTE;
 }
 

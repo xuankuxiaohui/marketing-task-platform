@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
 import { zhCN } from "@/locales/zh-CN";
 
 defineOptions({ name: "ConfirmDialog" });
 
-defineProps<{
+const props = defineProps<{
   visible: boolean;
   title?: string;
   message: string;
@@ -13,11 +14,31 @@ const emit = defineEmits<{
   confirm: [];
   cancel: [];
 }>();
+
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape" && props.visible) {
+    emit("cancel");
+  }
+}
+
+function onMaskClick(event: MouseEvent): void {
+  if (event.target === event.currentTarget) {
+    emit("cancel");
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", onKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeydown);
+});
 </script>
 
 <template>
-  <div v-if="visible" class="confirm-mask" data-testid="confirm-dialog">
-    <div class="confirm-card" role="dialog" aria-modal="true">
+  <div v-if="visible" class="confirm-mask" data-testid="confirm-dialog" @click="onMaskClick">
+    <div class="confirm-card" role="dialog" aria-modal="true" @click.stop>
       <h3>{{ title || zhCN.confirm.title }}</h3>
       <p data-testid="confirm-message">{{ message }}</p>
       <div class="confirm-card__actions">

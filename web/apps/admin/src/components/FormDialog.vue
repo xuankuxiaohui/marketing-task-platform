@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from "vue";
 import { zhCN } from "@/locales/zh-CN";
 
 defineOptions({ name: "FormDialog" });
 
-defineProps<{
+const props = defineProps<{
   visible: boolean;
   title: string;
   saving?: boolean;
@@ -13,11 +14,31 @@ const emit = defineEmits<{
   submit: [];
   cancel: [];
 }>();
+
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape" && props.visible) {
+    emit("cancel");
+  }
+}
+
+function onMaskClick(event: MouseEvent): void {
+  if (event.target === event.currentTarget) {
+    emit("cancel");
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", onKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeydown);
+});
 </script>
 
 <template>
-  <div v-if="visible" class="form-mask" data-testid="form-dialog">
-    <el-form class="form-card" label-position="top" @submit.prevent="emit('submit')">
+  <div v-if="visible" class="form-mask" data-testid="form-dialog" @click="onMaskClick">
+    <el-form class="form-card" label-position="top" @submit.prevent="emit('submit')" @click.stop>
       <h3>{{ title }}</h3>
       <div class="form-card__body">
         <slot />
