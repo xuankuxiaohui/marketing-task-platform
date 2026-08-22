@@ -169,45 +169,91 @@ onMounted(() => {
   <section class="signin-page">
     <NavBar :title="zhCN.signin.title" left-arrow @click-left="router.back()" />
     <Empty v-if="!loading && !calendar" :description="zhCN.signin.empty" data-testid="signin-empty" />
-    <div v-else-if="calendar" data-testid="signin-calendar">
-      <p data-testid="signin-streak">{{ zhCN.signin.streak }} {{ calendar.consecutiveDays }}</p>
-      <p v-if="calendar.nextRewardHint" data-testid="signin-hint">{{ calendar.nextRewardHint }}</p>
-      <p data-testid="signin-balance">{{ zhCN.signin.balance }} {{ calendar.pointsBalance }} · {{ zhCN.signin.cost }} {{ calendar.catchupCostPoints }}</p>
-      <p v-if="insufficient" data-testid="signin-insufficient">{{ zhCN.signin.insufficient }}</p>
-      <Calendar
-        :poppable="false"
-        :show-title="false"
-        :show-confirm="false"
-        :formatter="formatter"
-        @select="onSelect"
-      />
-      <Button
-        type="primary"
-        block
-        data-testid="signin-checkin"
-        :disabled="todaySigned"
-        @click="onCheckin"
-      >
-        {{ todaySigned ? zhCN.signin.signed : zhCN.signin.checkin }}
-      </Button>
+    <div v-else-if="calendar" class="signin-board" data-testid="signin-calendar">
+      <header class="signin-hero">
+        <p data-testid="signin-streak">{{ zhCN.signin.streak }} {{ calendar.consecutiveDays }}</p>
+        <p v-if="calendar.nextRewardHint" data-testid="signin-hint">{{ calendar.nextRewardHint }}</p>
+        <p data-testid="signin-balance">{{ zhCN.signin.balance }} {{ calendar.pointsBalance }} · {{ zhCN.signin.cost }} {{ calendar.catchupCostPoints }}</p>
+        <p v-if="insufficient" data-testid="signin-insufficient">{{ zhCN.signin.insufficient }}</p>
+      </header>
+      <div class="signin-calendar-card">
+        <Calendar
+          :poppable="false"
+          :show-title="false"
+          :show-confirm="false"
+          :formatter="formatter"
+          @select="onSelect"
+        />
+      </div>
+      <div class="signin-actions">
+        <Button
+          type="primary"
+          block
+          data-testid="signin-checkin"
+          :disabled="todaySigned"
+          @click="onCheckin"
+        >
+          {{ todaySigned ? zhCN.signin.signed : zhCN.signin.checkin }}
+        </Button>
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
+.signin-page {
+  min-height: 100%;
+  background:
+    radial-gradient(120% 50% at 50% -10%, var(--portal-bg-wash) 0%, transparent 50%),
+    var(--portal-bg);
+}
+.signin-page :deep(.van-nav-bar) {
+  background: transparent;
+}
+.signin-hero {
+  margin: 8px 16px 12px;
+  padding: 18px 16px;
+  border-radius: var(--portal-radius-lg);
+  background: linear-gradient(135deg, var(--portal-primary-deep) 0%, var(--portal-primary-warm) 100%);
+  box-shadow: var(--portal-shadow);
+  color: #fff;
+}
+.signin-hero p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  opacity: 0.95;
+}
+.signin-hero p:first-child {
+  font-size: 22px;
+  font-weight: 700;
+  opacity: 1;
+}
+.signin-hero p:last-child {
+  margin-bottom: 0;
+}
+.signin-calendar-card {
+  overflow: hidden;
+  margin: 0 16px 12px;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
+}
+.signin-actions {
+  padding: 4px 16px 24px;
+}
 :deep(.signin-signed) {
-  color: #07c160;
+  color: var(--portal-primary);
   font-weight: 600;
 }
 :deep(.signin-catchup) {
-  color: #1989fa;
+  color: var(--portal-primary-warm);
   font-weight: 600;
 }
 :deep(.signin-missed) {
-  color: #ee0a24;
+  color: var(--portal-accent);
 }
 :deep(.signin-today) {
-  color: #ff976a;
+  color: var(--van-warning-color);
   font-weight: 600;
 }
 </style>

@@ -7,6 +7,9 @@ export type PortalActivityView = {
   name: string;
   startTime?: string;
   endTime?: string;
+  coverUrl?: string;
+  imageUrl?: string;
+  bannerUrl?: string;
 };
 
 export type SubmoduleView = {
@@ -25,6 +28,9 @@ export type PortalActivityDetailView = {
   contentHash: string;
   version: number;
   submodules: SubmoduleView[];
+  coverUrl?: string;
+  imageUrl?: string;
+  bannerUrl?: string;
 };
 
 export type ParticipateResponse = {

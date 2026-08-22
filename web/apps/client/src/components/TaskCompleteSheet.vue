@@ -26,7 +26,7 @@ const open = computed({
     position="bottom"
     round
     closeable
-    :style="{ height: '60vh' }"
+    :style="{ height: '60vh', background: 'var(--portal-bg)' }"
     data-testid="task-complete-sheet"
   >
     <div class="task-complete-sheet">
@@ -39,5 +39,6 @@ const open = computed({
 .task-complete-sheet {
   height: 100%;
   overflow: auto;
+  background: var(--portal-bg);
 }
 </style>

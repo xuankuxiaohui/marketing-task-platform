@@ -51,14 +51,14 @@ defineProps<{
   gap: 12px;
   align-items: flex-start;
   padding: 10px 0;
-  color: #c8c9cc;
+  color: var(--portal-line);
 }
 .task-timeline__item[data-tone="current"] {
-  color: #323233;
+  color: var(--portal-ink);
   font-weight: 600;
 }
 .task-timeline__item[data-tone="done"] {
-  color: #07c160;
+  color: var(--portal-primary);
 }
 .task-timeline__mark {
   display: flex;
@@ -86,11 +86,11 @@ defineProps<{
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: #ebedf0;
+  background: var(--portal-primary-soft);
 }
 .task-timeline__bar {
   height: 100%;
   border-radius: 999px;
-  background: #1989fa;
+  background: var(--portal-primary);
 }
 </style>

@@ -11,9 +11,11 @@ import {
   type SubmoduleView,
 } from "@/api/activity";
 import { fetchTaskList, type TaskCardView } from "@/api/task";
+import FallbackImage from "@/components/FallbackImage.vue";
 import TaskCard from "@/components/TaskCard.vue";
 import TaskCompleteSheet from "@/components/TaskCompleteSheet.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { activityCover, activityWindow } from "@/utils/activity-cover";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 
 defineOptions({ name: "ActivityPage" });
@@ -35,6 +37,11 @@ const activityId = computed(() => {
   }
   return null;
 });
+
+const cover = computed(() => (detail.value ? activityCover(detail.value) : undefined));
+const windowLabel = computed(() =>
+  detail.value ? activityWindow(detail.value.startTime, detail.value.endTime) : "",
+);
 
 function sortedSubmodules(rows: SubmoduleView[] | undefined): SubmoduleView[] {
   return [...(rows ?? [])].sort((a, b) => a.sort - b.sort);
@@ -158,21 +165,33 @@ watch(sheetOpen, (open, wasOpen) => {
     <NavBar :title="zhCN.activity.title" left-arrow @click-left="router.back()" />
     <Empty v-if="!loading && !detail" :description="zhCN.activity.empty" data-testid="activity-empty" />
     <div v-else-if="detail" data-testid="activity-detail">
-      <h2 data-testid="activity-name">{{ detail.name }}</h2>
+      <header class="activity-hero">
+        <div class="activity-hero__cover">
+          <FallbackImage v-if="cover" :src="cover" :alt="detail.name" />
+          <span v-else class="activity-hero__fallback">{{ detail.name.slice(0, 1) }}</span>
+        </div>
+        <div class="activity-hero__body">
+          <h2 data-testid="activity-name">{{ detail.name }}</h2>
+          <p v-if="windowLabel">{{ windowLabel }}</p>
+        </div>
+      </header>
       <!-- richText is server-sanitized (R22); do not bind unsanitized HTML -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="activity-html" data-testid="activity-html" v-html="detail.richText" />
       <div v-if="hasSignin || tasks.length" data-testid="activity-submodules">
         <article
           v-if="hasSignin"
-          class="hub-card"
+          class="signin-card"
           data-testid="activity-signin-card"
           role="button"
           tabindex="0"
           @click="openSignin"
         >
-          <strong>{{ zhCN.home.signin }}</strong>
-          <span>{{ zhCN.home.signinHint }}</span>
+          <span class="signin-card__mark" aria-hidden="true">签</span>
+          <span class="signin-card__meta">
+            <strong>{{ zhCN.home.signin }}</strong>
+            <span>{{ zhCN.home.signinHint }}</span>
+          </span>
         </article>
         <TaskCard
           v-for="task in tasks"
@@ -183,35 +202,109 @@ watch(sheetOpen, (open, wasOpen) => {
         />
       </div>
       <p v-if="result" data-testid="activity-result">{{ result }}</p>
-      <Button type="primary" block data-testid="activity-join" @click="onParticipate">
-        {{ zhCN.activity.join }}
-      </Button>
+      <div class="activity-join">
+        <Button type="primary" block data-testid="activity-join" @click="onParticipate">
+          {{ zhCN.activity.join }}
+        </Button>
+      </div>
     </div>
     <TaskCompleteSheet v-model:show="sheetOpen" :task-id="sheetTaskId" />
   </section>
 </template>
 
 <style scoped>
+.activity-page {
+  min-height: 100%;
+  background:
+    radial-gradient(120% 50% at 50% -10%, var(--portal-bg-wash) 0%, transparent 50%),
+    var(--portal-bg);
+}
+.activity-page :deep(.van-nav-bar) {
+  background: transparent;
+}
+.activity-hero {
+  overflow: hidden;
+  margin: 8px 16px 12px;
+  border-radius: var(--portal-radius-lg);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow);
+}
+.activity-hero__cover {
+  display: flex;
+  height: 140px;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--portal-primary-warm) 0%, var(--portal-primary-deep) 100%);
+}
+.activity-hero__cover :deep(.fallback-image),
+.activity-hero__cover :deep(img) {
+  width: 100%;
+  height: 140px;
+  border-radius: 0;
+}
+.activity-hero__fallback {
+  color: #fff;
+  font-size: 48px;
+  font-weight: 700;
+}
+.activity-hero__body {
+  padding: 14px 16px 16px;
+}
+.activity-hero__body h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.activity-hero__body p {
+  margin: 6px 0 0;
+  color: var(--portal-muted);
+  font-size: 13px;
+}
 .activity-html {
+  margin: 0 16px 12px;
   padding: 12px 16px;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
   font-size: 14px;
   line-height: 1.6;
 }
-.hub-card {
+.signin-card {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+  align-items: center;
   margin: 12px 16px;
-  padding: 12px;
-  border-radius: 12px;
-  background: #fff;
+  padding: 14px;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
   text-align: left;
 }
-.hub-card strong {
-  font-size: 15px;
+.signin-card__mark {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--portal-accent-soft);
+  color: var(--portal-accent);
+  font-size: 16px;
+  font-weight: 700;
 }
-.hub-card span {
-  color: #646566;
+.signin-card__meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.signin-card__meta strong {
+  font-size: 16px;
+}
+.signin-card__meta span {
+  color: var(--portal-muted);
   font-size: 13px;
+}
+.activity-join {
+  padding: 8px 16px 24px;
 }
 </style>

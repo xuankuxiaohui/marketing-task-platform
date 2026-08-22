@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
-import { sessionMessage } from "./session-reason";
+import { isGuestSessionCode, sessionMessage } from "./session-reason";
 
 describe("sessionMessage", () => {
   it("distinguishes concurrent kick from admin kick", () => {
@@ -11,5 +11,11 @@ describe("sessionMessage", () => {
     expect(sessionMessage("auth.session.kicked-concurrent")).not.toBe(
       sessionMessage("auth.session.kicked-admin"),
     );
+  });
+
+  it("treats missing/expired as a guest-safe points bar", () => {
+    expect(isGuestSessionCode("auth.session.missing")).toBe(true);
+    expect(isGuestSessionCode("auth.session.expired")).toBe(true);
+    expect(isGuestSessionCode("auth.session.kicked-admin")).toBe(false);
   });
 });
