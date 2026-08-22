@@ -50,6 +50,17 @@ async function captchaFromResponsePayload(
   return waitRedisGet(`captcha:${realm}:${captchaId}`);
 }
 
+/** Fill an el-input whether data-testid is on the wrapper or the native input. */
+export async function fillTestIdInput(page: Page, testId: string, value: string): Promise<void> {
+  const root = page.getByTestId(testId);
+  const inner = root.locator("input");
+  if ((await inner.count()) > 0) {
+    await inner.fill(value);
+    return;
+  }
+  await root.fill(value);
+}
+
 export async function fillPortalCaptcha(page: Page): Promise<void> {
   const code = await fillCaptchaFromRefresh(page, "/api/common/captcha", "portal");
   await page.getByTestId("login-captcha").locator("input").fill(code);
@@ -57,7 +68,7 @@ export async function fillPortalCaptcha(page: Page): Promise<void> {
 
 export async function fillAdminCaptcha(page: Page): Promise<void> {
   const code = await fillCaptchaFromRefresh(page, "/admin/captcha", "admin");
-  await page.getByTestId("login-captcha").locator("input").fill(code);
+  await fillTestIdInput(page, "login-captcha", code);
 }
 
 /**

@@ -45,24 +45,26 @@ async function submit(): Promise<void> {
       <h1>{{ zhCN.password.title }}</h1>
       <p class="login-card__sub">{{ zhCN.password.hint }}</p>
       <el-form-item :label="zhCN.password.oldPassword">
-        <el-input
-          v-model="oldPassword"
-          data-testid="change-password-old"
-          type="password"
-          show-password
-          autocomplete="current-password"
-          required
-        />
+        <div data-testid="change-password-old">
+          <el-input
+            v-model="oldPassword"
+            type="password"
+            show-password
+            autocomplete="current-password"
+            required
+          />
+        </div>
       </el-form-item>
       <el-form-item :label="zhCN.password.newPassword">
-        <el-input
-          v-model="newPassword"
-          data-testid="change-password-new"
-          type="password"
-          show-password
-          autocomplete="new-password"
-          required
-        />
+        <div data-testid="change-password-new">
+          <el-input
+            v-model="newPassword"
+            type="password"
+            show-password
+            autocomplete="new-password"
+            required
+          />
+        </div>
       </el-form-item>
       <p class="login-card__sub">{{ zhCN.common.passwordPolicy }}</p>
       <p v-if="errorMessage" class="login-error" data-testid="change-password-error" role="alert">

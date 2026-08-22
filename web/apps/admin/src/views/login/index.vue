@@ -80,34 +80,27 @@ onMounted(() => {
       <h1>{{ zhCN.appTitle }}</h1>
       <p class="login-card__sub">{{ zhCN.login.title }}</p>
       <el-form-item :label="zhCN.login.username">
-        <el-input
-          v-model="username"
-          data-testid="login-username"
-          name="username"
-          autocomplete="username"
-          required
-        />
+        <div data-testid="login-username">
+          <el-input v-model="username" name="username" autocomplete="username" required />
+        </div>
       </el-form-item>
       <el-form-item :label="zhCN.login.password">
-        <el-input
-          v-model="password"
-          data-testid="login-password"
-          name="password"
-          type="password"
-          show-password
-          autocomplete="current-password"
-          required
-        />
+        <div data-testid="login-password">
+          <el-input
+            v-model="password"
+            name="password"
+            type="password"
+            show-password
+            autocomplete="current-password"
+            required
+          />
+        </div>
       </el-form-item>
       <div class="login-captcha">
         <el-form-item :label="zhCN.login.captcha" class="login-field--grow">
-          <el-input
-            v-model="captchaCode"
-            data-testid="login-captcha"
-            name="captchaCode"
-            autocomplete="off"
-            required
-          />
+          <div data-testid="login-captcha">
+            <el-input v-model="captchaCode" name="captchaCode" autocomplete="off" required />
+          </div>
         </el-form-item>
         <button
           class="login-captcha__image"
