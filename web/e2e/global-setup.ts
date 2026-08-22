@@ -3,6 +3,7 @@ import {
   E2E_PORTAL_PASSWORD,
   adminLogin,
   ensurePrize,
+  ensurePublishedActivity,
   ensurePublishedTask,
   registerPortalUser,
 } from "./helpers/backend";
@@ -12,6 +13,7 @@ export type E2EState = {
   apiBase: string;
   prizeId: number;
   taskId: number;
+  activityId: number;
   loginUsername: string;
   loginPassword: string;
   portalToken: string;
@@ -34,12 +36,18 @@ export default async function globalSetup(): Promise<void> {
     ],
     transitions: [{ fromStepCode: "clk", toStepCode: "rwd" }],
   });
+  const activityId = await ensurePublishedActivity(session, {
+    code: "e2e_core_act",
+    name: "e2e core activity",
+    taskId,
+  });
   const loginUsername = "e2e_login1";
   const portal = await registerPortalUser(loginUsername, E2E_PORTAL_PASSWORD);
   const state: E2EState = {
     apiBase: apiBase(),
     prizeId,
     taskId,
+    activityId,
     loginUsername,
     loginPassword: E2E_PORTAL_PASSWORD,
     portalToken: portal.token,

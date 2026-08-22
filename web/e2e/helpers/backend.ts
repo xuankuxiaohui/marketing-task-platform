@@ -268,6 +268,73 @@ export async function ensurePublishedTask(session: AdminSession, seed: TaskSeed)
   return Number(taskId);
 }
 
+export type ActivitySeed = {
+  code: string;
+  name: string;
+  taskId: number;
+};
+
+function activitySaveBody(seed: ActivitySeed, id?: number): Record<string, unknown> {
+  return {
+    ...(id != null ? { id } : {}),
+    code: seed.code,
+    name: seed.name,
+    startTime: "2020-01-01T00:00:00Z",
+    endTime: "2099-12-31T23:59:59Z",
+    richText: "<p>e2e core</p>",
+    gray: { type: "NONE" },
+    submodules: [{ type: "TASK", refId: seed.taskId, sort: 0 }],
+    newUserOnly: false,
+    newUserDays: 7,
+  };
+}
+
+export async function ensurePublishedActivity(session: AdminSession, seed: ActivitySeed): Promise<number> {
+  const page = await api<{
+    code: unknown;
+    data?: { records?: Array<{ id?: number; status?: string }> };
+  }>(`/admin/activity/activities?code=${encodeURIComponent(seed.code)}&page=1&pageSize=5`, {
+    cookie: session.cookie,
+  });
+  requireOk(page.body, "activity page");
+  const row = page.body.data?.records?.[0];
+  let activityId: number;
+  if (row?.id != null) {
+    activityId = Number(row.id);
+    if (row.status === "PUBLISHED") {
+      return activityId;
+    }
+    const saved = await api("/admin/activity/activities", {
+      method: "POST",
+      cookie: session.cookie,
+      csrf: session.csrfToken,
+      body: JSON.stringify(activitySaveBody(seed, activityId)),
+    });
+    requireOk(saved.body as { code?: unknown }, "activity save");
+  } else {
+    const saved = await api<{ code: unknown; data?: { id?: number } }>("/admin/activity/activities", {
+      method: "POST",
+      cookie: session.cookie,
+      csrf: session.csrfToken,
+      body: JSON.stringify(activitySaveBody(seed)),
+    });
+    requireOk(saved.body, "activity save");
+    const id = saved.body.data?.id;
+    if (id == null) {
+      throw new Error("activity id missing");
+    }
+    activityId = Number(id);
+  }
+  const published = await api(`/admin/activity/activities/${activityId}/publish`, {
+    method: "POST",
+    cookie: session.cookie,
+    csrf: session.csrfToken,
+    body: JSON.stringify({ confirm: true, early: true }),
+  });
+  requireOk(published.body as { code?: unknown }, "activity publish");
+  return activityId;
+}
+
 export async function registerPortalUser(
   username: string,
   password: string,
