@@ -1,5 +1,6 @@
 export const zhCN = {
   appTitle: "营销任务平台",
+  consoleSubtitle: "运营中台",
   login: {
     title: "管理后台登录",
     username: "用户名",

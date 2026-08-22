@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "@mkt/shared": "workspace:*",
     "@vue-flow/core": "^1.48.2",
     "axios": "^1.12.2",

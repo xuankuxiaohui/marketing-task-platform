@@ -41,46 +41,52 @@ async function submit(): Promise<void> {
 
 <template>
   <main class="login-page">
-    <el-form class="login-card" label-position="top" @submit.prevent="submit">
-      <h1>{{ zhCN.password.title }}</h1>
-      <p class="login-card__sub">{{ zhCN.password.hint }}</p>
-      <el-form-item :label="zhCN.password.oldPassword">
-        <div data-testid="change-password-old">
-          <el-input
-            v-model="oldPassword"
-            type="password"
-            show-password
-            autocomplete="current-password"
-            required
-          />
-        </div>
-      </el-form-item>
-      <el-form-item :label="zhCN.password.newPassword">
-        <div data-testid="change-password-new">
-          <el-input
-            v-model="newPassword"
-            type="password"
-            show-password
-            autocomplete="new-password"
-            required
-          />
-        </div>
-      </el-form-item>
-      <p class="login-card__sub">{{ zhCN.common.passwordPolicy }}</p>
-      <p v-if="errorMessage" class="login-error" data-testid="change-password-error" role="alert">
-        {{ errorMessage }}
-      </p>
-      <el-button
-        class="login-submit"
-        type="primary"
-        native-type="submit"
-        data-testid="change-password-submit"
-        :loading="loading"
-        :disabled="loading"
-      >
-        {{ zhCN.password.submit }}
-      </el-button>
-    </el-form>
+    <aside class="login-brand">
+      <h1>{{ zhCN.appTitle }}</h1>
+      <p class="login-brand__sub">{{ zhCN.consoleSubtitle }}</p>
+    </aside>
+    <section class="login-panel">
+      <el-form class="login-card" label-position="top" @submit.prevent="submit">
+        <h2>{{ zhCN.password.title }}</h2>
+        <p class="login-card__sub">{{ zhCN.password.hint }}</p>
+        <el-form-item :label="zhCN.password.oldPassword">
+          <div data-testid="change-password-old">
+            <el-input
+              v-model="oldPassword"
+              type="password"
+              show-password
+              autocomplete="current-password"
+              required
+            />
+          </div>
+        </el-form-item>
+        <el-form-item :label="zhCN.password.newPassword">
+          <div data-testid="change-password-new">
+            <el-input
+              v-model="newPassword"
+              type="password"
+              show-password
+              autocomplete="new-password"
+              required
+            />
+          </div>
+        </el-form-item>
+        <p class="login-card__sub">{{ zhCN.common.passwordPolicy }}</p>
+        <p v-if="errorMessage" class="login-error" data-testid="change-password-error" role="alert">
+          {{ errorMessage }}
+        </p>
+        <el-button
+          class="login-submit"
+          type="primary"
+          native-type="submit"
+          data-testid="change-password-submit"
+          :loading="loading"
+          :disabled="loading"
+        >
+          {{ zhCN.password.submit }}
+        </el-button>
+      </el-form>
+    </section>
   </main>
 </template>
 
@@ -88,24 +94,50 @@ async function submit(): Promise<void> {
 .login-page {
   min-height: 100vh;
   display: flex;
+}
+.login-brand {
+  width: 44%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--admin-aside);
+  color: #fff;
+}
+.login-brand h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+.login-brand__sub {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.login-panel {
+  width: 56%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f172a;
+  background: var(--admin-page-bg);
 }
 .login-card {
-  width: 360px;
-  padding: 32px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+  width: 380px;
+  max-width: 100%;
 }
-.login-card h1 {
-  margin: 0;
-  font-size: 22px;
+.login-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--admin-ink);
 }
 .login-card__sub {
   margin: 0 0 8px;
-  color: #64748b;
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+.login-card :deep(.el-input__wrapper) {
+  min-height: 40px;
 }
 .login-error {
   margin: 0 0 12px;
@@ -114,5 +146,6 @@ async function submit(): Promise<void> {
 }
 .login-submit {
   width: 100%;
+  height: 40px;
 }
 </style>
