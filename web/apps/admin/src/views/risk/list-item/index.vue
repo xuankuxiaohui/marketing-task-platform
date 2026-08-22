@@ -163,7 +163,12 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="list-item-page">
-    <h2>{{ zhCN.list.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.list.title }}</h2>
+      <el-button type="primary" v-if="canAdd" data-testid="list-create" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-select v-model="filters.dimension" data-testid="filter-dimension">
         <el-option value="" :label="zhCN.list.dimension" />
@@ -177,17 +182,19 @@ onMounted(() => {
       <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
       <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
       <el-button data-testid="list-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-if="canAdd" data-testid="list-create" @click="openCreate">
-        {{ zhCN.common.create }}
-      </el-button>
       <el-button v-auth="PERMS.RISK_BLACK_IMPORT" data-testid="list-import" @click="openImport">
         {{ zhCN.list.import }}
       </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="list-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-if="canAdd" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="list-table" size="small" stripe>
       <el-table-column :label="zhCN.list.dimension">
         <template #default="{ row }">{{ row.dimension }}</template>
       </el-table-column>
@@ -212,7 +219,7 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button
+            <el-button text
               v-auth="removePerm(row)"
               data-testid="list-remove"
               @click="openRemove(row)"

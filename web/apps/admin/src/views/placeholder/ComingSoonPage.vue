@@ -11,13 +11,15 @@ const title = computed(() => (typeof route.meta.title === "string" ? route.meta.
 
 <template>
   <section class="admin-page coming-soon-page" data-testid="coming-soon-page">
-    <h2>{{ title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ title }}</h2>
+    </div>
     <p>{{ zhCN.placeholder.hint }}</p>
   </section>
 </template>
 
 <style scoped>
 .coming-soon-page {
-  color: #475569;
+  color: var(--admin-muted);
 }
 </style>

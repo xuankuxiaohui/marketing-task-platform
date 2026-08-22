@@ -117,19 +117,24 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="internal-app-page">
-    <h2>{{ zhCN.app.title }}</h2>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button v-auth="PERMS.APP_ADD" data-testid="app-create" @click="formOpen = true">
+    <div class="admin-page__header">
+      <h2>{{ zhCN.app.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.APP_ADD" data-testid="app-create" @click="formOpen = true">
         {{ zhCN.app.add }}
       </el-button>
-    </el-form>
+    </div>
     <p v-if="secretOnce" class="secret-once" data-testid="secret-once">
       {{ zhCN.app.secretOnce }}：<code data-testid="secret-value">{{ secretOnce }}</code>
     </p>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="internal-app-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.APP_ADD" text type="primary" @click="formOpen = true">
+        {{ zhCN.app.add }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="internal-app-table" size="small" stripe>
       <el-table-column :label="zhCN.app.appId">
         <template #default="{ row }">{{ row.appId }}</template>
       </el-table-column>
@@ -137,7 +142,15 @@ onMounted(() => {
         <template #default="{ row }">{{ row.appName }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.app.prevExpireAt">
         <template #default="{ row }">{{ formatDateTime(row.prevExpireAt) }}</template>
@@ -148,10 +161,10 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.APP_EDIT" data-testid="app-rotate" @click="onRotate(row)">
+            <el-button text v-auth="PERMS.APP_EDIT" data-testid="app-rotate" @click="onRotate(row)">
               {{ zhCN.app.rotate }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.ENABLED"
               v-auth="PERMS.APP_EDIT"
               data-testid="app-disable"
@@ -159,7 +172,7 @@ onMounted(() => {
             >
               {{ zhCN.common.disable }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.DISABLED"
               v-auth="PERMS.APP_EDIT"
               data-testid="app-enable"

@@ -74,12 +74,16 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="cache-page">
-    <h2>{{ zhCN.cache.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.cache.title }}</h2>
+    </div>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="success" class="hint" data-testid="cache-success">{{ success }}</p>
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="cache-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="cache-table" size="small" stripe>
       <el-table-column :label="zhCN.cache.namespace" min-width="240">
         <template #default="{ row }">
           {{ row.namespace }}

@@ -267,7 +267,7 @@ onMounted(async () => {
         {{ zhCN.common.create }}
       </el-button>
     </div>
-    <el-table v-else :data="records" class="data-table task-table" data-testid="task-table" size="small" stripe>
+    <el-table v-else :data="records" class="data-table task-table admin-table" data-testid="task-table" size="small" stripe>
       <el-table-column :label="zhCN.task.code">
         <template #default="{ row }">{{ row.code }}</template>
       </el-table-column>
@@ -356,7 +356,7 @@ onMounted(async () => {
     </div>
     <h3>{{ zhCN.task.scheduleFailures }}</h3>
     <p v-if="failures.length === 0" data-testid="failure-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="failures" class="data-table" data-testid="failure-table" stripe>
+    <el-table v-else :data="failures" class="data-table admin-table" data-testid="failure-table" size="small" stripe>
       <el-table-column :label="zhCN.task.code">
         <template #default="{ row }">{{ row.taskCode }}</template>
       </el-table-column>
@@ -394,41 +394,3 @@ onMounted(async () => {
     />
   </section>
 </template>
-
-<style scoped>
-.admin-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.page-empty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--admin-muted);
-  font-size: 12px;
-}
-.task-table :deep(.el-table__header th.el-table__cell) {
-  background: #f6f1e7;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--admin-ink);
-}
-.task-table :deep(.el-table__row) {
-  height: var(--admin-row);
-}
-.task-table :deep(.el-table td.el-table__cell),
-.task-table :deep(.el-table th.el-table__cell) {
-  border-right: none;
-}
-.task-table :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #faf7f0;
-}
-.status-tag--live {
-  --el-tag-bg-color: #ccfbf1;
-  --el-tag-border-color: #99f6e4;
-  --el-tag-text-color: #0f766e;
-}
-</style>

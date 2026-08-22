@@ -205,7 +205,12 @@ onMounted(async () => {
 
 <template>
   <section class="admin-page" data-testid="user-page">
-    <h2>{{ zhCN.user.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.user.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.USER_CREATE" data-testid="user-create" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
       <el-input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
@@ -215,14 +220,16 @@ onMounted(async () => {
         <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
       </el-select>
       <el-button data-testid="user-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.USER_CREATE" data-testid="user-create" @click="openCreate">
-        {{ zhCN.common.create }}
-      </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="user-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.USER_CREATE" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="user-table" size="small" stripe>
       <el-table-column :label="zhCN.user.username">
         <template #default="{ row }">{{ row.username }}</template>
       </el-table-column>
@@ -230,7 +237,15 @@ onMounted(async () => {
         <template #default="{ row }">{{ row.nickname }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.user.roles">
         <template #default="{ row }">{{ (row.roles ?? []).join(", ") }}</template>
@@ -241,10 +256,10 @@ onMounted(async () => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.USER_UPDATE" data-testid="user-edit" @click="openEdit(row)">
+            <el-button text v-auth="PERMS.USER_UPDATE" data-testid="user-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.ENABLED && !isProtected(row)"
               v-auth="PERMS.USER_DISABLE"
               data-testid="user-disable"
@@ -252,7 +267,7 @@ onMounted(async () => {
             >
               {{ zhCN.common.disable }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.DISABLED && !isProtected(row)"
               v-auth="PERMS.USER_DISABLE"
               data-testid="user-enable"
@@ -260,10 +275,10 @@ onMounted(async () => {
             >
               {{ zhCN.common.enable }}
             </el-button>
-            <el-button v-auth="PERMS.USER_RESET" data-testid="user-reset" @click="openReset(row)">
+            <el-button text v-auth="PERMS.USER_RESET" data-testid="user-reset" @click="openReset(row)">
               {{ zhCN.user.resetPassword }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="!isProtected(row)"
               v-auth="PERMS.USER_DELETE"
               data-testid="user-delete"

@@ -90,7 +90,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="instance-page">
-    <h2>{{ zhCN.instance.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.instance.title }}</h2>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.taskId" data-testid="filter-task-id" :placeholder="zhCN.instance.taskId" />
       <el-input v-model="filters.userId" data-testid="filter-user-id" :placeholder="zhCN.instance.userId" />
@@ -107,8 +109,10 @@ onMounted(() => {
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="instance-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="instance-table" size="small" stripe>
       <el-table-column label="ID">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
@@ -119,7 +123,15 @@ onMounted(() => {
         <template #default="{ row }">{{ row.userId }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.instance.cycleKey">
         <template #default="{ row }">{{ row.cycleKey }}</template>
@@ -127,10 +139,10 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.TASK_INSTANCE_QUERY" data-testid="instance-detail" @click="openDetail(row)">
+            <el-button text v-auth="PERMS.TASK_INSTANCE_QUERY" data-testid="instance-detail" @click="openDetail(row)">
               {{ zhCN.instance.detail }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === INSTANCE_STATUS.IN_PROGRESS"
               v-auth="PERMS.TASK_INSTANCE_ABANDON"
               data-testid="instance-abandon"
@@ -150,7 +162,7 @@ onMounted(() => {
     </div>
     <div v-if="detail" data-testid="instance-detail-panel">
       <h3>{{ zhCN.instance.steps }}</h3>
-      <el-table :data="detail.steps ?? []" class="data-table" stripe>
+      <el-table :data="detail.steps ?? []" class="data-table admin-table" size="small" stripe>
       <el-table-column>
         <template #default="{ row }">{{ row.stepCode }}</template>
       </el-table-column>

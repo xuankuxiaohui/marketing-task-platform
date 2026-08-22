@@ -64,7 +64,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="session-page">
-    <h2>{{ zhCN.session.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.session.title }}</h2>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-select v-model="filters.accountType" data-testid="filter-account-type">
         <el-option value="" :label="zhCN.session.accountType" />
@@ -76,8 +78,10 @@ onMounted(() => {
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="session-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="session-table" size="small" stripe>
       <el-table-column :label="zhCN.session.account">
         <template #default="{ row }">{{ row.account }}</template>
       </el-table-column>
@@ -102,7 +106,7 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.SESSION_KICK" data-testid="session-kick" @click="pendingKick = row">
+            <el-button text v-auth="PERMS.SESSION_KICK" data-testid="session-kick" @click="pendingKick = row">
               {{ zhCN.session.kick }}
             </el-button>
           </div>

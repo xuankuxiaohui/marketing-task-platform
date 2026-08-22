@@ -109,7 +109,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="record-page">
-    <h2>{{ zhCN.record.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.record.title }}</h2>
+    </div>
     <p class="hint" data-testid="record-no-list">{{ zhCN.record.noListHint }}</p>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
@@ -123,8 +125,10 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <h3>{{ zhCN.record.spend }}</h3>
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="spendRows.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="spendRows" class="data-table" data-testid="spend-table" stripe>
+    <div v-else-if="spendRows.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="spendRows" class="data-table admin-table" data-testid="spend-table" size="small" stripe>
       <el-table-column :label="zhCN.prize.category">
         <template #default="{ row }">{{ row.categoryCode }}</template>
       </el-table-column>

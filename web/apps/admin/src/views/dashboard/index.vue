@@ -60,7 +60,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page dashboard-page" data-testid="dashboard-page">
-    <h2>{{ zhCN.dashboard.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.dashboard.title }}</h2>
+    </div>
     <p>{{ zhCN.dashboard.welcome }}{{ session.nickname ? `，${session.nickname}` : "" }}</p>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>

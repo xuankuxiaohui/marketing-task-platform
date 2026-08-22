@@ -124,19 +124,26 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="config-page">
-    <h2>{{ zhCN.config.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.config.title }}</h2>
+      <el-button type="primary" v-auth="PERMS.CONFIG_CREATE" data-testid="config-create" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.configGroup" data-testid="filter-group" :placeholder="zhCN.config.group" />
       <el-input v-model="filters.key" data-testid="filter-key" :placeholder="zhCN.config.key" />
       <el-button data-testid="config-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.CONFIG_CREATE" data-testid="config-create" @click="openCreate">
-        {{ zhCN.common.create }}
-      </el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="config-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.CONFIG_CREATE" text type="primary" @click="openCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="config-table" size="small" stripe>
       <el-table-column :label="zhCN.config.key">
         <template #default="{ row }">{{ row.configKey }}</template>
       </el-table-column>
@@ -153,12 +160,20 @@ onMounted(() => {
         <template #default="{ row }">{{ row.masked ? "Y" : "N" }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.CONFIG_UPDATE" data-testid="config-edit" @click="openEdit(row)">
+            <el-button text v-auth="PERMS.CONFIG_UPDATE" data-testid="config-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
           </div>

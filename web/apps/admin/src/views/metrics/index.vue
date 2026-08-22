@@ -143,7 +143,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="metrics-page">
-    <h2>{{ zhCN.metrics.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.metrics.title }}</h2>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-select v-model="filters.grain" data-testid="filter-grain">
         <el-option value="DAY" :label="zhCN.metrics.day" />

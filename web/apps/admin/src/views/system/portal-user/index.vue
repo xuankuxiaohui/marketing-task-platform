@@ -200,7 +200,9 @@ onMounted(() => {
 
 <template>
   <section class="admin-page" data-testid="portal-user-page">
-    <h2>{{ zhCN.portal.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.portal.title }}</h2>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
       <el-input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
@@ -214,8 +216,10 @@ onMounted(() => {
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="portal-user-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+    </div>
+    <el-table v-else :data="records" class="data-table admin-table" data-testid="portal-user-table" size="small" stripe>
       <el-table-column :label="zhCN.user.username">
         <template #default="{ row }">{{ row.username }}</template>
       </el-table-column>
@@ -229,7 +233,15 @@ onMounted(() => {
         <template #default="{ row }">{{ row.userLevel || "—" }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
+            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
+          >
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.portal.registeredAt">
         <template #default="{ row }">{{ formatDateTime(row.registeredAt) }}</template>
@@ -237,13 +249,13 @@ onMounted(() => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.PORTAL_QUERY" data-testid="portal-detail" @click="openDetail(row)">
+            <el-button text v-auth="PERMS.PORTAL_QUERY" data-testid="portal-detail" @click="openDetail(row)">
               {{ zhCN.portal.detail }}
             </el-button>
-            <el-button v-auth="PERMS.PORTAL_PROFILE" data-testid="portal-profile" @click="openProfile(row)">
+            <el-button text v-auth="PERMS.PORTAL_PROFILE" data-testid="portal-profile" @click="openProfile(row)">
               {{ zhCN.portal.profile }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.ENABLED"
               v-auth="PERMS.PORTAL_DISABLE"
               data-testid="portal-disable"
@@ -251,7 +263,7 @@ onMounted(() => {
             >
               {{ zhCN.common.disable }}
             </el-button>
-            <el-button
+            <el-button text
               v-if="row.status === STATUS.DISABLED"
               v-auth="PERMS.PORTAL_DISABLE"
               data-testid="portal-enable"
@@ -259,10 +271,10 @@ onMounted(() => {
             >
               {{ zhCN.common.enable }}
             </el-button>
-            <el-button v-auth="PERMS.PORTAL_RESET" data-testid="portal-reset" @click="openReset(row)">
+            <el-button text v-auth="PERMS.PORTAL_RESET" data-testid="portal-reset" @click="openReset(row)">
               {{ zhCN.user.resetPassword }}
             </el-button>
-            <el-button v-auth="PERMS.PORTAL_DELETE" data-testid="portal-delete" @click="askDelete(row)">
+            <el-button text v-auth="PERMS.PORTAL_DELETE" data-testid="portal-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
             </el-button>
           </div>
