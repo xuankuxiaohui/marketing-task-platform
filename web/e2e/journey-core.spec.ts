@@ -62,6 +62,13 @@ test.describe("journey-core registered path", () => {
   });
 
   test("R34.5 home list emits task.card.exposure via POST /api/common/track/batch", async () => {
+    const state = readE2EState();
+    if (!page.url().includes("/home")) {
+      await page.goto("/home");
+    }
+    await expect(page.getByTestId("home-signin-card")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`home-activity-${state.activityId}`)).toBeVisible();
+    await expect(page.getByTestId("task-card")).toHaveCount(0);
     const pending = page.waitForRequest(
       (request) =>
         request.url().includes("/api/common/track/batch") &&
@@ -69,9 +76,8 @@ test.describe("journey-core registered path", () => {
         JSON.stringify(request.postDataJSON() ?? {}).includes("task.card.exposure"),
       { timeout: 15_000 },
     );
-    if (!page.url().includes("/home")) {
-      await page.goto("/home");
-    }
+    await page.getByTestId(`home-activity-${state.activityId}`).click();
+    await expect(page).toHaveURL(/\/activity/);
     await expect(page.getByTestId("task-card").first()).toBeVisible({ timeout: 15_000 });
     const request = await pending;
     const body = request.postDataJSON() as { events?: Array<{ code?: string }> };
@@ -81,16 +87,18 @@ test.describe("journey-core registered path", () => {
   test("claim a listed task then click-complete the current step", async () => {
     const state = readE2EState();
     await page.goto("/home");
+    await expect(page.getByTestId("home-signin-card")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("task-card")).toHaveCount(0);
+    await page.getByTestId(`home-activity-${state.activityId}`).click();
+    await expect(page).toHaveURL(/\/activity/);
     await expect(page.getByTestId("task-card").first()).toBeVisible({ timeout: 15_000 });
-    const action = page.getByTestId(`task-card-action-${state.taskId}`);
-    if (await action.count()) {
-      await action.click();
-    } else {
-      await page.getByTestId("task-card-open").first().click();
-      await page.getByTestId("task-claim").click();
-    }
-    await expect(page).toHaveURL(new RegExp(`/task/${state.taskId}`));
-    await expect(page.getByTestId("task-timeline")).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId("task-card-open").first().click();
+    await expect(page.getByTestId("task-complete-sheet")).toBeVisible();
+    await page.getByTestId("task-claim").click();
+    await expect(page).toHaveURL(/\/activity/);
+    await expect(page).not.toHaveURL(/\/task\/\d+/);
+    await expect(page.getByTestId("task-complete-sheet")).toBeVisible();
+    await expect(page.getByTestId("task-step-action")).toBeVisible({ timeout: 15_000 });
     await waitPastGrantElapsedFloor();
     const pendingClick = page.waitForResponse(
       (response) =>
