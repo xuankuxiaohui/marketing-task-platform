@@ -39,7 +39,10 @@ onUnmounted(() => {
 <template>
   <div v-if="visible" class="form-mask" data-testid="form-dialog" @click="onMaskClick">
     <el-form class="form-card" label-position="top" @submit.prevent="emit('submit')" @click.stop>
-      <h3>{{ title }}</h3>
+      <header class="form-card__header">
+        <h3>{{ title }}</h3>
+        <el-button class="form-card__close" text @click="emit('cancel')">×</el-button>
+      </header>
       <div class="form-card__body">
         <slot />
       </div>
@@ -57,33 +60,52 @@ onUnmounted(() => {
 .form-mask {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--el-overlay-color-lighter, rgba(0, 0, 0, 0.5));
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 30;
 }
 .form-card {
-  background: #fff;
+  background: var(--el-bg-color, #fff);
   min-width: 420px;
   max-width: 560px;
   max-height: 90vh;
   overflow: auto;
-  padding: 20px;
+  padding: 0;
   border-radius: 8px;
+  box-shadow: var(--el-box-shadow, 0 12px 32px 4px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.08));
+}
+.form-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
 }
 .form-card h3 {
-  margin: 0 0 12px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--el-text-color-primary, #303133);
+}
+.form-card__close {
+  min-width: 24px;
+  font-size: 18px;
+  color: var(--el-text-color-secondary, #909399);
 }
 .form-card__body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 16px;
 }
 .form-card__actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 0;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--el-border-color-lighter, #ebeef5);
 }
 </style>

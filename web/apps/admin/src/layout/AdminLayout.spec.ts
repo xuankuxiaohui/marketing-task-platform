@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
 import { DASHBOARD_ROUTE } from "@/router/dynamic";
+import { usePermissionStore } from "@/store/permission";
 import { useSessionStore } from "@/store/session";
 import { useTagsStore } from "@/store/tags";
 
@@ -80,5 +81,43 @@ describe("AdminLayout tags", () => {
     await flushPromises();
     expect(tags.items.map((item) => item.path)).toEqual([DASHBOARD_ROUTE, "/system/users"]);
     expect(router.currentRoute.value.path).toBe("/system/users");
+  });
+
+  it("groups sidebar menus with zh-CN titles and one-click items", async () => {
+    const { wrapper } = await mountLayout();
+    usePermissionStore().setMenus([
+      { id: 2, name: "工作台", route: "/dashboard", component: "dashboard/index", sort: 1, icon: undefined, children: [] },
+      { id: 3, name: "后台用户", route: "/system/users", component: "system/user/index", sort: 2, icon: undefined, children: [] },
+      {
+        id: 13,
+        name: "任务编辑（画布）",
+        route: "/task/definitions/edit/:id?",
+        component: "task/definition/edit",
+        sort: 3,
+        icon: undefined,
+        children: [],
+      },
+      { id: 90, name: "运营看板", route: "/metrics", component: "metrics/index", sort: 4, icon: undefined, children: [] },
+    ]);
+    await flushPromises();
+    expect(wrapper.text()).toContain(zhCN.menuGroup.dashboard);
+    expect(wrapper.text()).toContain(zhCN.menuGroup.system);
+    expect(wrapper.text()).toContain(zhCN.menuGroup.other);
+    expect(wrapper.text()).toContain("后台用户");
+    expect(wrapper.text()).not.toContain("任务编辑");
+    expect(wrapper.find(".el-sub-menu").exists()).toBe(false);
+    expect(wrapper.findAll(".el-menu-item-group").length).toBe(3);
+  });
+
+  it("keeps sidebar and content as separate scroll panes and resets content on route change", async () => {
+    const { wrapper, router } = await mountLayout();
+    const sidebar = wrapper.get('[data-testid="admin-sidebar"]');
+    const content = wrapper.get('[data-testid="admin-content"]');
+    expect(sidebar.classes()).toContain("admin-layout__aside");
+    expect(content.classes()).toContain("admin-layout__content");
+    (content.element as HTMLElement).scrollTop = 120;
+    await router.push("/system/users");
+    await flushPromises();
+    expect((content.element as HTMLElement).scrollTop).toBe(0);
   });
 });

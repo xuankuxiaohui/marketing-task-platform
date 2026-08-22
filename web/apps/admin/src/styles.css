@@ -1,3 +1,12 @@
+:root {
+  --el-color-primary: #2563eb;
+  --admin-surface: #fff;
+  --admin-page-bg: #f1f5f9;
+  --admin-card-radius: 8px;
+  --admin-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --admin-border: #e2e8f0;
+}
+
 html,
 body,
 #app {
@@ -17,31 +26,22 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 20px;
+  border-radius: var(--admin-card-radius);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-card-shadow);
 }
 .admin-page h2 {
   margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f172a;
 }
 .admin-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-}
-.admin-toolbar input,
-.admin-toolbar select {
-  height: 32px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 0 8px;
-}
-.admin-toolbar button,
-.row-actions button {
-  height: 32px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  border-radius: 4px;
-  padding: 0 10px;
-  cursor: pointer;
 }
 .data-table {
   width: 100%;
@@ -50,7 +50,7 @@ textarea {
 }
 .data-table th,
 .data-table td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--admin-border);
   padding: 8px 10px;
   text-align: left;
   font-size: 13px;
@@ -70,14 +70,6 @@ textarea {
   font-size: 13px;
   color: #334155;
 }
-.field input,
-.field select,
-.field textarea {
-  min-height: 32px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 4px 8px;
-}
 .hint {
   color: #64748b;
   font-size: 13px;
@@ -90,9 +82,10 @@ textarea {
 }
 .task-canvas {
   height: 420px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-card-radius);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-card-shadow);
 }
 .split-panels {
   display: grid;
@@ -111,9 +104,4 @@ textarea {
 }
 .admin-toolbar .el-form-item {
   margin-bottom: 0;
-}
-.row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }

@@ -41,37 +41,46 @@ async function submit(): Promise<void> {
 
 <template>
   <main class="login-page">
-    <form class="login-card" @submit.prevent="submit">
+    <el-form class="login-card" label-position="top" @submit.prevent="submit">
       <h1>{{ zhCN.password.title }}</h1>
       <p class="login-card__sub">{{ zhCN.password.hint }}</p>
-      <label class="login-field">
-        <span>{{ zhCN.password.oldPassword }}</span>
-        <input
-          v-model="oldPassword"
-          data-testid="change-password-old"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
-      </label>
-      <label class="login-field">
-        <span>{{ zhCN.password.newPassword }}</span>
-        <input
-          v-model="newPassword"
-          data-testid="change-password-new"
-          type="password"
-          autocomplete="new-password"
-          required
-        />
-      </label>
+      <el-form-item :label="zhCN.password.oldPassword">
+        <div data-testid="change-password-old">
+          <el-input
+            v-model="oldPassword"
+            type="password"
+            show-password
+            autocomplete="current-password"
+            required
+          />
+        </div>
+      </el-form-item>
+      <el-form-item :label="zhCN.password.newPassword">
+        <div data-testid="change-password-new">
+          <el-input
+            v-model="newPassword"
+            type="password"
+            show-password
+            autocomplete="new-password"
+            required
+          />
+        </div>
+      </el-form-item>
       <p class="login-card__sub">{{ zhCN.common.passwordPolicy }}</p>
       <p v-if="errorMessage" class="login-error" data-testid="change-password-error" role="alert">
         {{ errorMessage }}
       </p>
-      <button class="login-submit" type="submit" data-testid="change-password-submit" :disabled="loading">
+      <el-button
+        class="login-submit"
+        type="primary"
+        native-type="submit"
+        data-testid="change-password-submit"
+        :loading="loading"
+        :disabled="loading"
+      >
         {{ zhCN.password.submit }}
-      </button>
-    </form>
+      </el-button>
+    </el-form>
   </main>
 </template>
 
@@ -88,9 +97,7 @@ async function submit(): Promise<void> {
   padding: 32px;
   border-radius: 12px;
   background: #fff;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
 }
 .login-card h1 {
   margin: 0;
@@ -100,34 +107,12 @@ async function submit(): Promise<void> {
   margin: 0 0 8px;
   color: #64748b;
 }
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #334155;
-}
-.login-field input {
-  height: 36px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0 10px;
-}
 .login-error {
-  margin: 0;
-  color: #b91c1c;
+  margin: 0 0 12px;
+  color: #f56c6c;
   font-size: 13px;
 }
 .login-submit {
-  height: 40px;
-  border: 0;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.login-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  width: 100%;
 }
 </style>

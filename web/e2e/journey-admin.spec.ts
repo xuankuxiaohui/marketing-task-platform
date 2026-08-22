@@ -29,14 +29,14 @@ test.describe("journey-admin", () => {
     const state = readE2EState();
     const password = state.adminPassword ?? env.MKT_INIT_ADMIN_PASSWORD;
     await page.goto("/login");
-    await page.getByTestId("login-username").fill("admin");
-    await page.getByTestId("login-password").fill(password);
+    await page.getByTestId("login-username").locator("input").fill("admin");
+    await page.getByTestId("login-password").locator("input").fill(password);
     await fillAdminCaptcha(page);
     await page.getByTestId("login-submit").click();
     await expect(page).toHaveURL(/\/(dashboard|change-password)/);
     if (/\/change-password/.test(page.url())) {
-      await page.getByTestId("change-password-old").fill(password);
-      await page.getByTestId("change-password-new").fill(unlockedAdminPassword(password));
+      await page.getByTestId("change-password-old").locator("input").fill(password);
+      await page.getByTestId("change-password-new").locator("input").fill(unlockedAdminPassword(password));
       await page.getByTestId("change-password-submit").click();
     }
     await expect(page).toHaveURL(/\/dashboard/);

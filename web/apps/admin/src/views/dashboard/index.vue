@@ -59,7 +59,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="dashboard-page" data-testid="dashboard-page">
+  <section class="admin-page dashboard-page" data-testid="dashboard-page">
     <h2>{{ zhCN.dashboard.title }}</h2>
     <p>{{ zhCN.dashboard.welcome }}{{ session.nickname ? `，${session.nickname}` : "" }}</p>
     <FeedbackBanner :feedback="feedback" />
@@ -78,7 +78,7 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-page {
-  padding: 8px;
+  /* page chrome comes from .admin-page */
 }
 .dashboard-cards {
   display: grid;
