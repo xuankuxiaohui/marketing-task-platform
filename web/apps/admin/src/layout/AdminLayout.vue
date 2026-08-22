@@ -1,15 +1,42 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import {
+  Calendar,
+  Coin,
+  DataLine,
+  Flag,
+  Monitor,
+  More,
+  Picture,
+  Present,
+  Setting,
+  Ticket,
+  Warning,
+} from "@element-plus/icons-vue";
+import { computed, nextTick, ref, watch, type Component } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { AdminMenuNode } from "@/api/auth";
 import { zhCN } from "@/locales/zh-CN";
-import { DASHBOARD_ROUTE, groupSidebarMenus } from "@/router/dynamic";
+import { DASHBOARD_ROUTE, groupSidebarMenus, type SidebarGroupKey } from "@/router/dynamic";
 import { logoutAndReset } from "@/router/session";
 import { usePermissionStore } from "@/store/permission";
 import { useSessionStore } from "@/store/session";
 import { useTagsStore } from "@/store/tags";
 
 defineOptions({ name: "AdminLayout" });
+
+const GROUP_ICONS: Record<SidebarGroupKey, Component> = {
+  dashboard: Monitor,
+  system: Setting,
+  task: Flag,
+  reward: Present,
+  points: Coin,
+  risk: Warning,
+  track: DataLine,
+  signin: Calendar,
+  activity: Ticket,
+  ad: Picture,
+  other: More,
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -84,14 +111,28 @@ function onTagContext(path: string, event: MouseEvent): void {
 <template>
   <div class="admin-layout">
     <aside class="admin-layout__aside" data-testid="admin-sidebar">
-      <div class="admin-layout__brand">{{ zhCN.appTitle }}</div>
-      <el-menu :default-active="activePath" router background-color="#0f172a" text-color="#cbd5e1" active-text-color="#fff">
+      <div class="admin-layout__brand">
+        <div class="admin-layout__brand-title">{{ zhCN.appTitle }}</div>
+        <div class="admin-layout__brand-sub">{{ zhCN.consoleSubtitle }}</div>
+      </div>
+      <el-menu
+        :default-active="activePath"
+        router
+        background-color="var(--admin-aside)"
+        text-color="#cbd5e1"
+        active-text-color="#fff"
+      >
         <el-menu-item-group
           v-for="(group, index) in menuGroups"
           :key="group.key"
-          :title="group.title"
           :class="{ 'admin-layout__group--divided': index > 0 }"
         >
+          <template #title>
+            <span class="admin-layout__group-title">
+              <el-icon><component :is="GROUP_ICONS[group.key]" /></el-icon>
+              {{ group.title }}
+            </span>
+          </template>
           <el-menu-item v-for="item in group.items" :key="item.id" :index="menuIndex(item)">
             {{ item.name }}
           </el-menu-item>
@@ -130,7 +171,7 @@ function onTagContext(path: string, event: MouseEvent): void {
         </div>
         <div class="admin-layout__user">
           <span>{{ session.nickname || session.username }}</span>
-          <el-button data-testid="logout-button" @click="onLogout">{{ zhCN.layout.logout }}</el-button>
+          <el-button text data-testid="logout-button" @click="onLogout">{{ zhCN.layout.logout }}</el-button>
         </div>
       </header>
       <main ref="contentEl" class="admin-layout__content" data-testid="admin-content">
@@ -147,9 +188,9 @@ function onTagContext(path: string, event: MouseEvent): void {
   overflow: hidden;
 }
 .admin-layout__aside {
-  width: 220px;
+  width: 232px;
   height: 100vh;
-  background: #0f172a;
+  background: var(--admin-aside);
   color: #e2e8f0;
   display: flex;
   flex-direction: column;
@@ -158,9 +199,19 @@ function onTagContext(path: string, event: MouseEvent): void {
 }
 .admin-layout__brand {
   flex-shrink: 0;
-  padding: 16px;
-  font-weight: 600;
+  padding: 12px 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+.admin-layout__brand-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+}
+.admin-layout__brand-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #94a3b8;
 }
 .admin-layout__empty {
   padding: 16px;
@@ -173,35 +224,56 @@ function onTagContext(path: string, event: MouseEvent): void {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f1f5f9;
+  background: var(--admin-page-bg);
 }
 .admin-layout__header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
   gap: 12px;
-  padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  height: var(--admin-header);
+  min-height: var(--admin-header);
+  max-height: var(--admin-header);
+  padding: 0 16px;
+  background: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border);
+  overflow: hidden;
 }
 .admin-layout__tags {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .admin-tag-wrap {
   position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
 }
 .admin-tag {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  border-radius: 4px;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0 14px;
+  white-space: nowrap;
   cursor: pointer;
+  color: var(--admin-muted);
+  border-bottom: 2px solid transparent;
 }
 .admin-tag--active {
-  border-color: var(--el-color-primary);
   color: var(--el-color-primary);
+  border-bottom-color: var(--el-color-primary);
+  font-weight: 500;
 }
 .admin-tag__close {
   margin-left: 6px;
@@ -216,33 +288,51 @@ function onTagContext(path: string, event: MouseEvent): void {
   align-items: stretch;
   min-width: 128px;
   padding: 4px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.12);
 }
 .admin-layout__user {
   display: flex;
-  gap: 12px;
+  flex-shrink: 0;
+  gap: 8px;
   align-items: center;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--admin-ink);
 }
 .admin-layout__content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px 24px;
+  background: var(--admin-page-bg);
 }
 .admin-layout__aside :deep(.el-menu) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   border-right: none;
-  background-color: #0f172a;
+  background-color: var(--admin-aside);
 }
 .admin-layout__aside :deep(.el-menu-item-group__title) {
   color: #94a3b8;
   font-size: 12px;
   padding: 12px 20px 6px;
+}
+.admin-layout__group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.admin-layout__aside :deep(.el-menu-item) {
+  border-left: 3px solid transparent;
+}
+.admin-layout__aside :deep(.el-menu-item.is-active) {
+  background-color: var(--admin-aside-active) !important;
+  border-left-color: var(--el-color-primary);
+  color: #fff !important;
 }
 .admin-layout__aside :deep(.admin-layout__group--divided) {
   border-top: 1px solid rgba(148, 163, 184, 0.22);

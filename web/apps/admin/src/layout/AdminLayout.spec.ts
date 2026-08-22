@@ -100,6 +100,7 @@ describe("AdminLayout tags", () => {
       { id: 90, name: "运营看板", route: "/metrics", component: "metrics/index", sort: 4, icon: undefined, children: [] },
     ]);
     await flushPromises();
+    expect(wrapper.get(".admin-layout__brand").text()).toContain(zhCN.consoleSubtitle);
     expect(wrapper.text()).toContain(zhCN.menuGroup.dashboard);
     expect(wrapper.text()).toContain(zhCN.menuGroup.system);
     expect(wrapper.text()).toContain(zhCN.menuGroup.other);

@@ -43,6 +43,10 @@ const editing = ref<TaskDefinitionView | null>(null);
 const copyForm = reactive({ code: "", name: "" });
 const scheduleAt = ref("");
 
+function isLiveStatus(status: string | undefined): boolean {
+  return status === DEFINITION_STATUS.PUBLISHED || status === DEFINITION_STATUS.SCHEDULED;
+}
+
 async function load(): Promise<void> {
   loading.value = true;
   feedback.value = null;
@@ -62,6 +66,15 @@ async function load(): Promise<void> {
   }
   records.value = parsed.data?.records ?? [];
   total.value = parsed.data?.total ?? 0;
+}
+
+async function resetFilters(): Promise<void> {
+  filters.code = "";
+  filters.name = "";
+  filters.status = "";
+  filters.category = "";
+  page.value = 1;
+  await load();
 }
 
 async function loadFailures(): Promise<void> {
@@ -229,7 +242,12 @@ onMounted(async () => {
 
 <template>
   <section class="admin-page" data-testid="task-definition-page">
-    <h2>{{ zhCN.task.title }}</h2>
+    <div class="admin-page__header">
+      <h2>{{ zhCN.task.title }}</h2>
+      <el-button v-auth="PERMS.TASK_DEF_CREATE" type="primary" data-testid="task-create" @click="goCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
     <el-form :inline="true" class="admin-toolbar" @submit.prevent>
       <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.task.code" />
       <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.task.name" />
@@ -239,14 +257,17 @@ onMounted(async () => {
       </el-select>
       <el-input v-model="filters.category" data-testid="filter-category" :placeholder="zhCN.task.category" />
       <el-button data-testid="task-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.TASK_DEF_CREATE" data-testid="task-create" @click="goCreate">
-        {{ zhCN.common.create }}
-      </el-button>
+      <el-button data-testid="task-reset" @click="resetFilters">{{ zhCN.common.reset }}</el-button>
     </el-form>
     <FeedbackBanner :feedback="feedback" />
     <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <p v-else-if="records.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="records" class="data-table" data-testid="task-table" stripe>
+    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
+      <span>{{ zhCN.common.empty }}</span>
+      <el-button v-auth="PERMS.TASK_DEF_CREATE" text type="primary" @click="goCreate">
+        {{ zhCN.common.create }}
+      </el-button>
+    </div>
+    <el-table v-else :data="records" class="data-table task-table" data-testid="task-table" size="small" stripe>
       <el-table-column :label="zhCN.task.code">
         <template #default="{ row }">{{ row.code }}</template>
       </el-table-column>
@@ -254,7 +275,11 @@ onMounted(async () => {
         <template #default="{ row }">{{ row.name }}</template>
       </el-table-column>
       <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.status }}</template>
+        <template #default="{ row }">
+          <el-tag size="small" :type="isLiveStatus(row.status) ? 'success' : 'info'" :class="{ 'status-tag--live': isLiveStatus(row.status) }">
+            {{ row.status }}
+          </el-tag>
+        </template>
       </el-table-column>
       <el-table-column :label="zhCN.task.version">
         <template #default="{ row }">{{ row.version }}</template>
@@ -262,16 +287,17 @@ onMounted(async () => {
       <el-table-column :label="zhCN.common.actions" min-width="240">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-edit" @click="goEdit(row)">
+            <el-button text v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-edit" @click="goEdit(row)">
               {{ zhCN.common.edit }}
             </el-button>
-            <el-button v-auth="PERMS.TASK_DEF_QUERY" data-testid="task-versions" @click="goVersions(row)">
+            <el-button text v-auth="PERMS.TASK_DEF_QUERY" data-testid="task-versions" @click="goVersions(row)">
               {{ zhCN.task.versionTitle }}
             </el-button>
-            <el-button v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish(row)">
+            <el-button text v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish(row)">
               {{ zhCN.task.publish }}
             </el-button>
             <el-button
+              text
               v-if="row.status === DEFINITION_STATUS.SCHEDULED"
               v-auth="PERMS.TASK_DEF_PUBLISH"
               data-testid="task-publish-early"
@@ -280,6 +306,7 @@ onMounted(async () => {
               {{ zhCN.task.publishEarly }}
             </el-button>
             <el-button
+              text
               v-if="row.status === DEFINITION_STATUS.DRAFT"
               v-auth="PERMS.TASK_DEF_SCHEDULE"
               data-testid="task-schedule"
@@ -288,6 +315,7 @@ onMounted(async () => {
               {{ zhCN.task.schedule }}
             </el-button>
             <el-button
+              text
               v-if="row.status === DEFINITION_STATUS.SCHEDULED"
               v-auth="PERMS.TASK_DEF_SCHEDULE"
               data-testid="task-cancel-schedule"
@@ -296,6 +324,7 @@ onMounted(async () => {
               {{ zhCN.task.cancelSchedule }}
             </el-button>
             <el-button
+              text
               v-if="row.status === DEFINITION_STATUS.PUBLISHED"
               v-auth="PERMS.TASK_DEF_OFFLINE"
               data-testid="task-offline"
@@ -303,10 +332,11 @@ onMounted(async () => {
             >
               {{ zhCN.task.offline }}
             </el-button>
-            <el-button v-auth="PERMS.TASK_DEF_COPY" data-testid="task-copy" @click="openCopy(row)">
+            <el-button text v-auth="PERMS.TASK_DEF_COPY" data-testid="task-copy" @click="openCopy(row)">
               {{ zhCN.task.copy }}
             </el-button>
             <el-button
+              text
               v-if="row.status === DEFINITION_STATUS.DRAFT"
               v-auth="PERMS.TASK_DEF_DELETE"
               data-testid="task-delete"
@@ -364,3 +394,41 @@ onMounted(async () => {
     />
   </section>
 </template>
+
+<style scoped>
+.admin-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.page-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+.task-table :deep(.el-table__header th.el-table__cell) {
+  background: #f6f1e7;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--admin-ink);
+}
+.task-table :deep(.el-table__row) {
+  height: var(--admin-row);
+}
+.task-table :deep(.el-table td.el-table__cell),
+.task-table :deep(.el-table th.el-table__cell) {
+  border-right: none;
+}
+.task-table :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: #faf7f0;
+}
+.status-tag--live {
+  --el-tag-bg-color: #ccfbf1;
+  --el-tag-border-color: #99f6e4;
+  --el-tag-text-color: #0f766e;
+}
+</style>

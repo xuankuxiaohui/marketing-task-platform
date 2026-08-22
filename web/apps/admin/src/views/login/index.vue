@@ -76,61 +76,66 @@ onMounted(() => {
 
 <template>
   <main class="login-page">
-    <el-form class="login-card" label-position="top" @submit.prevent="submit">
+    <aside class="login-brand">
       <h1>{{ zhCN.appTitle }}</h1>
-      <p class="login-card__sub">{{ zhCN.login.title }}</p>
-      <el-form-item :label="zhCN.login.username">
-        <div data-testid="login-username">
-          <el-input v-model="username" name="username" autocomplete="username" required />
-        </div>
-      </el-form-item>
-      <el-form-item :label="zhCN.login.password">
-        <div data-testid="login-password">
-          <el-input
-            v-model="password"
-            name="password"
-            type="password"
-            show-password
-            autocomplete="current-password"
-            required
-          />
-        </div>
-      </el-form-item>
-      <div class="login-captcha">
-        <el-form-item :label="zhCN.login.captcha" class="login-field--grow">
-          <div data-testid="login-captcha">
-            <el-input v-model="captchaCode" name="captchaCode" autocomplete="off" required />
+      <p class="login-brand__sub">{{ zhCN.consoleSubtitle }}</p>
+    </aside>
+    <section class="login-panel">
+      <el-form class="login-card" label-position="top" @submit.prevent="submit">
+        <h2>{{ zhCN.login.title }}</h2>
+        <el-form-item :label="zhCN.login.username">
+          <div data-testid="login-username">
+            <el-input v-model="username" name="username" autocomplete="username" required />
           </div>
         </el-form-item>
-        <button
-          class="login-captcha__image"
-          type="button"
-          data-testid="login-captcha-refresh"
-          :aria-label="zhCN.login.captchaAlt"
-          @click="refreshCaptcha"
+        <el-form-item :label="zhCN.login.password">
+          <div data-testid="login-password">
+            <el-input
+              v-model="password"
+              name="password"
+              type="password"
+              show-password
+              autocomplete="current-password"
+              required
+            />
+          </div>
+        </el-form-item>
+        <div class="login-captcha">
+          <el-form-item :label="zhCN.login.captcha" class="login-field--grow">
+            <div data-testid="login-captcha">
+              <el-input v-model="captchaCode" name="captchaCode" autocomplete="off" required />
+            </div>
+          </el-form-item>
+          <button
+            class="login-captcha__image"
+            type="button"
+            data-testid="login-captcha-refresh"
+            :aria-label="zhCN.login.captchaAlt"
+            @click="refreshCaptcha"
+          >
+            <img
+              v-if="captchaImage"
+              data-testid="login-captcha-image"
+              :src="captchaImage"
+              :alt="zhCN.login.captchaAlt"
+            />
+          </button>
+        </div>
+        <p v-if="errorMessage" class="login-error" data-testid="login-error" role="alert">
+          {{ errorMessage }}
+        </p>
+        <el-button
+          class="login-submit"
+          type="primary"
+          native-type="submit"
+          data-testid="login-submit"
+          :loading="loading"
+          :disabled="loading"
         >
-          <img
-            v-if="captchaImage"
-            data-testid="login-captcha-image"
-            :src="captchaImage"
-            :alt="zhCN.login.captchaAlt"
-          />
-        </button>
-      </div>
-      <p v-if="errorMessage" class="login-error" data-testid="login-error" role="alert">
-        {{ errorMessage }}
-      </p>
-      <el-button
-        class="login-submit"
-        type="primary"
-        native-type="submit"
-        data-testid="login-submit"
-        :loading="loading"
-        :disabled="loading"
-      >
-        {{ zhCN.login.submit }}
-      </el-button>
-    </el-form>
+          {{ zhCN.login.submit }}
+        </el-button>
+      </el-form>
+    </section>
   </main>
 </template>
 
@@ -138,24 +143,45 @@ onMounted(() => {
 .login-page {
   min-height: 100vh;
   display: flex;
+}
+.login-brand {
+  width: 44%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--admin-aside);
+  color: #fff;
+}
+.login-brand h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+.login-brand__sub {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.login-panel {
+  width: 56%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f172a;
+  background: var(--admin-page-bg);
 }
 .login-card {
-  width: 360px;
-  padding: 32px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+  width: 380px;
+  max-width: 100%;
 }
-.login-card h1 {
-  margin: 0;
-  font-size: 22px;
+.login-card h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--admin-ink);
 }
-.login-card__sub {
-  margin: 0 0 8px;
-  color: #64748b;
+.login-card :deep(.el-input__wrapper) {
+  min-height: 40px;
 }
 .login-captcha {
   display: flex;
@@ -168,11 +194,11 @@ onMounted(() => {
 }
 .login-captcha__image {
   width: 120px;
-  height: 56px;
+  height: 40px;
   padding: 0;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  background: #f8fafc;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface);
   cursor: pointer;
 }
 .login-captcha__image img {
@@ -187,5 +213,6 @@ onMounted(() => {
 }
 .login-submit {
   width: 100%;
+  height: 40px;
 }
 </style>

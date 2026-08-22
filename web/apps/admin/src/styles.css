@@ -1,10 +1,22 @@
 :root {
-  --el-color-primary: #2563eb;
-  --admin-surface: #fff;
-  --admin-page-bg: #f1f5f9;
-  --admin-card-radius: 8px;
-  --admin-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-  --admin-border: #e2e8f0;
+  --el-color-primary: #0f766e;
+  --el-color-primary-light-3: #3d9a93;
+  --el-color-primary-light-5: #6bb3ad;
+  --el-color-primary-light-7: #9eccc8;
+  --el-color-primary-light-8: #b7d9d6;
+  --el-color-primary-light-9: #e7f4f3;
+  --el-color-primary-dark-2: #0c5e58;
+  --admin-ink: #111827;
+  --admin-aside: #0b1220;
+  --admin-aside-active: #134e4a;
+  --admin-page-bg: #f3efe6;
+  --admin-surface: #fffdf8;
+  --admin-border: #e4ddd0;
+  --admin-row: 40px;
+  --admin-header: 48px;
+  --admin-muted: #6b6256;
+  --admin-card-radius: 10px;
+  --admin-card-shadow: 0 1px 3px rgba(17, 24, 39, 0.08);
 }
 
 html,
@@ -13,6 +25,8 @@ body,
   margin: 0;
   min-height: 100%;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--admin-ink);
+  font-size: 13px;
 }
 
 button,
@@ -30,12 +44,14 @@ textarea {
   border-radius: var(--admin-card-radius);
   background: var(--admin-surface);
   box-shadow: var(--admin-card-shadow);
+  color: var(--admin-ink);
+  font-size: 13px;
 }
 .admin-page h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--admin-ink);
 }
 .admin-toolbar {
   display: flex;
@@ -46,7 +62,7 @@ textarea {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
+  background: var(--admin-surface);
 }
 .data-table th,
 .data-table td {
@@ -68,17 +84,18 @@ textarea {
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  color: #334155;
+  color: var(--admin-ink);
 }
 .hint {
-  color: #64748b;
-  font-size: 13px;
+  color: var(--admin-muted);
+  font-size: 12px;
 }
 .pager {
   display: flex;
   gap: 8px;
   align-items: center;
   font-size: 13px;
+  color: var(--admin-muted);
 }
 .task-canvas {
   height: 420px;
