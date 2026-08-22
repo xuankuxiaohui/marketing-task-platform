@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ok } from "@/test-utils/result";
+import { fail, ok } from "@/test-utils/result";
 
 vi.mock("@/api/ad", () => ({
   fetchAdPosition: vi.fn(),
@@ -55,6 +55,19 @@ describe("AdFloat", () => {
     await wrapper.get('[data-testid="ad-float-close"]').trigger("click");
     await flushPromises();
     expect(dismissMock).toHaveBeenCalledWith(8, "home_float");
+    expect(wrapper.find('[data-testid="ad-float"]').exists()).toBe(false);
+  });
+
+  it("renders nothing when the float slot is missing", async () => {
+    adMock.mockResolvedValue(fail("ad.position.not-found", "广告位不存在"));
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/", component: { template: "<div />" } }],
+    });
+    await router.push("/");
+    await router.isReady();
+    const wrapper = mount(AdFloat, { global: { plugins: [router] } });
+    await flushPromises();
     expect(wrapper.find('[data-testid="ad-float"]').exists()).toBe(false);
   });
 });

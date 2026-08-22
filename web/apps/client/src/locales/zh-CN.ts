@@ -94,8 +94,10 @@ export const zhCN = {
     balance: "当前积分",
   },
   home: {
-    title: "任务",
-    empty: "暂无任务",
+    title: "活动中心",
+    empty: "暂无进行中的活动",
+    signin: "每日签到",
+    signinHint: "每日签到送积分",
   },
   ad: {
     skip: "跳过",
@@ -142,6 +144,7 @@ export const zhCN = {
     reversal: "冲正",
   },
   task: {
+    title: "任务",
     all: "全部",
     claim: "领取",
     continue: "继续",

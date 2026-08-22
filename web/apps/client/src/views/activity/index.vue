@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, NavBar, showFailToast, showSuccessToast } from "vant";
 import { isFail, isOk } from "@mkt/shared";
-import { fetchActivities, fetchActivityDetail, postParticipate, type PortalActivityDetailView } from "@/api/activity";
+import {
+  fetchActivities,
+  fetchActivityDetail,
+  postParticipate,
+  type PortalActivityDetailView,
+  type SubmoduleView,
+} from "@/api/activity";
+import { fetchTaskList, type TaskCardView } from "@/api/task";
+import TaskCard from "@/components/TaskCard.vue";
+import TaskCompleteSheet from "@/components/TaskCompleteSheet.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 
 defineOptions({ name: "ActivityPage" });
 
@@ -13,6 +23,10 @@ const router = useRouter();
 const loading = ref(false);
 const detail = ref<PortalActivityDetailView | null>(null);
 const result = ref<string | null>(null);
+const tasks = ref<TaskCardView[]>([]);
+const hasSignin = ref(false);
+const sheetOpen = ref(false);
+const sheetTaskId = ref<number | null>(null);
 
 const activityId = computed(() => {
   const raw = route.query.id;
@@ -21,6 +35,43 @@ const activityId = computed(() => {
   }
   return null;
 });
+
+function sortedSubmodules(rows: SubmoduleView[] | undefined): SubmoduleView[] {
+  return [...(rows ?? [])].sort((a, b) => a.sort - b.sort);
+}
+
+async function loadBoundTasks(submodules: SubmoduleView[]): Promise<void> {
+  const orderedIds = sortedSubmodules(submodules)
+    .filter((item) => item.type === "TASK")
+    .map((item) => item.refId);
+  hasSignin.value = sortedSubmodules(submodules).some((item) => item.type === "SIGNIN");
+  if (orderedIds.length === 0) {
+    tasks.value = [];
+    return;
+  }
+  const wanted = new Set(orderedIds);
+  const found = new Map<number, TaskCardView>();
+  let page = 1;
+  while (found.size < wanted.size && page <= 20) {
+    const list = await fetchTaskList({ page, pageSize: 50 });
+    if (!isOk(list) || !list.data) {
+      showPortalFail(list);
+      break;
+    }
+    for (const card of list.data.records ?? []) {
+      if (card.taskId != null && wanted.has(card.taskId)) {
+        found.set(card.taskId, card);
+      }
+    }
+    const total = Number(list.data.total ?? 0);
+    const records = list.data.records ?? [];
+    if (records.length === 0 || page * 50 >= total) {
+      break;
+    }
+    page += 1;
+  }
+  tasks.value = orderedIds.map((id) => found.get(id)).filter((card): card is TaskCardView => card != null);
+}
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -34,28 +85,40 @@ async function load(): Promise<void> {
     }
     if (id == null || !Number.isFinite(id)) {
       detail.value = null;
+      tasks.value = [];
+      hasSignin.value = false;
       return;
     }
     const response = await fetchActivityDetail(id);
     if (isFail(response)) {
       showFailToast(response.message);
       detail.value = null;
+      tasks.value = [];
+      hasSignin.value = false;
       return;
     }
     detail.value = response.data ?? null;
+    await loadBoundTasks(detail.value?.submodules ?? []);
+  } catch {
+    showNetworkFail();
+    detail.value = null;
+    tasks.value = [];
+    hasSignin.value = false;
   } finally {
     loading.value = false;
   }
 }
 
-function submodulePath(type: string, refId: number): string {
-  if (type === "TASK") {
-    return `/task/${refId}`;
+function openTaskSheet(task: TaskCardView): void {
+  if (task.taskId == null) {
+    return;
   }
-  if (type === "SIGNIN") {
-    return "/signin";
-  }
-  return "/mine/prizes";
+  sheetTaskId.value = task.taskId;
+  sheetOpen.value = true;
+}
+
+function openSignin(): void {
+  void router.push("/signin");
 }
 
 async function onParticipate(): Promise<void> {
@@ -75,8 +138,18 @@ async function onParticipate(): Promise<void> {
   }
 }
 
-onMounted(() => {
-  void load();
+watch(
+  activityId,
+  () => {
+    void load();
+  },
+  { immediate: true },
+);
+
+watch(sheetOpen, (open, wasOpen) => {
+  if (wasOpen && !open) {
+    void loadBoundTasks(detail.value?.submodules ?? []);
+  }
 });
 </script>
 
@@ -89,18 +162,32 @@ onMounted(() => {
       <!-- richText is server-sanitized (R22); do not bind unsanitized HTML -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="activity-html" data-testid="activity-html" v-html="detail.richText" />
-      <ul v-if="detail.submodules.length" data-testid="activity-submodules">
-        <li v-for="item in detail.submodules" :key="`${item.type}-${item.refId}`">
-          <button type="button" @click="router.push(submodulePath(item.type, item.refId))">
-            {{ item.type }} #{{ item.refId }}
-          </button>
-        </li>
-      </ul>
+      <div v-if="hasSignin || tasks.length" data-testid="activity-submodules">
+        <article
+          v-if="hasSignin"
+          class="hub-card"
+          data-testid="activity-signin-card"
+          role="button"
+          tabindex="0"
+          @click="openSignin"
+        >
+          <strong>{{ zhCN.home.signin }}</strong>
+          <span>{{ zhCN.home.signinHint }}</span>
+        </article>
+        <TaskCard
+          v-for="task in tasks"
+          :key="task.taskId"
+          :task="task"
+          @open="openTaskSheet(task)"
+          @action="openTaskSheet(task)"
+        />
+      </div>
       <p v-if="result" data-testid="activity-result">{{ result }}</p>
       <Button type="primary" block data-testid="activity-join" @click="onParticipate">
         {{ zhCN.activity.join }}
       </Button>
     </div>
+    <TaskCompleteSheet v-model:show="sheetOpen" :task-id="sheetTaskId" />
   </section>
 </template>
 
@@ -109,5 +196,22 @@ onMounted(() => {
   padding: 12px 16px;
   font-size: 14px;
   line-height: 1.6;
+}
+.hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+}
+.hub-card strong {
+  font-size: 15px;
+}
+.hub-card span {
+  color: #646566;
+  font-size: 13px;
 }
 </style>
