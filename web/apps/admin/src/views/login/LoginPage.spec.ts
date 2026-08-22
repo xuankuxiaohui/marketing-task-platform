@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,6 +50,17 @@ async function mountLogin(query: Record<string, string> = {}) {
   return { wrapper, router };
 }
 
+
+async function setTestidInput(wrapper: VueWrapper, testid: string, value: string): Promise<void> {
+  const root = wrapper.get(`[data-testid="${testid}"]`);
+  const inner = root.find("input");
+  if (inner.exists()) {
+    await inner.setValue(value);
+    return;
+  }
+  await root.setValue(value);
+}
+
 describe("LoginPage", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -80,9 +91,9 @@ describe("LoginPage", () => {
       }),
     );
     const { wrapper, router } = await mountLogin();
-    await wrapper.get('[data-testid="login-username"]').setValue("admin");
-    await wrapper.get('[data-testid="login-password"]').setValue("Admin123!x");
-    await wrapper.get('[data-testid="login-captcha"]').setValue("ab12");
+    await setTestidInput(wrapper, "login-username", "admin");
+    await setTestidInput(wrapper, "login-password", "Admin123!x");
+    await setTestidInput(wrapper, "login-captcha", "ab12");
     await wrapper.get("form").trigger("submit.prevent");
     await flushPromises();
     expect(loginMock).toHaveBeenCalledWith({
@@ -106,9 +117,9 @@ describe("LoginPage", () => {
       }),
     );
     const { wrapper, router } = await mountLogin();
-    await wrapper.get('[data-testid="login-username"]').setValue("admin");
-    await wrapper.get('[data-testid="login-password"]').setValue("Admin123!x");
-    await wrapper.get('[data-testid="login-captcha"]').setValue("ab12");
+    await setTestidInput(wrapper, "login-username", "admin");
+    await setTestidInput(wrapper, "login-password", "Admin123!x");
+    await setTestidInput(wrapper, "login-captcha", "ab12");
     await wrapper.get("form").trigger("submit.prevent");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/change-password");
@@ -120,9 +131,9 @@ describe("LoginPage", () => {
       .mockResolvedValueOnce(ok<CaptchaData>({ captchaId: "cid-1", imageBase64: "data:image/png;base64,xx" }))
       .mockResolvedValueOnce(ok<CaptchaData>({ captchaId: "cid-2", imageBase64: "data:image/png;base64,yy" }));
     const { wrapper } = await mountLogin();
-    await wrapper.get('[data-testid="login-username"]').setValue("admin");
-    await wrapper.get('[data-testid="login-password"]').setValue("Admin123!x");
-    await wrapper.get('[data-testid="login-captcha"]').setValue("bad");
+    await setTestidInput(wrapper, "login-username", "admin");
+    await setTestidInput(wrapper, "login-password", "Admin123!x");
+    await setTestidInput(wrapper, "login-captcha", "bad");
     await wrapper.get("form").trigger("submit.prevent");
     await flushPromises();
     expect(wrapper.get('[data-testid="login-error"]').text()).toBe("验证码错误");
@@ -137,9 +148,9 @@ describe("LoginPage", () => {
       fail("auth.login.invalid-credential", "用户名或密码错误") as Result<AdminLoginData>,
     );
     const { wrapper } = await mountLogin();
-    await wrapper.get('[data-testid="login-username"]').setValue("admin");
-    await wrapper.get('[data-testid="login-password"]').setValue("wrong");
-    await wrapper.get('[data-testid="login-captcha"]').setValue("ab12");
+    await setTestidInput(wrapper, "login-username", "admin");
+    await setTestidInput(wrapper, "login-password", "wrong");
+    await setTestidInput(wrapper, "login-captcha", "ab12");
     await wrapper.get("form").trigger("submit.prevent");
     await flushPromises();
     expect(wrapper.get('[data-testid="login-error"]').text()).toBe("用户名或密码错误");

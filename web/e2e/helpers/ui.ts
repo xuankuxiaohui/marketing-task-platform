@@ -57,7 +57,7 @@ export async function fillPortalCaptcha(page: Page): Promise<void> {
 
 export async function fillAdminCaptcha(page: Page): Promise<void> {
   const code = await fillCaptchaFromRefresh(page, "/admin/captcha", "admin");
-  await page.getByTestId("login-captcha").fill(code);
+  await page.getByTestId("login-captcha").locator("input").fill(code);
 }
 
 /**

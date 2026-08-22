@@ -76,41 +76,39 @@ onMounted(() => {
 
 <template>
   <main class="login-page">
-    <form class="login-card" @submit.prevent="submit">
+    <el-form class="login-card" label-position="top" @submit.prevent="submit">
       <h1>{{ zhCN.appTitle }}</h1>
       <p class="login-card__sub">{{ zhCN.login.title }}</p>
-      <label class="login-field">
-        <span>{{ zhCN.login.username }}</span>
-        <input
+      <el-form-item :label="zhCN.login.username">
+        <el-input
           v-model="username"
           data-testid="login-username"
           name="username"
           autocomplete="username"
           required
         />
-      </label>
-      <label class="login-field">
-        <span>{{ zhCN.login.password }}</span>
-        <input
+      </el-form-item>
+      <el-form-item :label="zhCN.login.password">
+        <el-input
           v-model="password"
           data-testid="login-password"
           name="password"
           type="password"
+          show-password
           autocomplete="current-password"
           required
         />
-      </label>
+      </el-form-item>
       <div class="login-captcha">
-        <label class="login-field login-field--grow">
-          <span>{{ zhCN.login.captcha }}</span>
-          <input
+        <el-form-item :label="zhCN.login.captcha" class="login-field--grow">
+          <el-input
             v-model="captchaCode"
             data-testid="login-captcha"
             name="captchaCode"
             autocomplete="off"
             required
           />
-        </label>
+        </el-form-item>
         <button
           class="login-captcha__image"
           type="button"
@@ -129,10 +127,17 @@ onMounted(() => {
       <p v-if="errorMessage" class="login-error" data-testid="login-error" role="alert">
         {{ errorMessage }}
       </p>
-      <button class="login-submit" type="submit" data-testid="login-submit" :disabled="loading">
+      <el-button
+        class="login-submit"
+        type="primary"
+        native-type="submit"
+        data-testid="login-submit"
+        :loading="loading"
+        :disabled="loading"
+      >
         {{ zhCN.login.submit }}
-      </button>
-    </form>
+      </el-button>
+    </el-form>
   </main>
 </template>
 
@@ -149,9 +154,7 @@ onMounted(() => {
   padding: 32px;
   border-radius: 12px;
   background: #fff;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
 }
 .login-card h1 {
   margin: 0;
@@ -161,19 +164,6 @@ onMounted(() => {
   margin: 0 0 8px;
   color: #64748b;
 }
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #334155;
-}
-.login-field input {
-  height: 36px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0 10px;
-}
 .login-captcha {
   display: flex;
   gap: 8px;
@@ -181,12 +171,14 @@ onMounted(() => {
 }
 .login-field--grow {
   flex: 1;
+  margin-bottom: 0;
 }
 .login-captcha__image {
   width: 120px;
   height: 56px;
   padding: 0;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
   background: #f8fafc;
   cursor: pointer;
 }
@@ -196,19 +188,11 @@ onMounted(() => {
   object-fit: contain;
 }
 .login-error {
-  margin: 0;
-  color: #b91c1c;
+  margin: 0 0 12px;
+  color: #f56c6c;
   font-size: 13px;
 }
 .login-submit {
-  height: 40px;
-  border: 0;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.login-submit:disabled {
-  opacity: 0.6;
+  width: 100%;
 }
 </style>

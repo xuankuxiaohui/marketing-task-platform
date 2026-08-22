@@ -1,5 +1,6 @@
 import type { NavigationGuard, RouteRecordRaw } from "vue-router";
 import type { AdminMenuNode } from "@/api/auth";
+import { zhCN } from "@/locales/zh-CN";
 import ComingSoonPage from "@/views/placeholder/ComingSoonPage.vue";
 
 const viewModules = import.meta.glob("../views/**/*.vue");
@@ -48,6 +49,63 @@ const redirectLiteralParams: NavigationGuard = (to) => {
 
 export function sidebarMenus(nodes: AdminMenuNode[]): AdminMenuNode[] {
   return nodes.filter((node) => !isLoginMenu(node) && !isParamRoute(node.route));
+}
+
+export const SIDEBAR_GROUP_KEYS = [
+  "dashboard",
+  "system",
+  "task",
+  "reward",
+  "points",
+  "risk",
+  "track",
+  "signin",
+  "activity",
+  "ad",
+  "other",
+] as const;
+
+export type SidebarGroupKey = (typeof SIDEBAR_GROUP_KEYS)[number];
+
+export type SidebarMenuGroup = {
+  key: SidebarGroupKey;
+  title: string;
+  items: AdminMenuNode[];
+};
+
+const PREFIX_TO_GROUP: Record<string, SidebarGroupKey> = {
+  dashboard: "dashboard",
+  system: "system",
+  task: "task",
+  reward: "reward",
+  points: "points",
+  risk: "risk",
+  track: "track",
+  signin: "signin",
+  activity: "activity",
+  ad: "ad",
+};
+
+export function sidebarGroupKey(route: string | undefined | null): SidebarGroupKey {
+  const prefix = (route ?? "").split("/").filter(Boolean)[0] ?? "";
+  return PREFIX_TO_GROUP[prefix] ?? "other";
+}
+
+/** Group sidebar items by first path segment. Login and `:id` menus stay hidden (#78). */
+export function groupSidebarMenus(nodes: AdminMenuNode[]): SidebarMenuGroup[] {
+  const visible = sidebarMenus(nodes);
+  const buckets = new Map<SidebarGroupKey, AdminMenuNode[]>();
+  for (const key of SIDEBAR_GROUP_KEYS) {
+    buckets.set(key, []);
+  }
+  for (const node of visible) {
+    buckets.get(sidebarGroupKey(node.route))!.push(node);
+  }
+  return SIDEBAR_GROUP_KEYS.filter((key) => (buckets.get(key)?.length ?? 0) > 0).map((key) => ({
+    key,
+    title: zhCN.menuGroup[key],
+    items: buckets.get(key)!,
+  }));
 }
 
 export function menusToRoutes(nodes: AdminMenuNode[]): RouteRecordRaw[] {

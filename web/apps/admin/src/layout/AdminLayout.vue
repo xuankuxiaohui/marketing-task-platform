@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { AdminMenuNode } from "@/api/auth";
 import { zhCN } from "@/locales/zh-CN";
-import { DASHBOARD_ROUTE } from "@/router/dynamic";
+import { DASHBOARD_ROUTE, groupSidebarMenus } from "@/router/dynamic";
 import { logoutAndReset } from "@/router/session";
 import { usePermissionStore } from "@/store/permission";
 import { useSessionStore } from "@/store/session";
@@ -18,6 +18,7 @@ const session = useSessionStore();
 const tags = useTagsStore();
 
 const activePath = computed(() => route.path);
+const menuGroups = computed(() => groupSidebarMenus(permission.menus));
 const menuPath = ref<string | null>(null);
 
 function menuIndex(node: AdminMenuNode): string {
@@ -76,9 +77,16 @@ function onTagContext(path: string, event: MouseEvent): void {
     <aside class="admin-layout__aside">
       <div class="admin-layout__brand">{{ zhCN.appTitle }}</div>
       <el-menu :default-active="activePath" router background-color="#0f172a" text-color="#cbd5e1" active-text-color="#fff">
-        <el-menu-item v-for="item in permission.menus" :key="item.id" :index="menuIndex(item)">
-          {{ item.name }}
-        </el-menu-item>
+        <el-menu-item-group
+          v-for="(group, index) in menuGroups"
+          :key="group.key"
+          :title="group.title"
+          :class="{ 'admin-layout__group--divided': index > 0 }"
+        >
+          <el-menu-item v-for="item in group.items" :key="item.id" :index="menuIndex(item)">
+            {{ item.name }}
+          </el-menu-item>
+        </el-menu-item-group>
       </el-menu>
       <p v-if="permission.menus.length === 0" class="admin-layout__empty">{{ zhCN.layout.emptyMenu }}</p>
     </aside>
@@ -138,6 +146,7 @@ function onTagContext(path: string, event: MouseEvent): void {
 .admin-layout__brand {
   padding: 16px;
   font-weight: 600;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
 }
 .admin-layout__empty {
   padding: 16px;
@@ -173,8 +182,8 @@ function onTagContext(path: string, event: MouseEvent): void {
   cursor: pointer;
 }
 .admin-tag--active {
-  border-color: #2563eb;
-  color: #2563eb;
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
 }
 .admin-tag__close {
   margin-left: 6px;
@@ -201,5 +210,19 @@ function onTagContext(path: string, event: MouseEvent): void {
 }
 .admin-layout__content {
   padding: 16px;
+}
+.admin-layout__aside :deep(.el-menu) {
+  border-right: none;
+  background-color: #0f172a;
+}
+.admin-layout__aside :deep(.el-menu-item-group__title) {
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 12px 20px 6px;
+}
+.admin-layout__aside :deep(.admin-layout__group--divided) {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  margin-top: 4px;
+  padding-top: 4px;
 }
 </style>
