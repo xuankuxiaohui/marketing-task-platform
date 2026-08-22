@@ -9,9 +9,9 @@
   --admin-ink: #111827;
   --admin-aside: #0b1220;
   --admin-aside-active: #134e4a;
-  --admin-page-bg: #f3efe6;
-  --admin-surface: #fffdf8;
-  --admin-border: #e4ddd0;
+  --admin-page-bg: #f4f4f5;
+  --admin-surface: #ffffff;
+  --admin-border: #e4e4e7;
   --admin-row: 40px;
   --admin-header: 48px;
   --admin-muted: #6b6256;
@@ -74,7 +74,7 @@ textarea {
   font-size: 12px;
 }
 .admin-table .el-table__header th.el-table__cell {
-  background: #f6f1e7;
+  background: #f4f4f5;
   font-size: 12px;
   font-weight: 500;
   color: var(--admin-ink);
@@ -87,7 +87,7 @@ textarea {
   border-right: none;
 }
 .admin-table.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
-  background: #faf7f0;
+  background: #fafafa;
 }
 .status-tag--on,
 .status-tag--live {

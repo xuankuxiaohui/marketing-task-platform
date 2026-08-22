@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs, showToast } from "vant";
 import { isOk } from "@mkt/shared";
 import { claimPrize, fetchPrizeList, type PrizeCardView, type PrizeTab } from "@/api/prize";
@@ -18,7 +18,9 @@ const TABS: { name: PrizeTab; title: string }[] = [
   { name: "ALL", title: zhCN.prize.allTab },
 ];
 
+const route = useRoute();
 const router = useRouter();
+const isTabRoot = computed(() => route.meta.tab === "prizes");
 const activeTab = ref<PrizeTab>("PENDING");
 const records = ref<PrizeCardView[]>([]);
 const page = ref(1);
@@ -131,7 +133,7 @@ onMounted(() => {
 
 <template>
   <section class="mine-prizes">
-    <NavBar :title="zhCN.mine.prizes" left-arrow @click-left="router.back()" />
+    <NavBar :title="zhCN.mine.prizes" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
     <Tabs v-model:active="activeTab" sticky>
       <Tab v-for="tab in TABS" :key="tab.name" :title="tab.title" :name="tab.name" />
     </Tabs>
@@ -162,3 +164,10 @@ onMounted(() => {
     </PullRefresh>
   </section>
 </template>
+
+<style scoped>
+.mine-prizes {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
+</style>

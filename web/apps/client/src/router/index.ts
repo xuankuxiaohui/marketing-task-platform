@@ -59,16 +59,24 @@ const router = createRouter({
           meta: { title: zhCN.home.title },
         },
         {
+          path: "tasks",
+          redirect: "/mine/tasks",
+        },
+        {
+          path: "prizes",
+          redirect: "/mine/prizes",
+        },
+        {
           path: "mine/tasks",
           name: "MineTasksPage",
           component: () => import("@/views/mine/MineTasksPage.vue"),
-          meta: { title: zhCN.mine.tasks },
+          meta: { title: zhCN.mine.tasks, tab: "tasks" },
         },
         {
           path: "mine/prizes",
           name: "MinePrizesPage",
           component: () => import("@/views/mine/MinePrizesPage.vue"),
-          meta: { title: zhCN.mine.prizes },
+          meta: { title: zhCN.mine.prizes, tab: "prizes" },
         },
         {
           path: "mine/points",

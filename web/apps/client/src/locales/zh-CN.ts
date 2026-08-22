@@ -2,6 +2,8 @@ export const zhCN = {
   appTitle: "营销任务平台",
   tab: {
     home: "首页",
+    tasks: "任务",
+    prizes: "奖品",
     mine: "我的",
   },
   login: {
@@ -94,11 +96,14 @@ export const zhCN = {
     balance: "当前积分",
   },
   home: {
-    title: "活动中心",
+    title: "首页",
     empty: "暂无进行中的活动",
     signin: "每日签到",
     signinHint: "每日签到送积分",
-    pointsLogin: "登录查看积分",
+    pointsLogin: "登录后积分落在这里",
+    todayTasks: "今日可做",
+    activities: "进行中的活动",
+    streak: "连续签到",
   },
   ad: {
     skip: "跳过",

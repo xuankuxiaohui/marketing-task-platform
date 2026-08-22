@@ -59,7 +59,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section>
+  <section class="profile-page">
     <NavBar :title="zhCN.profile.title" left-arrow @click-left="router.back()" />
     <form @submit.prevent="submit">
       <Field
@@ -87,12 +87,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.auth-error {
-  margin: 8px 16px 0;
-  color: #ee0a24;
-  font-size: 13px;
-}
-.auth-actions {
-  padding: 16px;
+.profile-page {
+  min-height: 100%;
+  background: var(--portal-bg);
 }
 </style>

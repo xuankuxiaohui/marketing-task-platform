@@ -19,8 +19,15 @@ export const zhCN = {
   },
   dashboard: {
     title: "工作台",
-    welcome: "欢迎使用营销任务平台",
+    welcome: "今日",
     hint: "聚合指标见运营看板。",
+    inbox: "待办",
+    interceptToday: "今日拦截",
+    stockAlert: "库存告警",
+    inboxClear: "暂无待办",
+    unitCount: "次",
+    unitYuan: "元",
+    fenHint: "分",
   },
   layout: {
     logout: "退出",

@@ -82,6 +82,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.mine-page {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
 .profile-card {
   display: flex;
   gap: 12px;
@@ -90,8 +94,9 @@ onMounted(() => {
   margin: 12px 16px;
   padding: 16px;
   border: 0;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
   text-align: left;
 }
 .profile-card__avatar {
@@ -101,7 +106,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #1989fa;
+  background: var(--portal-primary);
   color: #fff;
   font-size: 20px;
 }
@@ -114,8 +119,9 @@ onMounted(() => {
   font-size: 16px;
 }
 .profile-card__meta span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 .mine-actions {
   margin-top: 12px;

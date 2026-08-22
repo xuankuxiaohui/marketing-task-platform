@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
@@ -23,7 +23,9 @@ const STATUS_TABS = [
   { name: "EXPIRED", title: zhCN.task.expired },
 ] as const;
 
+const route = useRoute();
 const router = useRouter();
+const isTabRoot = computed(() => route.meta.tab === "tasks");
 const categories = ref<DictPortalEntry[]>([]);
 const activeStatus = ref<MineTaskStatus>("IN_PROGRESS");
 const activeCategory = ref(ALL);
@@ -124,7 +126,7 @@ defineExpose({ selectStatus });
 
 <template>
   <section class="mine-tasks">
-    <NavBar :title="zhCN.mine.tasks" left-arrow @click-left="router.back()" />
+    <NavBar :title="zhCN.mine.tasks" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
     <Tabs ref="statusTabs" v-model:active="activeStatus" sticky>
       <Tab
         v-for="tab in STATUS_TABS"
@@ -186,6 +188,10 @@ defineExpose({ selectStatus });
 </template>
 
 <style scoped>
+.mine-tasks {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
 .mine-task-card {
   display: flex;
   gap: 12px;
@@ -194,8 +200,9 @@ defineExpose({ selectStatus });
   margin: 0 16px 12px;
   padding: 12px;
   border: 0;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
   text-align: left;
 }
 .mine-task-card__meta {
@@ -208,7 +215,7 @@ defineExpose({ selectStatus });
   font-size: 15px;
 }
 .mine-task-card__meta span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 12px;
 }
 </style>

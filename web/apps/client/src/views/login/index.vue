@@ -73,7 +73,8 @@ onMounted(() => {
 
 <template>
   <main class="auth-page">
-    <h1>{{ zhCN.login.title }}</h1>
+    <h1>{{ zhCN.appTitle }}</h1>
+    <p class="auth-page__sub">{{ zhCN.login.title }}</p>
     <form @submit.prevent="submit">
       <Field
         v-model="username"
@@ -112,28 +113,3 @@ onMounted(() => {
   </main>
 </template>
 
-<style scoped>
-.auth-page {
-  min-height: 100vh;
-  padding: 48px 16px 24px;
-  background: #fff;
-}
-.auth-page h1 {
-  margin: 0 0 24px;
-  font-size: 22px;
-}
-.auth-error {
-  margin: 8px 16px 0;
-  color: #ee0a24;
-  font-size: 13px;
-}
-.auth-actions {
-  padding: 16px;
-}
-.auth-link {
-  display: block;
-  text-align: center;
-  color: #1989fa;
-  font-size: 14px;
-}
-</style>

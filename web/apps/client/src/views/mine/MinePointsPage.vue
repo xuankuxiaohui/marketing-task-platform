@@ -173,11 +173,13 @@ onMounted(() => {
   gap: 4px;
   margin: 12px 16px;
   padding: 20px 16px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
+  font-variant-numeric: tabular-nums;
 }
 .points-balance span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 13px;
 }
 .points-balance strong {
@@ -191,8 +193,8 @@ onMounted(() => {
   margin: 0 16px 12px;
   padding: 12px;
   border: 0;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
   text-align: left;
 }
 .points-row:disabled {
@@ -209,13 +211,13 @@ onMounted(() => {
 }
 .points-row__main span,
 .points-row__amount span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 12px;
 }
 .points-row__amount strong[data-sign="plus"] {
-  color: #07c160;
+  color: var(--portal-primary);
 }
 .points-row__amount strong[data-sign="minus"] {
-  color: #ee0a24;
+  color: var(--portal-accent);
 }
 </style>

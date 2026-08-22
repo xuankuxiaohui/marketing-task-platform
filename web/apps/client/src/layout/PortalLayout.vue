@@ -10,7 +10,8 @@ import { zhCN } from "@/locales/zh-CN";
 defineOptions({ name: "PortalLayout" });
 
 const route = useRoute();
-const showTabbar = computed(() => route.meta.tab === "home" || route.meta.tab === "mine");
+const TAB_KEYS = new Set(["home", "tasks", "prizes", "mine"]);
+const showTabbar = computed(() => TAB_KEYS.has(String(route.meta.tab ?? "")));
 const showHomeAds = computed(() => route.meta.tab === "home");
 </script>
 
@@ -22,6 +23,8 @@ const showHomeAds = computed(() => route.meta.tab === "home");
     <router-view />
     <Tabbar v-if="showTabbar" route placeholder safe-area-inset-bottom data-testid="portal-tabbar">
       <TabbarItem replace to="/home" icon="home-o" data-testid="tab-home">{{ zhCN.tab.home }}</TabbarItem>
+      <TabbarItem replace to="/mine/tasks" icon="todo-list-o" data-testid="tab-tasks">{{ zhCN.tab.tasks }}</TabbarItem>
+      <TabbarItem replace to="/mine/prizes" icon="gift-o" data-testid="tab-prizes">{{ zhCN.tab.prizes }}</TabbarItem>
       <TabbarItem replace to="/mine" icon="user-o" data-testid="tab-mine">{{ zhCN.tab.mine }}</TabbarItem>
     </Tabbar>
   </div>

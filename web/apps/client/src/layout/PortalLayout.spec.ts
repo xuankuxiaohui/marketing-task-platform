@@ -29,6 +29,8 @@ async function mountLayout(path: string) {
         children: [
           { path: "home", component: { template: "<div />" }, meta: { tab: "home" } },
           { path: "mine", component: { template: "<div />" }, meta: { tab: "mine" } },
+          { path: "mine/tasks", component: { template: "<div />" }, meta: { tab: "tasks" } },
+          { path: "mine/prizes", component: { template: "<div />" }, meta: { tab: "prizes" } },
           { path: "mine/password", component: { template: "<div />" } },
         ],
       },
@@ -46,10 +48,20 @@ describe("PortalLayout", () => {
     adMock.mockResolvedValue(ok({ code: "x", form: "SPLASH", materials: [] }));
   });
 
-  it("renders home / mine tabs on the two roots", async () => {
+  it("renders four club tabs on the hub roots", async () => {
     const wrapper = await mountLayout("/home");
-    expect(wrapper.get('[data-testid="portal-tabbar"]').text()).toContain(zhCN.tab.home);
-    expect(wrapper.get('[data-testid="portal-tabbar"]').text()).toContain(zhCN.tab.mine);
+    const bar = wrapper.get('[data-testid="portal-tabbar"]').text();
+    expect(bar).toContain(zhCN.tab.home);
+    expect(bar).toContain(zhCN.tab.tasks);
+    expect(bar).toContain(zhCN.tab.prizes);
+    expect(bar).toContain(zhCN.tab.mine);
+  });
+
+  it("keeps the tabbar on the task and prize roots", async () => {
+    const tasks = await mountLayout("/mine/tasks");
+    expect(tasks.get('[data-testid="tab-tasks"]').text()).toContain(zhCN.tab.tasks);
+    const prizes = await mountLayout("/mine/prizes");
+    expect(prizes.get('[data-testid="tab-prizes"]').text()).toContain(zhCN.tab.prizes);
   });
 
   it("hides the tabbar on nested personal pages", async () => {

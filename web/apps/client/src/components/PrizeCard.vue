@@ -95,8 +95,9 @@ onUnmounted(() => {
   align-items: center;
   margin: 0 16px 12px;
   padding: 12px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
 }
 .prize-card__meta {
   display: flex;
@@ -115,14 +116,14 @@ onUnmounted(() => {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 12px;
   text-align: left;
 }
 .prize-card__source {
-  color: #1989fa;
+  color: var(--portal-primary);
 }
 .prize-card__countdown {
-  color: #ee0a24;
+  color: var(--portal-accent);
 }
 </style>

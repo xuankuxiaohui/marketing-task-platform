@@ -67,9 +67,11 @@ describe("DashboardPage", () => {
   it("shows aggregated cards and link to metrics page", async () => {
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="card-funnel"]').text()).toContain("5");
+    expect(wrapper.get('[data-testid="card-spend"]').text()).toContain("0.20");
     expect(wrapper.get('[data-testid="card-spend"]').text()).toContain("20");
     expect(wrapper.get('[data-testid="card-risk"]').text()).toContain("2");
     expect(wrapper.get('[data-testid="card-ad"]').text()).toContain("1");
+    expect(wrapper.get('[data-testid="dashboard-inbox"]').text()).toContain(zhCN.dashboard.interceptToday);
     expect(wrapper.get('[data-testid="metrics-link"]').text()).toContain(zhCN.metrics.open);
     expect(wrapper.get('[data-testid="metrics-link"]').attributes("href")).toBe("/metrics");
   });

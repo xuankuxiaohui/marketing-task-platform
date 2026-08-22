@@ -239,6 +239,8 @@ onMounted(() => {
   box-shadow: var(--portal-shadow-soft);
 }
 .signin-actions {
+  position: sticky;
+  bottom: 8px;
   padding: 4px 16px 24px;
 }
 :deep(.signin-signed) {

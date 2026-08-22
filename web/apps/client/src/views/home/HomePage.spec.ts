@@ -29,6 +29,13 @@ vi.mock("@/api/task", () => ({
   abandonTask: vi.fn(),
 }));
 
+vi.mock("@/api/signin", () => ({
+  fetchSigninActivities: vi.fn(),
+  fetchSigninCalendar: vi.fn(),
+  postCheckin: vi.fn(),
+  postCatchup: vi.fn(),
+}));
+
 vi.mock("@/tracking", () => ({
   TRACK: { TASK_START_CLICK: "task.start.click", AD_CAROUSEL_EXPOSURE: "ad.carousel.exposure", AD_CAROUSEL_CLICK: "ad.carousel.click" },
   track: vi.fn(),
@@ -47,6 +54,7 @@ vi.mock("vant", async () => {
 import { fetchActivities } from "@/api/activity";
 import { fetchAdPosition } from "@/api/ad";
 import { fetchPointsBalance } from "@/api/points";
+import { fetchSigninActivities, fetchSigninCalendar } from "@/api/signin";
 import { fetchTaskList } from "@/api/task";
 import { showFailToast } from "vant";
 import HomePage from "./index.vue";
@@ -55,6 +63,8 @@ const activityMock = vi.mocked(fetchActivities);
 const adMock = vi.mocked(fetchAdPosition);
 const pointsMock = vi.mocked(fetchPointsBalance);
 const listMock = vi.mocked(fetchTaskList);
+const signinListMock = vi.mocked(fetchSigninActivities);
+const signinCalendarMock = vi.mocked(fetchSigninCalendar);
 const failToast = vi.mocked(showFailToast);
 
 async function mountHome() {
@@ -82,19 +92,22 @@ describe("HomePage", () => {
     listMock.mockReset();
     failToast.mockReset();
     pointsMock.mockReset();
+    signinListMock.mockReset();
+    signinCalendarMock.mockReset();
     adMock.mockReset();
     adMock.mockResolvedValue(ok({ code: "home_banner", form: "CAROUSEL", materials: [] }));
     pointsMock.mockResolvedValue(ok({ balance: 12 }));
+    listMock.mockResolvedValue(ok({ total: 0, records: [] }));
+    signinListMock.mockResolvedValue(ok([]));
   });
 
-  it("shows the generic empty copy when there are no activities", async () => {
+  it("keeps the club hub when there are no activities", async () => {
     activityMock.mockResolvedValue(ok([]));
     const { wrapper } = await mountHome();
     expect(wrapper.get('[data-testid="home-empty"]').text()).toContain(zhCN.home.empty);
     expect(wrapper.get('[data-testid="home-signin-card"]').text()).toContain(zhCN.home.signin);
-    expect(wrapper.find('[data-testid="home-list"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="task-card"]').exists()).toBe(false);
-    expect(listMock).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="home-activity-list"]').exists()).toBe(false);
+    expect(listMock).toHaveBeenCalled();
   });
 
   it("renders activity cards that open the activity page by id", async () => {
@@ -111,7 +124,7 @@ describe("HomePage", () => {
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/activity");
     expect(router.currentRoute.value.query.id).toBe("3");
-    expect(listMock).not.toHaveBeenCalled();
+    expect(listMock).toHaveBeenCalled();
   });
 
   it("routes the sign-in card to the existing calendar page", async () => {
@@ -160,6 +173,20 @@ describe("HomePage", () => {
     await wrapper.get('[data-testid="home-points-bar"]').trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/login");
+  });
+
+  it("renders today's tasks even when the activity list is empty", async () => {
+    activityMock.mockResolvedValue(ok([]));
+    listMock.mockResolvedValue(
+      ok({
+        total: 1,
+        records: [{ taskId: 41, name: "浏览活动页", userStatus: "NOT_STARTED", rewardPreview: { firstName: "30积分", totalCount: 1 } }],
+      }),
+    );
+    const { wrapper } = await mountHome();
+    expect(wrapper.get('[data-testid="home-empty"]').text()).toContain(zhCN.home.empty);
+    expect(wrapper.get('[data-testid="home-task-list"]').text()).toContain("浏览活动页");
+    expect(wrapper.get('[data-testid="task-card"]').text()).toContain("浏览活动页");
   });
 
   it("renders an activity cover image when the view has one", async () => {

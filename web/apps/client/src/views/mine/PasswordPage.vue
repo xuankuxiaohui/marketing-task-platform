@@ -52,7 +52,7 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <section>
+  <section class="password-page">
     <NavBar
       :title="zhCN.password.title"
       :left-arrow="!session.mustChangePassword"
@@ -92,17 +92,8 @@ async function submit(): Promise<void> {
 </template>
 
 <style scoped>
-.auth-hint {
-  margin: 0 16px 8px;
-  color: #646566;
-  font-size: 12px;
-}
-.auth-error {
-  margin: 8px 16px 0;
-  color: #ee0a24;
-  font-size: 13px;
-}
-.auth-actions {
-  padding: 16px;
+.password-page {
+  min-height: 100%;
+  background: var(--portal-bg);
 }
 </style>

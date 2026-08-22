@@ -194,7 +194,7 @@ watch(sheetOpen, (open, wasOpen) => {
           tabindex="0"
           @click="openSignin"
         >
-          <span class="signin-card__mark" aria-hidden="true">签</span>
+          <span class="signin-card__mark" aria-hidden="true">日</span>
           <span class="signin-card__meta">
             <strong>{{ zhCN.home.signin }}</strong>
             <span>{{ zhCN.home.signinHint }}</span>
