@@ -108,4 +108,16 @@ describe("AdminLayout tags", () => {
     expect(wrapper.find(".el-sub-menu").exists()).toBe(false);
     expect(wrapper.findAll(".el-menu-item-group").length).toBe(3);
   });
+
+  it("keeps sidebar and content as separate scroll panes and resets content on route change", async () => {
+    const { wrapper, router } = await mountLayout();
+    const sidebar = wrapper.get('[data-testid="admin-sidebar"]');
+    const content = wrapper.get('[data-testid="admin-content"]');
+    expect(sidebar.classes()).toContain("admin-layout__aside");
+    expect(content.classes()).toContain("admin-layout__content");
+    (content.element as HTMLElement).scrollTop = 120;
+    await router.push("/system/users");
+    await flushPromises();
+    expect((content.element as HTMLElement).scrollTop).toBe(0);
+  });
 });
