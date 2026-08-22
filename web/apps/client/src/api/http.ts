@@ -15,6 +15,7 @@ const SKIP_UNAUTHORIZED = [
   "/api/common/auth/username-available",
   "/api/common/track/batch",
   "/api/common/ad/",
+  "/api/common/points/balance",
   "/api/common/activity/activities",
   "/api/common/task/list",
 ];

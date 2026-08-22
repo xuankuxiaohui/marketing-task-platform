@@ -70,8 +70,9 @@ onUnmounted(() => {
   align-items: center;
   margin: 0 16px 12px;
   padding: 12px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
 }
 .task-card__body {
   display: flex;
@@ -83,6 +84,12 @@ onUnmounted(() => {
   border: 0;
   background: transparent;
   text-align: left;
+}
+.task-card :deep(.fallback-image) {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--portal-primary-soft);
 }
 .task-card__meta {
   display: flex;
@@ -102,7 +109,7 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 .task-card__reward {
-  color: #ee0a24;
+  color: var(--portal-accent);
   font-size: 13px;
 }
 </style>

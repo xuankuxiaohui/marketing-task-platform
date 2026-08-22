@@ -98,6 +98,7 @@ export const zhCN = {
     empty: "暂无进行中的活动",
     signin: "每日签到",
     signinHint: "每日签到送积分",
+    pointsLogin: "登录查看积分",
   },
   ad: {
     skip: "跳过",

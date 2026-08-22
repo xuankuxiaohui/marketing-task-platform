@@ -21,3 +21,7 @@ export function sessionMessage(code: string | undefined, fallback?: string): str
       return fallback || zhCN.session.missing;
   }
 }
+
+export function isGuestSessionCode(code: unknown): boolean {
+  return code === SESSION_CODES.missing || code === SESSION_CODES.expired;
+}

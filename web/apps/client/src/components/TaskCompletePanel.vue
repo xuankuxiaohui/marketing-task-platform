@@ -118,11 +118,15 @@ const {
 </template>
 
 <style scoped>
+.task-detail {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
 .task-detail__refresh {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #1989fa;
+  color: var(--portal-primary);
   font-size: 14px;
 }
 .task-detail__sheet-head {
@@ -141,8 +145,9 @@ const {
   gap: 12px;
   margin: 12px 16px;
   padding: 12px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
 }
 .task-detail__hero h2 {
   margin: 0 0 4px;
@@ -150,20 +155,21 @@ const {
 }
 .task-detail__hero p {
   margin: 0;
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 13px;
 }
 .task-detail__preview {
   margin: 0 16px 12px;
   padding: 12px 12px 12px 28px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
 }
 .task-detail__current {
   margin: 12px 16px;
   padding: 16px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
 }
 .task-detail__current h3 {
   margin: 0 0 8px;
@@ -173,7 +179,7 @@ const {
   height: 6px;
   margin: 8px 0 16px;
   border-radius: 999px;
-  background: #1989fa;
+  background: var(--portal-primary);
 }
 .task-detail__actions {
   padding: 8px 16px 24px;

@@ -192,6 +192,25 @@ describe("ActivityPage", () => {
     expect(router.currentRoute.value.query.redirect).toBe("/activity?id=3");
   });
 
+  it("renders a cover image on the activity hero when the view has one", async () => {
+    listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
+    detailMock.mockResolvedValue(
+      ok({
+        id: 3,
+        code: "summer",
+        name: "夏季专题",
+        richText: "<p>hello</p>",
+        contentHash: "abc",
+        version: 1,
+        submodules: [],
+        coverUrl: "https://cdn.example/hero.png",
+      }),
+    );
+    const { wrapper } = await mountPage({ id: "3" });
+    expect(wrapper.get('[data-testid="activity-name"]').text()).toContain("夏季专题");
+    expect(wrapper.get('[data-testid="fallback-image"]').attributes("src")).toBe("https://cdn.example/hero.png");
+  });
+
   it("routes the activity sign-in card to the calendar", async () => {
     listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     detailMock.mockResolvedValue(
