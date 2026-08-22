@@ -15,6 +15,11 @@ vi.mock("@/api/activity", () => ({
   postParticipate: vi.fn(),
 }));
 
+vi.mock("@/api/points", () => ({
+  fetchPointsBalance: vi.fn(),
+  fetchPointsTransactions: vi.fn(),
+}));
+
 vi.mock("@/api/task", () => ({
   fetchTaskList: vi.fn(),
   startTask: vi.fn(),
@@ -41,12 +46,14 @@ vi.mock("vant", async () => {
 
 import { fetchActivities } from "@/api/activity";
 import { fetchAdPosition } from "@/api/ad";
+import { fetchPointsBalance } from "@/api/points";
 import { fetchTaskList } from "@/api/task";
 import { showFailToast } from "vant";
 import HomePage from "./index.vue";
 
 const activityMock = vi.mocked(fetchActivities);
 const adMock = vi.mocked(fetchAdPosition);
+const pointsMock = vi.mocked(fetchPointsBalance);
 const listMock = vi.mocked(fetchTaskList);
 const failToast = vi.mocked(showFailToast);
 
@@ -57,6 +64,8 @@ async function mountHome() {
       { path: "/home", component: HomePage },
       { path: "/activity", component: { template: "<div />" } },
       { path: "/signin", component: { template: "<div />" } },
+      { path: "/login", component: { template: "<div />" } },
+      { path: "/mine/points", component: { template: "<div />" } },
       { path: "/task/:taskId", component: { template: "<div />" } },
     ],
   });
@@ -72,8 +81,10 @@ describe("HomePage", () => {
     activityMock.mockReset();
     listMock.mockReset();
     failToast.mockReset();
+    pointsMock.mockReset();
     adMock.mockReset();
     adMock.mockResolvedValue(ok({ code: "home_banner", form: "CAROUSEL", materials: [] }));
+    pointsMock.mockResolvedValue(ok({ balance: 12 }));
   });
 
   it("shows the generic empty copy when there are no activities", async () => {
@@ -118,5 +129,46 @@ describe("HomePage", () => {
     expect(wrapper.find('[data-testid="ad-carousel"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="home-signin-card"]').exists()).toBe(true);
     expect(failToast).not.toHaveBeenCalled();
+  });
+
+  it("shows the points balance on the hub strip", async () => {
+    activityMock.mockResolvedValue(ok([]));
+    const { wrapper, router } = await mountHome();
+    expect(wrapper.get('[data-testid="home-points-value"]').text()).toBe("12");
+    await wrapper.get('[data-testid="home-points-bar"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/mine/points");
+  });
+
+  it("hides the points bar on a non-session points failure", async () => {
+    activityMock.mockResolvedValue(ok([]));
+    pointsMock.mockResolvedValue(fail("common.error", "boom"));
+    const { wrapper } = await mountHome();
+    expect(wrapper.find('[data-testid="home-points-bar"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="home-signin-card"]').text()).toContain(zhCN.home.signin);
+    expect(failToast).not.toHaveBeenCalled();
+  });
+
+  it("keeps the hub intact and shows a login hint when points balance is 401", async () => {
+    activityMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
+    pointsMock.mockResolvedValue(fail("auth.session.missing", "请先登录"));
+    const { wrapper, router } = await mountHome();
+    expect(wrapper.get('[data-testid="home-points-login"]').text()).toContain(zhCN.home.pointsLogin);
+    expect(wrapper.get('[data-testid="home-activity-3"]').text()).toContain("夏季专题");
+    expect(wrapper.get('[data-testid="home-signin-card"]').text()).toContain(zhCN.home.signin);
+    expect(failToast).not.toHaveBeenCalled();
+    await wrapper.get('[data-testid="home-points-bar"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/login");
+  });
+
+  it("renders an activity cover image when the view has one", async () => {
+    activityMock.mockResolvedValue(
+      ok([{ id: 3, code: "summer", name: "夏季专题", coverUrl: "https://cdn.example/cover.png" }]),
+    );
+    const { wrapper } = await mountHome();
+    expect(wrapper.get('[data-testid="home-activity-3"]').get('[data-testid="fallback-image"]').attributes("src")).toBe(
+      "https://cdn.example/cover.png",
+    );
   });
 });

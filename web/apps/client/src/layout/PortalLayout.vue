@@ -30,5 +30,14 @@ const showHomeAds = computed(() => route.meta.tab === "home");
 <style scoped>
 .portal-layout {
   min-height: 100vh;
+  background: var(--portal-bg);
+  color: var(--portal-ink);
+}
+.portal-layout :deep(.van-tabbar) {
+  border-top: 1px solid var(--portal-line);
+  background: var(--portal-surface);
+}
+.portal-layout :deep(.van-tabbar-item--active) {
+  color: var(--portal-primary);
 }
 </style>

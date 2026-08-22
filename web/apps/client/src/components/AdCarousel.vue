@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section v-if="visible" class="ad-carousel" data-testid="ad-carousel">
-    <Swipe :autoplay="intervalMs" indicator-color="#1989fa" @change="onChange">
+    <Swipe :autoplay="intervalMs" indicator-color="#0f766e" @change="onChange">
       <SwipeItem v-for="item in materials" :key="item.materialId">
         <button type="button" class="ad-carousel__slide" data-testid="ad-carousel-slide" @click="onClick(item)">
           <FallbackImage :src="item.imageUrl" :alt="item.title || zhCN.ad.carousel" />
@@ -117,9 +117,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .ad-carousel {
-  margin: 8px 12px 0;
+  margin: 8px 16px 0;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--portal-radius-lg);
+  box-shadow: var(--portal-shadow);
+  background: var(--portal-surface);
 }
 .ad-carousel__slide {
   display: block;
@@ -130,11 +132,11 @@ onBeforeUnmount(() => {
 }
 .ad-carousel :deep(.fallback-image) {
   width: 100%;
-  height: 140px;
+  height: 168px;
 }
 .ad-carousel :deep(img) {
   width: 100%;
-  height: 140px;
+  height: 168px;
   object-fit: cover;
 }
 </style>
