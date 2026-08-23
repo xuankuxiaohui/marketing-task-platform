@@ -67,3 +67,4 @@ web/.e2e-state.json
 perf/state.json
 perf/reports/*
 !perf/reports/.gitkeep
+.gstack/
