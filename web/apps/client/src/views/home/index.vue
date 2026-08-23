@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useSessionReload } from "@/composables/useSessionReload";
 import { Button, Empty, NavBar, PullRefresh, showSuccessToast } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchActivities, type PortalActivityView } from "@/api/activity";
@@ -177,14 +178,9 @@ async function onHomeCheckin(): Promise<void> {
   }
 }
 
-watch(
-  () => session.authenticated,
-  (ok, wasOk) => {
-    if (ok && !wasOk) {
-      void Promise.all([loadPoints(), loadSignin()]);
-    }
-  },
-);
+useSessionReload(() => {
+  void Promise.all([loadPoints(), loadSignin()]);
+});
 
 onMounted(() => {
   void loadAll();

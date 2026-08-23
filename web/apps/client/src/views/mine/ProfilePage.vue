@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { Button, Cell, CellGroup, Field, NavBar } from "vant";
 import { isFail, isOk } from "@mkt/shared";
 import { fetchProfile, updateProfile } from "@/api/auth";
+import { useSessionReload } from "@/composables/useSessionReload";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
 import { portalNicknameSatisfied } from "@/utils/username";
@@ -19,6 +20,9 @@ const loading = ref(false);
 const tagsText = computed(() => (session.tags.length > 0 ? session.tags.join("、") : zhCN.profile.emptyValue));
 
 async function load(): Promise<void> {
+  if (!session.authenticated) {
+    return;
+  }
   const result = await fetchProfile();
   if (isOk(result) && result.data) {
     session.setProfile(result.data);
@@ -52,6 +56,10 @@ async function submit(): Promise<void> {
     loading.value = false;
   }
 }
+
+useSessionReload(() => {
+  void load();
+});
 
 onMounted(() => {
   void load();
