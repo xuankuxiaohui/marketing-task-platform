@@ -14,7 +14,7 @@
 
 ## 2. 短命分支
 
-默认从最新 `origin/master` 拉出，合入后删除。不要再叠 `task/*` 施工链。新工作用 `fix/<slug>`（文档用 `docs/<slug>`），走 issue + PR。
+默认从最新 `origin/master` 拉出。新工作修改用 `fix/<slug>`（文档用 `docs/<slug>`），新功能使用`feat/需求`,走 issue + PR。
 
 ```text
 fix/<slug>          缺陷 / 测试阶段改动

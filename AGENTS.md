@@ -103,8 +103,3 @@ pnpm --filter @mkt/shared gen:api
 ## Git
 
 见 [08-git-workflow.md](docs/standards/08-git-workflow.md)。
-
-- 新工作从 `origin/master` 开 `fix/<slug>`（文档可用 `docs/<slug>`）。不要再叠 `task/*` 施工链
-- issue + PR 到 master；不要自动合、不要 merge / push / force-push `master`
-- **禁止** `feat/`、`develop/`、再建 `main`
-- 不要提交 `spike/*/target`
