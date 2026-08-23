@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LockOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { isFail, isOk } from "@mkt/shared";
@@ -7,6 +8,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { DASHBOARD_ROUTE } from "@/router/dynamic";
 import { ensureDynamicRoutes } from "@/router/session";
 import { useSessionStore } from "@/store/session";
+import LoginShell from "./LoginShell.vue";
 
 defineOptions({ name: "ChangePasswordPage" });
 
@@ -40,98 +42,108 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <main class="login-page">
-    <aside class="login-brand">
-      <h1>{{ zhCN.appTitle }}</h1>
-      <p class="login-brand__sub">{{ zhCN.consoleSubtitle }}</p>
-    </aside>
-    <section class="login-panel">
-      <a-form layout="vertical" class="login-card" @submit.prevent="submit">
+  <LoginShell>
+    <a-form layout="vertical" class="login-form" @submit.prevent="submit">
+      <header class="login-form__head">
         <h2>{{ zhCN.password.title }}</h2>
-        <p class="login-card__sub">{{ zhCN.password.hint }}</p>
-        <a-form-item :label="zhCN.password.oldPassword">
-          <div data-testid="change-password-old">
-            <a-input-password v-model:value="oldPassword" autocomplete="current-password" required />
-          </div>
-        </a-form-item>
-        <a-form-item :label="zhCN.password.newPassword">
-          <div data-testid="change-password-new">
-            <a-input-password v-model:value="newPassword" autocomplete="new-password" required />
-          </div>
-        </a-form-item>
-        <p class="login-card__sub">{{ zhCN.common.passwordPolicy }}</p>
-        <a-alert
-          v-if="errorMessage"
-          type="error"
-          show-icon
-          class="login-error"
-          data-testid="change-password-error"
-          role="alert"
-          :message="errorMessage"
-        />
-        <a-button class="login-submit" type="primary" html-type="submit" data-testid="change-password-submit" :loading="loading" :disabled="loading">
+        <p>{{ zhCN.password.hint }}</p>
+      </header>
+      <a-form-item :label="zhCN.password.oldPassword">
+        <div data-testid="change-password-old">
+          <a-input-password
+            v-model:value="oldPassword"
+            size="large"
+            autocomplete="current-password"
+            :placeholder="zhCN.password.oldPassword"
+            required
+          >
+            <template #prefix>
+              <LockOutlined />
+            </template>
+          </a-input-password>
+        </div>
+      </a-form-item>
+      <a-form-item :label="zhCN.password.newPassword">
+        <div data-testid="change-password-new">
+          <a-input-password
+            v-model:value="newPassword"
+            size="large"
+            autocomplete="new-password"
+            :placeholder="zhCN.password.newPassword"
+            required
+          >
+            <template #prefix>
+              <LockOutlined />
+            </template>
+          </a-input-password>
+        </div>
+      </a-form-item>
+      <p class="login-form__policy">{{ zhCN.common.passwordPolicy }}</p>
+      <a-alert
+        v-if="errorMessage"
+        type="error"
+        show-icon
+        class="login-form__error"
+        data-testid="change-password-error"
+        role="alert"
+        :message="errorMessage"
+      />
+      <a-form-item class="login-form__actions">
+        <a-button
+          block
+          type="primary"
+          size="large"
+          html-type="submit"
+          data-testid="change-password-submit"
+          :loading="loading"
+          :disabled="loading"
+        >
           {{ zhCN.password.submit }}
         </a-button>
-      </a-form>
-    </section>
-  </main>
+      </a-form-item>
+    </a-form>
+  </LoginShell>
 </template>
 
 <style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
+.login-form__head {
+  margin-bottom: 32px;
 }
-.login-brand {
-  width: 44%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 48px 40px;
-  background: var(--admin-aside);
-  color: #fff;
-}
-.login-brand h1 {
+.login-form__head h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
-}
-.login-brand__sub {
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
-}
-.login-panel {
-  width: 56%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--admin-page-bg);
-}
-.login-card {
-  width: 380px;
-  max-width: 100%;
-}
-.login-card h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 600;
+  line-height: 1.3;
   color: var(--admin-ink);
 }
-.login-card__sub {
-  margin: 0 0 8px;
+.login-form__head p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--admin-muted);
-  font-size: 12px;
 }
-.login-card :deep(.ant-input),
-.login-card :deep(.ant-input-affix-wrapper) {
-  min-height: 40px;
+.login-form :deep(.ant-form-item) {
+  margin-bottom: 24px;
 }
-.login-error {
-  margin: 0 0 12px;
+.login-form :deep(.ant-input-prefix),
+.login-form :deep(.ant-input-affix-wrapper .anticon) {
+  color: rgba(0, 0, 0, 0.25);
 }
-.login-submit {
+.login-form :deep(.ant-input-affix-wrapper),
+.login-form :deep(.ant-input) {
   width: 100%;
-  height: 40px;
+}
+.login-form__policy {
+  margin: -8px 0 24px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--admin-muted);
+}
+.login-form__error {
+  margin: 0 0 24px;
+}
+.login-form__actions {
+  margin-bottom: 0 !important;
+  padding-top: 8px;
 }
 </style>

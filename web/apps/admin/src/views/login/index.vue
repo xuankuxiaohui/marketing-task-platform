@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons-vue";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { isFail, isOk } from "@mkt/shared";
@@ -7,6 +8,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { DASHBOARD_ROUTE } from "@/router/dynamic";
 import { ensureDynamicRoutes } from "@/router/session";
 import { useSessionStore } from "@/store/session";
+import LoginShell from "./LoginShell.vue";
 
 defineOptions({ name: "LoginPage" });
 
@@ -75,33 +77,65 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="login-page">
-    <aside class="login-brand">
-      <h1>{{ zhCN.appTitle }}</h1>
-      <p class="login-brand__sub">{{ zhCN.consoleSubtitle }}</p>
-      <p class="login-brand__hint">{{ zhCN.login.brandHint }}</p>
-    </aside>
-    <section class="login-panel">
-      <a-form layout="vertical" class="login-card" @submit.prevent="submit">
+  <LoginShell>
+    <a-form layout="vertical" class="login-form" @submit.prevent="submit">
+      <header class="login-form__head">
         <h2>{{ zhCN.login.title }}</h2>
-        <a-form-item :label="zhCN.login.username">
-          <div data-testid="login-username">
-            <a-input v-model:value="username" size="large" name="username" autocomplete="username" required />
+        <p>{{ zhCN.login.subtitle }}</p>
+      </header>
+      <a-form-item>
+        <div data-testid="login-username">
+          <a-input
+            v-model:value="username"
+            size="large"
+            name="username"
+            autocomplete="username"
+            :placeholder="zhCN.login.usernamePlaceholder"
+            :aria-label="zhCN.login.username"
+            required
+          >
+            <template #prefix>
+              <UserOutlined />
+            </template>
+          </a-input>
+        </div>
+      </a-form-item>
+      <a-form-item>
+        <div data-testid="login-password">
+          <a-input-password
+            v-model:value="password"
+            size="large"
+            name="password"
+            autocomplete="current-password"
+            :placeholder="zhCN.login.passwordPlaceholder"
+            :aria-label="zhCN.login.password"
+            required
+          >
+            <template #prefix>
+              <LockOutlined />
+            </template>
+          </a-input-password>
+        </div>
+      </a-form-item>
+      <a-form-item class="login-form__captcha-item">
+        <div class="login-form__captcha">
+          <div data-testid="login-captcha" class="login-form__captcha-field">
+            <a-input
+              v-model:value="captchaCode"
+              size="large"
+              name="captchaCode"
+              autocomplete="off"
+              :placeholder="zhCN.login.captchaPlaceholder"
+              :aria-label="zhCN.login.captcha"
+              required
+            >
+              <template #prefix>
+                <SafetyCertificateOutlined />
+              </template>
+            </a-input>
           </div>
-        </a-form-item>
-        <a-form-item :label="zhCN.login.password">
-          <div data-testid="login-password">
-            <a-input-password v-model:value="password" size="large" name="password" autocomplete="current-password" required />
-          </div>
-        </a-form-item>
-        <div class="login-captcha">
-          <a-form-item :label="zhCN.login.captcha" class="login-field--grow">
-            <div data-testid="login-captcha">
-              <a-input v-model:value="captchaCode" size="large" name="captchaCode" autocomplete="off" required />
-            </div>
-          </a-form-item>
           <button
-            class="login-captcha__image"
+            class="login-form__captcha-image"
             type="button"
             data-testid="login-captcha-refresh"
             :aria-label="zhCN.login.captchaAlt"
@@ -115,105 +149,99 @@ onMounted(() => {
             />
           </button>
         </div>
-        <a-alert
-          v-if="errorMessage"
-          type="error"
-          show-icon
-          class="login-error"
-          data-testid="login-error"
-          role="alert"
-          :message="errorMessage"
-        />
-        <a-button class="login-submit" type="primary" size="large" html-type="submit" data-testid="login-submit" :loading="loading" :disabled="loading">
+      </a-form-item>
+      <a-alert
+        v-if="errorMessage"
+        type="error"
+        show-icon
+        class="login-form__error"
+        data-testid="login-error"
+        role="alert"
+        :message="errorMessage"
+      />
+      <a-form-item class="login-form__actions">
+        <a-button
+          block
+          type="primary"
+          size="large"
+          html-type="submit"
+          data-testid="login-submit"
+          :loading="loading"
+          :disabled="loading"
+        >
           {{ zhCN.login.submit }}
         </a-button>
-      </a-form>
-    </section>
-  </main>
+      </a-form-item>
+    </a-form>
+  </LoginShell>
 </template>
 
 <style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
+.login-form__head {
+  margin-bottom: 32px;
 }
-.login-brand {
-  width: 44%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 48px 40px;
-  background: var(--admin-aside);
-  color: #fff;
-}
-.login-brand h1 {
+.login-form__head h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
-}
-.login-brand__sub {
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
-}
-.login-brand__hint {
-  margin: 24px 0 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
-}
-.login-panel {
-  width: 56%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--admin-page-bg);
-}
-.login-card {
-  width: 400px;
-  max-width: 100%;
-  padding: 28px 28px 24px;
-  border: 1px solid var(--admin-border);
-  border-radius: 12px;
-  background: var(--admin-surface);
-  box-shadow: var(--admin-card-shadow);
-}
-.login-card h2 {
-  margin: 0 0 16px;
-  font-size: 18px;
-  font-weight: 600;
+  line-height: 1.3;
   color: var(--admin-ink);
 }
-.login-card :deep(.ant-input-affix-wrapper),
-.login-card :deep(.ant-input) {
+.login-form__head p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--admin-muted);
+}
+.login-form :deep(.ant-form-item) {
+  margin-bottom: 24px;
+}
+.login-form :deep(.ant-input-prefix),
+.login-form :deep(.ant-input-affix-wrapper .anticon) {
+  color: rgba(0, 0, 0, 0.25);
+}
+.login-form :deep(.ant-input-affix-wrapper),
+.login-form :deep(.ant-input) {
   width: 100%;
 }
-.login-captcha {
+.login-form__captcha {
   display: flex;
-  gap: 8px;
-  align-items: flex-end;
+  align-items: center;
+  gap: 12px;
 }
-.login-field--grow {
+.login-form__captcha-field {
   flex: 1;
-  margin-bottom: 0;
+  min-width: 0;
 }
-.login-captcha__image {
-  width: 120px;
+.login-form__captcha-image {
+  flex: 0 0 116px;
+  width: 116px;
   height: 40px;
   padding: 0;
-  border: 1px solid var(--admin-border);
+  overflow: hidden;
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
-  background: var(--admin-surface);
+  background: #fff;
   cursor: pointer;
 }
-.login-captcha__image img {
+.login-form__captcha-image:hover {
+  border-color: var(--admin-primary);
+}
+.login-form__captcha-image:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 1px;
+}
+.login-form__captcha-image img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
-.login-error {
-  margin: 0 0 12px;
+.login-form__error {
+  margin: 0 0 24px;
 }
-.login-submit {
-  width: 100%;
+.login-form__actions {
+  margin-bottom: 0 !important;
+  padding-top: 8px;
 }
 </style>
