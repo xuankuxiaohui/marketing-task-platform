@@ -32,6 +32,7 @@ async function copyTrace(): Promise<void> {
     data-testid="page-error"
     role="alert"
     :message="feedback.message"
+    :description="feedback.traceId"
   >
     <template v-if="feedback.traceId" #action>
       <a-button size="small" data-testid="copy-trace" @click="copyTrace">

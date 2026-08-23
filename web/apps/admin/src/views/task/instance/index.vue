@@ -14,7 +14,7 @@ import { INSTANCE_STATUS } from "@/constants/task";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskInstancePage" });
@@ -76,7 +76,7 @@ async function submitAbandon(): Promise<void> {
     return;
   }
   const result = await abandonInstance(abandoning.value.id, { reason: reason.value });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

@@ -19,7 +19,7 @@ import { PERMS } from "@/constants/identity";
 import { CLAIM_MODES, PRIZE_STATUS, RECON_POLICIES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPrizeImpact, isPrizeImpactPreview } from "@/utils/prize-impact";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
@@ -144,7 +144,7 @@ async function submit(): Promise<void> {
   feedback.value = null;
   const result: Result = editing.value?.id != null ? await updatePrize(editing.value.id, buildBody()) : await createPrize(buildBody());
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -163,7 +163,7 @@ async function submitReplenish(): Promise<void> {
     reason: replenishForm.reason,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -191,7 +191,7 @@ async function askDisable(row: PrizeResponse): Promise<void> {
     message: formatPrizeImpact(parsed.data as PrizeImpactResponse, "disable"),
     run: async () => {
       const done = await disablePrize(row.id as number, { confirm: true });
-      const doneParsed = okOrFeedback(done);
+      const doneParsed = writeOrFeedback(done);
       if (!doneParsed.ok) {
         feedback.value = doneParsed.feedback;
         return;
@@ -220,7 +220,7 @@ async function askEnable(row: PrizeResponse): Promise<void> {
     message: formatPrizeImpact(parsed.data as PrizeImpactResponse, "enable"),
     run: async () => {
       const done = await enablePrize(row.id as number, { confirm: true });
-      const doneParsed = okOrFeedback(done);
+      const doneParsed = writeOrFeedback(done);
       if (!doneParsed.ok) {
         feedback.value = doneParsed.feedback;
         return;
@@ -238,7 +238,7 @@ function askDelete(row: PrizeResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deletePrize(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

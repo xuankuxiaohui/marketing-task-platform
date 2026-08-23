@@ -7,7 +7,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "AdMaterialPage" });
@@ -108,7 +108,7 @@ async function submit(): Promise<void> {
     status: form.status,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -122,7 +122,7 @@ function askDelete(row: AdMaterialView): void {
     message: zhCN.common.delete,
     run: async () => {
       const result = await deleteMaterial(row.id);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

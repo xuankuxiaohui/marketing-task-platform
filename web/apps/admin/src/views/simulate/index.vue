@@ -15,7 +15,7 @@ import {
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "SimulateTaskPage" });
@@ -83,32 +83,32 @@ async function loadDetail(): Promise<void> {
 }
 
 async function startTask(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateStart(userId(), taskId())), (data) => {
+  await run(async () => writeOrFeedback(await simulateStart(userId(), taskId())), (data) => {
     form.instanceId = String(data.instanceId);
     return `${zhCN.simulate.start}: ${data.instanceId} ${data.instanceStatus}`;
   });
 }
 
 async function clickStep(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateClick(userId(), instanceId(), form.stepCode)), (data) => {
+  await run(async () => writeOrFeedback(await simulateClick(userId(), instanceId(), form.stepCode)), (data) => {
     return `${zhCN.simulate.click}: ${data.stepStatus} / ${data.instanceStatus}`;
   });
 }
 
 async function callbackStep(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateCallback(userId(), instanceId(), form.stepCode, form.bizNo || undefined)), (data) => {
+  await run(async () => writeOrFeedback(await simulateCallback(userId(), instanceId(), form.stepCode, form.bizNo || undefined)), (data) => {
     return `${zhCN.simulate.callback}: ${data.stepStatus} / ${data.instanceStatus}`;
   });
 }
 
 async function progressStep(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateProgress(userId(), instanceId(), form.stepCode, Number(form.value), form.reportId)), (data) => {
+  await run(async () => writeOrFeedback(await simulateProgress(userId(), instanceId(), form.stepCode, Number(form.value), form.reportId)), (data) => {
     return `${zhCN.simulate.progress}: ${data.progressCurrent}/${data.progressTarget ?? "-"} ${data.stepStatus}`;
   });
 }
 
 async function runFlow(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateFlow(userId(), taskId())), (data) => {
+  await run(async () => writeOrFeedback(await simulateFlow(userId(), taskId())), (data) => {
     form.instanceId = String(data.instanceId);
     flowSteps.value = data.steps ?? [];
     return `${zhCN.simulate.flow}: ${data.instanceId} ${data.instanceStatus}`;
@@ -116,7 +116,7 @@ async function runFlow(): Promise<void> {
 }
 
 async function reverseRun(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateReverse(instanceId())), (data) => {
+  await run(async () => writeOrFeedback(await simulateReverse(instanceId())), (data) => {
     return `${zhCN.simulate.reverse}: stock=${data.stockRestored} points=${data.pointsReversed} sending=${data.sendingMarked} channel=${data.channelRevoked}`;
   });
 }

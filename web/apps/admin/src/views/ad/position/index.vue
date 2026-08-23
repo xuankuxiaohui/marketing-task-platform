@@ -15,7 +15,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "AdPositionPage" });
@@ -112,7 +112,7 @@ async function submit(): Promise<void> {
     status: form.status,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -133,7 +133,7 @@ async function onBind(): Promise<void> {
     grayType: "NONE",
     status: "ENABLED",
   });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -151,7 +151,7 @@ function askDelete(row: AdPositionView): void {
     message: zhCN.common.delete,
     run: async () => {
       const result = await deletePosition(row.id);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -166,7 +166,7 @@ function askUnbind(row: AdPositionView, materialId: number): void {
     message: zhCN.ad.unbind,
     run: async () => {
       const result = await unbindPlacement(row.id, materialId);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

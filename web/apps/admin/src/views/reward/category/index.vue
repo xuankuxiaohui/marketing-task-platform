@@ -17,7 +17,7 @@ import { PERMS, STATUS } from "@/constants/identity";
 import { COST_MODES, FULFILLMENT_MODES, RECON_POLICIES, REWARD_TARGETS } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RewardCategoryPage" });
@@ -100,7 +100,7 @@ async function submit(): Promise<void> {
     ? await updateCategory(form.code, body)
     : await createCategory(body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -117,7 +117,7 @@ function askDelete(row: PrizeCategoryResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteCategory(row.code as string);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -132,7 +132,7 @@ async function onDisable(row: PrizeCategoryResponse): Promise<void> {
     return;
   }
   const result = await disableCategory(row.code);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -145,7 +145,7 @@ async function onEnable(row: PrizeCategoryResponse): Promise<void> {
     return;
   }
   const result = await enableCategory(row.code);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

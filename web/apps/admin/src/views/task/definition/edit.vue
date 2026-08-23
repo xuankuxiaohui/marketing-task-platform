@@ -17,7 +17,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { PERMS } from "@/constants/identity";
 import { CYCLE_TYPES, EXPR_TYPES, GRAY_TYPES, STEP_TYPES } from "@/constants/task";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPublishImpact, isPublishPreview } from "@/utils/publish-confirm";
 import {
   edgesToTransitions,
@@ -250,7 +250,7 @@ async function save(): Promise<void> {
   feedback.value = null;
   const result = await saveDefinition(buildSaveBody());
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -279,7 +279,7 @@ async function onPublish(): Promise<void> {
       message: formatPublishImpact(parsed.data as PublishResponse),
       run: async () => {
         const done = await publishDefinition(form.id as number, { confirm: true });
-        const doneParsed = okOrFeedback(done);
+        const doneParsed = writeOrFeedback(done);
         if (!doneParsed.ok) {
           feedback.value = doneParsed.feedback;
           return;
@@ -297,7 +297,7 @@ async function onResetRevision(): Promise<void> {
     return;
   }
   const result = await resetRevision(form.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

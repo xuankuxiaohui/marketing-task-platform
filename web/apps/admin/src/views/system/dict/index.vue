@@ -18,7 +18,7 @@ import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "DictManagePage" });
@@ -92,7 +92,7 @@ async function submitType(): Promise<void> {
     ? await updateDictType(editing.value.id, { name: form.name, status: form.status, remark: form.remark })
     : await createDictType({ code: form.code, name: form.name, remark: form.remark });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -114,7 +114,7 @@ async function submitEntry(): Promise<void> {
     remark: entryForm.remark || undefined,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -131,7 +131,7 @@ function askDelete(row: DictTypeView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteDictType(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

@@ -12,7 +12,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { PERMS } from "@/constants/identity";
 import { BYPASS_RULES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RewardRecordPage" });
@@ -60,7 +60,7 @@ async function onRetry(): Promise<void> {
     return;
   }
   const result = await retryGrant(Number(recordId.value));
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
   }
@@ -71,7 +71,7 @@ async function onFulfillConfirm(): Promise<void> {
     return;
   }
   const result = await fulfillConfirm(Number(recordId.value));
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
   }
@@ -82,7 +82,7 @@ async function onFulfillRetry(): Promise<void> {
     return;
   }
   const result = await fulfillRetry(Number(recordId.value));
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
   }
@@ -95,7 +95,7 @@ async function onManualGrant(): Promise<void> {
     reason: grantForm.reason,
     bypassRules: grantForm.bypass,
   });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

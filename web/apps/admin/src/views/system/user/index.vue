@@ -21,7 +21,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { useSessionStore } from "@/store/session";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "AdminUserPage" });
@@ -135,7 +135,7 @@ async function submitForm(): Promise<void> {
   if (!result) {
     return;
   }
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -152,7 +152,7 @@ function askDisable(row: AdminUserView): void {
     message: zhCN.confirm.disable,
     run: async () => {
       const result = await disableUser(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -170,7 +170,7 @@ function askDelete(row: AdminUserView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteUser(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -185,7 +185,7 @@ async function onEnable(row: AdminUserView): Promise<void> {
     return;
   }
   const result = await enableUser(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -283,6 +283,7 @@ function onTableChange(pag: { current?: number }): void {
       :visible="formOpen"
       :title="formMode === 'reset' ? zhCN.user.resetPassword : formMode === 'edit' ? zhCN.common.edit : zhCN.common.create"
       :saving="saving"
+      :feedback="formOpen ? feedback : null"
       @submit="submitForm"
       @cancel="formOpen = false"
     >

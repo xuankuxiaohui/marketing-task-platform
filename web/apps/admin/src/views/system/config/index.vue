@@ -7,7 +7,7 @@ import { CONFIG_VALUE_TYPES, PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { buildConfigUpdateBody, CONFIG_MASK_DISPLAY } from "@/utils/config-update";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "ConfigManagePage" });
@@ -88,7 +88,7 @@ async function submit(): Promise<void> {
       remark: form.remark || undefined,
     });
     saving.value = false;
-    const parsed = okOrFeedback(result);
+    const parsed = writeOrFeedback(result);
     if (!parsed.ok) {
       feedback.value = parsed.feedback;
       return;
@@ -110,7 +110,7 @@ async function submit(): Promise<void> {
   );
   const result = await updateConfig(editing.value.configKey ?? form.configKey, body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -189,6 +189,7 @@ onMounted(() => {
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
       :saving="saving"
+      :feedback="formOpen ? feedback : null"
       @submit="submit"
       @cancel="formOpen = false"
     >

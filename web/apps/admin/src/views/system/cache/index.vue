@@ -5,7 +5,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { buildCacheEvictCommand, CACHE_EVICT_LEVELS, SESSION_NAMESPACE } from "@/utils/cache-evict";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "CacheManagePage" });
@@ -57,7 +57,7 @@ async function submitEvict(): Promise<void> {
     return;
   }
   const result = await evictCache(built.body);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

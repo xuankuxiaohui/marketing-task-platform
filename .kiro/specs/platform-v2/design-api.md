@@ -74,6 +74,7 @@
 **POST /admin/identity/roles**（`identity:role:create`）· `{code(3-30 [a-z0-9_-]), name, description?}`
 **PUT /admin/identity/roles/{id}**（`identity:role:update`）· `{name, description, status}`；内置超管角色改权限集拒绝（R2.5）
 **DELETE /admin/identity/roles/{id}**（`identity:role:delete`）· 内置拒绝 `auth.role.built-in`(400)
+**GET /admin/identity/roles/{id}/permissions**（`identity:role:query`）· `{permissionIds: [long]}`；角色不存在 `common.not-found`
 **PUT /admin/identity/roles/{id}/permissions**（`identity:role:assign-permission`）· `{permissionIds: [long]}`；生效即权限缓存失效（R2.6）
 
 **GET /admin/identity/permissions/tree**（`identity:permission:query`）

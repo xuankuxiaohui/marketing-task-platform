@@ -16,7 +16,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "ActivityManagePage" });
@@ -165,7 +165,7 @@ async function submit(): Promise<void> {
   };
   const result: Result = await saveActivity(body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -176,7 +176,7 @@ async function submit(): Promise<void> {
 
 async function onPublish(row: ActivityView, confirmFlag: boolean): Promise<void> {
   const result = await publishActivity(row.id, { confirm: confirmFlag, early: true });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -198,7 +198,7 @@ function askDelete(row: ActivityView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteActivity(row.id);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -210,7 +210,7 @@ function askDelete(row: ActivityView): void {
 
 async function onOffline(row: ActivityView): Promise<void> {
   const result = await offlineActivity(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -223,7 +223,7 @@ async function onSchedule(row: ActivityView): Promise<void> {
     return;
   }
   const result = await scheduleActivity(row.id, { publishAt: toInstant(form.publishAt) });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

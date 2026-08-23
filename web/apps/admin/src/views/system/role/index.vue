@@ -6,8 +6,12 @@ import {
   createRole,
   deleteRole,
   fetchPermissionTree,
+  fetchRolePermissions,
   pageRoles,
+  pageUsers,
   updateRole,
+  updateUser,
+  type AdminUserView,
   type PermissionTreeNode,
   type RoleView,
 } from "@/api/identity";
@@ -18,8 +22,9 @@ import { PERMS, STATUS, SUPER_ADMIN_ROLE } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { toPermissionTreeData } from "@/utils/permission-tree";
+import { remainingRoleIdsAfterRevoke, toCheckedPermissionIds } from "@/utils/role-assign";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RolePermissionPage" });
@@ -37,6 +42,8 @@ const editing = ref<RoleView | null>(null);
 const form = reactive({ code: "", name: "", description: "", status: STATUS.ENABLED as string });
 const tree = ref<PermissionTreeNode[]>([]);
 const selectedIds = ref<number[]>([]);
+const holders = ref<AdminUserView[]>([]);
+const roleCatalog = ref<RoleView[]>([]);
 const confirm = ref<{ message: string; run: () => Promise<void> } | null>(null);
 const treeData = ref(toPermissionTreeData([]));
 
@@ -77,16 +84,37 @@ function openEdit(row: RoleView): void {
 }
 
 async function openAssign(row: RoleView): Promise<void> {
-  editing.value = row;
-  const result = await fetchPermissionTree();
-  const parsed = okOrFeedback(result);
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
+  if (row.id == null) {
     return;
   }
-  tree.value = parsed.data ?? [];
+  editing.value = row;
+  feedback.value = null;
+  const [treeResult, permResult, usersResult, rolesResult] = await Promise.all([
+    fetchPermissionTree(),
+    fetchRolePermissions(row.id),
+    pageUsers({ roleId: row.id, page: 1, pageSize: 100 }),
+    pageRoles({ all: true, page: 1, pageSize: 100 }),
+  ]);
+  const treeParsed = okOrFeedback(treeResult);
+  if (!treeParsed.ok) {
+    feedback.value = treeParsed.feedback;
+    return;
+  }
+  const permParsed = okOrFeedback(permResult);
+  if (!permParsed.ok) {
+    feedback.value = permParsed.feedback;
+    return;
+  }
+  tree.value = treeParsed.data ?? [];
   treeData.value = toPermissionTreeData(tree.value);
-  selectedIds.value = [];
+  selectedIds.value = toCheckedPermissionIds(permParsed.data?.permissionIds);
+  const usersParsed = okOrFeedback(usersResult);
+  holders.value = usersParsed.ok ? (usersParsed.data?.records ?? []) : [];
+  if (!usersParsed.ok) {
+    feedback.value = usersParsed.feedback;
+  }
+  const rolesParsed = okOrFeedback(rolesResult);
+  roleCatalog.value = rolesParsed.ok ? (rolesParsed.data?.records ?? []) : [];
   assignOpen.value = true;
 }
 
@@ -97,11 +125,12 @@ function onPermCheck(keys: (string | number)[] | { checked: (string | number)[] 
 
 async function submitForm(): Promise<void> {
   saving.value = true;
+  feedback.value = null;
   const result: Result = editing.value?.id
     ? await updateRole(editing.value.id, { name: form.name, description: form.description, status: form.status })
     : await createRole({ code: form.code, name: form.name, description: form.description });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -115,14 +144,40 @@ async function submitAssign(): Promise<void> {
     return;
   }
   saving.value = true;
-  const result = await assignRolePermissions(editing.value.id, { permissionIds: selectedIds.value });
+  feedback.value = null;
+  const result = await assignRolePermissions(editing.value.id, {
+    permissionIds: toCheckedPermissionIds(selectedIds.value),
+  });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
   }
   assignOpen.value = false;
+}
+
+function askRevoke(user: AdminUserView): void {
+  if (user.id == null || editing.value?.id == null) {
+    return;
+  }
+  const roleId = editing.value.id;
+  confirm.value = {
+    message: zhCN.role.revokeConfirm,
+    run: async () => {
+      const result = await updateUser(user.id as number, {
+        nickname: user.nickname ?? "",
+        roleIds: remainingRoleIdsAfterRevoke(roleCatalog.value, user.roles, roleId),
+      });
+      const parsed = writeOrFeedback(result, zhCN.role.revoked);
+      if (!parsed.ok) {
+        feedback.value = parsed.feedback;
+        return;
+      }
+      holders.value = holders.value.filter((row) => row.id !== user.id);
+      await load();
+    },
+  };
 }
 
 function askDelete(row: RoleView): void {
@@ -133,7 +188,7 @@ function askDelete(row: RoleView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteRole(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -217,6 +272,7 @@ onMounted(() => {
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
       :saving="saving"
+      :feedback="formOpen ? feedback : null"
       @submit="submitForm"
       @cancel="formOpen = false"
     >
@@ -240,6 +296,7 @@ onMounted(() => {
       :visible="assignOpen"
       :title="zhCN.role.assign"
       :saving="saving"
+      :feedback="assignOpen ? feedback : null"
       @submit="submitAssign"
       @cancel="assignOpen = false"
     >
@@ -260,6 +317,24 @@ onMounted(() => {
             <span :data-testid="`perm-${key}`">{{ title }}</span>
           </template>
         </a-tree>
+      </div>
+      <div class="role-holders" data-testid="role-holders">
+        <h3>{{ zhCN.role.holders }}</h3>
+        <p v-if="holders.length === 0" class="hint">{{ zhCN.role.noHolders }}</p>
+        <ul v-else>
+          <li v-for="user in holders" :key="user.id" class="role-holders__row" :data-testid="`role-holder-${user.id}`">
+            <span>{{ user.username }}（{{ user.nickname }}）</span>
+            <a-button
+              size="small"
+              danger
+              v-auth="PERMS.USER_UPDATE"
+              data-testid="role-revoke"
+              @click="askRevoke(user)"
+            >
+              {{ zhCN.role.revoke }}
+            </a-button>
+          </li>
+        </ul>
       </div>
     </FormDialog>
     <ConfirmDialog
@@ -283,5 +358,31 @@ onMounted(() => {
 }
 .perm-tree {
   background: transparent;
+}
+.role-holders {
+  grid-column: 1 / -1;
+}
+.role-holders h3 {
+  margin: 8px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.role-holders ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.role-holders__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  background: #fff;
 }
 </style>

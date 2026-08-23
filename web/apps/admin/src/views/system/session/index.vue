@@ -6,7 +6,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { ACCOUNT_TYPE, PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "SessionManagePage" });
@@ -50,7 +50,7 @@ async function onKickConfirm(): Promise<void> {
     account: row.account,
     tokenLast4: row.tokenLast4,
   });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

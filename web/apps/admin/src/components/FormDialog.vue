@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
+import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { zhCN } from "@/locales/zh-CN";
+import type { PageFeedback } from "@/utils/feedback";
 
 defineOptions({ name: "FormDialog" });
 
@@ -8,6 +10,7 @@ const props = defineProps<{
   visible: boolean;
   title: string;
   saving?: boolean;
+  feedback?: PageFeedback | null;
 }>();
 
 const emit = defineEmits<{
@@ -46,6 +49,7 @@ onUnmounted(() => {
     <div data-testid="form-dialog">
       <a-form layout="vertical" class="admin-form-modal__form" @submit.prevent="emit('submit')">
         <div class="admin-form-modal__body" data-testid="form-dialog-body">
+          <FeedbackBanner :feedback="feedback ?? null" />
           <slot />
         </div>
       </a-form>
@@ -98,7 +102,11 @@ onUnmounted(() => {
 .admin-form-modal__body > :deep(p),
 .admin-form-modal__body > :deep(fieldset),
 .admin-form-modal__body > :deep(.perm-tree-wrap),
+.admin-form-modal__body > :deep(.role-holders),
 .admin-form-modal__body > :deep(.ant-btn) {
+  grid-column: 1 / -1;
+}
+.admin-form-modal__body > :deep(.ant-alert) {
   grid-column: 1 / -1;
 }
 .admin-form-modal__body > :deep(label) {

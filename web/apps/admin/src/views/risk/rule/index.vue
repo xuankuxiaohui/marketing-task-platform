@@ -6,7 +6,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { hasAuth } from "@/directives/auth";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RiskRulePage" });
@@ -64,7 +64,7 @@ async function submit(): Promise<void> {
     action: form.action,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

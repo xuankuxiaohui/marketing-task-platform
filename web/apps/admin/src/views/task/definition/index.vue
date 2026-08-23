@@ -22,7 +22,7 @@ import { DEFINITION_STATUS } from "@/constants/task";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPublishImpact, isPublishPreview } from "@/utils/publish-confirm";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
@@ -117,7 +117,7 @@ async function applyPublish(id: number, body: { confirm: boolean; early?: boolea
       message: formatPublishImpact(parsed.data as PublishResponse),
       run: async () => {
         const done = await publishDefinition(id, { confirm: true, early: body.early });
-        const doneParsed = okOrFeedback(done);
+        const doneParsed = writeOrFeedback(done);
         if (!doneParsed.ok) {
           feedback.value = doneParsed.feedback;
           return;
@@ -161,7 +161,7 @@ async function submitCopy(): Promise<void> {
   saving.value = true;
   const result = await copyDefinition(editing.value.id, { code: copyForm.code, name: copyForm.name });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -177,7 +177,7 @@ async function submitSchedule(): Promise<void> {
   saving.value = true;
   const result = await scheduleDefinition(editing.value.id, { publishAt: scheduleAt.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -191,7 +191,7 @@ async function onCancelSchedule(row: TaskDefinitionView): Promise<void> {
     return;
   }
   const result = await cancelSchedule(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -204,7 +204,7 @@ async function onOffline(row: TaskDefinitionView): Promise<void> {
     return;
   }
   const result = await offlineDefinition(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -220,7 +220,7 @@ function askDelete(row: TaskDefinitionView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteDefinition(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

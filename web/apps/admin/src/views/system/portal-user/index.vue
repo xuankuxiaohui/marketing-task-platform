@@ -18,7 +18,7 @@ import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "PortalUserPage" });
@@ -116,7 +116,7 @@ async function submitProfile(): Promise<void> {
     orgId: profile.orgId || undefined,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -132,7 +132,7 @@ async function submitReset(): Promise<void> {
   saving.value = true;
   const result = await resetPortalPassword(editingId.value, newPassword.value);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -148,7 +148,7 @@ function askDisable(row: PortalUserView): void {
     message: zhCN.confirm.disable,
     run: async () => {
       const result = await disablePortalUser(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -166,7 +166,7 @@ function askDelete(row: PortalUserView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deletePortalUser(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -181,7 +181,7 @@ async function onEnable(row: PortalUserView): Promise<void> {
     return;
   }
   const result = await enablePortalUser(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

@@ -51,6 +51,20 @@ describe("FormDialog", () => {
     wrapper.unmount();
   });
 
+  it("shows write-fail feedback inside the open modal", () => {
+    const wrapper = mount(FormDialog, {
+      props: {
+        visible: true,
+        title: "新建",
+        feedback: { message: "配置值不合法", traceId: "trace-cfg" },
+      },
+      attachTo: document.body,
+    });
+    expect(wrapper.get('[data-testid="form-dialog"]').text()).toContain("配置值不合法");
+    expect(wrapper.get('[data-testid="page-error"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("keeps the form body slot inside the modal", () => {
     const wrapper = mount(FormDialog, {
       props: { visible: true, title: "新建" },

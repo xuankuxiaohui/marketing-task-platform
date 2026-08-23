@@ -14,7 +14,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TrackMetadataPage" });
@@ -108,7 +108,7 @@ async function submit(): Promise<void> {
   const result: Result =
     editing.value?.id != null ? await updateMetadata(editing.value.id, buildBody()) : await createMetadata(buildBody());
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -125,7 +125,7 @@ function askDelete(row: TrackMetadataResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteMetadata(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

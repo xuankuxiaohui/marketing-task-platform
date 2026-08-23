@@ -935,6 +935,37 @@
       }
     },
     "/admin/identity/roles/{id}/permissions": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "查询角色权限",
+        "description": "权限 identity:role:query",
+        "operationId": "listPermissions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultRolePermissionIdsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "identity"
@@ -5555,6 +5586,33 @@
         "required": [
           "permissionIds"
         ]
+      },
+      "RolePermissionIdsResponse": {
+        "type": "object",
+        "properties": {
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      },
+      "ResultRolePermissionIdsResponse": {
+        "type": "object",
+        "properties": {
+          "code": {},
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RolePermissionIdsResponse"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
       },
       "PortalUserProfileCommand": {
         "type": "object",

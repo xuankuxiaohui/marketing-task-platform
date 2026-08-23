@@ -14,7 +14,7 @@ import { RISK_DIMENSIONS, RISK_LIST_TYPES } from "@/constants/risk";
 import { hasAuth } from "@/directives/auth";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RiskListItemPage" });
@@ -110,7 +110,7 @@ async function submit(): Promise<void> {
     remark: form.remark || undefined,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -129,7 +129,7 @@ async function submitImport(): Promise<void> {
     reason: form.reason,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -148,7 +148,7 @@ async function submitRemove(): Promise<void> {
   feedback.value = null;
   const result = await removeListItem(removing.value.id, { reason: removeReason.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

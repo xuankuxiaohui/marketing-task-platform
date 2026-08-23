@@ -18,7 +18,7 @@ import { PERMS } from "@/constants/identity";
 import { RECON_ACTIONS, RECON_REVIEW } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RewardReconPage" });
@@ -81,7 +81,7 @@ async function submitCreate(): Promise<void> {
   saving.value = true;
   const result = await createReconBatch({ categoryCode: createForm.categoryCode, billDate: createForm.billDate });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -104,7 +104,7 @@ async function submitImport(): Promise<void> {
   saving.value = true;
   const result = await importReconLines(selected.value.id, body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -118,7 +118,7 @@ async function onMatch(row: ReconBatchResponse): Promise<void> {
     return;
   }
   const result = await matchReconBatch(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -153,7 +153,7 @@ async function submitReview(): Promise<void> {
     remark: reviewForm.remark,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -176,7 +176,7 @@ async function submitAction(): Promise<void> {
     prizeId: actionForm.prizeId ? Number(actionForm.prizeId) : undefined,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

@@ -15,7 +15,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskCrowdPage" });
@@ -78,7 +78,7 @@ async function submit(): Promise<void> {
   const body = { code: form.code, name: form.name, status: form.status };
   const result: Result = editing.value?.id != null ? await updateCrowd(editing.value.id, body) : await createCrowd(body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -94,7 +94,7 @@ async function submitImport(): Promise<void> {
   saving.value = true;
   const result = await importCrowd(editing.value.id, { content: importContent.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -114,7 +114,7 @@ function askDelete(row: CrowdResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteCrowd(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

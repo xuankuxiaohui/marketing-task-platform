@@ -128,6 +128,12 @@ public class RoleAppService {
         audits.append("role-delete", "sys_role", String.valueOf(id), "SUCCESS", summary("delete", existing.getCode()));
     }
 
+    public List<Long> listPermissionIds(long id) {
+        require(id);
+        List<Long> ids = rolePermissions.listPermissionIds(id);
+        return ids == null ? List.of() : List.copyOf(ids);
+    }
+
     @Transactional
     public void assignPermissions(long id, RoleAssignPermissionsCommand command) {
         RoleEntity existing = require(id);

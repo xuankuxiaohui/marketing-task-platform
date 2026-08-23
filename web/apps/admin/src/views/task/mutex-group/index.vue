@@ -13,7 +13,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskMutexGroupPage" });
@@ -66,7 +66,7 @@ async function submit(): Promise<void> {
   const body = { code: form.code, name: form.name, crossCycle: form.crossCycle };
   const result: Result = editing.value?.id != null ? await updateMutexGroup(editing.value.id, body) : await createMutexGroup(body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -83,7 +83,7 @@ function askDelete(row: MutexGroupResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteMutexGroup(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;

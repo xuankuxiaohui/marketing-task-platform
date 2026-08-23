@@ -15,7 +15,7 @@ import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "InternalAppPage" });
@@ -50,7 +50,7 @@ async function submitCreate(): Promise<void> {
   saving.value = true;
   const result = await createInternalApp({ appName: appName.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -66,7 +66,7 @@ async function onRotate(row: InternalAppView): Promise<void> {
     return;
   }
   const result = await rotateInternalAppSecret(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -83,7 +83,7 @@ function askDisable(row: InternalAppView): void {
     message: zhCN.confirm.disable,
     run: async () => {
       const result = await disableInternalApp(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -98,7 +98,7 @@ async function onEnable(row: InternalAppView): Promise<void> {
     return;
   }
   const result = await enableInternalApp(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

@@ -7,7 +7,7 @@ import { PERMS } from "@/constants/identity";
 import { RISK_ACTION_RESULTS, RISK_HANDLE_ACTIONS, RISK_HIT_TYPES, RISK_RULE_CODES } from "@/constants/risk";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RiskCasePage" });
@@ -84,7 +84,7 @@ async function submitHandle(): Promise<void> {
     expireAt: form.action === "ADD_BLACK" ? toIsoInstant(form.expireAt) : undefined,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;

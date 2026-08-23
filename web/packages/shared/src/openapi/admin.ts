@@ -307,7 +307,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * 查询角色权限
+         * @description 权限 identity:role:query
+         */
+        get: operations["listPermissions"];
         /**
          * 分配角色权限
          * @description 权限 identity:role:assign-permission；内置拒绝 auth.role.built-in
@@ -2128,6 +2132,15 @@ export interface components {
         };
         RoleAssignPermissionsCommand: {
             permissionIds: number[];
+        };
+        RolePermissionIdsResponse: {
+            permissionIds?: number[];
+        };
+        ResultRolePermissionIdsResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["RolePermissionIdsResponse"];
+            traceId?: string;
         };
         PortalUserProfileCommand: {
             province?: string;
@@ -4233,6 +4246,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    listPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultRolePermissionIdsResponse"];
                 };
             };
         };

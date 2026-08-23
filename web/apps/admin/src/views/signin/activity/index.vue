@@ -16,7 +16,7 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "SigninActivityPage" });
@@ -114,7 +114,7 @@ async function submit(): Promise<void> {
   };
   const result: Result = await saveSigninActivity(body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -125,7 +125,7 @@ async function submit(): Promise<void> {
 
 async function onPublish(row: SigninActivityView, confirmFlag: boolean): Promise<void> {
   const result = await publishSigninActivity(row.id, { confirm: confirmFlag, early: true });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -147,7 +147,7 @@ function askDelete(row: SigninActivityView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteSigninActivity(row.id);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -159,7 +159,7 @@ function askDelete(row: SigninActivityView): void {
 
 async function onOffline(row: SigninActivityView): Promise<void> {
   const result = await offlineSigninActivity(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -172,7 +172,7 @@ async function onSchedule(row: SigninActivityView): Promise<void> {
     return;
   }
   const result = await scheduleSigninActivity(row.id, { publishAt: toInstant(form.publishAt) });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
