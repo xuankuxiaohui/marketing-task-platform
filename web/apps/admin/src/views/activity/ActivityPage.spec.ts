@@ -1,3 +1,4 @@
+import { message } from "ant-design-vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -59,16 +60,27 @@ describe("ActivityManagePage", () => {
   });
 
   it("lists activities and previews publish confirm", async () => {
-    publishMock.mockResolvedValue(
-      ok({
-        requiresConfirm: true,
-        message: zhCN.activity.revisionHint,
-        id: 3,
-        code: "summer",
-        version: 0,
-        status: "DRAFT",
-      }),
-    );
+    const successSpy = vi.spyOn(message, "success");
+    publishMock
+      .mockResolvedValueOnce(
+        ok({
+          requiresConfirm: true,
+          message: zhCN.activity.revisionHint,
+          id: 3,
+          code: "summer",
+          version: 0,
+          status: "DRAFT",
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          requiresConfirm: false,
+          id: 3,
+          code: "summer",
+          version: 1,
+          status: "PUBLISHED",
+        }),
+      );
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="activity-table"]').text()).toContain("summer");
     expect(wrapper.find(".ant-pagination").exists()).toBe(true);
@@ -77,6 +89,13 @@ describe("ActivityManagePage", () => {
     await wrapper.get('[data-testid="activity-publish"]').trigger("click");
     await flushPromises();
     expect(publishMock).toHaveBeenCalledWith(3, { confirm: false, early: true });
+    expect(successSpy).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="confirm-message"]').text()).toContain(zhCN.activity.revisionHint);
+    await wrapper.get('[data-testid="confirm-ok"]').trigger("click");
+    await flushPromises();
+    expect(publishMock).toHaveBeenNthCalledWith(2, 3, { confirm: true, early: true });
+    expect(successSpy).toHaveBeenCalledWith(zhCN.common.saved);
+    successSpy.mockRestore();
   });
 
   it("shows Ant Design empty and date picker instead of homemade chrome", async () => {

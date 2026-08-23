@@ -125,7 +125,7 @@ async function submit(): Promise<void> {
 
 async function onPublish(row: SigninActivityView, confirmFlag: boolean): Promise<void> {
   const result = await publishSigninActivity(row.id, { confirm: confirmFlag, early: true });
-  const parsed = writeOrFeedback(result);
+  const parsed = confirmFlag ? writeOrFeedback(result) : okOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
