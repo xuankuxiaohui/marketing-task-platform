@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
 import { fetchMineTasks, type MineTaskView } from "@/api/task";
+import { useSessionReload } from "@/composables/useSessionReload";
+import { useLoginOverlayStore } from "@/store/login-overlay";
+import { useSessionStore } from "@/store/session";
 import { type MineTaskStatus } from "@/utils/mine-status";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
@@ -17,16 +20,21 @@ defineOptions({ name: "MineTasksPage" });
 const ALL = "ALL";
 const PAGE_SIZE = 20;
 const STATUS_TABS = [
+  { name: ALL, title: zhCN.task.all },
   { name: "IN_PROGRESS", title: zhCN.task.inProgress },
   { name: "COMPLETED", title: zhCN.task.completed },
-  { name: "ABANDONED", title: zhCN.task.abandoned },
   { name: "EXPIRED", title: zhCN.task.expired },
 ] as const;
 
+type StatusTab = (typeof STATUS_TABS)[number]["name"];
+
+const route = useRoute();
 const router = useRouter();
+const session = useSessionStore();
+const overlay = useLoginOverlayStore();
+const isTabRoot = computed(() => route.meta.tab === "tasks");
 const categories = ref<DictPortalEntry[]>([]);
-const activeStatus = ref<MineTaskStatus>("IN_PROGRESS");
-const activeCategory = ref(ALL);
+const activeStatus = ref<StatusTab>("IN_PROGRESS");
 const records = ref<MineTaskView[]>([]);
 const page = ref(1);
 const total = ref(0);
@@ -51,18 +59,24 @@ async function loadCategories(): Promise<void> {
 }
 
 async function loadPage(reset: boolean): Promise<void> {
+  if (!session.authenticated) {
+    records.value = [];
+    total.value = 0;
+    finished.value = true;
+    loading.value = false;
+    refreshing.value = false;
+    loaded.value = true;
+    return;
+  }
   if (reset) {
     page.value = 1;
     finished.value = false;
   }
   loading.value = true;
   try {
-    const status = activeStatus.value;
-    const rawCategory = String(activeCategory.value);
-    const category = rawCategory === ALL || rawCategory === "0" ? undefined : rawCategory;
+    const status = activeStatus.value === ALL ? undefined : activeStatus.value;
     const result = await fetchMineTasks({
       status,
-      category,
       page: page.value,
       pageSize: PAGE_SIZE,
     });
@@ -104,11 +118,20 @@ function openTask(row: MineTaskView): void {
   void router.push(`/task/${row.taskId}`);
 }
 
-function selectStatus(name: MineTaskStatus): void {
-  activeStatus.value = name;
+function selectStatus(name: StatusTab | MineTaskStatus): void {
+  activeStatus.value = name as StatusTab;
 }
 
-watch([activeStatus, activeCategory], () => {
+function requestLogin(): void {
+  overlay.request({ redirect: route.fullPath });
+}
+
+watch(activeStatus, () => {
+  void loadPage(true);
+});
+
+useSessionReload(() => {
+  void loadCategories();
   void loadPage(true);
 });
 
@@ -124,8 +147,8 @@ defineExpose({ selectStatus });
 
 <template>
   <section class="mine-tasks">
-    <NavBar :title="zhCN.mine.tasks" left-arrow @click-left="router.back()" />
-    <Tabs ref="statusTabs" v-model:active="activeStatus" sticky>
+    <NavBar :title="zhCN.mine.tasks" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
+    <Tabs ref="statusTabs" v-model:active="activeStatus" data-testid="mine-status-row">
       <Tab
         v-for="tab in STATUS_TABS"
         :key="tab.name"
@@ -134,19 +157,15 @@ defineExpose({ selectStatus });
         :data-testid="'mine-status-' + tab.name"
       />
     </Tabs>
-    <Tabs v-model:active="activeCategory" shrink>
-      <Tab :title="zhCN.task.all" :name="ALL" />
-      <Tab
-        v-for="entry in categories"
-        :key="entry.value ?? entry.label"
-        :title="entry.label || entry.value"
-        :name="entry.value"
-      />
-    </Tabs>
-    <PullRefresh v-model="refreshing" @refresh="onRefresh">
-      <Empty v-if="empty" :description="emptyCopy" data-testid="mine-tasks-empty">
+    <PullRefresh v-model="refreshing" class="mine-list" data-testid="mine-list" @refresh="onRefresh">
+      <Empty v-if="!session.authenticated" :description="zhCN.session.missing" data-testid="mine-tasks-login">
+        <Button type="primary" size="small" data-testid="mine-tasks-login-action" @click="requestLogin">
+          {{ zhCN.login.submit }}
+        </Button>
+      </Empty>
+      <Empty v-else-if="empty" :description="emptyCopy" data-testid="mine-tasks-empty">
         <Button
-          v-if="activeStatus === 'IN_PROGRESS'"
+          v-if="activeStatus === 'IN_PROGRESS' || activeStatus === ALL"
           type="primary"
           size="small"
           data-testid="empty-go-home"
@@ -186,6 +205,17 @@ defineExpose({ selectStatus });
 </template>
 
 <style scoped>
+.mine-tasks {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
+.mine-tasks :deep(.van-tabs__wrap),
+.mine-tasks :deep(.van-tabs__nav) {
+  background: var(--portal-bg);
+}
+.mine-list {
+  padding-top: 12px;
+}
 .mine-task-card {
   display: flex;
   gap: 12px;
@@ -194,9 +224,20 @@ defineExpose({ selectStatus });
   margin: 0 16px 12px;
   padding: 12px;
   border: 0;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
   text-align: left;
+}
+.mine-task-card:first-of-type {
+  margin-top: 4px;
+}
+.mine-task-card :deep(.fallback-image) {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 14px;
+  background: var(--portal-primary-soft);
 }
 .mine-task-card__meta {
   display: flex;
@@ -208,7 +249,7 @@ defineExpose({ selectStatus });
   font-size: 15px;
 }
 .mine-task-card__meta span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 12px;
 }
 </style>

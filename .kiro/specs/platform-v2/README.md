@@ -42,7 +42,7 @@
 | 缓存 | Spring Cache + Caffeine + Redis。`ad:position` P0 只占位，任务 48 接线 |
 | 表达式 | AviatorScript + AST 白名单 |
 | 异步 | Outbox（按 producer 分 Relay） |
-| 管理端 | vue-pure-admin-thin（`web/apps/admin`）；门户 Vant 4（`web/apps/client`） |
+| 管理端 | vue-pure-admin-thin 骨架 + Ant Design Vue（`web/apps/admin`）；门户 Vant 4（`web/apps/client`） |
 
 ## 范围
 

@@ -106,7 +106,8 @@ onMounted(() => {
 
 <template>
   <main class="auth-page">
-    <h1>{{ zhCN.register.title }}</h1>
+    <h1>{{ zhCN.appTitle }}</h1>
+    <p class="auth-page__sub">{{ zhCN.register.title }}</p>
     <form @submit.prevent="submit">
       <Field
         v-model="username"
@@ -150,37 +151,3 @@ onMounted(() => {
     <router-link class="auth-link" to="/login" data-testid="to-login">{{ zhCN.register.toLogin }}</router-link>
   </main>
 </template>
-
-<style scoped>
-.auth-page {
-  min-height: 100vh;
-  padding: 48px 16px 24px;
-  background: #fff;
-}
-.auth-page h1 {
-  margin: 0 0 24px;
-  font-size: 22px;
-}
-.auth-hint {
-  margin: 0 16px 8px;
-  color: #646566;
-  font-size: 12px;
-}
-.auth-error {
-  margin: 8px 16px 0;
-  color: #ee0a24;
-  font-size: 13px;
-}
-.auth-agree {
-  padding: 8px 16px;
-}
-.auth-actions {
-  padding: 16px;
-}
-.auth-link {
-  display: block;
-  text-align: center;
-  color: #1989fa;
-  font-size: 14px;
-}
-</style>

@@ -10,6 +10,7 @@ export type RoleView = components["schemas"]["RoleView"];
 export type RoleCreateCommand = components["schemas"]["RoleCreateCommand"];
 export type RoleUpdateCommand = components["schemas"]["RoleUpdateCommand"];
 export type RoleAssignPermissionsCommand = components["schemas"]["RoleAssignPermissionsCommand"];
+export type RolePermissionIdsResponse = components["schemas"]["RolePermissionIdsResponse"];
 export type PageDataRoleView = components["schemas"]["PageDataRoleView"];
 export type PermissionTreeNode = components["schemas"]["PermissionTreeNodeResponse"];
 export type SessionView = components["schemas"]["SessionView"];
@@ -76,6 +77,10 @@ export function updateRole(id: number, body: RoleUpdateCommand): Promise<Result<
 
 export function deleteRole(id: number): Promise<Result<OkResponse>> {
   return request("DELETE", `/admin/identity/roles/${id}`);
+}
+
+export function fetchRolePermissions(id: number): Promise<Result<RolePermissionIdsResponse>> {
+  return request("GET", `/admin/identity/roles/${id}/permissions`);
 }
 
 export function assignRolePermissions(id: number, body: RoleAssignPermissionsCommand): Promise<Result<OkResponse>> {

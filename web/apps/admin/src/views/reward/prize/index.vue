@@ -18,15 +18,17 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { CLAIM_MODES, PRIZE_STATUS, RECON_POLICIES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { adminStatusLabel } from "@/utils/status-label";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPrizeImpact, isPrizeImpactPreview } from "@/utils/prize-impact";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RewardPrizePage" });
 
 const records = ref<PrizeResponse[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ code: "", name: "", categoryCode: "", status: "" });
@@ -142,7 +144,7 @@ async function submit(): Promise<void> {
   feedback.value = null;
   const result: Result = editing.value?.id != null ? await updatePrize(editing.value.id, buildBody()) : await createPrize(buildBody());
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -161,7 +163,7 @@ async function submitReplenish(): Promise<void> {
     reason: replenishForm.reason,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -189,7 +191,7 @@ async function askDisable(row: PrizeResponse): Promise<void> {
     message: formatPrizeImpact(parsed.data as PrizeImpactResponse, "disable"),
     run: async () => {
       const done = await disablePrize(row.id as number, { confirm: true });
-      const doneParsed = okOrFeedback(done);
+      const doneParsed = writeOrFeedback(done);
       if (!doneParsed.ok) {
         feedback.value = doneParsed.feedback;
         return;
@@ -218,7 +220,7 @@ async function askEnable(row: PrizeResponse): Promise<void> {
     message: formatPrizeImpact(parsed.data as PrizeImpactResponse, "enable"),
     run: async () => {
       const done = await enablePrize(row.id as number, { confirm: true });
-      const doneParsed = okOrFeedback(done);
+      const doneParsed = writeOrFeedback(done);
       if (!doneParsed.ok) {
         feedback.value = doneParsed.feedback;
         return;
@@ -236,7 +238,7 @@ function askDelete(row: PrizeResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deletePrize(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -252,6 +254,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -261,95 +269,71 @@ onMounted(() => {
   <section class="admin-page" data-testid="prize-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.prize.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.REWARD_PRIZE_CREATE" data-testid="prize-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.REWARD_PRIZE_CREATE" data-testid="prize-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.prize.code" />
-      <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.prize.name" />
-      <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
-      <el-select v-model="filters.status" data-testid="filter-status">
-        <el-option value="" :label="zhCN.common.status" />
-        <el-option v-for="item in Object.values(PRIZE_STATUS)" :key="item" :value="item" :label="item" />
-      </el-select>
-      <el-button data-testid="prize-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.code" data-testid="filter-code" :placeholder="zhCN.prize.code" />
+      <a-input v-model:value="filters.name" data-testid="filter-name" :placeholder="zhCN.prize.name" />
+      <a-input v-model:value="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
+      <a-select v-model:value="filters.status" data-testid="filter-status">
+        <a-select-option value="">{{ zhCN.common.status }}</a-select-option>
+        <a-select-option v-for="item in Object.values(PRIZE_STATUS)" :key="item" :value="item">{{ adminStatusLabel(item) }}</a-select-option>
+      </a-select>
+      <a-button type="primary" data-testid="prize-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.REWARD_PRIZE_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="prize-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.REWARD_PRIZE_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="prize-table" size="small" stripe>
-      <el-table-column :label="zhCN.prize.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.prize.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.prize.category">
-        <template #default="{ row }">{{ row.categoryCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
-            {{ row.status }}
-          </el-tag>
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.prize.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.prize.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.prize.category">
+        <template #default="{ record: row }">{{ row.categoryCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
+            {{ adminStatusLabel(row.status) }}
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.prize.stock">
-        <template #default="{ row }">{{ row.remainingStock }}/{{ row.totalStock }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.prize.stock">
+        <template #default="{ record: row }">{{ row.remainingStock }}/{{ row.totalStock }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.REWARD_PRIZE_UPDATE" data-testid="prize-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.REWARD_PRIZE_UPDATE" data-testid="prize-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text
-              v-if="row.status === PRIZE_STATUS.ENABLED"
-              v-auth="PERMS.REWARD_PRIZE_DISABLE"
-              data-testid="prize-disable"
-              @click="askDisable(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === PRIZE_STATUS.ENABLED" v-auth="PERMS.REWARD_PRIZE_DISABLE" data-testid="prize-disable" @click="askDisable(row)">
               {{ zhCN.common.disable }}
-            </el-button>
-            <el-button text
-              v-if="row.status !== PRIZE_STATUS.ENABLED"
-              v-auth="PERMS.REWARD_PRIZE_ENABLE"
-              data-testid="prize-enable"
-              @click="askEnable(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status !== PRIZE_STATUS.ENABLED" v-auth="PERMS.REWARD_PRIZE_ENABLE" data-testid="prize-enable" @click="askEnable(row)">
               {{ zhCN.common.enable }}
-            </el-button>
-            <el-button text v-auth="PERMS.REWARD_PRIZE_STOCK" data-testid="prize-replenish" @click="openReplenish(row)">
+            </a-button>
+            <a-button size="small" v-auth="PERMS.REWARD_PRIZE_STOCK" data-testid="prize-replenish" @click="openReplenish(row)">
               {{ zhCN.prize.replenish }}
-            </el-button>
-            <el-button text
-              v-if="row.status === PRIZE_STATUS.DRAFT"
-              v-auth="PERMS.REWARD_PRIZE_DELETE"
-              data-testid="prize-delete"
-              @click="askDelete(row)"
-            >
+            </a-button>
+            <a-button size="small" danger v-if="row.status === PRIZE_STATUS.DRAFT" v-auth="PERMS.REWARD_PRIZE_DELETE" data-testid="prize-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -357,44 +341,44 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <el-form-item :label="zhCN.prize.code">
-        <el-input v-model="form.code" data-testid="prize-code" :disabled="editing != null" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.name">
-        <el-input v-model="form.name" data-testid="prize-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.category">
-        <el-input v-model="form.categoryCode" data-testid="prize-category" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.totalStock">
-        <el-input v-model.number="form.totalStock" type="number" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.dailyLimit">
-        <el-input v-model.number="form.dailyClaimLimit" type="number" />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.totalLimit">
-        <el-input v-model.number="form.totalClaimLimit" type="number" />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.claimMode">
-        <el-select v-model="form.claimMode">
-        <el-option v-for="item in CLAIM_MODES" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.category.reconActionPolicy">
-        <el-select v-model="form.reconActionPolicy">
-        <el-option value="" label="—" />
-        <el-option v-for="item in RECON_POLICIES" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.unitCostFen">
-        <el-input v-model="form.unitCostFen" />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.expireHours">
-        <el-input v-model="form.expireHours" />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.typeParams">
-        <el-input v-model="form.typeParams" type="textarea" :rows="3"  />
-      </el-form-item>
+      <a-form-item :label="zhCN.prize.code">
+        <a-input v-model:value="form.code" data-testid="prize-code" :disabled="editing != null" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.name">
+        <a-input v-model:value="form.name" data-testid="prize-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.category">
+        <a-input v-model:value="form.categoryCode" data-testid="prize-category" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.totalStock">
+        <a-input v-model:value.number="form.totalStock" required type="number" />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.dailyLimit">
+        <a-input v-model:value.number="form.dailyClaimLimit" type="number" />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.totalLimit">
+        <a-input v-model:value.number="form.totalClaimLimit" type="number" />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.claimMode">
+        <a-select v-model:value="form.claimMode">
+        <a-select-option v-for="item in CLAIM_MODES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.category.reconActionPolicy">
+        <a-select v-model:value="form.reconActionPolicy">
+        <a-select-option value="">—</a-select-option>
+        <a-select-option v-for="item in RECON_POLICIES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.unitCostFen">
+        <a-input v-model:value="form.unitCostFen" />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.expireHours">
+        <a-input v-model:value="form.expireHours" />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.typeParams">
+        <a-textarea v-model:value="form.typeParams" :rows="3" />
+      </a-form-item>
     </FormDialog>
     <FormDialog
       :visible="replenishOpen"
@@ -403,12 +387,12 @@ onMounted(() => {
       @submit="submitReplenish"
       @cancel="replenishOpen = false"
     >
-      <el-form-item :label="zhCN.prize.amount">
-        <el-input v-model.number="replenishForm.amount" data-testid="replenish-amount" type="number" min="1" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.prize.reason">
-        <el-input v-model="replenishForm.reason" data-testid="replenish-reason" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.prize.amount">
+        <a-input v-model:value.number="replenishForm.amount" data-testid="replenish-amount" min="1" required type="number" />
+      </a-form-item>
+      <a-form-item :label="zhCN.prize.reason">
+        <a-input v-model:value="replenishForm.reason" data-testid="replenish-reason" required />
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

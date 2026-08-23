@@ -13,14 +13,15 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskMutexGroupPage" });
 
 const records = ref<MutexGroupResponse[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const formOpen = ref(false);
@@ -65,7 +66,7 @@ async function submit(): Promise<void> {
   const body = { code: form.code, name: form.name, crossCycle: form.crossCycle };
   const result: Result = editing.value?.id != null ? await updateMutexGroup(editing.value.id, body) : await createMutexGroup(body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -82,7 +83,7 @@ function askDelete(row: MutexGroupResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteMutexGroup(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -98,6 +99,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -107,50 +114,45 @@ onMounted(() => {
   <section class="admin-page" data-testid="mutex-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.mutex.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.TASK_MUTEX_CREATE" data-testid="mutex-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.TASK_MUTEX_CREATE" data-testid="mutex-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button data-testid="mutex-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-button type="primary" data-testid="mutex-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.TASK_MUTEX_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="mutex-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.TASK_MUTEX_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="mutex-table" size="small" stripe>
-      <el-table-column :label="zhCN.mutex.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.mutex.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.mutex.crossCycle">
-        <template #default="{ row }">{{ row.crossCycle ? "Y" : "N" }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.mutex.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.mutex.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.mutex.crossCycle">
+        <template #default="{ record: row }">{{ row.crossCycle ? "Y" : "N" }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.TASK_MUTEX_UPDATE" data-testid="mutex-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.TASK_MUTEX_UPDATE" data-testid="mutex-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text v-auth="PERMS.TASK_MUTEX_DELETE" data-testid="mutex-delete" @click="askDelete(row)">
+            </a-button>
+            <a-button size="small" danger v-auth="PERMS.TASK_MUTEX_DELETE" data-testid="mutex-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -158,15 +160,15 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <el-form-item :label="zhCN.mutex.code">
-        <el-input v-model="form.code" data-testid="mutex-code" :disabled="editing != null" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.mutex.name">
-        <el-input v-model="form.name" data-testid="mutex-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.mutex.crossCycle">
-        <el-checkbox v-model="form.crossCycle" data-testid="mutex-cross" />
-      </el-form-item>
+      <a-form-item :label="zhCN.mutex.code">
+        <a-input v-model:value="form.code" data-testid="mutex-code" :disabled="editing != null" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.mutex.name">
+        <a-input v-model:value="form.name" data-testid="mutex-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.mutex.crossCycle">
+        <a-checkbox v-model:checked="form.crossCycle" data-testid="mutex-cross" />
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

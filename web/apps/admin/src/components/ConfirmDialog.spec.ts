@@ -7,34 +7,43 @@ describe("ConfirmDialog", () => {
     document.body.innerHTML = "";
   });
 
-  it("emits cancel on Escape when visible", async () => {
+  it("renders an Ant Design modal and emits cancel on Escape", async () => {
     const wrapper = mount(ConfirmDialog, {
       props: { visible: true, message: "确认删除？" },
       attachTo: document.body,
     });
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(document.querySelector(".ant-modal")).not.toBeNull();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(wrapper.emitted("cancel")).toHaveLength(1);
     wrapper.unmount();
   });
 
   it("does not emit cancel on Escape when hidden", () => {
     const wrapper = mount(ConfirmDialog, { props: { visible: false, message: "确认删除？" } });
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(wrapper.find(".ant-modal").exists()).toBe(false);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(wrapper.emitted("cancel")).toBeUndefined();
     wrapper.unmount();
   });
 
-  it("emits cancel on mask click but not card click", async () => {
-    const wrapper = mount(ConfirmDialog, { props: { visible: true, message: "确认删除？" } });
-    await wrapper.get('[data-testid="confirm-dialog"]').trigger("click");
+  it("emits cancel on mask click but not modal body click", async () => {
+    const wrapper = mount(ConfirmDialog, {
+      props: { visible: true, message: "确认删除？" },
+      attachTo: document.body,
+    });
+    expect(document.querySelector(".ant-modal")).not.toBeNull();
+    await wrapper.get(".ant-modal-wrap").trigger("click");
     expect(wrapper.emitted("cancel")).toHaveLength(1);
-    await wrapper.get(".confirm-card").trigger("click");
+    await wrapper.get(".ant-modal-body").trigger("click");
     expect(wrapper.emitted("cancel")).toHaveLength(1);
     wrapper.unmount();
   });
 
   it("keeps cancel and confirm buttons", async () => {
-    const wrapper = mount(ConfirmDialog, { props: { visible: true, message: "确认删除？" } });
+    const wrapper = mount(ConfirmDialog, {
+      props: { visible: true, message: "确认删除？" },
+      attachTo: document.body,
+    });
     await wrapper.get('[data-testid="confirm-cancel"]').trigger("click");
     await wrapper.get('[data-testid="confirm-ok"]').trigger("click");
     expect(wrapper.emitted("cancel")).toHaveLength(1);

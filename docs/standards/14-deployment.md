@@ -138,7 +138,7 @@ R31.1 / R31 属性 1：
 
 1. 本地 Compose（有 Docker 时）使用与规格同主版本的 MySQL 8、Redis 7 镜像，便于 IT。现网共享中间件是 MySQL 8.0.25 + Redis 6.0.8 / DB 2，P0 不升级共享实例。
 2. **MUST NOT** 用 SQLite「先跑起来」。
-3. 本机无 Docker 时：可以只跑单元测试，应用连 LAN 中间件（`192.168.88.149`，库 `mkt_platform`，Redis DB 2）；集成与部署冒烟留 CI。不得因此改生产拓扑或改用 db0。
+3. 本机无 Docker 时：可以只跑单元测试，应用连 LAN 中间件（`192.168.88.149`，库 `mkt_platform`，Redis DB 2）；集成与部署冒烟留 CI。不得因此改生产拓扑或改用 db0。本机起停两个应用 + 两个前端用 `scripts/dev.ps1`，配置只读仓库根 `.env.local`，**MUST NOT** 读/改 `deploy/.env` 或 `deploy/docker-compose.yml`。
 
 ## 13. AI 检查清单
 

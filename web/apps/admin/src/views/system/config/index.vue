@@ -5,15 +5,17 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { CONFIG_VALUE_TYPES, PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { buildConfigUpdateBody, CONFIG_MASK_DISPLAY } from "@/utils/config-update";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "ConfigManagePage" });
 
 const records = ref<ConfigView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ configGroup: "", key: "" });
@@ -86,7 +88,7 @@ async function submit(): Promise<void> {
       remark: form.remark || undefined,
     });
     saving.value = false;
-    const parsed = okOrFeedback(result);
+    const parsed = writeOrFeedback(result);
     if (!parsed.ok) {
       feedback.value = parsed.feedback;
       return;
@@ -108,13 +110,19 @@ async function submit(): Promise<void> {
   );
   const result = await updateConfig(editing.value.configKey ?? form.configKey, body);
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
   }
   formOpen.value = false;
   await load();
+}
+
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
 }
 
 onMounted(() => {
@@ -126,100 +134,92 @@ onMounted(() => {
   <section class="admin-page" data-testid="config-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.config.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.CONFIG_CREATE" data-testid="config-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.CONFIG_CREATE" data-testid="config-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.configGroup" data-testid="filter-group" :placeholder="zhCN.config.group" />
-      <el-input v-model="filters.key" data-testid="filter-key" :placeholder="zhCN.config.key" />
-      <el-button data-testid="config-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.configGroup" data-testid="filter-group" :placeholder="zhCN.config.group" />
+      <a-input v-model:value="filters.key" data-testid="filter-key" :placeholder="zhCN.config.key" />
+      <a-button type="primary" data-testid="config-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.CONFIG_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="config-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.CONFIG_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="config-table" size="small" stripe>
-      <el-table-column :label="zhCN.config.key">
-        <template #default="{ row }">{{ row.configKey }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.config.group">
-        <template #default="{ row }">{{ row.configGroup }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.config.value">
-        <template #default="{ row }"><span data-testid="config-value">{{ row.configValue }}</span></template>
-      </el-table-column>
-      <el-table-column :label="zhCN.config.valueType">
-        <template #default="{ row }">{{ row.valueType }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.config.masked">
-        <template #default="{ row }">{{ row.masked ? "Y" : "N" }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
-            {{ row.status }}
-          </el-tag>
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.config.key">
+        <template #default="{ record: row }">{{ row.configKey }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.config.group">
+        <template #default="{ record: row }">{{ row.configGroup }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.config.value">
+        <template #default="{ record: row }"><span data-testid="config-value">{{ row.configValue }}</span></template>
+      </a-table-column>
+      <a-table-column :title="zhCN.config.valueType">
+        <template #default="{ record: row }">{{ row.valueType }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.config.masked">
+        <template #default="{ record: row }">{{ row.masked ? "Y" : "N" }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
+            {{ adminStatusLabel(row.status) }}
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.CONFIG_UPDATE" data-testid="config-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.CONFIG_UPDATE" data-testid="config-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
       :saving="saving"
+      :feedback="formOpen ? feedback : null"
       @submit="submit"
       @cancel="formOpen = false"
     >
       <p v-if="editing?.masked" class="hint">{{ zhCN.config.keepValue }}</p>
-      <el-form-item v-if="!editing" :label="zhCN.config.key">
-        <el-input v-model="form.configKey" data-testid="config-key" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.config.group">
-        <el-input v-model="form.configGroup" data-testid="config-group" required />
-      </el-form-item>
-      <el-form-item :label="editing?.masked ? zhCN.config.newValue : zhCN.config.value">
-        <el-input v-model="form.configValue" data-testid="config-value-input" :required="!editing" />
-      </el-form-item>
-      <el-form-item :label="zhCN.config.valueType">
-        <el-select v-model="form.valueType" data-testid="config-value-type">
-        <el-option v-for="item in CONFIG_VALUE_TYPES" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.config.masked">
-        <el-checkbox v-model="form.masked" data-testid="config-masked" />
-      </el-form-item>
-      <el-form-item v-if="editing" :label="zhCN.common.status">
-        <el-select v-model="form.status">
-        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
-        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.common.remark">
-        <el-input v-model="form.remark" />
-      </el-form-item>
+      <a-form-item v-if="!editing" :label="zhCN.config.key">
+        <a-input v-model:value="form.configKey" data-testid="config-key" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.config.group">
+        <a-input v-model:value="form.configGroup" data-testid="config-group" required />
+      </a-form-item>
+      <a-form-item :label="editing?.masked ? zhCN.config.newValue : zhCN.config.value">
+        <a-input v-model:value="form.configValue" data-testid="config-value-input" :required="!editing" />
+      </a-form-item>
+      <a-form-item :label="zhCN.config.valueType">
+        <a-select v-model:value="form.valueType" data-testid="config-value-type">
+        <a-select-option v-for="item in CONFIG_VALUE_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.config.masked">
+        <a-checkbox v-model:checked="form.masked" data-testid="config-masked" />
+      </a-form-item>
+      <a-form-item v-if="editing" :label="zhCN.common.status">
+        <a-select v-model:value="form.status">
+        <a-select-option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</a-select-option>
+        <a-select-option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.common.remark">
+        <a-input v-model:value="form.remark" />
+      </a-form-item>
     </FormDialog>
   </section>
 </template>

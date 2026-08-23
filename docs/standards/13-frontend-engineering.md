@@ -41,7 +41,7 @@ packages:
 
 | 应用 | 基础 | 构建 |
 |------|------|------|
-| `apps/admin` | vue-pure-admin-thin | Vite |
+| `apps/admin` | vue-pure-admin-thin 骨架（动态路由 / `v-auth` / 多标签）+ Ant Design Vue | Vite |
 | `apps/client` | Vue 3 + Vant 4 + unplugin-auto-import | Vite |
 
 1. 开发代理：admin → `/admin`，client → `/api`。**MUST NOT** 把生产后端地址写死在源码。

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useSessionReload } from "@/composables/useSessionReload";
 import { Empty, List, NavBar, PullRefresh } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchPointsBalance, fetchPointsTransactions, type PointsPortalTxView } from "@/api/points";
@@ -51,6 +52,9 @@ function formatAmount(amount?: number): string {
 }
 
 async function loadBalance(): Promise<void> {
+  if (!session.authenticated) {
+    return;
+  }
   const result = await fetchPointsBalance();
   if (!isOk(result) || !result.data) {
     showPortalFail(result);
@@ -62,6 +66,15 @@ async function loadBalance(): Promise<void> {
 }
 
 async function loadPage(reset: boolean): Promise<void> {
+  if (!session.authenticated) {
+    records.value = [];
+    total.value = 0;
+    finished.value = true;
+    loading.value = false;
+    refreshing.value = false;
+    loaded.value = true;
+    return;
+  }
   if (reset) {
     page.value = 1;
     finished.value = false;
@@ -111,6 +124,13 @@ function openSource(row: PointsPortalTxView): void {
   }
   void router.push(`/task/${row.sourceTaskId}`);
 }
+
+useSessionReload(() => {
+  void loadBalance().catch(() => {
+    showNetworkFail();
+  });
+  void loadPage(true);
+});
 
 onMounted(() => {
   track(TRACK.POINTS_PAGE_VIEW);
@@ -173,11 +193,13 @@ onMounted(() => {
   gap: 4px;
   margin: 12px 16px;
   padding: 20px 16px;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
+  font-variant-numeric: tabular-nums;
 }
 .points-balance span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 13px;
 }
 .points-balance strong {
@@ -191,8 +213,8 @@ onMounted(() => {
   margin: 0 16px 12px;
   padding: 12px;
   border: 0;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
   text-align: left;
 }
 .points-row:disabled {
@@ -209,13 +231,13 @@ onMounted(() => {
 }
 .points-row__main span,
 .points-row__amount span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 12px;
 }
 .points-row__amount strong[data-sign="plus"] {
-  color: #07c160;
+  color: var(--portal-primary);
 }
 .points-row__amount strong[data-sign="minus"] {
-  color: #ee0a24;
+  color: var(--portal-accent);
 }
 </style>

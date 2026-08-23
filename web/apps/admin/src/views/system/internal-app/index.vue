@@ -13,15 +13,17 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "InternalAppPage" });
 
 const records = ref<InternalAppView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const formOpen = ref(false);
@@ -48,7 +50,7 @@ async function submitCreate(): Promise<void> {
   saving.value = true;
   const result = await createInternalApp({ appName: appName.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -64,7 +66,7 @@ async function onRotate(row: InternalAppView): Promise<void> {
     return;
   }
   const result = await rotateInternalAppSecret(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -81,7 +83,7 @@ function askDisable(row: InternalAppView): void {
     message: zhCN.confirm.disable,
     run: async () => {
       const result = await disableInternalApp(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -96,7 +98,7 @@ async function onEnable(row: InternalAppView): Promise<void> {
     return;
   }
   const result = await enableInternalApp(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -110,6 +112,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -119,81 +127,62 @@ onMounted(() => {
   <section class="admin-page" data-testid="internal-app-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.app.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.APP_ADD" data-testid="app-create" @click="formOpen = true">
+      <a-button type="primary" v-auth="PERMS.APP_ADD" data-testid="app-create" @click="formOpen = true">
         {{ zhCN.app.add }}
-      </el-button>
+      </a-button>
     </div>
     <p v-if="secretOnce" class="secret-once" data-testid="secret-once">
       {{ zhCN.app.secretOnce }}：<code data-testid="secret-value">{{ secretOnce }}</code>
     </p>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.APP_ADD" text type="primary" @click="formOpen = true">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="internal-app-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.APP_ADD" type="primary" size="small" @click="formOpen = true">
         {{ zhCN.app.add }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="internal-app-table" size="small" stripe>
-      <el-table-column :label="zhCN.app.appId">
-        <template #default="{ row }">{{ row.appId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.app.appName">
-        <template #default="{ row }">{{ row.appName }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
-            {{ row.status }}
-          </el-tag>
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.app.appId">
+        <template #default="{ record: row }">{{ row.appId }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.app.appName">
+        <template #default="{ record: row }">{{ row.appName }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
+            {{ adminStatusLabel(row.status) }}
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.app.prevExpireAt">
-        <template #default="{ row }">{{ formatDateTime(row.prevExpireAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.createdAt">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.app.prevExpireAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.prevExpireAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.createdAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.createdAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.APP_EDIT" data-testid="app-rotate" @click="onRotate(row)">
+            <a-button size="small" v-auth="PERMS.APP_EDIT" data-testid="app-rotate" @click="onRotate(row)">
               {{ zhCN.app.rotate }}
-            </el-button>
-            <el-button text
-              v-if="row.status === STATUS.ENABLED"
-              v-auth="PERMS.APP_EDIT"
-              data-testid="app-disable"
-              @click="askDisable(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === STATUS.ENABLED" v-auth="PERMS.APP_EDIT" data-testid="app-disable" @click="askDisable(row)">
               {{ zhCN.common.disable }}
-            </el-button>
-            <el-button text
-              v-if="row.status === STATUS.DISABLED"
-              v-auth="PERMS.APP_EDIT"
-              data-testid="app-enable"
-              @click="onEnable(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === STATUS.DISABLED" v-auth="PERMS.APP_EDIT" data-testid="app-enable" @click="onEnable(row)">
               {{ zhCN.common.enable }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog :visible="formOpen" :title="zhCN.app.add" :saving="saving" @submit="submitCreate" @cancel="formOpen = false">
-      <el-form-item :label="zhCN.app.appName">
-        <el-input v-model="appName" data-testid="app-name" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.app.appName">
+        <a-input v-model:value="appName" data-testid="app-name" required />
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"
@@ -206,8 +195,8 @@ onMounted(() => {
 
 <style scoped>
 .secret-once {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
   border-radius: 6px;
   padding: 8px 12px;
 }

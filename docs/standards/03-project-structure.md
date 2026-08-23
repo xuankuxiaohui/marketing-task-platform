@@ -39,14 +39,15 @@ marketing-task-platform/
 ├── web/                             # pnpm workspace
 │   ├── pnpm-workspace.yaml
 │   ├── package.json
-│   ├── apps/admin/                  # vue-pure-admin-thin
+│   ├── apps/admin/                  # vue-pure-admin-thin 骨架 + Ant Design Vue
 │   ├── apps/client/                 # Vant 4 H5
 │   └── packages/shared/             # OpenAPI 生成类型与少量纯函数
 ├── docs/standards/                  # 本规范
 ├── .kiro/specs/platform-v2/         # 产品规格
 ├── spike/                           # 编组 A 冒烟，禁止业务代码，不进 server/
 ├── perf/                            # k6 脚本与报告（任务 43）
-└── ci/                              # 部署冒烟脚本等
+├── ci/                              # 部署冒烟脚本等
+└── scripts/                         # 本机四进程启停（不走 Compose，不改 deploy/）
 ```
 
 规则：

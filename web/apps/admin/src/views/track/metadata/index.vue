@@ -13,14 +13,16 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { adminStatusLabel } from "@/utils/status-label";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TrackMetadataPage" });
 
 const records = ref<TrackMetadataResponse[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ eventCode: "", status: "" });
@@ -106,7 +108,7 @@ async function submit(): Promise<void> {
   const result: Result =
     editing.value?.id != null ? await updateMetadata(editing.value.id, buildBody()) : await createMetadata(buildBody());
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -123,7 +125,7 @@ function askDelete(row: TrackMetadataResponse): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteMetadata(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -139,6 +141,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -148,69 +156,60 @@ onMounted(() => {
   <section class="admin-page" data-testid="metadata-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.metadata.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.TRACK_META_CREATE" data-testid="metadata-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.TRACK_META_CREATE" data-testid="metadata-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.metadata.eventCode" />
-      <el-select v-model="filters.status" data-testid="filter-status">
-        <el-option value="" :label="zhCN.common.status" />
-        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
-        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
-      </el-select>
-      <el-button v-auth="PERMS.TRACK_META_QUERY" data-testid="metadata-query" @click="load">
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.metadata.eventCode" />
+      <a-select v-model:value="filters.status" data-testid="filter-status">
+        <a-select-option value="">{{ zhCN.common.status }}</a-select-option>
+        <a-select-option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</a-select-option>
+        <a-select-option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</a-select-option>
+      </a-select>
+      <a-button type="primary" v-auth="PERMS.TRACK_META_QUERY" data-testid="metadata-query" @click="load">
         {{ zhCN.common.query }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.TRACK_META_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="metadata-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.TRACK_META_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="metadata-table" size="small" stripe>
-      <el-table-column :label="zhCN.metadata.eventCode">
-        <template #default="{ row }">{{ row.eventCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metadata.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
-            {{ row.status }}
-          </el-tag>
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.metadata.eventCode">
+        <template #default="{ record: row }">{{ row.eventCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metadata.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
+            {{ adminStatusLabel(row.status) }}
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metadata.owner">
-        <template #default="{ row }">{{ row.owner }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.metadata.owner">
+        <template #default="{ record: row }">{{ row.owner }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.TRACK_META_UPDATE" data-testid="metadata-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.TRACK_META_UPDATE" data-testid="metadata-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text v-auth="PERMS.TRACK_META_DELETE" data-testid="metadata-delete" @click="askDelete(row)">
+            </a-button>
+            <a-button size="small" danger v-auth="PERMS.TRACK_META_DELETE" data-testid="metadata-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -218,28 +217,28 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <el-form-item :label="zhCN.metadata.eventCode">
-        <el-input v-model="form.eventCode" data-testid="metadata-code" :disabled="editing != null" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.metadata.eventCode">
+        <a-input v-model:value="form.eventCode" data-testid="metadata-code" :disabled="editing != null" required />
+      </a-form-item>
       <p v-if="editing" class="hint">{{ zhCN.metadata.eventCodeLocked }}</p>
-      <el-form-item :label="zhCN.metadata.name">
-        <el-input v-model="form.name" data-testid="metadata-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.metadata.propSchema">
-        <el-input v-model="form.propSchema" type="textarea" data-testid="metadata-schema" :rows="6"  />
-      </el-form-item>
-      <el-form-item :label="zhCN.common.status">
-        <el-select v-model="form.status" data-testid="metadata-status">
-        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
-        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.metadata.owner">
-        <el-input v-model="form.owner" data-testid="metadata-owner" />
-      </el-form-item>
-      <el-form-item :label="zhCN.common.remark">
-        <el-input v-model="form.remark" />
-      </el-form-item>
+      <a-form-item :label="zhCN.metadata.name">
+        <a-input v-model:value="form.name" data-testid="metadata-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.metadata.propSchema">
+        <a-textarea v-model:value="form.propSchema" data-testid="metadata-schema" :rows="6" />
+      </a-form-item>
+      <a-form-item :label="zhCN.common.status">
+        <a-select v-model:value="form.status" data-testid="metadata-status">
+        <a-select-option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</a-select-option>
+        <a-select-option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.metadata.owner">
+        <a-input v-model:value="form.owner" data-testid="metadata-owner" />
+      </a-form-item>
+      <a-form-item :label="zhCN.common.remark">
+        <a-input v-model:value="form.remark" />
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

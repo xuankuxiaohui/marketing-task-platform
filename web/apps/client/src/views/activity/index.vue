@@ -1,22 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Button, Empty, NavBar, showFailToast, showSuccessToast } from "vant";
+import { Empty, NavBar, showFailToast } from "vant";
 import { isFail, isOk } from "@mkt/shared";
 import {
   fetchActivities,
   fetchActivityDetail,
-  postParticipate,
   type PortalActivityDetailView,
   type SubmoduleView,
 } from "@/api/activity";
 import { fetchTaskList, type TaskCardView } from "@/api/task";
 import FallbackImage from "@/components/FallbackImage.vue";
 import TaskCard from "@/components/TaskCard.vue";
-import TaskCompleteSheet from "@/components/TaskCompleteSheet.vue";
 import { zhCN } from "@/locales/zh-CN";
-import { loginLocation } from "@/router/guards";
-import { useSessionStore } from "@/store/session";
 import { activityCover, activityWindow } from "@/utils/activity-cover";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
 
@@ -24,14 +20,11 @@ defineOptions({ name: "ActivityPage" });
 
 const route = useRoute();
 const router = useRouter();
-const session = useSessionStore();
 const loading = ref(false);
 const detail = ref<PortalActivityDetailView | null>(null);
-const result = ref<string | null>(null);
 const tasks = ref<TaskCardView[]>([]);
-const hasSignin = ref(false);
-const sheetOpen = ref(false);
-const sheetTaskId = ref<number | null>(null);
+const rulesOpen = ref(false);
+const rulesEl = ref<HTMLElement | null>(null);
 
 const activityId = computed(() => {
   const raw = route.query.id;
@@ -54,7 +47,6 @@ async function loadBoundTasks(submodules: SubmoduleView[]): Promise<void> {
   const orderedIds = sortedSubmodules(submodules)
     .filter((item) => item.type === "TASK")
     .map((item) => item.refId);
-  hasSignin.value = sortedSubmodules(submodules).some((item) => item.type === "SIGNIN");
   if (orderedIds.length === 0) {
     tasks.value = [];
     return;
@@ -85,6 +77,7 @@ async function loadBoundTasks(submodules: SubmoduleView[]): Promise<void> {
 
 async function load(): Promise<void> {
   loading.value = true;
+  rulesOpen.value = false;
   try {
     let id = activityId.value;
     if (id == null || !Number.isFinite(id)) {
@@ -96,7 +89,6 @@ async function load(): Promise<void> {
     if (id == null || !Number.isFinite(id)) {
       detail.value = null;
       tasks.value = [];
-      hasSignin.value = false;
       return;
     }
     const response = await fetchActivityDetail(id);
@@ -104,7 +96,6 @@ async function load(): Promise<void> {
       showFailToast(response.message);
       detail.value = null;
       tasks.value = [];
-      hasSignin.value = false;
       return;
     }
     detail.value = response.data ?? null;
@@ -113,43 +104,22 @@ async function load(): Promise<void> {
     showNetworkFail();
     detail.value = null;
     tasks.value = [];
-    hasSignin.value = false;
   } finally {
     loading.value = false;
   }
 }
 
-function openTaskSheet(task: TaskCardView): void {
+function openTask(task: TaskCardView): void {
   if (task.taskId == null) {
     return;
   }
-  sheetTaskId.value = task.taskId;
-  sheetOpen.value = true;
+  void router.push(`/task/${task.taskId}`);
 }
 
-function openSignin(): void {
-  void router.push("/signin");
-}
-
-async function onParticipate(): Promise<void> {
-  if (!session.authenticated) {
-    void router.replace(loginLocation(route.fullPath));
-    return;
-  }
-  if (!detail.value) {
-    return;
-  }
-  const response = await postParticipate(detail.value.id);
-  if (isFail(response)) {
-    showFailToast(response.message);
-    return;
-  }
-  result.value = response.data?.result ?? "";
-  if (response.data?.result === "PASS") {
-    showSuccessToast(zhCN.activity.joined);
-  } else {
-    showFailToast(zhCN.activity.rejected);
-  }
+async function openRules(): Promise<void> {
+  rulesOpen.value = true;
+  await nextTick();
+  rulesEl.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
 
 watch(
@@ -160,11 +130,6 @@ watch(
   { immediate: true },
 );
 
-watch(sheetOpen, (open, wasOpen) => {
-  if (wasOpen && !open) {
-    void loadBoundTasks(detail.value?.submodules ?? []);
-  }
-});
 </script>
 
 <template>
@@ -182,40 +147,25 @@ watch(sheetOpen, (open, wasOpen) => {
           <p v-if="windowLabel">{{ windowLabel }}</p>
         </div>
       </header>
-      <!-- richText is server-sanitized (R22); do not bind unsanitized HTML -->
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div class="activity-html" data-testid="activity-html" v-html="detail.richText" />
-      <div v-if="hasSignin || tasks.length" data-testid="activity-submodules">
-        <article
-          v-if="hasSignin"
-          class="signin-card"
-          data-testid="activity-signin-card"
-          role="button"
-          tabindex="0"
-          @click="openSignin"
-        >
-          <span class="signin-card__mark" aria-hidden="true">签</span>
-          <span class="signin-card__meta">
-            <strong>{{ zhCN.home.signin }}</strong>
-            <span>{{ zhCN.home.signinHint }}</span>
-          </span>
-        </article>
+      <div v-if="tasks.length" data-testid="activity-submodules">
         <TaskCard
           v-for="task in tasks"
           :key="task.taskId"
           :task="task"
-          @open="openTaskSheet(task)"
-          @action="openTaskSheet(task)"
+          @open="openTask(task)"
+          @action="openTask(task)"
         />
       </div>
-      <p v-if="result" data-testid="activity-result">{{ result }}</p>
-      <div class="activity-join">
-        <Button type="primary" block data-testid="activity-join" @click="onParticipate">
-          {{ zhCN.activity.join }}
-        </Button>
-      </div>
+      <section v-if="rulesOpen" ref="rulesEl" class="activity-rules" data-testid="activity-rules">
+        <h3>{{ zhCN.activity.rulesTitle }}</h3>
+        <!-- richText is server-sanitized (R22); do not bind unsanitized HTML -->
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div class="activity-html" data-testid="activity-html" v-html="detail.richText" />
+      </section>
+      <button type="button" class="activity-rules-fab" data-testid="activity-rules-btn" @click="openRules">
+        {{ zhCN.activity.rules }}
+      </button>
     </div>
-    <TaskCompleteSheet v-model:show="sheetOpen" :task-id="sheetTaskId" />
   </section>
 </template>
 
@@ -266,52 +216,32 @@ watch(sheetOpen, (open, wasOpen) => {
   color: var(--portal-muted);
   font-size: 13px;
 }
-.activity-html {
-  margin: 0 16px 12px;
+.activity-rules {
+  margin: 0 16px 80px;
   padding: 12px 16px;
   border-radius: var(--portal-radius);
   background: var(--portal-surface);
+}
+.activity-rules h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.activity-html {
   font-size: 14px;
   line-height: 1.6;
 }
-.signin-card {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 12px 16px;
-  padding: 14px;
-  border-radius: var(--portal-radius);
-  background: var(--portal-surface);
-  box-shadow: var(--portal-shadow-soft);
-  text-align: left;
-}
-.signin-card__mark {
-  display: flex;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  background: var(--portal-accent-soft);
-  color: var(--portal-accent);
-  font-size: 16px;
-  font-weight: 700;
-}
-.signin-card__meta {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 4px;
-}
-.signin-card__meta strong {
-  font-size: 16px;
-}
-.signin-card__meta span {
-  color: var(--portal-muted);
+.activity-rules-fab {
+  position: fixed;
+  top: 40%;
+  right: 0;
+  z-index: 8;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 10px 0 0 10px;
+  background: var(--portal-primary);
+  box-shadow: var(--portal-shadow);
+  color: #fff;
   font-size: 13px;
-}
-.activity-join {
-  padding: 8px 16px 24px;
+  writing-mode: vertical-rl;
 }
 </style>

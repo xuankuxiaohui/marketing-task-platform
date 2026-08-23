@@ -11,12 +11,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
+    "@ant-design/icons-vue": "^7.0.1",
     "@mkt/shared": "workspace:*",
     "@vue-flow/core": "^1.48.2",
+    "ant-design-vue": "^4.2.6",
     "axios": "^1.12.2",
     "echarts": "^5.6.0",
-    "element-plus": "^2.11.5",
     "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3"

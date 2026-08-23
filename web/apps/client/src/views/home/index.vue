@@ -1,153 +1,215 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Button, Empty, NavBar, PullRefresh } from "vant";
-import { isFail, isOk } from "@mkt/shared";
-import { fetchActivities, type PortalActivityView } from "@/api/activity";
+import { useSessionReload } from "@/composables/useSessionReload";
+import { Button, NavBar, PullRefresh, showSuccessToast } from "vant";
+import { isOk } from "@mkt/shared";
 import { fetchPointsBalance } from "@/api/points";
+import {
+  fetchSigninActivities,
+  fetchSigninCalendar,
+  postCheckin,
+  type SigninCalendarResponse,
+} from "@/api/signin";
 import AdCarousel from "@/components/AdCarousel.vue";
-import FallbackImage from "@/components/FallbackImage.vue";
+import SigninMonthGrid from "@/components/SigninMonthGrid.vue";
 import { zhCN } from "@/locales/zh-CN";
-import { activityCover, activityWindow } from "@/utils/activity-cover";
+import { useLoginOverlayStore } from "@/store/login-overlay";
+import { useSessionStore } from "@/store/session";
+import { monthGrid, toIsoDate, yearMonthOf } from "@/utils/home-week";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
-import { isGuestSessionCode } from "@/utils/session-reason";
 
 defineOptions({ name: "HomePage" });
 
 const router = useRouter();
-const activities = ref<PortalActivityView[]>([]);
+const session = useSessionStore();
+const overlay = useLoginOverlayStore();
 const refreshing = ref(false);
-const loaded = ref(false);
 const pointsBalance = ref<number | null>(null);
-const pointsGuest = ref(false);
+const signinCalendar = ref<SigninCalendarResponse | null>(null);
+const signinActivityId = ref<number | null>(null);
+const signinActing = ref(false);
 
-const empty = computed(() => loaded.value && activities.value.length === 0);
-const showPointsBar = computed(() => pointsBalance.value != null || pointsGuest.value);
-
-async function load(): Promise<void> {
-  try {
-    const result = await fetchActivities();
-    if (!isOk(result) || !result.data) {
-      showPortalFail(result);
-      activities.value = [];
-      return;
-    }
-    activities.value = result.data;
-  } catch {
-    showNetworkFail();
-    activities.value = [];
-  } finally {
-    refreshing.value = false;
-    loaded.value = true;
-  }
-}
+const todayIso = computed(() => toIsoDate(new Date()));
+const todaySigned = computed(() =>
+  Boolean(
+    signinCalendar.value?.days.some(
+      (day) => day.state === "SIGNED" && day.date.slice(0, 10) === todayIso.value,
+    ),
+  ),
+);
+const streakDays = computed(() => signinCalendar.value?.consecutiveDays ?? null);
+const monthCells = computed(() =>
+  monthGrid(signinCalendar.value?.yearMonth ?? yearMonthOf(todayIso.value), signinCalendar.value?.days ?? []),
+);
 
 async function loadPoints(): Promise<void> {
+  if (!session.authenticated) {
+    pointsBalance.value = null;
+    return;
+  }
   try {
     const result = await fetchPointsBalance();
     if (isOk(result) && result.data && result.data.balance != null) {
       pointsBalance.value = Number(result.data.balance);
-      pointsGuest.value = false;
       return;
     }
     pointsBalance.value = null;
-    pointsGuest.value = isFail(result) && isGuestSessionCode(result.code);
   } catch {
     pointsBalance.value = null;
-    pointsGuest.value = false;
+  }
+}
+
+async function loadSignin(): Promise<void> {
+  if (!session.authenticated) {
+    signinCalendar.value = null;
+    signinActivityId.value = null;
+    return;
+  }
+  try {
+    const list = await fetchSigninActivities();
+    if (!isOk(list) || !list.data || list.data.length === 0) {
+      signinCalendar.value = null;
+      signinActivityId.value = null;
+      return;
+    }
+    const id = list.data[0].activityId;
+    signinActivityId.value = id;
+    const calendar = await fetchSigninCalendar(id);
+    if (isOk(calendar) && calendar.data) {
+      signinCalendar.value = calendar.data;
+      return;
+    }
+    signinCalendar.value = null;
+  } catch {
+    signinCalendar.value = null;
+    signinActivityId.value = null;
+  }
+}
+
+async function loadAll(): Promise<void> {
+  try {
+    if (session.authenticated) {
+      await Promise.all([loadPoints(), loadSignin()]);
+    } else {
+      pointsBalance.value = null;
+      signinCalendar.value = null;
+      signinActivityId.value = null;
+    }
+  } finally {
+    refreshing.value = false;
   }
 }
 
 function onRefresh(): void {
-  void load();
-  void loadPoints();
+  void loadAll();
 }
 
-function openActivity(activity: PortalActivityView): void {
-  void router.push({ path: "/activity", query: { id: String(activity.id) } });
+function requestHomeLogin(resume?: () => void, redirect = "/home"): void {
+  overlay.request({ redirect, resume });
 }
 
-function openSignin(): void {
+function openSigninPage(): void {
+  if (!session.authenticated) {
+    requestHomeLogin(() => {
+      void router.push("/signin");
+    }, "/signin");
+    return;
+  }
   void router.push("/signin");
 }
 
 function openPoints(): void {
-  if (pointsGuest.value) {
-    void router.push({ path: "/login", query: { redirect: "/home" } });
+  if (!session.authenticated) {
+    requestHomeLogin(() => {
+      void router.push("/mine/points");
+    }, "/mine/points");
     return;
   }
   void router.push("/mine/points");
 }
 
-function coverOf(activity: PortalActivityView): string | undefined {
-  return activityCover(activity);
+async function onHomeCheckin(): Promise<void> {
+  if (!session.authenticated) {
+    requestHomeLogin(() => {
+      void onHomeCheckin();
+    });
+    return;
+  }
+  if (signinActivityId.value == null) {
+    await loadSignin();
+  }
+  if (signinActivityId.value == null || todaySigned.value || signinActing.value) {
+    void router.push("/signin");
+    return;
+  }
+  signinActing.value = true;
+  try {
+    const result = await postCheckin(signinActivityId.value);
+    if (!isOk(result) || !result.data) {
+      showPortalFail(result);
+      return;
+    }
+    showSuccessToast(zhCN.signin.checkin);
+    await loadSignin();
+    await loadPoints();
+  } catch {
+    showNetworkFail();
+  } finally {
+    signinActing.value = false;
+  }
 }
 
-function windowOf(activity: PortalActivityView): string {
-  return activityWindow(activity.startTime, activity.endTime);
-}
+useSessionReload(() => {
+  void Promise.all([loadPoints(), loadSignin()]);
+});
 
 onMounted(() => {
-  void load();
-  void loadPoints();
+  void loadAll();
 });
 </script>
 
 <template>
   <section class="home-page">
     <NavBar :title="zhCN.home.title" />
-    <AdCarousel position-code="home_banner" />
     <PullRefresh v-model="refreshing" @refresh="onRefresh">
-      <button
-        v-if="showPointsBar"
-        type="button"
-        class="points-bar"
-        data-testid="home-points-bar"
-        @click="openPoints"
-      >
-        <span>{{ zhCN.points.balance }}</span>
-        <strong v-if="pointsBalance != null" data-testid="home-points-value">{{ pointsBalance }}</strong>
-        <span v-else data-testid="home-points-login">{{ zhCN.home.pointsLogin }}</span>
-      </button>
-      <article
-        class="signin-card"
-        data-testid="home-signin-card"
-        role="button"
-        tabindex="0"
-        @click="openSignin"
-      >
-        <span class="signin-card__mark" aria-hidden="true">签</span>
-        <span class="signin-card__meta">
+      <article class="signin-panel" data-testid="home-signin-card">
+        <div class="signin-panel__info">
           <strong>{{ zhCN.home.signin }}</strong>
-          <span>{{ zhCN.home.signinHint }}</span>
-        </span>
-      </article>
-      <Empty v-if="empty" :description="zhCN.home.empty" data-testid="home-empty">
-        <Button type="primary" size="small" data-testid="home-retry" @click="load">
-          {{ zhCN.common.retry }}
-        </Button>
-      </Empty>
-      <div v-else data-testid="home-activity-list">
-        <article
-          v-for="activity in activities"
-          :key="activity.id"
-          class="activity-card"
-          :data-testid="`home-activity-${activity.id}`"
+          <button type="button" class="signin-panel__meta" data-testid="home-points-bar" @click="openPoints">
+            <span data-testid="home-signin-balance">
+              {{ zhCN.points.balance }}
+              <b v-if="pointsBalance != null" data-testid="home-points-value">{{ pointsBalance }}</b>
+              <em v-else data-testid="home-points-login">{{ zhCN.home.pointsLogin }}</em>
+            </span>
+            <span data-testid="home-signin-streak">
+              {{ zhCN.home.streak }}
+              <template v-if="streakDays != null"> {{ streakDays }}{{ zhCN.home.dayUnit }}</template>
+              <template v-else> {{ zhCN.home.pointsLogin }}</template>
+            </span>
+          </button>
+          <Button
+            type="primary"
+            size="small"
+            data-testid="home-signin-action"
+            :loading="signinActing"
+            :disabled="todaySigned"
+            @click.stop="onHomeCheckin"
+          >
+            {{ todaySigned ? zhCN.signin.signed : zhCN.signin.checkin }}
+          </Button>
+        </div>
+        <div
+          class="signin-panel__cal"
+          data-testid="home-signin-calendar"
           role="button"
           tabindex="0"
-          @click="openActivity(activity)"
+          @click="openSigninPage"
         >
-          <div class="activity-card__cover">
-            <FallbackImage v-if="coverOf(activity)" :src="coverOf(activity)" :alt="activity.name" />
-            <span v-else class="activity-card__fallback">{{ activity.name.slice(0, 1) }}</span>
-          </div>
-          <span class="activity-card__body">
-            <strong>{{ activity.name }}</strong>
-            <span v-if="activity.code">{{ activity.code }}</span>
-            <span v-if="windowOf(activity)">{{ windowOf(activity) }}</span>
-          </span>
-        </article>
-      </div>
+          <SigninMonthGrid :cells="monthCells" compact @select="openSigninPage" />
+        </div>
+      </article>
+      <AdCarousel position-code="home_banner" />
     </PullRefresh>
   </section>
 </template>
@@ -163,104 +225,54 @@ onMounted(() => {
 .home-page :deep(.van-nav-bar) {
   background: transparent;
 }
-.points-bar {
+.signin-panel {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  width: calc(100% - 32px);
-  margin: 12px 16px 0;
-  padding: 14px 16px;
-  border: 0;
-  border-radius: var(--portal-radius);
-  background: linear-gradient(135deg, var(--portal-primary-deep) 0%, var(--portal-primary-warm) 100%);
-  box-shadow: var(--portal-shadow);
-  color: #fff;
-  text-align: left;
-}
-.points-bar span {
-  font-size: 13px;
-  opacity: 0.9;
-}
-.points-bar strong {
-  font-size: 22px;
-  letter-spacing: 0.02em;
-}
-.signin-card {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 12px 16px;
-  padding: 14px;
+  gap: 10px;
+  align-items: stretch;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
   border-radius: var(--portal-radius);
   background: var(--portal-surface);
   box-shadow: var(--portal-shadow-soft);
-  text-align: left;
 }
-.signin-card__mark {
-  display: flex;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  background: var(--portal-accent-soft);
-  color: var(--portal-accent);
-  font-size: 16px;
-  font-weight: 700;
-}
-.signin-card__meta {
+.signin-panel__info {
   display: flex;
   min-width: 0;
+  flex: 1 1 70%;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  align-items: flex-start;
 }
-.signin-card__meta strong {
-  font-size: 16px;
+.signin-panel__info strong {
+  font-size: 14px;
 }
-.signin-card__meta span {
-  color: var(--portal-muted);
-  font-size: 13px;
-}
-.activity-card {
+.signin-panel__meta {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  margin: 0 16px 14px;
-  border-radius: var(--portal-radius-lg);
-  background: var(--portal-surface);
-  box-shadow: var(--portal-shadow);
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   text-align: left;
-}
-.activity-card__cover {
-  display: flex;
-  height: 120px;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(160deg, var(--portal-primary-warm) 0%, var(--portal-primary-deep) 100%);
-}
-.activity-card__cover :deep(.fallback-image),
-.activity-card__cover :deep(img) {
-  width: 100%;
-  height: 120px;
-  border-radius: 0;
-}
-.activity-card__fallback {
-  color: #fff;
-  font-size: 40px;
-  font-weight: 700;
-}
-.activity-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px 16px;
-}
-.activity-card__body strong {
-  font-size: 16px;
-}
-.activity-card__body span {
   color: var(--portal-muted);
-  font-size: 13px;
+  font-size: 12px;
+}
+.signin-panel__meta b {
+  margin-left: 4px;
+  color: var(--portal-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.signin-panel__meta em {
+  margin-left: 4px;
+  font-style: normal;
+}
+.signin-panel__cal {
+  flex: 0 0 30%;
+  width: 30%;
+  max-width: 30%;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 </style>

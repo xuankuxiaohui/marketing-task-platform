@@ -42,6 +42,7 @@ replay_pid*
 .env.vm
 deploy/.env
 deploy/backups/
+.run/
 .tmp_*.py
 
 # Maven
@@ -66,3 +67,4 @@ web/.e2e-state.json
 perf/state.json
 perf/reports/*
 !perf/reports/.gitkeep
+.gstack/

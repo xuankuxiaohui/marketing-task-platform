@@ -14,14 +14,15 @@ import { RISK_DIMENSIONS, RISK_LIST_TYPES } from "@/constants/risk";
 import { hasAuth } from "@/directives/auth";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RiskListItemPage" });
 
 const records = ref<RiskListItemResponse[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ dimension: "", listType: "", value: "", from: "", to: "" });
@@ -109,7 +110,7 @@ async function submit(): Promise<void> {
     remark: form.remark || undefined,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -128,7 +129,7 @@ async function submitImport(): Promise<void> {
     reason: form.reason,
   });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -147,13 +148,19 @@ async function submitRemove(): Promise<void> {
   feedback.value = null;
   const result = await removeListItem(removing.value.id, { reason: removeReason.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
   }
   removeOpen.value = false;
   await load();
+}
+
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
 }
 
 onMounted(() => {
@@ -165,77 +172,68 @@ onMounted(() => {
   <section class="admin-page" data-testid="list-item-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.list.title }}</h2>
-      <el-button type="primary" v-if="canAdd" data-testid="list-create" @click="openCreate">
+      <a-button type="primary" v-if="canAdd" data-testid="list-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-select v-model="filters.dimension" data-testid="filter-dimension">
-        <el-option value="" :label="zhCN.list.dimension" />
-        <el-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item" :label="item" />
-      </el-select>
-      <el-select v-model="filters.listType" data-testid="filter-list-type">
-        <el-option value="" :label="zhCN.list.listType" />
-        <el-option v-for="item in RISK_LIST_TYPES" :key="item" :value="item" :label="item" />
-      </el-select>
-      <el-input v-model="filters.value" data-testid="filter-value" :placeholder="zhCN.list.listValue" />
-      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <el-button data-testid="list-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button v-auth="PERMS.RISK_BLACK_IMPORT" data-testid="list-import" @click="openImport">
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-select v-model:value="filters.dimension" data-testid="filter-dimension">
+        <a-select-option value="">{{ zhCN.list.dimension }}</a-select-option>
+        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      <a-select v-model:value="filters.listType" data-testid="filter-list-type">
+        <a-select-option value="">{{ zhCN.list.listType }}</a-select-option>
+        <a-select-option v-for="item in RISK_LIST_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      <a-input v-model:value="filters.value" data-testid="filter-value" :placeholder="zhCN.list.listValue" />
+      <a-date-picker v-model:value="filters.from" data-testid="filter-from" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-date-picker v-model:value="filters.to" data-testid="filter-to" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-button type="primary" data-testid="list-query" @click="load">{{ zhCN.common.query }}</a-button>
+      <a-button v-auth="PERMS.RISK_BLACK_IMPORT" data-testid="list-import" @click="openImport">
         {{ zhCN.list.import }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-if="canAdd" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="list-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-if="canAdd" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="list-table" size="small" stripe>
-      <el-table-column :label="zhCN.list.dimension">
-        <template #default="{ row }">{{ row.dimension }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.list.listType">
-        <template #default="{ row }">{{ row.listType }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.list.listValue">
-        <template #default="{ row }">{{ row.listValue }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.list.reason">
-        <template #default="{ row }">{{ row.reason }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.list.denyLogin">
-        <template #default="{ row }">{{ row.denyLogin ? zhCN.common.enabled : zhCN.common.disabled }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.list.effectiveAt">
-        <template #default="{ row }">{{ formatDateTime(row.effectiveAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.list.expireAt">
-        <template #default="{ row }">{{ formatDateTime(row.expireAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.list.dimension">
+        <template #default="{ record: row }">{{ row.dimension }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.list.listType">
+        <template #default="{ record: row }">{{ row.listType }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.list.listValue">
+        <template #default="{ record: row }">{{ row.listValue }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.list.reason">
+        <template #default="{ record: row }">{{ row.reason }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.list.denyLogin">
+        <template #default="{ record: row }">{{ row.denyLogin ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.list.effectiveAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.effectiveAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.list.expireAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.expireAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text
-              v-auth="removePerm(row)"
-              data-testid="list-remove"
-              @click="openRemove(row)"
-            >
+            <a-button size="small" v-auth="removePerm(row)" data-testid="list-remove" @click="openRemove(row)">
               {{ zhCN.list.remove }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="zhCN.common.create"
@@ -243,32 +241,32 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <el-form-item :label="zhCN.list.dimension">
-        <el-select v-model="form.dimension" data-testid="list-dimension">
-        <el-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.list.listType">
-        <el-select v-model="form.listType" data-testid="list-type">
-        <el-option v-if="hasAuth(PERMS.RISK_BLACK_ADD)" value="BLACK" :label="zhCN.list.black" />
-        <el-option v-if="hasAuth(PERMS.RISK_WHITE_ADD)" value="WHITE" :label="zhCN.list.white" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.list.listValue">
-        <el-input v-model="form.listValue" data-testid="list-value" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.list.reason">
-        <el-input v-model="form.reason" data-testid="list-reason" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.list.expireAt">
-        <el-input v-model="form.expireAt" data-testid="list-expire" type="datetime-local" />
-      </el-form-item>
-      <el-form-item v-if="showDenyLogin" :label="zhCN.list.denyLogin">
-        <el-checkbox v-model="form.denyLogin" data-testid="list-deny-login" />
-      </el-form-item>
-      <el-form-item :label="zhCN.common.remark">
-        <el-input v-model="form.remark" data-testid="list-remark" />
-      </el-form-item>
+      <a-form-item :label="zhCN.list.dimension">
+        <a-select v-model:value="form.dimension" data-testid="list-dimension">
+        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.list.listType">
+        <a-select v-model:value="form.listType" data-testid="list-type">
+        <a-select-option v-if="hasAuth(PERMS.RISK_BLACK_ADD)" value="BLACK">{{ zhCN.list.black }}</a-select-option>
+        <a-select-option v-if="hasAuth(PERMS.RISK_WHITE_ADD)" value="WHITE">{{ zhCN.list.white }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.list.listValue">
+        <a-input v-model:value="form.listValue" data-testid="list-value" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.list.reason">
+        <a-input v-model:value="form.reason" data-testid="list-reason" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.list.expireAt">
+        <a-date-picker v-model:value="form.expireAt" data-testid="list-expire" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      </a-form-item>
+      <a-form-item v-if="showDenyLogin" :label="zhCN.list.denyLogin">
+        <a-checkbox v-model:checked="form.denyLogin" data-testid="list-deny-login" />
+      </a-form-item>
+      <a-form-item :label="zhCN.common.remark">
+        <a-input v-model:value="form.remark" data-testid="list-remark" />
+      </a-form-item>
     </FormDialog>
     <FormDialog
       :visible="importOpen"
@@ -277,17 +275,17 @@ onMounted(() => {
       @submit="submitImport"
       @cancel="importOpen = false"
     >
-      <el-form-item :label="zhCN.list.dimension">
-        <el-select v-model="form.dimension" data-testid="import-dimension">
-        <el-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.list.content">
-        <el-input v-model="form.listValue" type="textarea" data-testid="import-content" :rows="8" required  />
-      </el-form-item>
-      <el-form-item :label="zhCN.list.reason">
-        <el-input v-model="form.reason" data-testid="import-reason" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.list.dimension">
+        <a-select v-model:value="form.dimension" data-testid="import-dimension">
+        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.list.content">
+        <a-textarea v-model:value="form.listValue" data-testid="import-content" :rows="8" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.list.reason">
+        <a-input v-model:value="form.reason" data-testid="import-reason" required />
+      </a-form-item>
       <p v-if="importHint" data-testid="import-result">{{ importHint }}</p>
     </FormDialog>
     <FormDialog
@@ -297,9 +295,9 @@ onMounted(() => {
       @submit="submitRemove"
       @cancel="removeOpen = false"
     >
-      <el-form-item :label="zhCN.list.removeReason">
-        <el-input v-model="removeReason" data-testid="remove-reason" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.list.removeReason">
+        <a-input v-model:value="removeReason" data-testid="remove-reason" required />
+      </a-form-item>
     </FormDialog>
   </section>
 </template>

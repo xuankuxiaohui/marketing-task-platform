@@ -1,3 +1,4 @@
+import { message } from "ant-design-vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,6 +6,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/signin", () => ({
@@ -56,21 +58,39 @@ describe("SigninActivityPage", () => {
   });
 
   it("lists activities and previews publish confirm", async () => {
-    publishMock.mockResolvedValue(
-      ok({
-        requiresConfirm: true,
-        message: "新签到将使用新版本，已产生的记录按签到时快照结算",
-        id: 3,
-        code: "daily_check",
-        version: 0,
-        status: "DRAFT",
-      }),
-    );
+    const successSpy = vi.spyOn(message, "success");
+    publishMock
+      .mockResolvedValueOnce(
+        ok({
+          requiresConfirm: true,
+          message: "新签到将使用新版本，已产生的记录按签到时快照结算",
+          id: 3,
+          code: "daily_check",
+          version: 0,
+          status: "DRAFT",
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          requiresConfirm: false,
+          id: 3,
+          code: "daily_check",
+          version: 1,
+          status: "PUBLISHED",
+        }),
+      );
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="signin-table"]').text()).toContain("daily_check");
-    expect(wrapper.get('[data-testid="signin-create"]').text()).toContain(zhCN.common.create);
+    expect(visibleText(wrapper, "signin-create")).toContain(zhCN.common.create);
     await wrapper.get('[data-testid="signin-publish"]').trigger("click");
     await flushPromises();
     expect(publishMock).toHaveBeenCalledWith(3, { confirm: false, early: true });
+    expect(successSpy).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="confirm-message"]').text()).toContain("新签到将使用新版本");
+    await wrapper.get('[data-testid="confirm-ok"]').trigger("click");
+    await flushPromises();
+    expect(publishMock).toHaveBeenNthCalledWith(2, 3, { confirm: true, early: true });
+    expect(successSpy).toHaveBeenCalledWith(zhCN.common.saved);
+    successSpy.mockRestore();
   });
 });

@@ -64,6 +64,13 @@ class RoleAdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ok").value(true));
 
+        when(appService.listPermissionIds(9L)).thenReturn(List.of(4L, 10L));
+        mvc.perform(get("/admin/identity/roles/9/permissions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.permissionIds[0]").value(4))
+                .andExpect(jsonPath("$.data.permissionIds[1]").value(10));
+
         mvc.perform(put("/admin/identity/roles/9/permissions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"permissionIds\":[4,10]}"))

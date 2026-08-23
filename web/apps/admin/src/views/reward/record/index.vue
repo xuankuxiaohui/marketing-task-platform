@@ -12,7 +12,8 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { PERMS } from "@/constants/identity";
 import { BYPASS_RULES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RewardRecordPage" });
 
@@ -59,7 +60,7 @@ async function onRetry(): Promise<void> {
     return;
   }
   const result = await retryGrant(Number(recordId.value));
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
   }
@@ -70,7 +71,7 @@ async function onFulfillConfirm(): Promise<void> {
     return;
   }
   const result = await fulfillConfirm(Number(recordId.value));
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
   }
@@ -81,7 +82,7 @@ async function onFulfillRetry(): Promise<void> {
     return;
   }
   const result = await fulfillRetry(Number(recordId.value));
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
   }
@@ -94,7 +95,7 @@ async function onManualGrant(): Promise<void> {
     reason: grantForm.reason,
     bypassRules: grantForm.bypass,
   });
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -113,64 +114,62 @@ onMounted(() => {
       <h2>{{ zhCN.record.title }}</h2>
     </div>
     <p class="hint" data-testid="record-no-list">{{ zhCN.record.noListHint }}</p>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
-      <el-input v-model="filters.prizeId" data-testid="filter-prize" :placeholder="zhCN.record.prizeId" />
-      <el-input v-model="filters.from" type="datetime-local" />
-      <el-input v-model="filters.to" type="datetime-local" />
-      <el-button v-auth="PERMS.REWARD_RECORD_QUERY" data-testid="spend-query" @click="loadSpend">
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.categoryCode" data-testid="filter-category" :placeholder="zhCN.prize.category" />
+      <a-input v-model:value="filters.prizeId" data-testid="filter-prize" :placeholder="zhCN.record.prizeId" />
+      <a-date-picker v-model:value="filters.from" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-date-picker v-model:value="filters.to" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-button type="primary" v-auth="PERMS.REWARD_RECORD_QUERY" data-testid="spend-query" @click="loadSpend">
         {{ zhCN.common.query }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
     <h3>{{ zhCN.record.spend }}</h3>
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="spendRows.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-    </div>
-    <el-table v-else :data="spendRows" class="data-table admin-table" data-testid="spend-table" size="small" stripe>
-      <el-table-column :label="zhCN.prize.category">
-        <template #default="{ row }">{{ row.categoryCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.record.arrivedCount">
-        <template #default="{ row }">{{ row.arrivedCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.record.arrivedCost">
-        <template #default="{ row }">{{ row.arrivedCostFen }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.record.sendingCount">
-        <template #default="{ row }">{{ row.sendingCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.record.sendingCost">
-        <template #default="{ row }">{{ row.sendingCostFen }}</template>
-      </el-table-column>
-    </el-table>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="recordId" data-testid="record-id" :placeholder="zhCN.record.recordId" />
-      <el-button v-auth="PERMS.REWARD_RECORD_RETRY" data-testid="record-retry" @click="onRetry">
+    <a-table size="small" :loading="loading" :data-source="spendRows" class="data-table admin-table" data-testid="spend-table" :pagination="false" :row-key="adminRowKey">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+      </template>
+
+      <a-table-column :title="zhCN.prize.category">
+        <template #default="{ record: row }">{{ row.categoryCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.record.arrivedCount">
+        <template #default="{ record: row }">{{ row.arrivedCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.record.arrivedCost">
+        <template #default="{ record: row }">{{ row.arrivedCostFen }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.record.sendingCount">
+        <template #default="{ record: row }">{{ row.sendingCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.record.sendingCost">
+        <template #default="{ record: row }">{{ row.sendingCostFen }}</template>
+      </a-table-column>
+    </a-table>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="recordId" data-testid="record-id" :placeholder="zhCN.record.recordId" />
+      <a-button v-auth="PERMS.REWARD_RECORD_RETRY" data-testid="record-retry" @click="onRetry">
         {{ zhCN.record.retry }}
-      </el-button>
-      <el-button v-auth="PERMS.REWARD_RECORD_FULFILL" data-testid="record-fulfill-confirm" @click="onFulfillConfirm">
+      </a-button>
+      <a-button v-auth="PERMS.REWARD_RECORD_FULFILL" data-testid="record-fulfill-confirm" @click="onFulfillConfirm">
         {{ zhCN.record.fulfillConfirm }}
-      </el-button>
-      <el-button v-auth="PERMS.REWARD_RECORD_FULFILL" data-testid="record-fulfill-retry" @click="onFulfillRetry">
+      </a-button>
+      <a-button v-auth="PERMS.REWARD_RECORD_FULFILL" data-testid="record-fulfill-retry" @click="onFulfillRetry">
         {{ zhCN.record.fulfillRetry }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <h3>{{ zhCN.record.manualGrant }}</h3>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="grantForm.userId" data-testid="grant-user" :placeholder="zhCN.record.userId" />
-      <el-input v-model="grantForm.prizeId" data-testid="grant-prize" :placeholder="zhCN.record.prizeId" />
-      <el-input v-model="grantForm.reason" data-testid="grant-reason" :placeholder="zhCN.prize.reason" />
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="grantForm.userId" data-testid="grant-user" :placeholder="zhCN.record.userId" />
+      <a-input v-model:value="grantForm.prizeId" data-testid="grant-prize" :placeholder="zhCN.record.prizeId" />
+      <a-input v-model:value="grantForm.reason" data-testid="grant-reason" :placeholder="zhCN.prize.reason" />
       <label v-for="rule in BYPASS_RULES" :key="rule">
-        <el-checkbox
-          :model-value="grantForm.bypass.includes(rule)"
-          @update:model-value="(val: boolean) => toggleBypass(rule, val)" />
+        <a-checkbox :checked="grantForm.bypass.includes(rule)" @update:checked="(val: boolean) => toggleBypass(rule, val)" />
         {{ rule }}
       </label>
-      <el-button v-auth="PERMS.REWARD_RECORD_MANUAL" data-testid="grant-submit" @click="onManualGrant">
+      <a-button v-auth="PERMS.REWARD_RECORD_MANUAL" data-testid="grant-submit" @click="onManualGrant">
         {{ zhCN.record.manualGrant }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
   </section>
 </template>

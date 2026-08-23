@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/simulate", () => ({
@@ -82,6 +83,6 @@ describe("SimulateTaskPage", () => {
     await flushPromises();
     expect(reverseMock).toHaveBeenCalledWith(11);
     expect(wrapper.get('[data-testid="simulate-result"]').text()).toContain("channel=false");
-    expect(wrapper.get('[data-testid="simulate-start"]').text()).toContain(zhCN.simulate.start);
+    expect(visibleText(wrapper, "simulate-start")).toContain(zhCN.simulate.start);
   });
 });

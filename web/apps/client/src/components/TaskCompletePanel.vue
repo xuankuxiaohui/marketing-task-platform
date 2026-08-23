@@ -106,6 +106,7 @@ const {
         <Button
           v-if="inProgress"
           block
+          plain
           :disabled="acting"
           data-testid="task-abandon"
           @click="onAbandon"
@@ -181,7 +182,17 @@ const {
   border-radius: 999px;
   background: var(--portal-primary);
 }
+.task-detail__body {
+  padding-bottom: 88px;
+}
 .task-detail__actions {
-  padding: 8px 16px 24px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--portal-bg);
 }
 </style>

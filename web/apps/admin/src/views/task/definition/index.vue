@@ -20,9 +20,11 @@ import FormDialog from "@/components/FormDialog.vue";
 import { PERMS } from "@/constants/identity";
 import { DEFINITION_STATUS } from "@/constants/task";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPublishImpact, isPublishPreview } from "@/utils/publish-confirm";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskDefinitionPage" });
 
@@ -31,7 +33,7 @@ const records = ref<TaskDefinitionView[]>([]);
 const failures = ref<ScheduleFailureView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ code: "", name: "", status: "", category: "" });
@@ -78,7 +80,7 @@ async function resetFilters(): Promise<void> {
 }
 
 async function loadFailures(): Promise<void> {
-  const result = await pageScheduleFailures({ page: 1, pageSize: 20 });
+  const result = await pageScheduleFailures({ page: 1, pageSize: ADMIN_PAGE_SIZE });
   const parsed = okOrFeedback(result);
   if (parsed.ok) {
     failures.value = parsed.data?.records ?? [];
@@ -115,7 +117,7 @@ async function applyPublish(id: number, body: { confirm: boolean; early?: boolea
       message: formatPublishImpact(parsed.data as PublishResponse),
       run: async () => {
         const done = await publishDefinition(id, { confirm: true, early: body.early });
-        const doneParsed = okOrFeedback(done);
+        const doneParsed = writeOrFeedback(done);
         if (!doneParsed.ok) {
           feedback.value = doneParsed.feedback;
           return;
@@ -159,7 +161,7 @@ async function submitCopy(): Promise<void> {
   saving.value = true;
   const result = await copyDefinition(editing.value.id, { code: copyForm.code, name: copyForm.name });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -175,7 +177,7 @@ async function submitSchedule(): Promise<void> {
   saving.value = true;
   const result = await scheduleDefinition(editing.value.id, { publishAt: scheduleAt.value });
   saving.value = false;
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -189,7 +191,7 @@ async function onCancelSchedule(row: TaskDefinitionView): Promise<void> {
     return;
   }
   const result = await cancelSchedule(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -202,7 +204,7 @@ async function onOffline(row: TaskDefinitionView): Promise<void> {
     return;
   }
   const result = await offlineDefinition(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -218,7 +220,7 @@ function askDelete(row: TaskDefinitionView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteDefinition(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -238,142 +240,112 @@ onMounted(async () => {
   await load();
   await loadFailures();
 });
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
 </script>
 
 <template>
   <section class="admin-page" data-testid="task-definition-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.task.title }}</h2>
-      <el-button v-auth="PERMS.TASK_DEF_CREATE" type="primary" data-testid="task-create" @click="goCreate">
+      <a-button v-auth="PERMS.TASK_DEF_CREATE" type="primary" data-testid="task-create" @click="goCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.task.code" />
-      <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.task.name" />
-      <el-select v-model="filters.status" data-testid="filter-status">
-        <el-option value="" :label="zhCN.common.status" />
-        <el-option v-for="status in Object.values(DEFINITION_STATUS)" :key="status" :value="status" :label="status" />
-      </el-select>
-      <el-input v-model="filters.category" data-testid="filter-category" :placeholder="zhCN.task.category" />
-      <el-button data-testid="task-query" @click="load">{{ zhCN.common.query }}</el-button>
-      <el-button data-testid="task-reset" @click="resetFilters">{{ zhCN.common.reset }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.code" data-testid="filter-code" :placeholder="zhCN.task.code" />
+      <a-input v-model:value="filters.name" data-testid="filter-name" :placeholder="zhCN.task.name" />
+      <a-select v-model:value="filters.status" data-testid="filter-status">
+        <a-select-option value="">{{ zhCN.common.status }}</a-select-option>
+        <a-select-option v-for="status in Object.values(DEFINITION_STATUS)" :key="status" :value="status">{{ adminStatusLabel(status) }}</a-select-option>
+      </a-select>
+      <a-input v-model:value="filters.category" data-testid="filter-category" :placeholder="zhCN.task.category" />
+      <a-button type="primary" data-testid="task-query" @click="load">{{ zhCN.common.query }}</a-button>
+      <a-button data-testid="task-reset" @click="resetFilters">{{ zhCN.common.reset }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.TASK_DEF_CREATE" text type="primary" @click="goCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table task-table admin-table" data-testid="task-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.TASK_DEF_CREATE" type="primary" size="small" @click="goCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table task-table admin-table" data-testid="task-table" size="small" stripe>
-      <el-table-column :label="zhCN.task.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.task.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag size="small" :type="isLiveStatus(row.status) ? 'success' : 'info'" :class="{ 'status-tag--live': isLiveStatus(row.status) }">
-            {{ row.status }}
-          </el-tag>
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.task.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.task.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="isLiveStatus(row.status) ? 'success' : 'default'" :class="{ 'status-tag--live': isLiveStatus(row.status) }">
+            {{ adminStatusLabel(row.status) }}
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.task.version">
-        <template #default="{ row }">{{ row.version }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.task.version">
+        <template #default="{ record: row }">{{ row.version }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-edit" @click="goEdit(row)">
+            <a-button size="small" v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-edit" @click="goEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text v-auth="PERMS.TASK_DEF_QUERY" data-testid="task-versions" @click="goVersions(row)">
+            </a-button>
+            <a-button size="small" v-auth="PERMS.TASK_DEF_QUERY" data-testid="task-versions" @click="goVersions(row)">
               {{ zhCN.task.versionTitle }}
-            </el-button>
-            <el-button text v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish(row)">
+            </a-button>
+            <a-button size="small" v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish(row)">
               {{ zhCN.task.publish }}
-            </el-button>
-            <el-button
-              text
-              v-if="row.status === DEFINITION_STATUS.SCHEDULED"
-              v-auth="PERMS.TASK_DEF_PUBLISH"
-              data-testid="task-publish-early"
-              @click="onPublish(row, true)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === DEFINITION_STATUS.SCHEDULED" v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish-early" @click="onPublish(row, true)">
               {{ zhCN.task.publishEarly }}
-            </el-button>
-            <el-button
-              text
-              v-if="row.status === DEFINITION_STATUS.DRAFT"
-              v-auth="PERMS.TASK_DEF_SCHEDULE"
-              data-testid="task-schedule"
-              @click="openSchedule(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === DEFINITION_STATUS.DRAFT" v-auth="PERMS.TASK_DEF_SCHEDULE" data-testid="task-schedule" @click="openSchedule(row)">
               {{ zhCN.task.schedule }}
-            </el-button>
-            <el-button
-              text
-              v-if="row.status === DEFINITION_STATUS.SCHEDULED"
-              v-auth="PERMS.TASK_DEF_SCHEDULE"
-              data-testid="task-cancel-schedule"
-              @click="onCancelSchedule(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === DEFINITION_STATUS.SCHEDULED" v-auth="PERMS.TASK_DEF_SCHEDULE" data-testid="task-cancel-schedule" @click="onCancelSchedule(row)">
               {{ zhCN.task.cancelSchedule }}
-            </el-button>
-            <el-button
-              text
-              v-if="row.status === DEFINITION_STATUS.PUBLISHED"
-              v-auth="PERMS.TASK_DEF_OFFLINE"
-              data-testid="task-offline"
-              @click="onOffline(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === DEFINITION_STATUS.PUBLISHED" v-auth="PERMS.TASK_DEF_OFFLINE" data-testid="task-offline" @click="onOffline(row)">
               {{ zhCN.task.offline }}
-            </el-button>
-            <el-button text v-auth="PERMS.TASK_DEF_COPY" data-testid="task-copy" @click="openCopy(row)">
+            </a-button>
+            <a-button size="small" v-auth="PERMS.TASK_DEF_COPY" data-testid="task-copy" @click="openCopy(row)">
               {{ zhCN.task.copy }}
-            </el-button>
-            <el-button
-              text
-              v-if="row.status === DEFINITION_STATUS.DRAFT"
-              v-auth="PERMS.TASK_DEF_DELETE"
-              data-testid="task-delete"
-              @click="askDelete(row)"
-            >
+            </a-button>
+            <a-button size="small" danger v-if="row.status === DEFINITION_STATUS.DRAFT" v-auth="PERMS.TASK_DEF_DELETE" data-testid="task-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <h3>{{ zhCN.task.scheduleFailures }}</h3>
     <p v-if="failures.length === 0" data-testid="failure-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="failures" class="data-table admin-table" data-testid="failure-table" size="small" stripe>
-      <el-table-column :label="zhCN.task.code">
-        <template #default="{ row }">{{ row.taskCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.task.reason">
-        <template #default="{ row }">{{ row.reason }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.createdAt">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-    </el-table>
+    <a-table v-else :data-source="failures" class="data-table admin-table" data-testid="failure-table" size="small" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.task.code">
+        <template #default="{ record: row }">{{ row.taskCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.task.reason">
+        <template #default="{ record: row }">{{ row.reason }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.createdAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.createdAt) }}</template>
+      </a-table-column>
+    </a-table>
     <FormDialog :visible="copyOpen" :title="zhCN.task.copy" :saving="saving" @submit="submitCopy" @cancel="copyOpen = false">
-      <el-form-item :label="zhCN.task.newCode">
-        <el-input v-model="copyForm.code" data-testid="copy-code" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.task.newName">
-        <el-input v-model="copyForm.name" data-testid="copy-name" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.task.newCode">
+        <a-input v-model:value="copyForm.code" data-testid="copy-code" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.task.newName">
+        <a-input v-model:value="copyForm.name" data-testid="copy-name" required />
+      </a-form-item>
     </FormDialog>
     <FormDialog
       :visible="scheduleOpen"
@@ -382,9 +354,9 @@ onMounted(async () => {
       @submit="submitSchedule"
       @cancel="scheduleOpen = false"
     >
-      <el-form-item :label="zhCN.task.publishAt">
-        <el-input v-model="scheduleAt" data-testid="schedule-at" type="datetime-local" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.task.publishAt">
+        <a-date-picker v-model:value="scheduleAt" data-testid="schedule-at" required show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

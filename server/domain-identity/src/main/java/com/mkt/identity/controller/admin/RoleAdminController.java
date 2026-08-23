@@ -8,6 +8,7 @@ import com.mkt.identity.command.RoleUpdateCommand;
 import com.mkt.identity.query.RoleQuery;
 import com.mkt.identity.response.IdResponse;
 import com.mkt.identity.response.OkResponse;
+import com.mkt.identity.response.RolePermissionIdsResponse;
 import com.mkt.identity.response.RoleView;
 import com.mkt.identity.support.IdentityPermissions;
 import com.mkt.kernel.PageData;
@@ -72,6 +73,13 @@ public class RoleAdminController {
     public Result<OkResponse> delete(@PathVariable long id) {
         appService.delete(id);
         return Result.ok(OkResponse.yes());
+    }
+
+    @GetMapping("/{id}/permissions")
+    @SaCheckPermission(IdentityPermissions.ROLE_QUERY)
+    @Operation(summary = "查询角色权限", description = "权限 identity:role:query")
+    public Result<RolePermissionIdsResponse> listPermissions(@PathVariable long id) {
+        return Result.ok(new RolePermissionIdsResponse(appService.listPermissionIds(id)));
     }
 
     @PutMapping("/{id}/permissions")

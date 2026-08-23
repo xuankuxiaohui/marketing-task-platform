@@ -2,10 +2,11 @@ import { showFailToast } from "vant";
 import { createRouter, createWebHistory } from "vue-router";
 import { setUnauthorizedHandler } from "@/api/http";
 import { zhCN } from "@/locales/zh-CN";
-import { HOME_ROUTE, LOGIN_ROUTE, resolveAuthNavigation } from "@/router/guards";
+import { HOME_ROUTE, LOGIN_ROUTE, isPublicPath, resolveAuthNavigation } from "@/router/guards";
 import { ensurePortalSession, resetPortalSession } from "@/router/session";
+import { handlePortalUnauthorized } from "@/router/unauthorized";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
-import { sessionMessage } from "@/utils/session-reason";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -59,16 +60,24 @@ const router = createRouter({
           meta: { title: zhCN.home.title },
         },
         {
+          path: "tasks",
+          redirect: "/mine/tasks",
+        },
+        {
+          path: "prizes",
+          redirect: "/mine/prizes",
+        },
+        {
           path: "mine/tasks",
           name: "MineTasksPage",
           component: () => import("@/views/mine/MineTasksPage.vue"),
-          meta: { title: zhCN.mine.tasks },
+          meta: { title: zhCN.mine.tasks, tab: "tasks" },
         },
         {
           path: "mine/prizes",
           name: "MinePrizesPage",
           component: () => import("@/views/mine/MinePrizesPage.vue"),
-          meta: { title: zhCN.mine.prizes },
+          meta: { title: zhCN.mine.prizes, tab: "prizes" },
         },
         {
           path: "mine/points",
@@ -88,6 +97,18 @@ const router = createRouter({
           component: () => import("@/views/activity/index.vue"),
           meta: { title: zhCN.activity.title, public: true },
         },
+        {
+          path: "activities",
+          name: "ActivityHubPage",
+          component: () => import("@/views/activity/ActivityHubPage.vue"),
+          meta: { title: zhCN.mine.activityHub, public: true },
+        },
+        {
+          path: "mine/prizes/:recordId",
+          name: "PrizeDetailPage",
+          component: () => import("@/views/mine/PrizeDetailPage.vue"),
+          meta: { title: zhCN.prize.detailTitle },
+        },
       ],
     },
   ],
@@ -106,6 +127,9 @@ router.beforeEach(async (to) => {
   if (decision.type === "redirect") {
     return { path: decision.path, query: decision.query };
   }
+  if (!session.authenticated && !isPublicPath(to.path)) {
+    useLoginOverlayStore().request({ redirect: to.fullPath });
+  }
   return true;
 });
 
@@ -115,14 +139,12 @@ router.afterEach((to) => {
 });
 
 setUnauthorizedHandler((payload) => {
-  showFailToast(sessionMessage(payload.code, payload.message));
-  resetPortalSession();
-  if (router.currentRoute.value.path !== LOGIN_ROUTE) {
-    void router.replace({
-      path: LOGIN_ROUTE,
-      query: { redirect: router.currentRoute.value.fullPath },
-    });
-  }
+  handlePortalUnauthorized(payload, {
+    currentPath: router.currentRoute.value.fullPath,
+    reset: () => resetPortalSession(),
+    toast: (message) => showFailToast(message),
+    openOverlay: (opts) => useLoginOverlayStore().request(opts),
+  });
 });
 
 export default router;

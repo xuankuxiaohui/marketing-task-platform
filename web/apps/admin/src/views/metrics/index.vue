@@ -15,6 +15,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import MetricsChart from "./MetricsChart.vue";
+import { adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "MetricsDashboardPage" });
 
@@ -146,126 +147,123 @@ onMounted(() => {
     <div class="admin-page__header">
       <h2>{{ zhCN.metrics.title }}</h2>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-select v-model="filters.grain" data-testid="filter-grain">
-        <el-option value="DAY" :label="zhCN.metrics.day" />
-        <el-option value="WEEK" :label="zhCN.metrics.week" />
-        <el-option value="MONTH" :label="zhCN.metrics.month" />
-      </el-select>
-      <el-input v-model="filters.dimKey" data-testid="filter-dim" :placeholder="zhCN.metrics.dimKey" />
-      <el-input v-model="filters.from" type="date" data-testid="filter-from" />
-      <el-input v-model="filters.to" type="date" data-testid="filter-to" />
-      <el-button data-testid="metrics-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-select v-model:value="filters.grain" data-testid="filter-grain">
+        <a-select-option value="DAY">{{ zhCN.metrics.day }}</a-select-option>
+        <a-select-option value="WEEK">{{ zhCN.metrics.week }}</a-select-option>
+        <a-select-option value="MONTH">{{ zhCN.metrics.month }}</a-select-option>
+      </a-select>
+      <a-input v-model:value="filters.dimKey" data-testid="filter-dim" :placeholder="zhCN.metrics.dimKey" />
+      <a-date-picker v-model:value="filters.from" data-testid="filter-from" value-format="YYYY-MM-DD" format="YYYY-MM-DD" />
+      <a-date-picker v-model:value="filters.to" data-testid="filter-to" value-format="YYYY-MM-DD" format="YYYY-MM-DD" />
+      <a-button type="primary" data-testid="metrics-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else class="metrics-grid">
-      <article data-testid="funnel-panel">
-        <h3>{{ zhCN.metrics.funnel }}</h3>
-        <p v-if="funnel.length === 0" data-testid="funnel-empty">{{ zhCN.common.empty }}</p>
+    <a-spin :spinning="loading">
+    <div class="metrics-grid">
+      <a-card data-testid="funnel-panel" :title="zhCN.metrics.funnel">
+        <a-empty v-if="funnel.length === 0" :description="zhCN.common.empty" data-testid="funnel-empty" />
         <template v-else>
           <MetricsChart :option="funnelOption()" />
-          <el-table :data="funnel" class="data-table" data-testid="funnel-table" stripe>
-      <el-table-column :label="zhCN.metrics.period">
-        <template #default="{ row }">{{ row.period }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.dimKey">
-        <template #default="{ row }">{{ row.dimKey }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.exposure">
-        <template #default="{ row }">{{ row.exposureCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.start">
-        <template #default="{ row }">{{ row.startCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.complete">
-        <template #default="{ row }">{{ row.completeCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.startRate">
-        <template #default="{ row }">{{ formatRate(row.startRate) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.completeRate">
-        <template #default="{ row }">{{ formatRate(row.completeRate) }}</template>
-      </el-table-column>
-    </el-table>
+          <a-table size="small" :data-source="funnel" class="data-table admin-table" data-testid="funnel-table" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.metrics.period">
+        <template #default="{ record: row }">{{ row.period }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.dimKey">
+        <template #default="{ record: row }">{{ row.dimKey }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.exposure">
+        <template #default="{ record: row }">{{ row.exposureCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.start">
+        <template #default="{ record: row }">{{ row.startCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.complete">
+        <template #default="{ record: row }">{{ row.completeCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.startRate">
+        <template #default="{ record: row }">{{ formatRate(row.startRate) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.completeRate">
+        <template #default="{ record: row }">{{ formatRate(row.completeRate) }}</template>
+      </a-table-column>
+    </a-table>
         </template>
-      </article>
-      <article data-testid="spend-panel">
-        <h3>{{ zhCN.metrics.spend }}</h3>
-        <p v-if="spend.length === 0" data-testid="spend-empty">{{ zhCN.common.empty }}</p>
+      </a-card>
+      <a-card data-testid="spend-panel" :title="zhCN.metrics.spend">
+        <a-empty v-if="spend.length === 0" :description="zhCN.common.empty" data-testid="spend-empty" />
         <template v-else>
           <MetricsChart :option="spendOption()" />
-          <el-table :data="spend" class="data-table" data-testid="spend-table" stripe>
-      <el-table-column :label="zhCN.metrics.period">
-        <template #default="{ row }">{{ row.period }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.dimKey">
-        <template #default="{ row }">{{ row.dimKey }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.arrivedCount">
-        <template #default="{ row }">{{ row.arrivedCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.arrivedCost">
-        <template #default="{ row }">{{ row.arrivedCostFen }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.sendingCost">
-        <template #default="{ row }">{{ row.sendingCostFen }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.stock">
-        <template #default="{ row }">{{ row.remainingStock }}/{{ row.totalStock }}</template>
-      </el-table-column>
-    </el-table>
+          <a-table size="small" :data-source="spend" class="data-table admin-table" data-testid="spend-table" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.metrics.period">
+        <template #default="{ record: row }">{{ row.period }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.dimKey">
+        <template #default="{ record: row }">{{ row.dimKey }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.arrivedCount">
+        <template #default="{ record: row }">{{ row.arrivedCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.arrivedCost">
+        <template #default="{ record: row }">{{ row.arrivedCostFen }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.sendingCost">
+        <template #default="{ record: row }">{{ row.sendingCostFen }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.stock">
+        <template #default="{ record: row }">{{ row.remainingStock }}/{{ row.totalStock }}</template>
+      </a-table-column>
+    </a-table>
         </template>
-      </article>
-      <article data-testid="risk-panel">
-        <h3>{{ zhCN.metrics.risk }}</h3>
-        <p v-if="risk.length === 0" data-testid="risk-empty">{{ zhCN.common.empty }}</p>
+      </a-card>
+      <a-card data-testid="risk-panel" :title="zhCN.metrics.risk">
+        <a-empty v-if="risk.length === 0" :description="zhCN.common.empty" data-testid="risk-empty" />
         <template v-else>
           <MetricsChart :option="riskOption()" />
-          <el-table :data="risk" class="data-table" data-testid="risk-table" stripe>
-      <el-table-column :label="zhCN.metrics.period">
-        <template #default="{ row }">{{ row.period }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.dimKey">
-        <template #default="{ row }">{{ row.dimKey }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.hits">
-        <template #default="{ row }">{{ row.hitCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.intercepts">
-        <template #default="{ row }">{{ row.interceptCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.interceptRate">
-        <template #default="{ row }">{{ formatRate(row.interceptRate) }}</template>
-      </el-table-column>
-    </el-table>
+          <a-table size="small" :data-source="risk" class="data-table admin-table" data-testid="risk-table" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.metrics.period">
+        <template #default="{ record: row }">{{ row.period }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.dimKey">
+        <template #default="{ record: row }">{{ row.dimKey }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.hits">
+        <template #default="{ record: row }">{{ row.hitCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.intercepts">
+        <template #default="{ record: row }">{{ row.interceptCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.interceptRate">
+        <template #default="{ record: row }">{{ formatRate(row.interceptRate) }}</template>
+      </a-table-column>
+    </a-table>
         </template>
-      </article>
-      <article data-testid="ad-panel">
-        <h3>{{ zhCN.metrics.ad }}</h3>
-        <p v-if="ads.length === 0" data-testid="ad-empty">{{ zhCN.common.empty }}</p>
+      </a-card>
+      <a-card data-testid="ad-panel" :title="zhCN.metrics.ad">
+        <a-empty v-if="ads.length === 0" :description="zhCN.common.empty" data-testid="ad-empty" />
         <template v-else>
           <MetricsChart :option="adOption()" />
-          <el-table :data="ads" class="data-table" data-testid="ad-table" stripe>
-      <el-table-column :label="zhCN.metrics.period">
-        <template #default="{ row }">{{ row.period }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.dimKey">
-        <template #default="{ row }">{{ row.dimKey }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.adExposure">
-        <template #default="{ row }">{{ row.exposureCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.adClick">
-        <template #default="{ row }">{{ row.clickCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.metrics.ctr">
-        <template #default="{ row }">{{ formatRate(row.ctr) }}</template>
-      </el-table-column>
-    </el-table>
+          <a-table size="small" :data-source="ads" class="data-table admin-table" data-testid="ad-table" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.metrics.period">
+        <template #default="{ record: row }">{{ row.period }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.dimKey">
+        <template #default="{ record: row }">{{ row.dimKey }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.adExposure">
+        <template #default="{ record: row }">{{ row.exposureCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.adClick">
+        <template #default="{ record: row }">{{ row.clickCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.metrics.ctr">
+        <template #default="{ record: row }">{{ formatRate(row.ctr) }}</template>
+      </a-table-column>
+    </a-table>
         </template>
-      </article>
+      </a-card>
     </div>
+    </a-spin>
   </section>
 </template>
 
@@ -273,10 +271,5 @@ onMounted(() => {
 .metrics-grid {
   display: grid;
   gap: 16px;
-}
-.metrics-grid article {
-  background: #fff;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
 }
 </style>

@@ -74,6 +74,7 @@
 **POST /admin/identity/roles**（`identity:role:create`）· `{code(3-30 [a-z0-9_-]), name, description?}`
 **PUT /admin/identity/roles/{id}**（`identity:role:update`）· `{name, description, status}`；内置超管角色改权限集拒绝（R2.5）
 **DELETE /admin/identity/roles/{id}**（`identity:role:delete`）· 内置拒绝 `auth.role.built-in`(400)
+**GET /admin/identity/roles/{id}/permissions**（`identity:role:query`）· `{permissionIds: [long]}`；角色不存在 `common.not-found`
 **PUT /admin/identity/roles/{id}/permissions**（`identity:role:assign-permission`）· `{permissionIds: [long]}`；生效即权限缓存失效（R2.6）
 
 **GET /admin/identity/permissions/tree**（`identity:permission:query`）
@@ -333,7 +334,7 @@ X-Sign = lowerHex( HMAC-SHA256( secret, stringToSign ) )
 #### 4.9.3 prize / points / dict / track（R19/R20/R7.3/R28/R35）
 
 **GET /api/common/prize/list**（登录态）· 参数 `tab: PENDING|ALL`（默认 PENDING，R35.1）；**PENDING tab = status IN ('WON','CLAIMING','RETRY_PENDING') 或 (status='GRANTED' ∧ fulfillmentStatus IN ('SENDING','FULFILL_FAILED'))；PERMANENT_FAILED / EXPIRED / (GRANTED∧ARRIVED) 仅 ALL tab 可见**
-- `records`: `[{recordId, prizeName, prizeImage, categoryCode, rewardTarget, fulfillmentMode, status, fulfillmentStatus, expireAt?, sourceTaskId?, sourceTaskName?, failReason?, fulfillFailReason?}]`
+- `records`: `[{recordId, prizeName, prizeImage, categoryCode, rewardTarget, fulfillmentMode, status, fulfillmentStatus, expireAt?, obtainedAt?, sourceTaskId?, sourceTaskName?, failReason?, fulfillFailReason?}]`（`obtainedAt` = 获得时间，取发放记录 `createdAt`，无则 `grantedAt`）
 - 展示映射（R35.2）：WON=可领取；CLAIMING=loading；RETRY_PENDING=可手动重试附错误文案（AUTO 型置灰「发放重试中」）；PENDING=置灰「发放创建中」（仅 ALL）；PERMANENT_FAILED=置灰仅原因；EXPIRED=置灰；GRANTED+ARRIVED=置灰「已到账」；GRANTED+SENDING=置灰「发送中」；GRANTED+FULFILL_FAILED=置灰「发送失败」+原因
 
 **POST /api/common/prize/records/{id}/claim**（登录态，用户限流 R19.5）

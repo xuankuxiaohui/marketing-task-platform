@@ -18,9 +18,11 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS, STATUS, SUPER_ADMIN_ROLE } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
+import { adminStatusLabel } from "@/utils/status-label";
 import { useSessionStore } from "@/store/session";
 import { formatDateTime } from "@/utils/datetime";
-import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "AdminUserPage" });
 
@@ -28,7 +30,7 @@ const session = useSessionStore();
 const records = ref<AdminUserView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ username: "", nickname: "", status: "", roleId: "" });
@@ -133,7 +135,7 @@ async function submitForm(): Promise<void> {
   if (!result) {
     return;
   }
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -150,7 +152,7 @@ function askDisable(row: AdminUserView): void {
     message: zhCN.confirm.disable,
     run: async () => {
       const result = await disableUser(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -168,7 +170,7 @@ function askDelete(row: AdminUserView): void {
     message: zhCN.confirm.delete,
     run: async () => {
       const result = await deleteUser(row.id as number);
-      const parsed = okOrFeedback(result);
+      const parsed = writeOrFeedback(result);
       if (!parsed.ok) {
         feedback.value = parsed.feedback;
         return;
@@ -183,7 +185,7 @@ async function onEnable(row: AdminUserView): Promise<void> {
     return;
   }
   const result = await enableUser(row.id);
-  const parsed = okOrFeedback(result);
+  const parsed = writeOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -201,124 +203,104 @@ onMounted(async () => {
   await loadRoles();
   await load();
 });
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
 </script>
 
 <template>
   <section class="admin-page" data-testid="user-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.user.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.USER_CREATE" data-testid="user-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.USER_CREATE" data-testid="user-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
-      <el-input v-model="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
-      <el-select v-model="filters.status" data-testid="filter-status">
-        <el-option value="" :label="zhCN.common.status" />
-        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
-        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
-      </el-select>
-      <el-button data-testid="user-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.username" data-testid="filter-username" :placeholder="zhCN.user.username" />
+      <a-input v-model:value="filters.nickname" data-testid="filter-nickname" :placeholder="zhCN.user.nickname" />
+      <a-select v-model:value="filters.status" data-testid="filter-status">
+        <a-select-option value="">{{ zhCN.common.status }}</a-select-option>
+        <a-select-option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</a-select-option>
+        <a-select-option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</a-select-option>
+      </a-select>
+      <a-button type="primary" data-testid="user-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.USER_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="user-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.USER_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="user-table" size="small" stripe>
-      <el-table-column :label="zhCN.user.username">
-        <template #default="{ row }">{{ row.username }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.user.nickname">
-        <template #default="{ row }">{{ row.nickname }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
-            {{ row.status }}
-          </el-tag>
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.user.username">
+        <template #default="{ record: row }">{{ row.username }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.user.nickname">
+        <template #default="{ record: row }">{{ row.nickname }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
+            {{ adminStatusLabel(row.status) }}
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.user.roles">
-        <template #default="{ row }">{{ (row.roles ?? []).join(", ") }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.user.lastLoginAt">
-        <template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.user.roles">
+        <template #default="{ record: row }">{{ (row.roles ?? []).join(", ") }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.user.lastLoginAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.lastLoginAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.USER_UPDATE" data-testid="user-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.USER_UPDATE" data-testid="user-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text
-              v-if="row.status === STATUS.ENABLED && !isProtected(row)"
-              v-auth="PERMS.USER_DISABLE"
-              data-testid="user-disable"
-              @click="askDisable(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === STATUS.ENABLED && !isProtected(row)" v-auth="PERMS.USER_DISABLE" data-testid="user-disable" @click="askDisable(row)">
               {{ zhCN.common.disable }}
-            </el-button>
-            <el-button text
-              v-if="row.status === STATUS.DISABLED && !isProtected(row)"
-              v-auth="PERMS.USER_DISABLE"
-              data-testid="user-enable"
-              @click="onEnable(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === STATUS.DISABLED && !isProtected(row)" v-auth="PERMS.USER_DISABLE" data-testid="user-enable" @click="onEnable(row)">
               {{ zhCN.common.enable }}
-            </el-button>
-            <el-button text v-auth="PERMS.USER_RESET" data-testid="user-reset" @click="openReset(row)">
+            </a-button>
+            <a-button size="small" v-auth="PERMS.USER_RESET" data-testid="user-reset" @click="openReset(row)">
               {{ zhCN.user.resetPassword }}
-            </el-button>
-            <el-button text
-              v-if="!isProtected(row)"
-              v-auth="PERMS.USER_DELETE"
-              data-testid="user-delete"
-              @click="askDelete(row)"
-            >
+            </a-button>
+            <a-button size="small" danger v-if="!isProtected(row)" v-auth="PERMS.USER_DELETE" data-testid="user-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.page }} -</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.page }} +</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="formMode === 'reset' ? zhCN.user.resetPassword : formMode === 'edit' ? zhCN.common.edit : zhCN.common.create"
       :saving="saving"
+      :feedback="formOpen ? feedback : null"
       @submit="submitForm"
       @cancel="formOpen = false"
     >
-      <el-form-item v-if="formMode === 'create'" :label="zhCN.user.username">
-        <el-input v-model="form.username" data-testid="user-username" required />
-      </el-form-item>
-      <el-form-item v-if="formMode !== 'reset'" :label="zhCN.user.nickname">
-        <el-input v-model="form.nickname" data-testid="user-nickname" required />
-      </el-form-item>
-      <el-form-item v-if="formMode !== 'edit'" :label="zhCN.user.password">
-        <el-input v-model="form.password" data-testid="user-password" type="password" required />
+      <a-form-item v-if="formMode === 'create'" :label="zhCN.user.username">
+        <a-input v-model:value="form.username" data-testid="user-username" required />
+      </a-form-item>
+      <a-form-item v-if="formMode !== 'reset'" :label="zhCN.user.nickname">
+        <a-input v-model:value="form.nickname" data-testid="user-nickname" required />
+      </a-form-item>
+      <a-form-item v-if="formMode !== 'edit'" :label="zhCN.user.password">
+        <a-input-password v-model:value="form.password" data-testid="user-password" required />
         <span class="hint">{{ zhCN.common.passwordPolicy }}</span>
-      </el-form-item>
+      </a-form-item>
       <fieldset v-if="formMode !== 'reset'" class="field">
         <legend>{{ zhCN.user.roles }}</legend>
         <label v-for="role in roles" :key="role.id">
-          <el-checkbox
-            :model-value="form.roleIds.includes(Number(role.id))"
-            @update:model-value="(val: boolean) => toggleRole(Number(role.id), val)" />
+          <a-checkbox :checked="form.roleIds.includes(Number(role.id))" @update:checked="(val: boolean) => toggleRole(Number(role.id), val)" />
           {{ role.name }}
         </label>
       </fieldset>

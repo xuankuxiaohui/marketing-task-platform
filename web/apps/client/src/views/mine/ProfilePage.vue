@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { Button, Cell, CellGroup, Field, NavBar } from "vant";
 import { isFail, isOk } from "@mkt/shared";
 import { fetchProfile, updateProfile } from "@/api/auth";
+import { useSessionReload } from "@/composables/useSessionReload";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
 import { portalNicknameSatisfied } from "@/utils/username";
@@ -19,6 +20,9 @@ const loading = ref(false);
 const tagsText = computed(() => (session.tags.length > 0 ? session.tags.join("、") : zhCN.profile.emptyValue));
 
 async function load(): Promise<void> {
+  if (!session.authenticated) {
+    return;
+  }
   const result = await fetchProfile();
   if (isOk(result) && result.data) {
     session.setProfile(result.data);
@@ -53,13 +57,17 @@ async function submit(): Promise<void> {
   }
 }
 
+useSessionReload(() => {
+  void load();
+});
+
 onMounted(() => {
   void load();
 });
 </script>
 
 <template>
-  <section>
+  <section class="profile-page">
     <NavBar :title="zhCN.profile.title" left-arrow @click-left="router.back()" />
     <form @submit.prevent="submit">
       <Field
@@ -87,12 +95,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.auth-error {
-  margin: 8px 16px 0;
-  color: #ee0a24;
-  font-size: 13px;
-}
-.auth-actions {
-  padding: 16px;
+.profile-page {
+  min-height: 100%;
+  background: var(--portal-bg);
 }
 </style>

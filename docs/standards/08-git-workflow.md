@@ -14,17 +14,18 @@
 
 ## 2. 短命分支
 
-默认从最新 `origin/master` 拉出，合入后删除。不要再叠 `task/*` 施工链。新工作用 `fix/<slug>`（文档用 `docs/<slug>`），走 issue + PR。
+默认从最新 `origin/master` 拉出。新工作修改用 `fix/<slug>`（文档用 `docs/<slug>`），新功能使用`feat/需求`,走 issue + PR。
 
 ```text
 fix/<slug>          缺陷 / 测试阶段改动
 docs/<slug>         仅文档或规格
 spike/<n>-<slug>    历史编组 A 冒烟（不要新开 task/* 施工链）
+feat/xxx    新需求
 ```
 
 1. **MUST** 一个分支只对应一件事（通常一个 issue）。
 2. `slug` 小写 + 连字符，不超过 40 字符。
-3. **MUST NOT** 用 `feat/xxx`、`thanh/xxx`、中文分支名。
+3. **MUST NOT** 中文分支名。
 4. 需要基于未合入的前置改动时：在 PR 描述写清依赖，**不要**把两件事揉进同一分支。
 
 ## 3. 提交

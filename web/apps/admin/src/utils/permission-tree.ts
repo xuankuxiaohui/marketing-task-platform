@@ -27,3 +27,19 @@ export function flattenPermissionTree(nodes: PermissionTreeNode[] | undefined, d
   }
   return out;
 }
+
+export type PermissionTreeItem = {
+  key: number;
+  title: string;
+  children?: PermissionTreeItem[];
+};
+
+export function toPermissionTreeData(nodes: PermissionTreeNode[] | undefined): PermissionTreeItem[] {
+  return (nodes ?? [])
+    .filter((node) => node.id != null)
+    .map((node) => ({
+      key: Number(node.id),
+      title: node.name ?? "",
+      children: node.children && node.children.length > 0 ? toPermissionTreeData(node.children) : undefined,
+    }));
+}

@@ -7,6 +7,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
 import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
+import { ADMIN_PAGE_SIZE } from "@/utils/table";
 
 vi.mock("@/api/track", () => ({
   debugEvents: vi.fn(),
@@ -55,7 +56,7 @@ describe("TrackEventPage", () => {
     expect(debugMock).toHaveBeenCalledWith(
       expect.objectContaining({
         page: 1,
-        pageSize: 20,
+        pageSize: ADMIN_PAGE_SIZE,
       }),
     );
     expect(wrapper.get('[data-testid="debug-no-side-effect"]').text()).toBe(zhCN.trackEvent.hint);
@@ -82,7 +83,7 @@ describe("TrackEventPage", () => {
       from: undefined,
       to: undefined,
       page: 1,
-      pageSize: 20,
+      pageSize: ADMIN_PAGE_SIZE,
     });
     expect(debugMock).toHaveBeenCalledTimes(2);
   });

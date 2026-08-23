@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
+import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { zhCN } from "@/locales/zh-CN";
+import type { PageFeedback } from "@/utils/feedback";
 
 defineOptions({ name: "FormDialog" });
 
@@ -8,6 +10,7 @@ const props = defineProps<{
   visible: boolean;
   title: string;
   saving?: boolean;
+  feedback?: PageFeedback | null;
 }>();
 
 const emit = defineEmits<{
@@ -17,12 +20,6 @@ const emit = defineEmits<{
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === "Escape" && props.visible) {
-    emit("cancel");
-  }
-}
-
-function onMaskClick(event: MouseEvent): void {
-  if (event.target === event.currentTarget) {
     emit("cancel");
   }
 }
@@ -37,75 +34,84 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="visible" class="form-mask" data-testid="form-dialog" @click="onMaskClick">
-    <el-form class="form-card" label-position="top" @submit.prevent="emit('submit')" @click.stop>
-      <header class="form-card__header">
-        <h3>{{ title }}</h3>
-        <el-button class="form-card__close" text @click="emit('cancel')">×</el-button>
-      </header>
-      <div class="form-card__body">
-        <slot />
-      </div>
-      <div class="form-card__actions">
-        <el-button data-testid="form-cancel" @click="emit('cancel')">{{ zhCN.common.cancel }}</el-button>
-        <el-button type="primary" native-type="submit" data-testid="form-submit" :disabled="saving">
-          {{ zhCN.common.save }}
-        </el-button>
-      </div>
-    </el-form>
-  </div>
+  <a-modal
+    :open="visible"
+    :title="title"
+    :confirm-loading="saving"
+    :mask-closable="true"
+    :keyboard="false"
+    :destroy-on-close="true"
+    :get-container="false"
+    :width="720"
+    @ok="emit('submit')"
+    @cancel="emit('cancel')"
+  >
+    <div data-testid="form-dialog">
+      <a-form layout="vertical" class="admin-form-modal__form" @submit.prevent="emit('submit')">
+        <div class="admin-form-modal__body" data-testid="form-dialog-body">
+          <FeedbackBanner :feedback="feedback ?? null" />
+          <slot />
+        </div>
+      </a-form>
+    </div>
+    <template #footer>
+      <a-button data-testid="form-cancel" @click="emit('cancel')">{{ zhCN.common.cancel }}</a-button>
+      <a-button
+        type="primary"
+        html-type="submit"
+        data-testid="form-submit"
+        :loading="saving"
+        :disabled="saving"
+        @click="emit('submit')"
+      >
+        {{ zhCN.common.save }}
+      </a-button>
+    </template>
+  </a-modal>
 </template>
 
 <style scoped>
-.form-mask {
-  position: fixed;
-  inset: 0;
-  background: var(--el-overlay-color-lighter, rgba(0, 0, 0, 0.5));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 30;
-}
-.form-card {
-  background: var(--el-bg-color, #fff);
-  min-width: 420px;
-  max-width: 560px;
-  max-height: 90vh;
-  overflow: auto;
-  padding: 0;
-  border-radius: 8px;
-  box-shadow: var(--el-box-shadow, 0 12px 32px 4px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.08));
-}
-.form-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
-}
-.form-card h3 {
+.admin-form-modal__form {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--el-text-color-primary, #303133);
 }
-.form-card__close {
-  min-width: 24px;
-  font-size: 18px;
-  color: var(--el-text-color-secondary, #909399);
+.admin-form-modal__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
+  gap: 16px 16px;
+  max-height: min(56vh, 520px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px 2px 8px;
 }
-.form-card__body {
+.admin-form-modal__body :deep(.ant-form-item) {
+  margin-bottom: 0;
+}
+.admin-form-modal__body :deep(.ant-form-item-label) {
+  padding-bottom: 4px;
+}
+.admin-form-modal__body :deep(.ant-input),
+.admin-form-modal__body :deep(.ant-input-affix-wrapper),
+.admin-form-modal__body :deep(.ant-select),
+.admin-form-modal__body :deep(.ant-picker),
+.admin-form-modal__body :deep(textarea.ant-input) {
+  width: 100%;
+}
+.admin-form-modal__body :deep(.ant-form-item:has(textarea)),
+.admin-form-modal__body :deep(.ant-form-item:has(.ant-btn)),
+.admin-form-modal__body > :deep(p),
+.admin-form-modal__body > :deep(fieldset),
+.admin-form-modal__body > :deep(.perm-tree-wrap),
+.admin-form-modal__body > :deep(.role-holders),
+.admin-form-modal__body > :deep(.ant-btn) {
+  grid-column: 1 / -1;
+}
+.admin-form-modal__body > :deep(.ant-alert) {
+  grid-column: 1 / -1;
+}
+.admin-form-modal__body > :deep(label) {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-}
-.form-card__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 0;
-  padding: 12px 16px 16px;
-  border-top: 1px solid var(--el-border-color-lighter, #ebeef5);
+  gap: 4px;
 }
 </style>

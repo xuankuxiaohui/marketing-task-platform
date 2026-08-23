@@ -6,6 +6,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskDefinitionVersionPage" });
 
@@ -63,20 +64,23 @@ onMounted(() => {
       <h2>{{ zhCN.task.versionTitle }}</h2>
     </div>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="versions.length === 0" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else :data="versions" class="data-table" data-testid="version-table" stripe>
-      <el-table-column :label="zhCN.task.version">
-        <template #default="{ row }">{{ row.version }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.createdAt">
-        <template #default="{ row }">{{ formatDateTime(row.publishedAt) }}</template>
-      </el-table-column>
-    </el-table>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="left" data-testid="diff-left" :placeholder="zhCN.task.version" />
-      <el-input v-model="right" data-testid="diff-right" :placeholder="zhCN.task.version" />
-      <el-button data-testid="diff-run" @click="loadDiff">对比</el-button>
-    </el-form>
+    <a-table size="small" :data-source="versions" class="data-table" data-testid="version-table" :pagination="false" :row-key="adminRowKey">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+      </template>
+
+      <a-table-column :title="zhCN.task.version">
+        <template #default="{ record: row }">{{ row.version }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.createdAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.publishedAt) }}</template>
+      </a-table-column>
+    </a-table>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="left" data-testid="diff-left" :placeholder="zhCN.task.version" />
+      <a-input v-model:value="right" data-testid="diff-right" :placeholder="zhCN.task.version" />
+      <a-button data-testid="diff-run" @click="loadDiff">对比</a-button>
+    </a-form>
     <pre v-if="diff" data-testid="diff-result">{{ JSON.stringify(diff, null, 2) }}</pre>
   </section>
 </template>

@@ -45,13 +45,12 @@ vi.mock("vant", async () => {
   };
 });
 
-import { fetchActivities, fetchActivityDetail, postParticipate } from "@/api/activity";
+import { fetchActivities, fetchActivityDetail } from "@/api/activity";
 import { fetchTaskDetail, fetchTaskList } from "@/api/task";
 import ActivityPage from "./index.vue";
 
 const listMock = vi.mocked(fetchActivities);
 const detailMock = vi.mocked(fetchActivityDetail);
-const joinMock = vi.mocked(postParticipate);
 const taskListMock = vi.mocked(fetchTaskList);
 const taskDetailMock = vi.mocked(fetchTaskDetail);
 
@@ -98,7 +97,6 @@ describe("ActivityPage", () => {
   beforeEach(() => {
     listMock.mockReset();
     detailMock.mockReset();
-    joinMock.mockReset();
     taskListMock.mockReset();
     taskDetailMock.mockReset();
     taskListMock.mockResolvedValue(ok({ total: 0, records: [] }));
@@ -111,7 +109,7 @@ describe("ActivityPage", () => {
     expect(wrapper.get('[data-testid="activity-empty"]').text()).toContain(zhCN.activity.empty);
   });
 
-  it("renders sanitized html and participates", async () => {
+  it("lazy-reveals rules on the side button and has no join CTA", async () => {
     listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     detailMock.mockResolvedValue(
       ok({
@@ -125,17 +123,16 @@ describe("ActivityPage", () => {
       }),
     );
     taskListMock.mockResolvedValue(ok({ total: 1, records: [card()] }));
-    joinMock.mockResolvedValue(ok({ participationId: 9, result: "PASS", granted: true }));
     const { wrapper } = await mountPage();
     expect(wrapper.get('[data-testid="activity-name"]').text()).toContain("夏季专题");
-    expect(wrapper.get('[data-testid="activity-html"]').html()).toContain("<p>hello</p>");
-    await wrapper.get('[data-testid="activity-join"]').trigger("click");
+    expect(wrapper.find('[data-testid="activity-html"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-join"]').exists()).toBe(false);
+    await wrapper.get('[data-testid="activity-rules-btn"]').trigger("click");
     await flushPromises();
-    expect(joinMock).toHaveBeenCalledWith(3);
-    expect(wrapper.get('[data-testid="activity-result"]').text()).toContain("PASS");
+    expect(wrapper.get('[data-testid="activity-html"]').html()).toContain("<p>hello</p>");
   });
 
-  it("shows bound task cards and opens the half-sheet without leaving the page", async () => {
+  it("opens bound task cards on the full task page", async () => {
     listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     detailMock.mockResolvedValue(
       ok({
@@ -162,15 +159,14 @@ describe("ActivityPage", () => {
     const { wrapper, router } = await mountPage({ id: "3" });
     expect(wrapper.get('[data-testid="task-card"]').text()).toContain("每日浏览");
     expect(wrapper.text()).not.toContain("独立任务");
-    expect(wrapper.get('[data-testid="activity-signin-card"]').text()).toContain(zhCN.home.signin);
+    expect(wrapper.find('[data-testid="activity-signin-card"]').exists()).toBe(false);
     await wrapper.get('[data-testid="task-card-open"]').trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/activity");
-    expect(wrapper.find('[data-testid="task-complete-sheet"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="task-claim"]').exists()).toBe(true);
+    expect(router.currentRoute.value.path).toBe("/task/8");
+    expect(wrapper.find('[data-testid="task-complete-sheet"]').exists()).toBe(false);
   });
 
-  it("sends a guest to login on participate without calling the write API", async () => {
+  it("does not show daily sign-in or a join result on a regular activity", async () => {
     listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     detailMock.mockResolvedValue(
       ok({
@@ -180,16 +176,14 @@ describe("ActivityPage", () => {
         richText: "<p>hello</p>",
         contentHash: "abc",
         version: 1,
-        submodules: [],
+        submodules: [{ type: "SIGNIN", refId: 4, sort: 0 }],
       }),
     );
-    const { wrapper, router } = await mountPage({ id: "3" }, false);
+    const { wrapper } = await mountPage({ id: "3" });
     expect(wrapper.find('[data-testid="activity-detail"]').exists()).toBe(true);
-    await wrapper.get('[data-testid="activity-join"]').trigger("click");
-    await flushPromises();
-    expect(joinMock).not.toHaveBeenCalled();
-    expect(router.currentRoute.value.path).toBe("/login");
-    expect(router.currentRoute.value.query.redirect).toBe("/activity?id=3");
+    expect(wrapper.find('[data-testid="activity-signin-card"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-join"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-result"]').exists()).toBe(false);
   });
 
   it("renders a cover image on the activity hero when the view has one", async () => {
@@ -211,22 +205,4 @@ describe("ActivityPage", () => {
     expect(wrapper.get('[data-testid="fallback-image"]').attributes("src")).toBe("https://cdn.example/hero.png");
   });
 
-  it("routes the activity sign-in card to the calendar", async () => {
-    listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
-    detailMock.mockResolvedValue(
-      ok({
-        id: 3,
-        code: "summer",
-        name: "夏季专题",
-        richText: "",
-        contentHash: "abc",
-        version: 1,
-        submodules: [{ type: "SIGNIN", refId: 4, sort: 0 }],
-      }),
-    );
-    const { wrapper, router } = await mountPage({ id: "3" });
-    await wrapper.get('[data-testid="activity-signin-card"]').trigger("click");
-    await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/signin");
-  });
 });

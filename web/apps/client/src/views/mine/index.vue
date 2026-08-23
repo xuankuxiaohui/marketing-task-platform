@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useSessionReload } from "@/composables/useSessionReload";
 import { useRouter } from "vue-router";
 import { Badge, Cell, CellGroup, NavBar, showConfirmDialog } from "vant";
 import { isOk } from "@mkt/shared";
@@ -15,6 +16,10 @@ const session = useSessionStore();
 const inProgressCount = ref(0);
 
 async function loadBadge(): Promise<void> {
+  if (!session.authenticated) {
+    inProgressCount.value = 0;
+    return;
+  }
   const result = await fetchMineTasks({ status: "IN_PROGRESS", page: 1, pageSize: 1 });
   if (isOk(result) && result.data) {
     inProgressCount.value = Number(result.data.total ?? 0);
@@ -32,6 +37,10 @@ async function onLogout(): Promise<void> {
   }
   await logoutAndReset(router);
 }
+
+useSessionReload(() => {
+  void loadBadge();
+});
 
 onMounted(() => {
   void loadBadge();
@@ -71,7 +80,7 @@ onMounted(() => {
         :label="zhCN.mine.activityHint"
         is-link
         data-testid="entry-activity"
-        @click="router.push('/activity')"
+        @click="router.push('/activities')"
       />
     </CellGroup>
     <CellGroup inset class="mine-actions">
@@ -82,6 +91,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.mine-page {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
 .profile-card {
   display: flex;
   gap: 12px;
@@ -90,8 +103,9 @@ onMounted(() => {
   margin: 12px 16px;
   padding: 16px;
   border: 0;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+  box-shadow: var(--portal-shadow-soft);
   text-align: left;
 }
 .profile-card__avatar {
@@ -101,7 +115,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #1989fa;
+  background: var(--portal-primary);
   color: #fff;
   font-size: 20px;
 }
@@ -114,8 +128,9 @@ onMounted(() => {
   font-size: 16px;
 }
 .profile-card__meta span {
-  color: #646566;
+  color: var(--portal-muted);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 .mine-actions {
   margin-top: 12px;

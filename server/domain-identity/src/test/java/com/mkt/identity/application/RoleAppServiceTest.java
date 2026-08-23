@@ -27,6 +27,7 @@ import com.mkt.infra.outbox.MemoryOutboxStore;
 import com.mkt.infra.outbox.OutboxProducer;
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.kernel.BusinessException;
+import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
@@ -115,6 +116,8 @@ class RoleAppServiceTest {
         node.setId(4L);
         when(permissions.selectById(4L)).thenReturn(node);
         cache.put(CacheNamespace.RBAC_PERMISSION, "2", new String[] {"identity:role:query"});
+        when(rolePermissions.listPermissionIds(9L)).thenReturn(List.of(4L, 10L));
+        assertThat(service.listPermissionIds(9L)).containsExactly(4L, 10L);
         service.assignPermissions(9L, new RoleAssignPermissionsCommand(List.of(4L)));
         verify(rolePermissions).deleteByRoleId(9L);
         verify(rolePermissions).insert(9L, 4L);
@@ -142,6 +145,16 @@ class RoleAppServiceTest {
         var page = service.page(new RoleQuery(true, PageQuery.of(1, 20)));
         assertThat(page.total()).isEqualTo(1);
         assertThat(page.records().get(0).userCount()).isEqualTo(3);
+    }
+
+    @Test
+    void listPermissionIdsRejectsMissingRole() {
+        when(roles.selectById(8L)).thenReturn(null);
+        assertThatThrownBy(() -> service.listPermissionIds(8L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.NOT_FOUND);
+        verify(rolePermissions, never()).listPermissionIds(8L);
     }
 
     @Test

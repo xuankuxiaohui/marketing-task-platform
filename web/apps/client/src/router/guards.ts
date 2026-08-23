@@ -1,4 +1,4 @@
-export const PUBLIC_PATHS = new Set(["/login", "/register", "/home", "/activity"]);
+export const PUBLIC_PATHS = new Set(["/login", "/register", "/home", "/activity", "/activities"]);
 export const LOGIN_ROUTE = "/login";
 export const HOME_ROUTE = "/home";
 export const PASSWORD_ROUTE = "/mine/password";
@@ -41,7 +41,7 @@ export async function resolveAuthNavigation(to: GuardTo, deps: GuardDeps): Promi
   }
   const ok = await deps.ensureSession();
   if (!ok) {
-    return { type: "redirect", path: LOGIN_ROUTE, query: { redirect: to.fullPath } };
+    return { type: "next" };
   }
   if (mustChange && to.path !== PASSWORD_ROUTE) {
     return { type: "redirect", path: PASSWORD_ROUTE };

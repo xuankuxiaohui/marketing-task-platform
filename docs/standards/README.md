@@ -97,7 +97,7 @@
 | 认证 | Sa-Token 双 `StpLogic`；密码只用 `spring-security-crypto` BCrypt |
 | 缓存 | Spring Cache + Caffeine L1 + Redis L2。现网共享 Redis **6.0.8 / DB 2**；IT 镜像可用 Redis 7 |
 | 锁 | Redisson `RLock` |
-| 前端 | 管理端 vue-pure-admin-thin（Vue 3 + Element Plus + Pinia + Vite）；门户 Vant 4 |
+| 前端 | 管理端 vue-pure-admin-thin 骨架（Vue 3 + Ant Design Vue + Pinia + Vite）；门户 Vant 4 |
 | 契约 | springdoc-openapi 三分组；前端 `openapi-typescript` 生成类型 |
 
 版本号以 `dependency-matrix.md` 冒烟结论为唯一来源。本目录不重复钉小版本。
