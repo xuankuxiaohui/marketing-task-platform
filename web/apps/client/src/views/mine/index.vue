@@ -80,7 +80,7 @@ onMounted(() => {
         :label="zhCN.mine.activityHint"
         is-link
         data-testid="entry-activity"
-        @click="router.push('/activity')"
+        @click="router.push('/activities')"
       />
     </CellGroup>
     <CellGroup inset class="mine-actions">

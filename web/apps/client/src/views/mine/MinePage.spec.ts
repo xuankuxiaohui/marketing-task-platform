@@ -32,6 +32,7 @@ async function mountMine() {
       { path: "/mine/tasks", component: { template: "<div />" } },
       { path: "/mine/profile", component: { template: "<div />" } },
       { path: "/signin", component: { template: "<div />" } },
+      { path: "/activities", component: { template: "<div />" } },
       { path: "/login", component: { template: "<div />" } },
     ],
   });
@@ -69,5 +70,12 @@ describe("MinePage", () => {
     expect(wrapper.get('[data-testid="entry-activity"]').text()).toContain(zhCN.mine.activity);
     expect(wrapper.get('[data-testid="entry-password"]').text()).toContain(zhCN.mine.password);
     expect(wrapper.get('[data-testid="entry-logout"]').text()).toContain(zhCN.mine.logout);
+  });
+
+  it("opens the activity hub instead of a single activity page", async () => {
+    const { wrapper, router } = await mountMine();
+    await wrapper.get('[data-testid="entry-activity"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/activities");
   });
 });

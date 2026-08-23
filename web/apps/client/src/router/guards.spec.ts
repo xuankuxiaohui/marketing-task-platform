@@ -7,6 +7,7 @@ describe("portal route guards", () => {
     expect(isPublicPath("/register")).toBe(true);
     expect(isPublicPath("/home")).toBe(true);
     expect(isPublicPath("/activity")).toBe(true);
+    expect(isPublicPath("/activities")).toBe(true);
     expect(isPublicPath("/mine")).toBe(false);
     expect(isPublicPath("/signin")).toBe(false);
   });

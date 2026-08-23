@@ -57,4 +57,12 @@ describe("PrizeCard", () => {
     await wrapper.get('[data-testid="prize-action-11"]').trigger("click");
     expect(wrapper.emitted("claim")).toHaveLength(1);
   });
+
+  it("emits detail from the icon and name row", async () => {
+    const wrapper = mount(PrizeCard, { props: { prize: prize({ expireAt: undefined }) } });
+    await wrapper.get('[data-testid="prize-open"]').trigger("click");
+    expect(wrapper.emitted("detail")).toHaveLength(1);
+    expect(wrapper.get('[data-testid="prize-open"]').text()).toContain("积分礼包");
+    expect(wrapper.get('[data-testid="prize-open"]').text()).toContain(zhCN.prize.detail);
+  });
 });

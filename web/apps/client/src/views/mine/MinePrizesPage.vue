@@ -6,6 +6,7 @@ import { isOk } from "@mkt/shared";
 import { claimPrize, fetchPrizeList, type PrizeCardView, type PrizeTab } from "@/api/prize";
 import PrizeCard from "@/components/PrizeCard.vue";
 import { useSessionReload } from "@/composables/useSessionReload";
+import { usePrizePreviewStore } from "@/store/prize-preview";
 import { useSessionStore } from "@/store/session";
 import { zhCN } from "@/locales/zh-CN";
 import { TRACK, track } from "@/tracking";
@@ -23,6 +24,7 @@ const TABS: { name: PrizeTab; title: string }[] = [
 const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
+const preview = usePrizePreviewStore();
 const isTabRoot = computed(() => route.meta.tab === "prizes");
 const activeTab = ref<PrizeTab>("ALL");
 const records = ref<PrizeCardView[]>([]);
@@ -92,11 +94,12 @@ function onLoadMore(): void {
   void loadPage(false);
 }
 
-function openSource(row: PrizeCardView): void {
-  if (row.sourceTaskId == null) {
+function openDetail(row: PrizeCardView): void {
+  if (row.recordId == null) {
     return;
   }
-  void router.push(`/task/${row.sourceTaskId}`);
+  preview.set(row);
+  void router.push(`/mine/prizes/${row.recordId}`);
 }
 
 async function onClaim(row: PrizeCardView): Promise<void> {
@@ -151,7 +154,7 @@ onMounted(() => {
 <template>
   <section class="mine-prizes">
     <NavBar :title="zhCN.mine.prizes" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
-    <Tabs v-model:active="activeTab" sticky data-testid="mine-prize-tabs">
+    <Tabs v-model:active="activeTab" data-testid="mine-prize-tabs">
       <Tab
         v-for="tab in TABS"
         :key="tab.name"
@@ -160,7 +163,7 @@ onMounted(() => {
         :data-testid="'prize-tab-' + tab.name"
       />
     </Tabs>
-    <PullRefresh v-model="refreshing" @refresh="onRefresh">
+    <PullRefresh v-model="refreshing" class="mine-list" data-testid="mine-list" @refresh="onRefresh">
       <Empty v-if="empty" :description="zhCN.empty.prizes" data-testid="mine-prizes-empty">
         <Button type="primary" size="small" data-testid="empty-go-home" @click="router.push('/home')">
           {{ zhCN.empty.goTasks }}
@@ -181,7 +184,7 @@ onMounted(() => {
           :prize="row"
           :claiming="claiming === row.recordId"
           @claim="onClaim(row)"
-          @source="openSource(row)"
+          @detail="openDetail(row)"
         />
       </List>
     </PullRefresh>
@@ -192,5 +195,12 @@ onMounted(() => {
 .mine-prizes {
   min-height: 100%;
   background: var(--portal-bg);
+}
+.mine-prizes :deep(.van-tabs__wrap),
+.mine-prizes :deep(.van-tabs__nav) {
+  background: var(--portal-bg);
+}
+.mine-list {
+  padding-top: 12px;
 }
 </style>

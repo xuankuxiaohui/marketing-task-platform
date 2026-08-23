@@ -1,4 +1,4 @@
-export const PUBLIC_PATHS = new Set(["/login", "/register", "/home", "/activity"]);
+export const PUBLIC_PATHS = new Set(["/login", "/register", "/home", "/activity", "/activities"]);
 export const LOGIN_ROUTE = "/login";
 export const HOME_ROUTE = "/home";
 export const PASSWORD_ROUTE = "/mine/password";

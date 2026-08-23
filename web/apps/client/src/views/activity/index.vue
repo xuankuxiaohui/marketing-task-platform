@@ -12,7 +12,6 @@ import {
 import { fetchTaskList, type TaskCardView } from "@/api/task";
 import FallbackImage from "@/components/FallbackImage.vue";
 import TaskCard from "@/components/TaskCard.vue";
-import TaskCompleteSheet from "@/components/TaskCompleteSheet.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { activityCover, activityWindow } from "@/utils/activity-cover";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
@@ -24,8 +23,6 @@ const router = useRouter();
 const loading = ref(false);
 const detail = ref<PortalActivityDetailView | null>(null);
 const tasks = ref<TaskCardView[]>([]);
-const sheetOpen = ref(false);
-const sheetTaskId = ref<number | null>(null);
 const rulesOpen = ref(false);
 const rulesEl = ref<HTMLElement | null>(null);
 
@@ -112,12 +109,11 @@ async function load(): Promise<void> {
   }
 }
 
-function openTaskSheet(task: TaskCardView): void {
+function openTask(task: TaskCardView): void {
   if (task.taskId == null) {
     return;
   }
-  sheetTaskId.value = task.taskId;
-  sheetOpen.value = true;
+  void router.push(`/task/${task.taskId}`);
 }
 
 async function openRules(): Promise<void> {
@@ -134,11 +130,6 @@ watch(
   { immediate: true },
 );
 
-watch(sheetOpen, (open, wasOpen) => {
-  if (wasOpen && !open) {
-    void loadBoundTasks(detail.value?.submodules ?? []);
-  }
-});
 </script>
 
 <template>
@@ -161,8 +152,8 @@ watch(sheetOpen, (open, wasOpen) => {
           v-for="task in tasks"
           :key="task.taskId"
           :task="task"
-          @open="openTaskSheet(task)"
-          @action="openTaskSheet(task)"
+          @open="openTask(task)"
+          @action="openTask(task)"
         />
       </div>
       <section v-if="rulesOpen" ref="rulesEl" class="activity-rules" data-testid="activity-rules">
@@ -175,7 +166,6 @@ watch(sheetOpen, (open, wasOpen) => {
         {{ zhCN.activity.rules }}
       </button>
     </div>
-    <TaskCompleteSheet v-model:show="sheetOpen" :task-id="sheetTaskId" />
   </section>
 </template>
 

@@ -97,6 +97,18 @@ const router = createRouter({
           component: () => import("@/views/activity/index.vue"),
           meta: { title: zhCN.activity.title, public: true },
         },
+        {
+          path: "activities",
+          name: "ActivityHubPage",
+          component: () => import("@/views/activity/ActivityHubPage.vue"),
+          meta: { title: zhCN.mine.activityHub, public: true },
+        },
+        {
+          path: "mine/prizes/:recordId",
+          name: "PrizeDetailPage",
+          component: () => import("@/views/mine/PrizeDetailPage.vue"),
+          meta: { title: zhCN.prize.detailTitle },
+        },
       ],
     },
   ],

@@ -82,6 +82,7 @@ async function mountPrizes() {
     history: createMemoryHistory(),
     routes: [
       { path: "/mine/prizes", component: MinePrizesPage },
+      { path: "/mine/prizes/:recordId", component: { template: "<div />" } },
       { path: "/home", component: { template: "<div />" } },
       { path: "/task/:taskId", component: { template: "<div />" } },
     ],
@@ -141,12 +142,13 @@ describe("MinePrizesPage", () => {
     expect(wrapper.get('[data-testid="prize-action-11"]').text()).toBe(zhCN.prize.arrived);
   });
 
-  it("opens the source task from the prize card", async () => {
+  it("opens prize detail from the icon and name row", async () => {
     listMock.mockResolvedValue(ok({ total: 1, records: [prize()] }));
     const { wrapper, router } = await mountPrizes();
-    await wrapper.get('[data-testid="prize-source"]').trigger("click");
+    expect(wrapper.get('[data-testid="mine-list"]').classes()).toContain("mine-list");
+    await wrapper.get('[data-testid="prize-open"]').trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/task/22");
+    expect(router.currentRoute.value.path).toBe("/mine/prizes/11");
   });
 
   it("keeps PERMANENT_FAILED gray with reason only", async () => {

@@ -148,7 +148,7 @@ defineExpose({ selectStatus });
 <template>
   <section class="mine-tasks">
     <NavBar :title="zhCN.mine.tasks" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
-    <Tabs ref="statusTabs" v-model:active="activeStatus" sticky data-testid="mine-status-row">
+    <Tabs ref="statusTabs" v-model:active="activeStatus" data-testid="mine-status-row">
       <Tab
         v-for="tab in STATUS_TABS"
         :key="tab.name"
@@ -157,7 +157,7 @@ defineExpose({ selectStatus });
         :data-testid="'mine-status-' + tab.name"
       />
     </Tabs>
-    <PullRefresh v-model="refreshing" @refresh="onRefresh">
+    <PullRefresh v-model="refreshing" class="mine-list" data-testid="mine-list" @refresh="onRefresh">
       <Empty v-if="!session.authenticated" :description="zhCN.session.missing" data-testid="mine-tasks-login">
         <Button type="primary" size="small" data-testid="mine-tasks-login-action" @click="requestLogin">
           {{ zhCN.login.submit }}
@@ -209,6 +209,13 @@ defineExpose({ selectStatus });
   min-height: 100%;
   background: var(--portal-bg);
 }
+.mine-tasks :deep(.van-tabs__wrap),
+.mine-tasks :deep(.van-tabs__nav) {
+  background: var(--portal-bg);
+}
+.mine-list {
+  padding-top: 12px;
+}
 .mine-task-card {
   display: flex;
   gap: 12px;
@@ -221,6 +228,16 @@ defineExpose({ selectStatus });
   background: var(--portal-surface);
   box-shadow: var(--portal-shadow-soft);
   text-align: left;
+}
+.mine-task-card:first-of-type {
+  margin-top: 4px;
+}
+.mine-task-card :deep(.fallback-image) {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 14px;
+  background: var(--portal-primary-soft);
 }
 .mine-task-card__meta {
   display: flex;

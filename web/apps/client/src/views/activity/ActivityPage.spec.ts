@@ -132,7 +132,7 @@ describe("ActivityPage", () => {
     expect(wrapper.get('[data-testid="activity-html"]').html()).toContain("<p>hello</p>");
   });
 
-  it("shows bound task cards and opens the half-sheet without leaving the page", async () => {
+  it("opens bound task cards on the full task page", async () => {
     listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     detailMock.mockResolvedValue(
       ok({
@@ -162,9 +162,8 @@ describe("ActivityPage", () => {
     expect(wrapper.find('[data-testid="activity-signin-card"]').exists()).toBe(false);
     await wrapper.get('[data-testid="task-card-open"]').trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/activity");
-    expect(wrapper.find('[data-testid="task-complete-sheet"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="task-claim"]').exists()).toBe(true);
+    expect(router.currentRoute.value.path).toBe("/task/8");
+    expect(wrapper.find('[data-testid="task-complete-sheet"]').exists()).toBe(false);
   });
 
   it("does not show daily sign-in or a join result on a regular activity", async () => {
