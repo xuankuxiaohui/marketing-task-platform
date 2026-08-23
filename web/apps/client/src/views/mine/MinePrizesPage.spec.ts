@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { fail, ok } from "@/test-utils/result";
 import type { PrizeCardView } from "@/api/prize";
 
@@ -46,6 +48,7 @@ function prize(overrides: Partial<PrizeCardView> = {}): PrizeCardView {
     expireAt: new Date(Date.now() + 120_000).toISOString(),
     sourceTaskId: 22,
     sourceTaskName: "每日浏览",
+    obtainedAt: "2026-08-19T04:00:00.000Z",
     ...overrides,
   };
 }
@@ -61,7 +64,10 @@ async function mountPrizes() {
   });
   await router.push("/mine/prizes");
   await router.isReady();
-  const wrapper = mount(MinePrizesPage, { global: { plugins: [router] } });
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  useSessionStore().setLogin({ token: "client:t", userId: 9, nickname: "bob" });
+  const wrapper = mount(MinePrizesPage, { global: { plugins: [pinia, router] } });
   await flushPromises();
   return { wrapper, router };
 }
@@ -82,11 +88,21 @@ describe("MinePrizesPage", () => {
     expect(trackMock).toHaveBeenCalledWith(TRACK.REWARD_LIST_VIEW, { tab: "PENDING" });
   });
 
+  it("lists 全部 before 待领取 while defaulting to 待领取", async () => {
+    listMock.mockResolvedValue(ok({ total: 0, records: [] }));
+    const { wrapper } = await mountPrizes();
+    const tabs = wrapper.findAll('[data-testid^="prize-tab-"]');
+    expect(tabs[0]?.attributes("data-testid")).toBe("prize-tab-ALL");
+    expect(tabs[1]?.attributes("data-testid")).toBe("prize-tab-PENDING");
+    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ tab: "PENDING" }));
+  });
+
   it("renders claimable WON with countdown and claims to 已到账", async () => {
     listMock.mockResolvedValue(ok({ total: 1, records: [prize()] }));
     claimMock.mockResolvedValue(ok({ status: "GRANTED", fulfillmentStatus: "ARRIVED" }));
     const { wrapper } = await mountPrizes();
     expect(wrapper.get('[data-testid="prize-action-11"]').text()).toBe(zhCN.prize.claim);
+    expect(wrapper.get('[data-testid="prize-obtained-at"]').text()).toContain(zhCN.prize.obtainedAt);
     expect(wrapper.get('[data-testid="prize-countdown"]').text()).toContain(zhCN.prize.remain);
     await wrapper.get('[data-testid="prize-action-11"]').trigger("click");
     await flushPromises();

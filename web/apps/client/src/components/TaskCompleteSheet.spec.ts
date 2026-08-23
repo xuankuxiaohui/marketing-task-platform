@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
 import { fail, ok } from "@/test-utils/result";
 import type { TaskDetailView } from "@/api/task";
@@ -129,8 +130,8 @@ describe("TaskCompleteSheet", () => {
     await flushPromises();
     expect(startMock).not.toHaveBeenCalled();
     expect(failToast).not.toHaveBeenCalled();
-    expect(router.currentRoute.value.path).toBe("/login");
-    expect(router.currentRoute.value.query.redirect).toBe("/activity");
+    expect(router.currentRoute.value.path).toBe("/activity");
+    expect(useLoginOverlayStore().visible).toBe(true);
   });
 
   it("keeps 领取 after a generic risk block", async () => {

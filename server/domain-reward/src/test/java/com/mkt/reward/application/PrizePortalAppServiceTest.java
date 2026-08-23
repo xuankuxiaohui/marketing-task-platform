@@ -40,6 +40,9 @@ class PrizePortalAppServiceTest {
         assertThat(portal.list(9L, null, 1, 20).total()).isEqualTo(2);
         assertThat(portal.list(9L, "FOO", 1, 20).total()).isEqualTo(2);
         assertThat(portal.list(9L, "ALL", 1, 20).total()).isEqualTo(4);
+        assertThat(portal.list(9L, "ALL", 1, 20).records())
+                .extracting(v -> v.obtainedAt())
+                .containsOnly(java.time.Instant.parse("2026-08-19T00:00:00Z"));
     }
 
     private static GrantRecordEntity row(long id, String status, String fulfillment) {

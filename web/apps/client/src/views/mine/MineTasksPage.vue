@@ -5,7 +5,9 @@ import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
 import { fetchMineTasks, type MineTaskView } from "@/api/task";
+import { useSessionStore } from "@/store/session";
 import { type MineTaskStatus } from "@/utils/mine-status";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatBeijing } from "@/utils/datetime";
@@ -17,17 +19,21 @@ defineOptions({ name: "MineTasksPage" });
 const ALL = "ALL";
 const PAGE_SIZE = 20;
 const STATUS_TABS = [
+  { name: ALL, title: zhCN.task.all },
   { name: "IN_PROGRESS", title: zhCN.task.inProgress },
   { name: "COMPLETED", title: zhCN.task.completed },
-  { name: "ABANDONED", title: zhCN.task.abandoned },
   { name: "EXPIRED", title: zhCN.task.expired },
 ] as const;
 
+type StatusTab = (typeof STATUS_TABS)[number]["name"];
+
 const route = useRoute();
 const router = useRouter();
+const session = useSessionStore();
+const overlay = useLoginOverlayStore();
 const isTabRoot = computed(() => route.meta.tab === "tasks");
 const categories = ref<DictPortalEntry[]>([]);
-const activeStatus = ref<MineTaskStatus>("IN_PROGRESS");
+const activeStatus = ref<StatusTab>("IN_PROGRESS");
 const activeCategory = ref(ALL);
 const records = ref<MineTaskView[]>([]);
 const page = ref(1);
@@ -53,13 +59,22 @@ async function loadCategories(): Promise<void> {
 }
 
 async function loadPage(reset: boolean): Promise<void> {
+  if (!session.authenticated) {
+    records.value = [];
+    total.value = 0;
+    finished.value = true;
+    loading.value = false;
+    refreshing.value = false;
+    loaded.value = true;
+    return;
+  }
   if (reset) {
     page.value = 1;
     finished.value = false;
   }
   loading.value = true;
   try {
-    const status = activeStatus.value;
+    const status = activeStatus.value === ALL ? undefined : activeStatus.value;
     const rawCategory = String(activeCategory.value);
     const category = rawCategory === ALL || rawCategory === "0" ? undefined : rawCategory;
     const result = await fetchMineTasks({
@@ -106,8 +121,12 @@ function openTask(row: MineTaskView): void {
   void router.push(`/task/${row.taskId}`);
 }
 
-function selectStatus(name: MineTaskStatus): void {
-  activeStatus.value = name;
+function selectStatus(name: StatusTab | MineTaskStatus): void {
+  activeStatus.value = name as StatusTab;
+}
+
+function requestLogin(): void {
+  overlay.request({ redirect: route.fullPath });
 }
 
 watch([activeStatus, activeCategory], () => {
@@ -127,7 +146,7 @@ defineExpose({ selectStatus });
 <template>
   <section class="mine-tasks">
     <NavBar :title="zhCN.mine.tasks" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
-    <Tabs ref="statusTabs" v-model:active="activeStatus" sticky>
+    <Tabs ref="statusTabs" v-model:active="activeStatus" sticky data-testid="mine-status-row">
       <Tab
         v-for="tab in STATUS_TABS"
         :key="tab.name"
@@ -146,9 +165,14 @@ defineExpose({ selectStatus });
       />
     </Tabs>
     <PullRefresh v-model="refreshing" @refresh="onRefresh">
-      <Empty v-if="empty" :description="emptyCopy" data-testid="mine-tasks-empty">
+      <Empty v-if="!session.authenticated" :description="zhCN.session.missing" data-testid="mine-tasks-login">
+        <Button type="primary" size="small" data-testid="mine-tasks-login-action" @click="requestLogin">
+          {{ zhCN.login.submit }}
+        </Button>
+      </Empty>
+      <Empty v-else-if="empty" :description="emptyCopy" data-testid="mine-tasks-empty">
         <Button
-          v-if="activeStatus === 'IN_PROGRESS'"
+          v-if="activeStatus === 'IN_PROGRESS' || activeStatus === ALL"
           type="primary"
           size="small"
           data-testid="empty-go-home"

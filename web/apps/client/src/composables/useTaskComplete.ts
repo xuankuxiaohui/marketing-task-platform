@@ -12,7 +12,7 @@ import {
   type TaskDetailView,
 } from "@/api/task";
 import { zhCN } from "@/locales/zh-CN";
-import { loginLocation } from "@/router/guards";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
 import { TRACK, track } from "@/tracking";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
@@ -25,6 +25,7 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
   const route = useRoute();
   const router = useRouter();
   const session = useSessionStore();
+  const overlay = useLoginOverlayStore();
   const detail = ref<TaskDetailView | null>(null);
   const loading = ref(false);
   const acting = ref(false);
@@ -112,16 +113,18 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
     });
   }
 
-  function redirectGuestToLogin(): boolean {
+  function requestGuestLogin(resume: () => void): boolean {
     if (session.authenticated) {
       return false;
     }
-    void router.replace(loginLocation(route.fullPath));
+    overlay.request({ redirect: route.fullPath, resume });
     return true;
   }
 
   async function onClaim(): Promise<void> {
-    if (redirectGuestToLogin()) {
+    if (requestGuestLogin(() => {
+      void onClaim();
+    })) {
       return;
     }
     track(TRACK.TASK_START_CLICK, { taskId: taskId.value });
@@ -146,7 +149,9 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
   }
 
   async function onCurrentAction(): Promise<void> {
-    if (redirectGuestToLogin()) {
+    if (requestGuestLogin(() => {
+      void onCurrentAction();
+    })) {
       return;
     }
     const step = detail.value?.currentStep;
@@ -191,7 +196,9 @@ export function useTaskComplete(taskIdSource: MaybeRefOrGetter<number>) {
   }
 
   async function onAbandon(): Promise<void> {
-    if (redirectGuestToLogin()) {
+    if (requestGuestLogin(() => {
+      void onAbandon();
+    })) {
       return;
     }
     const instanceId = detail.value?.instanceId;

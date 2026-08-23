@@ -26,14 +26,14 @@ describe("portal route guards", () => {
     expect(activity).toEqual({ type: "next" });
   });
 
-  it("sends anonymous users from protected routes to login with redirect", async () => {
+  it("keeps anonymous users on protected routes so overlay login can open", async () => {
     const ensureSession = vi.fn().mockResolvedValue(false);
     const decision = await resolveAuthNavigation(
       { path: "/mine", fullPath: "/mine" },
       { sessionKnown: false, ensureSession },
     );
     expect(ensureSession).toHaveBeenCalled();
-    expect(decision).toEqual({ type: "redirect", path: "/login", query: { redirect: "/mine" } });
+    expect(decision).toEqual({ type: "next" });
   });
 
   it("allows public login without probing when session is known missing", async () => {

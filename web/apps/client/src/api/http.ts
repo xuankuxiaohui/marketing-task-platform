@@ -16,6 +16,7 @@ const SKIP_UNAUTHORIZED = [
   "/api/common/track/batch",
   "/api/common/ad/",
   "/api/common/points/balance",
+  "/api/common/signin/activities",
   "/api/common/activity/activities",
   "/api/common/task/list",
 ];
@@ -39,6 +40,9 @@ export function shouldSkipUnauthorized(url: string | undefined): boolean {
     return true;
   }
   if (/\/api\/common\/activity\/\d+(\?|$)/.test(url)) {
+    return true;
+  }
+  if (/\/api\/common\/signin\/\d+\/calendar/.test(url)) {
     return true;
   }
   return /\/api\/common\/task\/\d+\/detail/.test(url);

@@ -1395,6 +1395,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "obtainedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "sourceTaskId": {
             "type": "integer",
             "format": "int64"

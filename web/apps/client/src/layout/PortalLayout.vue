@@ -32,7 +32,11 @@ const showHomeAds = computed(() => route.meta.tab === "home");
 
 <style scoped>
 .portal-layout {
+  box-sizing: border-box;
   min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
   background: var(--portal-bg);
   color: var(--portal-ink);
 }

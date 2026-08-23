@@ -8,6 +8,7 @@ export const zhCN = {
   },
   login: {
     title: "登录",
+    sheetTitle: "登录后继续",
     username: "用户名",
     password: "密码",
     captcha: "验证码",
@@ -100,10 +101,11 @@ export const zhCN = {
     empty: "暂无进行中的活动",
     signin: "每日签到",
     signinHint: "每日签到送积分",
-    pointsLogin: "登录后积分落在这里",
+    pointsLogin: "登录后查看",
     todayTasks: "今日可做",
     activities: "进行中的活动",
     streak: "连续签到",
+    dayUnit: "天",
   },
   ad: {
     skip: "跳过",
@@ -124,6 +126,7 @@ export const zhCN = {
   prize: {
     pendingTab: "待领取",
     allTab: "全部",
+    obtainedAt: "获得时间",
     claim: "领取",
     claiming: "领取中",
     retry: "重试",

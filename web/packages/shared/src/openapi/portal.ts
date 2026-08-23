@@ -571,6 +571,8 @@ export interface components {
             fulfillmentStatus?: string;
             /** Format: date-time */
             expireAt?: string;
+            /** Format: date-time */
+            obtainedAt?: string;
             /** Format: int64 */
             sourceTaskId?: number;
             sourceTaskName?: string;

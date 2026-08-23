@@ -1,10 +1,10 @@
 # 设计文档：营销任务平台 v2
 
-> 版本：**v2.15**　需求：[requirements.md](requirements.md) v3.10　选型：[component-selection.md](component-selection.md)
+> 版本：**v2.16**　需求：[requirements.md](requirements.md) v3.10　选型：[component-selection.md](component-selection.md)
 > 步骤引擎：[feasibility-step-engine.md](feasibility-step-engine.md)　对账：[feasibility-recon.md](feasibility-recon.md)　风控：[feasibility-risk.md](feasibility-risk.md)
 > 验收矩阵：[../../docs/verification-matrix.md](../../docs/verification-matrix.md)　历史差异：[CHANGELOG-design.md](CHANGELOG-design.md)
 >
-> v2.15 相对 v2.14：§4.2 补角色当前权限集 GET。v2.14 相对 v2.13：§4.9.0 匿名清单补活动中心 GET 与绑卡任务 GET（R32.1 / #91）。v2.13 相对 v2.12：**按章拆册**。§ 编号不变；引用仍写 `design §x.y`；跳转搜 `<!-- §x.y -->`（不行号）。`ad:position` 明确为 P0 预留名 / 任务 48 接线。
+> v2.16 相对 v2.15：§4.9.3 奖品卡补 `obtainedAt`（获得时间）。v2.15 相对 v2.14：§4.2 补角色当前权限集 GET。v2.14 相对 v2.13：§4.9.0 匿名清单补活动中心 GET 与绑卡任务 GET（R32.1 / #91）。v2.13 相对 v2.12：**按章拆册**。§ 编号不变；引用仍写 `design §x.y`；跳转搜 `<!-- §x.y -->`（不行号）。`ad:position` 明确为 P0 预留名 / 任务 48 接线。
 
 <!-- §0 -->
 ## 0. 分册与章节索引

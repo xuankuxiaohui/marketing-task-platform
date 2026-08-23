@@ -5,6 +5,7 @@ import type { PrizeCardView } from "@/api/prize";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { remainLabel } from "@/utils/countdown";
+import { formatBeijing } from "@/utils/datetime";
 import { prizeButtonState } from "@/utils/prize-button";
 
 defineOptions({ name: "PrizeCard" });
@@ -60,6 +61,9 @@ onUnmounted(() => {
     <FallbackImage :src="prize.prizeImage" :alt="prize.prizeName ?? zhCN.mine.prizes" />
     <div class="prize-card__meta">
       <strong>{{ prize.prizeName }}</strong>
+      <span v-if="prize.obtainedAt" class="prize-card__obtained" data-testid="prize-obtained-at">
+        {{ zhCN.prize.obtainedAt }} {{ formatBeijing(prize.obtainedAt) }}
+      </span>
       <button
         v-if="prize.sourceTaskId != null"
         class="prize-card__source"
@@ -110,6 +114,7 @@ onUnmounted(() => {
   font-size: 15px;
 }
 .prize-card__source,
+.prize-card__obtained,
 .prize-card__countdown,
 .prize-card__reason,
 .prize-card__contact {

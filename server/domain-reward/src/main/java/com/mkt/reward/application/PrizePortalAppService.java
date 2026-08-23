@@ -47,6 +47,7 @@ public class PrizePortalAppService {
                 row.getStatus(),
                 row.getFulfillmentStatus(),
                 RewardTime.toInstant(row.getExpireAt()),
+                RewardTime.toInstant(row.getCreatedAt() != null ? row.getCreatedAt() : row.getGrantedAt()),
                 null,
                 null,
                 row.getFailReason(),

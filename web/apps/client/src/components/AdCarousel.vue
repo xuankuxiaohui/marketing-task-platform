@@ -6,6 +6,7 @@ import { isOk } from "@mkt/shared";
 import { fetchAdPosition, type PortalAdMaterialView } from "@/api/ad";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
+import { PORTAL_PRIMARY } from "@/theme";
 import { TRACK, track } from "@/tracking";
 import { resolveAdJump } from "@/utils/ad-jump";
 
@@ -105,7 +106,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section v-if="visible" class="ad-carousel" data-testid="ad-carousel">
-    <Swipe :autoplay="intervalMs" indicator-color="#0f766e" @change="onChange">
+    <Swipe :autoplay="intervalMs" :indicator-color="PORTAL_PRIMARY" @change="onChange">
       <SwipeItem v-for="item in materials" :key="item.materialId">
         <button type="button" class="ad-carousel__slide" data-testid="ad-carousel-slide" @click="onClick(item)">
           <FallbackImage :src="item.imageUrl" :alt="item.title || zhCN.ad.carousel" />

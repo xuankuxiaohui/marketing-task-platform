@@ -12,6 +12,7 @@ public record PrizeCardView(
         String status,
         String fulfillmentStatus,
         Instant expireAt,
+        Instant obtainedAt,
         Long sourceTaskId,
         String sourceTaskName,
         String failReason,

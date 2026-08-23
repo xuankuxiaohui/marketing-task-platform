@@ -28,6 +28,9 @@ class AnonymousPathsTest {
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/task/8/detail")).isTrue();
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/activity/activities")).isTrue();
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/activity/3")).isTrue();
+        assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/points/balance")).isFalse();
+        assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/signin/activities")).isFalse();
+        assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/signin/1/calendar")).isFalse();
         assertThat(AnonymousPaths.portalAnonymous("GET", "/api/common/task/mine")).isFalse();
         assertThat(AnonymousPaths.portalAnonymous("POST", "/api/common/task/8/start")).isFalse();
         assertThat(AnonymousPaths.portalAnonymous("POST", "/api/common/activity/3/participate")).isFalse();

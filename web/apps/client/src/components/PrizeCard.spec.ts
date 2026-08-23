@@ -44,6 +44,14 @@ describe("PrizeCard", () => {
     expect(wrapper.find('[data-testid="prize-countdown"]').exists()).toBe(false);
   });
 
+  it("renders obtain time from the shipped prize view", () => {
+    const wrapper = mount(PrizeCard, {
+      props: { prize: prize({ obtainedAt: "2026-08-19T04:00:00.000Z", expireAt: undefined }) },
+    });
+    expect(wrapper.get('[data-testid="prize-obtained-at"]').text()).toContain(zhCN.prize.obtainedAt);
+    expect(wrapper.get('[data-testid="prize-obtained-at"]').text()).toMatch(/2026/);
+  });
+
   it("emits claim when the action button is clicked", async () => {
     const wrapper = mount(PrizeCard, { props: { prize: prize({ expireAt: undefined }) } });
     await wrapper.get('[data-testid="prize-action-11"]').trigger("click");

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs, showToast } from "vant";
 import { isOk } from "@mkt/shared";
 import { claimPrize, fetchPrizeList, type PrizeCardView, type PrizeTab } from "@/api/prize";
+import { useSessionStore } from "@/store/session";
 import PrizeCard from "@/components/PrizeCard.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { TRACK, track } from "@/tracking";
@@ -14,12 +15,13 @@ defineOptions({ name: "MinePrizesPage" });
 
 const PAGE_SIZE = 20;
 const TABS: { name: PrizeTab; title: string }[] = [
-  { name: "PENDING", title: zhCN.prize.pendingTab },
   { name: "ALL", title: zhCN.prize.allTab },
+  { name: "PENDING", title: zhCN.prize.pendingTab },
 ];
 
 const route = useRoute();
 const router = useRouter();
+const session = useSessionStore();
 const isTabRoot = computed(() => route.meta.tab === "prizes");
 const activeTab = ref<PrizeTab>("PENDING");
 const records = ref<PrizeCardView[]>([]);
@@ -38,6 +40,15 @@ function reportView(tab: PrizeTab): void {
 }
 
 async function loadPage(reset: boolean): Promise<void> {
+  if (!session.authenticated) {
+    records.value = [];
+    total.value = 0;
+    finished.value = true;
+    loading.value = false;
+    refreshing.value = false;
+    loaded.value = true;
+    return;
+  }
   if (reset) {
     page.value = 1;
     finished.value = false;
@@ -134,8 +145,14 @@ onMounted(() => {
 <template>
   <section class="mine-prizes">
     <NavBar :title="zhCN.mine.prizes" :left-arrow="!isTabRoot" @click-left="isTabRoot ? undefined : router.back()" />
-    <Tabs v-model:active="activeTab" sticky>
-      <Tab v-for="tab in TABS" :key="tab.name" :title="tab.title" :name="tab.name" />
+    <Tabs v-model:active="activeTab" sticky data-testid="mine-prize-tabs">
+      <Tab
+        v-for="tab in TABS"
+        :key="tab.name"
+        :title="tab.title"
+        :name="tab.name"
+        :data-testid="'prize-tab-' + tab.name"
+      />
     </Tabs>
     <PullRefresh v-model="refreshing" @refresh="onRefresh">
       <Empty v-if="empty" :description="zhCN.empty.prizes" data-testid="mine-prizes-empty">

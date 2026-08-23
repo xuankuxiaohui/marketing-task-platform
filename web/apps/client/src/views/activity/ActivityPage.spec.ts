@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
 import { ok } from "@/test-utils/result";
 import type { TaskCardView } from "@/api/task";
@@ -170,7 +171,7 @@ describe("ActivityPage", () => {
     expect(wrapper.find('[data-testid="task-claim"]').exists()).toBe(true);
   });
 
-  it("sends a guest to login on participate without calling the write API", async () => {
+  it("opens overlay login on participate without leaving the activity", async () => {
     listMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     detailMock.mockResolvedValue(
       ok({
@@ -188,8 +189,8 @@ describe("ActivityPage", () => {
     await wrapper.get('[data-testid="activity-join"]').trigger("click");
     await flushPromises();
     expect(joinMock).not.toHaveBeenCalled();
-    expect(router.currentRoute.value.path).toBe("/login");
-    expect(router.currentRoute.value.query.redirect).toBe("/activity?id=3");
+    expect(router.currentRoute.value.path).toBe("/activity");
+    expect(useLoginOverlayStore().visible).toBe(true);
   });
 
   it("renders a cover image on the activity hero when the view has one", async () => {

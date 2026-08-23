@@ -1,19 +1,19 @@
 :root {
-  --portal-primary: #0f766e;
-  --portal-primary-deep: #115e59;
-  --portal-primary-warm: #0d9488;
-  --portal-primary-soft: #ccfbf1;
-  --portal-accent: #c2410c;
-  --portal-accent-soft: #ffedd5;
-  --portal-bg: #f3eee4;
-  --portal-bg-wash: #d7efe8;
-  --portal-surface: #fffdf8;
+  --portal-primary: #e11d48;
+  --portal-primary-deep: #9f1239;
+  --portal-primary-warm: #fb7185;
+  --portal-primary-soft: #ffe4e6;
+  --portal-accent: #d97706;
+  --portal-accent-soft: #fef3c7;
+  --portal-bg: #faf6f2;
+  --portal-bg-wash: #ffe4e6;
+  --portal-surface: #fffdfb;
   --portal-ink: #1c1917;
   --portal-muted: #78716c;
-  --portal-line: #e8e0d4;
+  --portal-line: #f0e6dc;
   --portal-radius: 16px;
   --portal-radius-lg: 20px;
-  --portal-shadow: 0 10px 28px rgba(15, 118, 110, 0.14);
+  --portal-shadow: 0 10px 28px rgba(225, 29, 72, 0.14);
   --portal-shadow-soft: 0 2px 10px rgba(28, 25, 23, 0.06);
 }
 
@@ -44,9 +44,11 @@ body,
 #app {
   margin: 0;
   min-height: 100%;
+  min-height: 100dvh;
   font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
   background: var(--portal-bg);
   color: var(--portal-ink);
+  -webkit-tap-highlight-color: transparent;
 }
 
 button,

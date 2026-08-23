@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/task", () => ({
@@ -23,7 +25,7 @@ import MineTasksPage from "./MineTasksPage.vue";
 const mineMock = vi.mocked(fetchMineTasks);
 const dictMock = vi.mocked(fetchDict);
 
-async function mountMineTasks() {
+async function mountMineTasks(loggedIn = true) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -34,7 +36,14 @@ async function mountMineTasks() {
   });
   await router.push("/mine/tasks");
   await router.isReady();
-  const wrapper = mount(MineTasksPage, { global: { plugins: [router] } });
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  const session = useSessionStore();
+  session.clear();
+  if (loggedIn) {
+    session.setLogin({ token: "client:t", userId: 9, nickname: "bob" });
+  }
+  const wrapper = mount(MineTasksPage, { global: { plugins: [pinia, router] } });
   await flushPromises();
   return { wrapper, router };
 }
@@ -44,6 +53,17 @@ describe("MineTasksPage", () => {
     mineMock.mockReset();
     dictMock.mockReset();
     dictMock.mockResolvedValue(ok([]));
+  });
+
+  it("puts 全部 and 进行中 on one status row and has no 已放弃 tab", async () => {
+    mineMock.mockResolvedValue(ok({ total: 0, records: [] }));
+    const { wrapper } = await mountMineTasks();
+    const row = wrapper.get('[data-testid="mine-status-row"]');
+    expect(row.find('[data-testid="mine-status-ALL"]').exists()).toBe(true);
+    expect(row.find('[data-testid="mine-status-IN_PROGRESS"]').exists()).toBe(true);
+    expect(row.find('[data-testid="mine-status-COMPLETED"]').exists()).toBe(true);
+    expect(row.find('[data-testid="mine-status-EXPIRED"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="mine-status-ABANDONED"]').exists()).toBe(false);
   });
 
   it("shows in-progress empty copy and a guide to the home list", async () => {
@@ -79,16 +99,20 @@ describe("MineTasksPage", () => {
     expect(wrapper.get('[data-testid="mine-task-card"]').text()).toContain(zhCN.task.completed);
   });
 
-  it("requests ABANDONED when the abandoned tab is selected, not COMPLETED", async () => {
+  it("omits status when 全部 is selected", async () => {
     mineMock
       .mockResolvedValueOnce(ok({ total: 0, records: [] }))
       .mockResolvedValueOnce(ok({ total: 0, records: [] }));
     const { wrapper } = await mountMineTasks();
-    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "IN_PROGRESS" }));
-    (wrapper.vm as unknown as { selectStatus: (name: string) => void }).selectStatus("ABANDONED");
+    (wrapper.vm as unknown as { selectStatus: (name: string) => void }).selectStatus("ALL");
     await flushPromises();
-    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "ABANDONED" }));
-    expect(mineMock).not.toHaveBeenCalledWith(expect.objectContaining({ status: "COMPLETED" }));
+    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: undefined }));
+  });
+
+  it("does not fetch private lists for a guest", async () => {
+    const { wrapper } = await mountMineTasks(false);
+    expect(mineMock).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="mine-tasks-login"]').text()).toContain(zhCN.session.missing);
   });
 
   it("opens task detail from a mine row", async () => {
