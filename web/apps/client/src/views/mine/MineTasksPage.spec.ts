@@ -10,6 +10,15 @@ vi.mock("@/api/task", () => ({
   fetchMineTasks: vi.fn(),
 }));
 
+vi.mock("@/api/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/api/auth")>("@/api/auth");
+  return {
+    ...actual,
+    fetchCaptcha: vi.fn(),
+    login: vi.fn(),
+  };
+});
+
 vi.mock("@/api/dict", async () => {
   const actual = await vi.importActual<typeof import("@/api/dict")>("@/api/dict");
   return {
@@ -18,12 +27,27 @@ vi.mock("@/api/dict", async () => {
   };
 });
 
+import type { CaptchaData, PortalAuthData } from "@/api/auth";
+import { fetchCaptcha, login } from "@/api/auth";
 import { fetchDict } from "@/api/dict";
 import { fetchMineTasks } from "@/api/task";
+import LoginOverlay from "@/components/LoginOverlay.vue";
+import { useLoginOverlayStore } from "@/store/login-overlay";
+import { submitOverlayLogin } from "@/test-utils/overlay-login";
+import { defineComponent, h } from "vue";
 import MineTasksPage from "./MineTasksPage.vue";
 
 const mineMock = vi.mocked(fetchMineTasks);
 const dictMock = vi.mocked(fetchDict);
+const fetchCaptchaMock = vi.mocked(fetchCaptcha);
+const loginMock = vi.mocked(login);
+
+const TasksHost = defineComponent({
+  name: "TasksHost",
+  setup() {
+    return () => h("div", [h(MineTasksPage), h(LoginOverlay)]);
+  },
+});
 
 async function mountMineTasks(loggedIn = true) {
   const router = createRouter({
@@ -52,7 +76,12 @@ describe("MineTasksPage", () => {
   beforeEach(() => {
     mineMock.mockReset();
     dictMock.mockReset();
+    fetchCaptchaMock.mockReset();
+    loginMock.mockReset();
     dictMock.mockResolvedValue(ok([]));
+    fetchCaptchaMock.mockResolvedValue(
+      ok<CaptchaData>({ captchaId: "cid-1", imageBase64: "data:image/png;base64,xx" }),
+    );
   });
 
   it("puts 全部 and 进行中 on one status row and has no 已放弃 tab", async () => {
@@ -137,5 +166,48 @@ describe("MineTasksPage", () => {
     await wrapper.get('[data-testid="mine-task-card"]').trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/task/22");
+  });
+
+  it("loads mine task cards after overlay login with only a redirect (no resume)", async () => {
+    mineMock.mockResolvedValue(
+      ok({
+        total: 1,
+        records: [
+          {
+            instanceId: 4,
+            taskId: 22,
+            taskName: "每日浏览",
+            status: "IN_PROGRESS",
+            currentStepName: "点击",
+            startedAt: "2026-08-20T04:00:00Z",
+          },
+        ],
+      }),
+    );
+    loginMock.mockResolvedValue(ok<PortalAuthData>({ token: "client:t", userId: 9, nickname: "bob" }));
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/mine/tasks", component: TasksHost },
+        { path: "/home", component: { template: "<div />" } },
+        { path: "/register", component: { template: "<div />" } },
+      ],
+    });
+    await router.push("/mine/tasks");
+    await router.isReady();
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().clear();
+    const wrapper = mount(TasksHost, { global: { plugins: [pinia, router] } });
+    await flushPromises();
+    expect(mineMock).not.toHaveBeenCalled();
+    useLoginOverlayStore().request({ redirect: "/mine/tasks" });
+    await flushPromises();
+    await submitOverlayLogin(wrapper);
+    expect(loginMock).toHaveBeenCalled();
+    expect(mineMock).toHaveBeenCalledWith(expect.objectContaining({ status: "IN_PROGRESS" }));
+    expect(wrapper.get('[data-testid="mine-task-card"]').text()).toContain("每日浏览");
+    expect(router.currentRoute.value.path).toBe("/mine/tasks");
+    expect(useLoginOverlayStore().visible).toBe(false);
   });
 });

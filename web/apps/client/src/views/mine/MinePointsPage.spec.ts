@@ -44,6 +44,7 @@ async function mountPoints(sessionBalance = 0) {
   await router.isReady();
   const pinia = createPinia();
   setActivePinia(pinia);
+  useSessionStore().setLogin({ token: "client:t", userId: 9, nickname: "bob" });
   useSessionStore().setPointsBalance(sessionBalance);
   const wrapper = mount(MinePointsPage, { global: { plugins: [pinia, router] } });
   await flushPromises();

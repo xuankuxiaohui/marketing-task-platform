@@ -1,7 +1,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { useSessionStore } from "@/store/session";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/signin", () => ({
@@ -62,7 +64,10 @@ async function mountPage() {
   });
   await router.push("/signin");
   await router.isReady();
-  const wrapper = mount(SigninPage, { global: { plugins: [router] } });
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  useSessionStore().setLogin({ token: "client:t", userId: 9, nickname: "bob" });
+  const wrapper = mount(SigninPage, { global: { plugins: [pinia, router] } });
   await flushPromises();
   return wrapper;
 }

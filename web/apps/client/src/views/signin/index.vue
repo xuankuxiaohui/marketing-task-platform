@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useSessionReload } from "@/composables/useSessionReload";
+import { useSessionStore } from "@/store/session";
 import { Button, Calendar, Empty, NavBar, showConfirmDialog, showFailToast, showSuccessToast, type CalendarDayItem } from "vant";
 import { isOk } from "@mkt/shared";
 import {
@@ -19,6 +21,7 @@ import { signinCalendarCell } from "@/utils/signin-calendar-state";
 defineOptions({ name: "SigninPage" });
 
 const router = useRouter();
+const session = useSessionStore();
 const loading = ref(false);
 const calendar = ref<SigninCalendarResponse | null>(null);
 const activityId = ref<number | null>(null);
@@ -75,6 +78,12 @@ function cellClass(cell: CalendarDayView | undefined): string {
 }
 
 async function load(): Promise<void> {
+  if (!session.authenticated) {
+    loading.value = false;
+    calendar.value = null;
+    activityId.value = null;
+    return;
+  }
   loading.value = true;
   const list = await fetchSigninActivities();
   if (!isOk(list) || !list.data || list.data.length === 0) {
@@ -159,6 +168,10 @@ async function onSelect(value: Date): Promise<void> {
   showSuccessToast(zhCN.signin.catchup);
   await load();
 }
+
+useSessionReload(() => {
+  void load();
+});
 
 onMounted(() => {
   void load();

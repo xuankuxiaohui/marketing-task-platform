@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useSessionReload } from "@/composables/useSessionReload";
 import { useRouter } from "vue-router";
 import { Badge, Cell, CellGroup, NavBar, showConfirmDialog } from "vant";
 import { isOk } from "@mkt/shared";
@@ -36,6 +37,10 @@ async function onLogout(): Promise<void> {
   }
   await logoutAndReset(router);
 }
+
+useSessionReload(() => {
+  void loadBadge();
+});
 
 onMounted(() => {
   void loadBadge();

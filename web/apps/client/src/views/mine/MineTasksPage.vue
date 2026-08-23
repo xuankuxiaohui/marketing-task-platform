@@ -5,9 +5,10 @@ import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
 import { fetchMineTasks, type MineTaskView } from "@/api/task";
+import { useSessionReload } from "@/composables/useSessionReload";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
 import { type MineTaskStatus } from "@/utils/mine-status";
-import { useLoginOverlayStore } from "@/store/login-overlay";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatBeijing } from "@/utils/datetime";
@@ -130,6 +131,11 @@ function requestLogin(): void {
 }
 
 watch([activeStatus, activeCategory], () => {
+  void loadPage(true);
+});
+
+useSessionReload(() => {
+  void loadCategories();
   void loadPage(true);
 });
 

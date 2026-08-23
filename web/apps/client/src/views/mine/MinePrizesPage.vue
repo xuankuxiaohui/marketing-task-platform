@@ -4,8 +4,9 @@ import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs, showToast } from "vant";
 import { isOk } from "@mkt/shared";
 import { claimPrize, fetchPrizeList, type PrizeCardView, type PrizeTab } from "@/api/prize";
-import { useSessionStore } from "@/store/session";
 import PrizeCard from "@/components/PrizeCard.vue";
+import { useSessionReload } from "@/composables/useSessionReload";
+import { useSessionStore } from "@/store/session";
 import { zhCN } from "@/locales/zh-CN";
 import { TRACK, track } from "@/tracking";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
@@ -133,6 +134,11 @@ async function onClaim(row: PrizeCardView): Promise<void> {
 
 watch(activeTab, (tab) => {
   reportView(tab);
+  void loadPage(true);
+});
+
+useSessionReload(() => {
+  reportView(activeTab.value);
   void loadPage(true);
 });
 

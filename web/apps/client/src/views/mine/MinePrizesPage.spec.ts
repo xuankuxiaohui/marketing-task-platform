@@ -12,6 +12,15 @@ vi.mock("@/api/prize", () => ({
   claimPrize: vi.fn(),
 }));
 
+vi.mock("@/api/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/api/auth")>("@/api/auth");
+  return {
+    ...actual,
+    fetchCaptcha: vi.fn(),
+    login: vi.fn(),
+  };
+});
+
 vi.mock("@/tracking", () => ({
   TRACK: {
     REWARD_LIST_VIEW: "reward.list.view",
@@ -29,14 +38,29 @@ vi.mock("vant", async () => {
   };
 });
 
+import type { CaptchaData, PortalAuthData } from "@/api/auth";
+import { fetchCaptcha, login } from "@/api/auth";
 import { claimPrize, fetchPrizeList } from "@/api/prize";
+import LoginOverlay from "@/components/LoginOverlay.vue";
+import { useLoginOverlayStore } from "@/store/login-overlay";
+import { submitOverlayLogin } from "@/test-utils/overlay-login";
 import { TRACK, track } from "@/tracking";
 import { showToast } from "vant";
+import { defineComponent, h } from "vue";
 import MinePrizesPage from "./MinePrizesPage.vue";
 
 const listMock = vi.mocked(fetchPrizeList);
 const claimMock = vi.mocked(claimPrize);
 const trackMock = vi.mocked(track);
+const fetchCaptchaMock = vi.mocked(fetchCaptcha);
+const loginMock = vi.mocked(login);
+
+const PrizeHost = defineComponent({
+  name: "PrizeHost",
+  setup() {
+    return () => h("div", [h(MinePrizesPage), h(LoginOverlay)]);
+  },
+});
 
 function prize(overrides: Partial<PrizeCardView> = {}): PrizeCardView {
   return {
@@ -77,7 +101,12 @@ describe("MinePrizesPage", () => {
     listMock.mockReset();
     claimMock.mockReset();
     trackMock.mockReset();
+    fetchCaptchaMock.mockReset();
+    loginMock.mockReset();
     vi.mocked(showToast).mockReset();
+    fetchCaptchaMock.mockResolvedValue(
+      ok<CaptchaData>({ captchaId: "cid-1", imageBase64: "data:image/png;base64,xx" }),
+    );
   });
 
   it("shows empty copy and a guide to tasks", async () => {
@@ -144,5 +173,34 @@ describe("MinePrizesPage", () => {
     await wrapper.get('[data-testid="prize-action-11"]').trigger("click");
     await flushPromises();
     expect(wrapper.get('[data-testid="prize-action-11"]').text()).toBe(zhCN.prize.claim);
+  });
+
+  it("loads prize cards after overlay login with only a redirect (no resume)", async () => {
+    listMock.mockResolvedValue(ok({ total: 1, records: [prize()] }));
+    loginMock.mockResolvedValue(ok<PortalAuthData>({ token: "client:t", userId: 9, nickname: "bob" }));
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/mine/prizes", component: PrizeHost },
+        { path: "/home", component: { template: "<div />" } },
+        { path: "/register", component: { template: "<div />" } },
+      ],
+    });
+    await router.push("/mine/prizes");
+    await router.isReady();
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().clear();
+    const wrapper = mount(PrizeHost, { global: { plugins: [pinia, router] } });
+    await flushPromises();
+    expect(listMock).not.toHaveBeenCalled();
+    useLoginOverlayStore().request({ redirect: "/mine/prizes" });
+    await flushPromises();
+    await submitOverlayLogin(wrapper);
+    expect(loginMock).toHaveBeenCalled();
+    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ tab: "PENDING" }));
+    expect(wrapper.get('[data-testid="prize-card"]').text()).toContain("积分礼包");
+    expect(router.currentRoute.value.path).toBe("/mine/prizes");
+    expect(useLoginOverlayStore().visible).toBe(false);
   });
 });
