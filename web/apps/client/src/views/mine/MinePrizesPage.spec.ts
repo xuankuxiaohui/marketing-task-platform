@@ -114,16 +114,16 @@ describe("MinePrizesPage", () => {
     const { wrapper } = await mountPrizes();
     expect(wrapper.get('[data-testid="mine-prizes-empty"]').text()).toContain(zhCN.empty.prizes);
     expect(wrapper.get('[data-testid="empty-go-home"]').text()).toBe(zhCN.empty.goTasks);
-    expect(trackMock).toHaveBeenCalledWith(TRACK.REWARD_LIST_VIEW, { tab: "PENDING" });
+    expect(trackMock).toHaveBeenCalledWith(TRACK.REWARD_LIST_VIEW, { tab: "ALL" });
   });
 
-  it("lists 全部 before 待领取 while defaulting to 待领取", async () => {
+  it("lists 全部 before 待领取 and defaults to 全部", async () => {
     listMock.mockResolvedValue(ok({ total: 0, records: [] }));
     const { wrapper } = await mountPrizes();
     const tabs = wrapper.findAll('[data-testid^="prize-tab-"]');
     expect(tabs[0]?.attributes("data-testid")).toBe("prize-tab-ALL");
     expect(tabs[1]?.attributes("data-testid")).toBe("prize-tab-PENDING");
-    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ tab: "PENDING" }));
+    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ tab: "ALL" }));
   });
 
   it("renders claimable WON with countdown and claims to 已到账", async () => {
@@ -138,7 +138,7 @@ describe("MinePrizesPage", () => {
     expect(trackMock).toHaveBeenCalledWith(TRACK.REWARD_CLAIM_CLICK, { recordId: 11 });
     expect(claimMock).toHaveBeenCalledWith(11);
     expect(showToast).toHaveBeenCalledWith(zhCN.prize.arrived);
-    expect(wrapper.find('[data-testid="prize-action-11"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="prize-action-11"]').text()).toBe(zhCN.prize.arrived);
   });
 
   it("opens the source task from the prize card", async () => {
@@ -198,7 +198,7 @@ describe("MinePrizesPage", () => {
     await flushPromises();
     await submitOverlayLogin(wrapper);
     expect(loginMock).toHaveBeenCalled();
-    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ tab: "PENDING" }));
+    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ tab: "ALL" }));
     expect(wrapper.get('[data-testid="prize-card"]').text()).toContain("积分礼包");
     expect(router.currentRoute.value.path).toBe("/mine/prizes");
     expect(useLoginOverlayStore().visible).toBe(false);

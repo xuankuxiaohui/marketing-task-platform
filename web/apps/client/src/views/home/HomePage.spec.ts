@@ -113,37 +113,21 @@ describe("HomePage", () => {
   });
 
   it("keeps the guest hub on /home without routing to /login", async () => {
-    activityMock.mockResolvedValue(ok([]));
     const { wrapper, router, overlay } = await mountHome(false);
     expect(router.currentRoute.value.path).toBe("/home");
     expect(overlay.visible).toBe(false);
-    expect(wrapper.get('[data-testid="home-empty"]').text()).toContain(zhCN.home.empty);
     expect(wrapper.get('[data-testid="home-signin-card"]').text()).toContain(zhCN.home.signin);
+    expect(wrapper.find('[data-testid="home-signin-calendar"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="home-activity-list"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="home-task-list"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="home-empty"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain(zhCN.home.activities);
     expect(pointsMock).not.toHaveBeenCalled();
     expect(signinListMock).not.toHaveBeenCalled();
+    expect(activityMock).not.toHaveBeenCalled();
     expect(listMock).not.toHaveBeenCalled();
   });
 
-  it("renders activity banners that open the activity page by id", async () => {
-    activityMock.mockResolvedValue(
-      ok([
-        { id: 3, code: "summer", name: "夏季专题" },
-        { id: 8, code: "autumn", name: "秋季专题" },
-      ]),
-    );
-    const { wrapper, router } = await mountHome();
-    expect(wrapper.get('[data-testid="home-activity-3"]').text()).toContain("夏季专题");
-    expect(wrapper.get('[data-testid="home-activity-8"]').text()).toContain("秋季专题");
-    await wrapper.get('[data-testid="home-activity-3"]').trigger("click");
-    await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/activity");
-    expect(router.currentRoute.value.query.id).toBe("3");
-  });
-
   it("opens overlay login from the compact sign-in action without leaving home", async () => {
-    activityMock.mockResolvedValue(ok([]));
     const { wrapper, router, overlay } = await mountHome(false);
     await wrapper.get('[data-testid="home-signin-action"]').trigger("click");
     await flushPromises();
@@ -151,8 +135,15 @@ describe("HomePage", () => {
     expect(router.currentRoute.value.path).toBe("/home");
   });
 
+  it("opens the sign-in activity page from the month calendar", async () => {
+    const { wrapper, router, overlay } = await mountHome(false);
+    await wrapper.get('[data-testid="home-signin-calendar"]').trigger("click");
+    await flushPromises();
+    expect(overlay.visible).toBe(true);
+    expect(router.currentRoute.value.path).toBe("/home");
+  });
+
   it("does not toast when the home banner slot is missing", async () => {
-    activityMock.mockResolvedValue(ok([]));
     adMock.mockResolvedValue(fail("ad.position.not-found", "广告位不存在"));
     const { wrapper } = await mountHome();
     expect(wrapper.find('[data-testid="ad-carousel"]').exists()).toBe(false);
@@ -160,8 +151,7 @@ describe("HomePage", () => {
     expect(failToast).not.toHaveBeenCalled();
   });
 
-  it("shows balance and streak on the compact strip after login", async () => {
-    activityMock.mockResolvedValue(ok([]));
+  it("shows balance, streak and a month grid after login", async () => {
     signinListMock.mockResolvedValue(ok([{ activityId: 4, code: "daily", name: "每日签到" }]));
     signinCalendarMock.mockResolvedValue(
       ok({
@@ -174,31 +164,29 @@ describe("HomePage", () => {
         catchupDailyLimit: 1,
         catchupCostPoints: 0,
         pointsBalance: 12,
-        days: [],
+        days: [{ date: "2026-08-20", state: "SIGNED" }],
         tiers: [],
       }),
     );
     const { wrapper, router } = await mountHome(true);
     expect(wrapper.get('[data-testid="home-points-value"]').text()).toBe("12");
     expect(wrapper.get('[data-testid="home-signin-streak"]').text()).toContain("3");
+    expect(wrapper.get('[data-testid="month-cell-2026-08-20"]').text()).toBe("20");
     await wrapper.get('[data-testid="home-points-bar"]').trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/mine/points");
   });
 
   it("does not toast or leave home when guest would otherwise 401 points/signin", async () => {
-    activityMock.mockResolvedValue(ok([{ id: 3, code: "summer", name: "夏季专题" }]));
     pointsMock.mockResolvedValue(fail("auth.session.missing", "请先登录"));
     signinListMock.mockResolvedValue(fail("auth.session.missing", "请先登录"));
     const { wrapper, router } = await mountHome(false);
     expect(wrapper.get('[data-testid="home-points-login"]').text()).toContain(zhCN.home.pointsLogin);
-    expect(wrapper.get('[data-testid="home-activity-3"]').text()).toContain("夏季专题");
     expect(failToast).not.toHaveBeenCalled();
     expect(router.currentRoute.value.path).toBe("/home");
   });
 
   it("does not render a standalone today-task catalog", async () => {
-    activityMock.mockResolvedValue(ok([]));
     listMock.mockResolvedValue(
       ok({
         total: 1,
@@ -211,17 +199,8 @@ describe("HomePage", () => {
     expect(listMock).not.toHaveBeenCalled();
   });
 
-  it("renders an activity cover image when the view has one", async () => {
-    activityMock.mockResolvedValue(
-      ok([{ id: 3, code: "summer", name: "夏季专题", coverUrl: "https://cdn.example/cover.png" }]),
-    );
-    const { wrapper } = await mountHome();
-    expect(wrapper.get('[data-testid="home-activity-3"]').get('[data-testid="fallback-image"]').attributes("src")).toBe(
-      "https://cdn.example/cover.png",
-    );
-  });
-
-  it("uses a non-teal primary token", () => {
+  it("uses a blue primary token", () => {
     expect(PORTAL_PRIMARY.toLowerCase()).not.toBe("#0f766e");
+    expect(PORTAL_PRIMARY.toLowerCase()).not.toBe("#e11d48");
   });
 });

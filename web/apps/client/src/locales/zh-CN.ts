@@ -82,6 +82,8 @@ export const zhCN = {
     join: "立即参与",
     joined: "参与成功",
     rejected: "暂不符合参与条件",
+    rules: "规则",
+    rulesTitle: "活动规则",
   },
   signin: {
     title: "签到",
@@ -95,6 +97,11 @@ export const zhCN = {
     streak: "连签天数",
     cost: "补签消耗",
     balance: "当前积分",
+    prevMonth: "上个月",
+    nextMonth: "下个月",
+    details: "明细",
+    rewards: "连签奖励",
+    rewardDay: "连续签到",
   },
   home: {
     title: "首页",

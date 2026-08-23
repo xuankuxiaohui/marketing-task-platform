@@ -35,7 +35,6 @@ const overlay = useLoginOverlayStore();
 const isTabRoot = computed(() => route.meta.tab === "tasks");
 const categories = ref<DictPortalEntry[]>([]);
 const activeStatus = ref<StatusTab>("IN_PROGRESS");
-const activeCategory = ref(ALL);
 const records = ref<MineTaskView[]>([]);
 const page = ref(1);
 const total = ref(0);
@@ -76,11 +75,8 @@ async function loadPage(reset: boolean): Promise<void> {
   loading.value = true;
   try {
     const status = activeStatus.value === ALL ? undefined : activeStatus.value;
-    const rawCategory = String(activeCategory.value);
-    const category = rawCategory === ALL || rawCategory === "0" ? undefined : rawCategory;
     const result = await fetchMineTasks({
       status,
-      category,
       page: page.value,
       pageSize: PAGE_SIZE,
     });
@@ -130,7 +126,7 @@ function requestLogin(): void {
   overlay.request({ redirect: route.fullPath });
 }
 
-watch([activeStatus, activeCategory], () => {
+watch(activeStatus, () => {
   void loadPage(true);
 });
 
@@ -159,15 +155,6 @@ defineExpose({ selectStatus });
         :title="tab.title"
         :name="tab.name"
         :data-testid="'mine-status-' + tab.name"
-      />
-    </Tabs>
-    <Tabs v-model:active="activeCategory" shrink>
-      <Tab :title="zhCN.task.all" :name="ALL" />
-      <Tab
-        v-for="entry in categories"
-        :key="entry.value ?? entry.label"
-        :title="entry.label || entry.value"
-        :name="entry.value"
       />
     </Tabs>
     <PullRefresh v-model="refreshing" @refresh="onRefresh">

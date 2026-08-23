@@ -1,20 +1,20 @@
 :root {
-  --portal-primary: #e11d48;
-  --portal-primary-deep: #9f1239;
-  --portal-primary-warm: #fb7185;
-  --portal-primary-soft: #ffe4e6;
+  --portal-primary: #2563eb;
+  --portal-primary-deep: #1d4ed8;
+  --portal-primary-warm: #60a5fa;
+  --portal-primary-soft: #dbeafe;
   --portal-accent: #d97706;
   --portal-accent-soft: #fef3c7;
-  --portal-bg: #faf6f2;
-  --portal-bg-wash: #ffe4e6;
-  --portal-surface: #fffdfb;
-  --portal-ink: #1c1917;
-  --portal-muted: #78716c;
-  --portal-line: #f0e6dc;
+  --portal-bg: #f4f7fb;
+  --portal-bg-wash: #dbeafe;
+  --portal-surface: #ffffff;
+  --portal-ink: #0f172a;
+  --portal-muted: #64748b;
+  --portal-line: #e2e8f0;
   --portal-radius: 16px;
   --portal-radius-lg: 20px;
-  --portal-shadow: 0 10px 28px rgba(225, 29, 72, 0.14);
-  --portal-shadow-soft: 0 2px 10px rgba(28, 25, 23, 0.06);
+  --portal-shadow: 0 10px 28px rgba(37, 99, 235, 0.14);
+  --portal-shadow-soft: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 
 :root:root {

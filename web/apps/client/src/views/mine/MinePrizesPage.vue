@@ -24,7 +24,7 @@ const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
 const isTabRoot = computed(() => route.meta.tab === "prizes");
-const activeTab = ref<PrizeTab>("PENDING");
+const activeTab = ref<PrizeTab>("ALL");
 const records = ref<PrizeCardView[]>([]);
 const page = ref(1);
 const total = ref(0);

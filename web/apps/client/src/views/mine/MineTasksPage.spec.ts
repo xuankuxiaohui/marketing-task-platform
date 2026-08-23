@@ -93,6 +93,7 @@ describe("MineTasksPage", () => {
     expect(row.find('[data-testid="mine-status-COMPLETED"]').exists()).toBe(true);
     expect(row.find('[data-testid="mine-status-EXPIRED"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="mine-status-ABANDONED"]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-testid="mine-status-ALL"]').length).toBe(1);
   });
 
   it("shows in-progress empty copy and a guide to the home list", async () => {

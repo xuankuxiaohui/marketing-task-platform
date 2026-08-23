@@ -60,6 +60,8 @@ async function mountPage() {
     routes: [
       { path: "/signin", component: SigninPage },
       { path: "/mine", component: { template: "<div />" } },
+      { path: "/mine/points", component: { template: "<div />" } },
+      { path: "/mine/prizes", component: { template: "<div />" } },
     ],
   });
   await router.push("/signin");
@@ -93,6 +95,20 @@ describe("SigninPage", () => {
     expect(wrapper.get('[data-testid="signin-streak"]').text()).toContain("2");
     expect(wrapper.get('[data-testid="signin-hint"]').text()).toContain("再签");
     expect(wrapper.get('[data-testid="signin-checkin"]').text()).toContain(zhCN.signin.checkin);
+    expect(wrapper.get('[data-testid="signin-rewards"]').text()).toContain("1");
+    expect(wrapper.get('[data-testid="signin-year-month"]').text()).toBe("2026-08");
+  });
+
+  it("loads only the requested adjacent month", async () => {
+    activitiesMock.mockResolvedValue(ok([{ activityId: 1, code: "daily_check", name: "每日签到" }]));
+    calendarMock
+      .mockResolvedValueOnce(ok(calendarPayload()))
+      .mockResolvedValueOnce(ok(calendarPayload({ yearMonth: "2026-07", days: [{ date: "2026-07-01", state: "SIGNED" }] })));
+    const wrapper = await mountPage();
+    await wrapper.get('[data-testid="signin-prev-month"]').trigger("click");
+    await flushPromises();
+    expect(calendarMock).toHaveBeenLastCalledWith(1, "2026-07");
+    expect(wrapper.get('[data-testid="signin-year-month"]').text()).toBe("2026-07");
   });
 
   it("greys catchup when balance is below cost", async () => {
