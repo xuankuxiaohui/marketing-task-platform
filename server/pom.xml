@@ -53,6 +53,8 @@
         <logstash-logback-encoder.version>8.1</logstash-logback-encoder.version>
         <!-- jacoco prepare-agent writes argLine; default empty so surefire still starts -->
         <argLine/>
+        <skipTests>false</skipTests>
+        <jacoco.skip>${skipTests}</jacoco.skip>
         <jacoco.line.bundle.minimum>0.70</jacoco.line.bundle.minimum>
         <jacoco.line.critical.minimum>0.85</jacoco.line.critical.minimum>
     </properties>
