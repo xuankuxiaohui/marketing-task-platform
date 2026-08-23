@@ -82,31 +82,24 @@ onMounted(() => {
       <p class="login-brand__hint">{{ zhCN.login.brandHint }}</p>
     </aside>
     <section class="login-panel">
-      <el-form class="login-card" label-position="top" @submit.prevent="submit">
+      <a-form layout="vertical" class="login-card" @submit.prevent="submit">
         <h2>{{ zhCN.login.title }}</h2>
-        <el-form-item :label="zhCN.login.username">
+        <a-form-item :label="zhCN.login.username">
           <div data-testid="login-username">
-            <el-input v-model="username" name="username" autocomplete="username" required />
+            <a-input v-model:value="username" size="large" name="username" autocomplete="username" required />
           </div>
-        </el-form-item>
-        <el-form-item :label="zhCN.login.password">
+        </a-form-item>
+        <a-form-item :label="zhCN.login.password">
           <div data-testid="login-password">
-            <el-input
-              v-model="password"
-              name="password"
-              type="password"
-              show-password
-              autocomplete="current-password"
-              required
-            />
+            <a-input-password v-model:value="password" size="large" name="password" autocomplete="current-password" required />
           </div>
-        </el-form-item>
+        </a-form-item>
         <div class="login-captcha">
-          <el-form-item :label="zhCN.login.captcha" class="login-field--grow">
+          <a-form-item :label="zhCN.login.captcha" class="login-field--grow">
             <div data-testid="login-captcha">
-              <el-input v-model="captchaCode" name="captchaCode" autocomplete="off" required />
+              <a-input v-model:value="captchaCode" size="large" name="captchaCode" autocomplete="off" required />
             </div>
-          </el-form-item>
+          </a-form-item>
           <button
             class="login-captcha__image"
             type="button"
@@ -122,20 +115,19 @@ onMounted(() => {
             />
           </button>
         </div>
-        <p v-if="errorMessage" class="login-error" data-testid="login-error" role="alert">
-          {{ errorMessage }}
-        </p>
-        <el-button
-          class="login-submit"
-          type="primary"
-          native-type="submit"
-          data-testid="login-submit"
-          :loading="loading"
-          :disabled="loading"
-        >
+        <a-alert
+          v-if="errorMessage"
+          type="error"
+          show-icon
+          class="login-error"
+          data-testid="login-error"
+          role="alert"
+          :message="errorMessage"
+        />
+        <a-button class="login-submit" type="primary" size="large" html-type="submit" data-testid="login-submit" :loading="loading" :disabled="loading">
           {{ zhCN.login.submit }}
-        </el-button>
-      </el-form>
+        </a-button>
+      </a-form>
     </section>
   </main>
 </template>
@@ -162,12 +154,12 @@ onMounted(() => {
 .login-brand__sub {
   margin: 12px 0 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.45);
 }
 .login-brand__hint {
   margin: 24px 0 0;
   font-size: 13px;
-  color: #cbd5e1;
+  color: rgba(255, 255, 255, 0.65);
 }
 .login-panel {
   width: 56%;
@@ -191,8 +183,9 @@ onMounted(() => {
   font-weight: 600;
   color: var(--admin-ink);
 }
-.login-card :deep(.el-input__wrapper) {
-  min-height: 40px;
+.login-card :deep(.ant-input-affix-wrapper),
+.login-card :deep(.ant-input) {
+  width: 100%;
 }
 .login-captcha {
   display: flex;
@@ -208,7 +201,7 @@ onMounted(() => {
   height: 40px;
   padding: 0;
   border: 1px solid var(--admin-border);
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--admin-surface);
   cursor: pointer;
 }
@@ -219,11 +212,8 @@ onMounted(() => {
 }
 .login-error {
   margin: 0 0 12px;
-  color: #f56c6c;
-  font-size: 13px;
 }
 .login-submit {
   width: 100%;
-  height: 40px;
 }
 </style>

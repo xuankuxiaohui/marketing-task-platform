@@ -17,13 +17,14 @@ import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "ActivityManagePage" });
 
 const records = ref<ActivityView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ code: "", name: "", status: "" });
@@ -236,6 +237,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -245,86 +252,67 @@ onMounted(() => {
   <section class="admin-page" data-testid="activity-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.activity.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.ACTIVITY_CREATE" data-testid="activity-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.ACTIVITY_CREATE" data-testid="activity-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.activity.code" />
-      <el-input v-model="filters.name" data-testid="filter-name" :placeholder="zhCN.activity.name" />
-      <el-select v-model="filters.status" data-testid="filter-status">
-        <el-option value="" :label="zhCN.common.status" />
-        <el-option value="DRAFT" :label="adminStatusLabel('DRAFT')" />
-        <el-option value="SCHEDULED" :label="adminStatusLabel('SCHEDULED')" />
-        <el-option value="PUBLISHED" :label="adminStatusLabel('PUBLISHED')" />
-        <el-option value="OFFLINE" :label="adminStatusLabel('OFFLINE')" />
-      </el-select>
-      <el-button data-testid="activity-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.code" data-testid="filter-code" :placeholder="zhCN.activity.code" />
+      <a-input v-model:value="filters.name" data-testid="filter-name" :placeholder="zhCN.activity.name" />
+      <a-select v-model:value="filters.status" data-testid="filter-status">
+        <a-select-option value="">{{ zhCN.common.status }}</a-select-option>
+        <a-select-option value="DRAFT">{{ adminStatusLabel('DRAFT') }}</a-select-option>
+        <a-select-option value="SCHEDULED">{{ adminStatusLabel('SCHEDULED') }}</a-select-option>
+        <a-select-option value="PUBLISHED">{{ adminStatusLabel('PUBLISHED') }}</a-select-option>
+        <a-select-option value="OFFLINE">{{ adminStatusLabel('OFFLINE') }}</a-select-option>
+      </a-select>
+      <a-button type="primary" data-testid="activity-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.ACTIVITY_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="activity-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.ACTIVITY_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="activity-table" size="small" stripe>
-      <el-table-column :label="zhCN.activity.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.activity.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.activity.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.activity.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
             {{ adminStatusLabel(row.status) }}
-          </el-tag>
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.activity.version">
-        <template #default="{ row }">{{ row.version }}{{ row.pendingRevision ? "*" : "" }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.activity.version">
+        <template #default="{ record: row }">{{ row.version }}{{ row.pendingRevision ? "*" : "" }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.ACTIVITY_UPDATE" data-testid="activity-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.ACTIVITY_UPDATE" data-testid="activity-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text v-auth="PERMS.ACTIVITY_PUBLISH" data-testid="activity-publish" @click="onPublish(row, false)">
+            </a-button>
+            <a-button size="small" v-auth="PERMS.ACTIVITY_PUBLISH" data-testid="activity-publish" @click="onPublish(row, false)">
               {{ zhCN.activity.publish }}
-            </el-button>
-            <el-button text
-              v-if="row.status === 'PUBLISHED'"
-              v-auth="PERMS.ACTIVITY_OFFLINE"
-              data-testid="activity-offline"
-              @click="onOffline(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === 'PUBLISHED'" v-auth="PERMS.ACTIVITY_OFFLINE" data-testid="activity-offline" @click="onOffline(row)">
               {{ zhCN.activity.offline }}
-            </el-button>
-            <el-button text
-              v-if="row.status === 'DRAFT'"
-              v-auth="PERMS.ACTIVITY_DELETE"
-              data-testid="activity-delete"
-              @click="askDelete(row)"
-            >
+            </a-button>
+            <a-button size="small" danger v-if="row.status === 'DRAFT'" v-auth="PERMS.ACTIVITY_DELETE" data-testid="activity-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -332,43 +320,39 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <el-form-item :label="zhCN.activity.code">
-        <el-input v-model="form.code" data-testid="activity-code" :disabled="editing != null" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.name">
-        <el-input v-model="form.name" data-testid="activity-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.startTime">
-        <el-input v-model="form.startTime" type="datetime-local" data-testid="activity-start" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.endTime">
-        <el-input v-model="form.endTime" type="datetime-local" data-testid="activity-end" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.richText">
-        <el-input v-model="form.richText" type="textarea" data-testid="activity-html" :rows="6" required  />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.prizeId">
-        <el-input v-model="form.prizeId" data-testid="activity-prize" />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.globalDailyLimit">
-        <el-input v-model="form.globalDailyLimit" data-testid="activity-global-limit" />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.allowUserIds">
-        <el-input v-model="form.allowUserIds" data-testid="activity-allow-users" />
-      </el-form-item>
-      <el-form-item :label="zhCN.activity.submodules">
-        <el-input v-model="form.submodules" type="textarea" data-testid="activity-submodules"  />
-      </el-form-item>
-      <el-form-item v-if="editing?.status === 'DRAFT'" :label="zhCN.activity.publishAt">
-        <el-input v-model="form.publishAt" type="datetime-local" data-testid="activity-schedule-at" />
-        <el-button
-          v-auth="PERMS.ACTIVITY_PUBLISH"
-          data-testid="activity-schedule"
-          @click="editing && onSchedule(editing)"
-        >
+      <a-form-item :label="zhCN.activity.code">
+        <a-input v-model:value="form.code" data-testid="activity-code" :disabled="editing != null" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.name">
+        <a-input v-model:value="form.name" data-testid="activity-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.startTime">
+        <a-date-picker v-model:value="form.startTime" data-testid="activity-start" required show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.endTime">
+        <a-date-picker v-model:value="form.endTime" data-testid="activity-end" required show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.richText">
+        <a-textarea v-model:value="form.richText" data-testid="activity-html" :rows="6" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.prizeId">
+        <a-input v-model:value="form.prizeId" data-testid="activity-prize" />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.globalDailyLimit">
+        <a-input v-model:value="form.globalDailyLimit" data-testid="activity-global-limit" />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.allowUserIds">
+        <a-input v-model:value="form.allowUserIds" data-testid="activity-allow-users" />
+      </a-form-item>
+      <a-form-item :label="zhCN.activity.submodules">
+        <a-textarea v-model:value="form.submodules" data-testid="activity-submodules" />
+      </a-form-item>
+      <a-form-item v-if="editing?.status === 'DRAFT'" :label="zhCN.activity.publishAt">
+        <a-date-picker v-model:value="form.publishAt" data-testid="activity-schedule-at" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+        <a-button v-auth="PERMS.ACTIVITY_PUBLISH" data-testid="activity-schedule" @click="editing && onSchedule(editing)">
           {{ zhCN.activity.schedule }}
-        </el-button>
-      </el-form-item>
+        </a-button>
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

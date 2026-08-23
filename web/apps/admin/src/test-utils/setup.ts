@@ -1,7 +1,7 @@
 import { config, DOMWrapper } from "@vue/test-utils";
-import ElementPlus from "element-plus";
+import Antd from "ant-design-vue";
 
-config.global.plugins.push(ElementPlus);
+config.global.plugins.push(Antd);
 
 const nativeSetValue = DOMWrapper.prototype.setValue;
 
@@ -12,6 +12,8 @@ DOMWrapper.prototype.setValue = async function patchedSetValue(value: unknown) {
   }
   const inst = (el as { __vueParentComponent?: { emit: (e: string, v: unknown) => void } }).__vueParentComponent;
   if (inst?.emit) {
+    inst.emit("update:value", value);
+    inst.emit("update:checked", value);
     inst.emit("update:modelValue", value);
     return;
   }

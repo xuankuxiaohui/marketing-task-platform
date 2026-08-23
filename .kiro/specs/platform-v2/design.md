@@ -153,7 +153,7 @@ marketing-task-platform/
 │   └── portal-app/
 │   # P1：domain-signin / domain-activity / domain-ad
 ├── web/                             # 前端 pnpm workspace
-│   ├── apps/admin/                  # 管理后台（vue-pure-admin-thin）
+│   ├── apps/admin/                  # 管理后台（vue-pure-admin-thin 骨架 + Ant Design Vue）
 │   ├── apps/client/                 # 门户 H5（Vant 4）
 │   └── packages/shared/             # 两端共享（类型生成产物/工具）
 └── .kiro/specs/platform-v2/         # 规格文档（本设计所在）

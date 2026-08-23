@@ -1,6 +1,6 @@
 # 12 · 前端编码规范
 
-> 适用范围：`web/apps/admin`（Vue 3 + Element Plus + Pinia）、`web/apps/client`（Vue 3 + Vant 4）。  
+> 适用范围：`web/apps/admin`（Vue 3 + Ant Design Vue + Pinia）、`web/apps/client`（Vue 3 + Vant 4）。  
 > 工程化（构建、类型生成、lint）见 [13-frontend-engineering.md](13-frontend-engineering.md)。
 
 ## 1. 依据（官方）
@@ -14,7 +14,7 @@
 | Vue Composition API FAQ | https://vuejs.org/guide/extras/composition-api-faq.html | 组合式，不用 Options 新代码 |
 | Pinia | https://pinia.vuejs.org/core-concepts/ | 状态模块 |
 | TypeScript Handbook | https://www.typescriptlang.org/docs/handbook/intro.html | 严格类型 |
-| Element Plus | https://element-plus.org/ | 管理端组件 |
+| Ant Design Vue | https://antdv.com/ | 管理端组件 |
 | Vant 4 | https://vant-ui.github.io/vant/#/zh-CN | 门户组件 |
 | vue-pure-admin | https://pure-admin.cn/ | 管理端骨架：动态路由、权限指令 |
 | Vue Flow | https://vueflow.dev/ | 任务画布（任务 37.2） |
@@ -24,13 +24,13 @@
 | | admin | client |
 |--|-------|--------|
 | 用户 | 运营 / 管理员 | C 端用户 |
-| UI 库 | Element Plus | Vant 4 |
+| UI 库 | Ant Design Vue | Vant 4 |
 | 鉴权 | Cookie（浏览器自动带）+ CSRF 头 | `Authorization: Bearer` |
 | 路由 | 动态路由，权限码 = 附录 B | 静态路由 + 登录守卫 |
 | 视口 | 桌面优先 | 移动端 H5 / WebView（模块 I） |
 
 1. **MUST NOT** 在一端引入另一端的 UI 库。
-2. **MUST NOT** 共用「带 Element/Vant 的业务组件」。共享只限无 UI 的 TS 函数与生成类型。
+2. **MUST NOT** 共用「带 Ant Design Vue/Vant 的业务组件」。共享只限无 UI 的 TS 函数与生成类型。
 3. 管理端 **MUST** 基于 vue-pure-admin-thin 的权限指令与多标签，不要自研第二套 RBAC 前端。
 
 ## 3. Vue 强制规则（Priority A）
@@ -41,7 +41,7 @@
 2. props 必须有类型（`defineProps<{ status: PrizeStatus }>()` 或运行时详细对象）。禁止 `defineProps(['status'])`。
 3. `v-for` **必须** `:key`，且 key 为稳定 id，禁止数组下标（列表会排序/删除时）。
 4. **禁止** 同一元素同时 `v-if` 与 `v-for`。过滤用 `computed`；或 `v-for` 放在 `<template>`。
-5. 业务组件样式 **必须** `scoped`（或 CSS modules）。布局/App 可全局。覆盖 Element/Vant 用官方推荐的类或 `:deep()`，禁止改 node_modules。
+5. 业务组件样式 **必须** `scoped`（或 CSS modules）。布局/App 可全局。覆盖 Ant Design Vue/Vant 用官方推荐的类或 `:deep()`，禁止改 node_modules。
 
 Priority B 本项目升级为 MUST：
 
@@ -132,7 +132,7 @@ const rewardPreview = computed(() => props.task.rewardPreview ?? "");
 
 1. 图标按钮 **SHOULD** 有 `aria-label`。
 2. 文案 P0 用中文写死在 i18n 资源或常量，**SHOULD** 集中 `locales/zh-CN.ts`，避免散落魔法句。
-3. 颜色对比跟随 Element / Vant 默认主题，不要在卡片上用过浅灰字。
+3. 颜色对比跟随 Ant Design Vue / Vant 默认主题，不要在卡片上用过浅灰字。
 
 ## 11. 禁止
 

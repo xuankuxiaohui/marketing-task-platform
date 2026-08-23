@@ -15,13 +15,14 @@ import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TaskInstancePage" });
 
 const records = ref<AdminInstanceView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ taskId: "", userId: "", status: "", simulated: "" });
@@ -84,6 +85,12 @@ async function submitAbandon(): Promise<void> {
   await load();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -94,89 +101,74 @@ onMounted(() => {
     <div class="admin-page__header">
       <h2>{{ zhCN.instance.title }}</h2>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.taskId" data-testid="filter-task-id" :placeholder="zhCN.instance.taskId" />
-      <el-input v-model="filters.userId" data-testid="filter-user-id" :placeholder="zhCN.instance.userId" />
-      <el-select v-model="filters.status" data-testid="filter-status">
-        <el-option value="" :label="zhCN.common.status" />
-        <el-option v-for="item in Object.values(INSTANCE_STATUS)" :key="item" :value="item" :label="adminStatusLabel(item)" />
-      </el-select>
-      <el-select v-model="filters.simulated" data-testid="filter-simulated">
-        <el-option value="" :label="zhCN.instance.simulated" />
-        <el-option value="0" label="0" />
-        <el-option value="1" label="1" />
-      </el-select>
-      <el-button data-testid="instance-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.taskId" data-testid="filter-task-id" :placeholder="zhCN.instance.taskId" />
+      <a-input v-model:value="filters.userId" data-testid="filter-user-id" :placeholder="zhCN.instance.userId" />
+      <a-select v-model:value="filters.status" data-testid="filter-status">
+        <a-select-option value="">{{ zhCN.common.status }}</a-select-option>
+        <a-select-option v-for="item in Object.values(INSTANCE_STATUS)" :key="item" :value="item">{{ adminStatusLabel(item) }}</a-select-option>
+      </a-select>
+      <a-select v-model:value="filters.simulated" data-testid="filter-simulated">
+        <a-select-option value="">{{ zhCN.instance.simulated }}</a-select-option>
+        <a-select-option value="0">0</a-select-option>
+        <a-select-option value="1">1</a-select-option>
+      </a-select>
+      <a-button type="primary" data-testid="instance-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="instance-table" size="small" stripe>
-      <el-table-column label="ID">
-        <template #default="{ row }">{{ row.id }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.instance.taskId">
-        <template #default="{ row }">{{ row.taskId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.instance.userId">
-        <template #default="{ row }">{{ row.userId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="instance-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+      </template>
+
+      <a-table-column title="ID">
+        <template #default="{ record: row }">{{ row.id }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.instance.taskId">
+        <template #default="{ record: row }">{{ row.taskId }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.instance.userId">
+        <template #default="{ record: row }">{{ row.userId }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
             {{ adminStatusLabel(row.status) }}
-          </el-tag>
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.instance.cycleKey">
-        <template #default="{ row }">{{ row.cycleKey }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.instance.cycleKey">
+        <template #default="{ record: row }">{{ row.cycleKey }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.TASK_INSTANCE_QUERY" data-testid="instance-detail" @click="openDetail(row)">
+            <a-button size="small" v-auth="PERMS.TASK_INSTANCE_QUERY" data-testid="instance-detail" @click="openDetail(row)">
               {{ zhCN.instance.detail }}
-            </el-button>
-            <el-button text
-              v-if="row.status === INSTANCE_STATUS.IN_PROGRESS"
-              v-auth="PERMS.TASK_INSTANCE_ABANDON"
-              data-testid="instance-abandon"
-              @click="openAbandon(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="row.status === INSTANCE_STATUS.IN_PROGRESS" v-auth="PERMS.TASK_INSTANCE_ABANDON" data-testid="instance-abandon" @click="openAbandon(row)">
               {{ zhCN.instance.abandon }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <div v-if="detail" data-testid="instance-detail-panel">
       <h3>{{ zhCN.instance.steps }}</h3>
-      <el-table :data="detail.steps ?? []" class="data-table admin-table" size="small" stripe>
-      <el-table-column>
-        <template #default="{ row }">{{ row.stepCode }}</template>
-      </el-table-column>
-      <el-table-column>
-        <template #default="{ row }">{{ row.type }}</template>
-      </el-table-column>
-      <el-table-column>
-        <template #default="{ row }">{{ adminStatusLabel(row.status) }}</template>
-      </el-table-column>
-      <el-table-column>
-        <template #default="{ row }">{{ row.progressCurrent }}/{{ row.progressTarget ?? "-" }}</template>
-      </el-table-column>
-    </el-table>
+      <a-table :data-source="detail.steps ?? []" class="data-table admin-table" size="small" :pagination="false" :row-key="adminRowKey">
+      <a-table-column>
+        <template #default="{ record: row }">{{ row.stepCode }}</template>
+      </a-table-column>
+      <a-table-column>
+        <template #default="{ record: row }">{{ row.type }}</template>
+      </a-table-column>
+      <a-table-column>
+        <template #default="{ record: row }">{{ adminStatusLabel(row.status) }}</template>
+      </a-table-column>
+      <a-table-column>
+        <template #default="{ record: row }">{{ row.progressCurrent }}/{{ row.progressTarget ?? "-" }}</template>
+      </a-table-column>
+    </a-table>
       <h3>{{ zhCN.instance.events }}</h3>
       <ul>
         <li v-for="(event, index) in detail.events ?? []" :key="`${event.code}-${index}`">
@@ -190,9 +182,9 @@ onMounted(() => {
       @submit="submitAbandon"
       @cancel="abandonOpen = false"
     >
-      <el-form-item :label="zhCN.instance.reason">
-        <el-input v-model="reason" data-testid="abandon-reason" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.instance.reason">
+        <a-input v-model:value="reason" data-testid="abandon-reason" required />
+      </a-form-item>
     </FormDialog>
   </section>
 </template>

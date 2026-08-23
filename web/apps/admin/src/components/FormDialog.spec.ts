@@ -7,36 +7,61 @@ describe("FormDialog", () => {
     document.body.innerHTML = "";
   });
 
-  it("emits cancel on Escape when visible", async () => {
-    const wrapper = mount(FormDialog, { props: { visible: true, title: "新建" }, attachTo: document.body });
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  it("renders an Ant Design modal and emits cancel on Escape", async () => {
+    const wrapper = mount(FormDialog, {
+      props: { visible: true, title: "新建" },
+      attachTo: document.body,
+    });
+    expect(document.querySelector(".ant-modal")).not.toBeNull();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(wrapper.emitted("cancel")).toHaveLength(1);
     wrapper.unmount();
   });
 
   it("does not emit cancel on Escape when hidden", () => {
     const wrapper = mount(FormDialog, { props: { visible: false, title: "新建" } });
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(wrapper.find(".ant-modal").exists()).toBe(false);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(wrapper.emitted("cancel")).toBeUndefined();
     wrapper.unmount();
   });
 
-  it("emits cancel on mask click but not card click", async () => {
-    const wrapper = mount(FormDialog, { props: { visible: true, title: "新建" } });
-    await wrapper.get('[data-testid="form-dialog"]').trigger("click");
+  it("emits cancel on mask click but not modal body click", async () => {
+    const wrapper = mount(FormDialog, {
+      props: { visible: true, title: "新建" },
+      attachTo: document.body,
+    });
+    expect(document.querySelector(".ant-modal")).not.toBeNull();
+    await wrapper.get(".ant-modal-wrap").trigger("click");
     expect(wrapper.emitted("cancel")).toHaveLength(1);
-    await wrapper.get(".form-card").trigger("click");
+    await wrapper.get(".ant-modal-body").trigger("click");
     expect(wrapper.emitted("cancel")).toHaveLength(1);
     wrapper.unmount();
   });
 
   it("keeps cancel and submit buttons", async () => {
-    const wrapper = mount(FormDialog, { props: { visible: true, title: "新建" } });
+    const wrapper = mount(FormDialog, {
+      props: { visible: true, title: "新建" },
+      attachTo: document.body,
+    });
     await wrapper.get('[data-testid="form-cancel"]').trigger("click");
-    await wrapper.get("form.form-card").trigger("submit");
+    await wrapper.get('[data-testid="form-submit"]').trigger("click");
     expect(wrapper.emitted("cancel")).toHaveLength(1);
     expect(wrapper.emitted("submit")).toHaveLength(1);
-    expect(wrapper.get('[data-testid="form-submit"]').attributes("disabled")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("keeps the form body slot inside the modal", () => {
+    const wrapper = mount(FormDialog, {
+      props: { visible: true, title: "新建" },
+      attachTo: document.body,
+      slots: {
+        default: `<div class="ant-form-item">字段一</div>`,
+      },
+    });
+    expect(wrapper.get('[data-testid="form-dialog-body"]').text()).toContain("字段一");
+    expect(wrapper.get('[data-testid="form-submit"]').exists()).toBe(true);
+    expect(wrapper.get(".ant-modal-footer").exists()).toBe(true);
     wrapper.unmount();
   });
 });

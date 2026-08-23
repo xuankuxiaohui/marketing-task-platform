@@ -46,46 +46,33 @@ async function submit(): Promise<void> {
       <p class="login-brand__sub">{{ zhCN.consoleSubtitle }}</p>
     </aside>
     <section class="login-panel">
-      <el-form class="login-card" label-position="top" @submit.prevent="submit">
+      <a-form layout="vertical" class="login-card" @submit.prevent="submit">
         <h2>{{ zhCN.password.title }}</h2>
         <p class="login-card__sub">{{ zhCN.password.hint }}</p>
-        <el-form-item :label="zhCN.password.oldPassword">
+        <a-form-item :label="zhCN.password.oldPassword">
           <div data-testid="change-password-old">
-            <el-input
-              v-model="oldPassword"
-              type="password"
-              show-password
-              autocomplete="current-password"
-              required
-            />
+            <a-input-password v-model:value="oldPassword" autocomplete="current-password" required />
           </div>
-        </el-form-item>
-        <el-form-item :label="zhCN.password.newPassword">
+        </a-form-item>
+        <a-form-item :label="zhCN.password.newPassword">
           <div data-testid="change-password-new">
-            <el-input
-              v-model="newPassword"
-              type="password"
-              show-password
-              autocomplete="new-password"
-              required
-            />
+            <a-input-password v-model:value="newPassword" autocomplete="new-password" required />
           </div>
-        </el-form-item>
+        </a-form-item>
         <p class="login-card__sub">{{ zhCN.common.passwordPolicy }}</p>
-        <p v-if="errorMessage" class="login-error" data-testid="change-password-error" role="alert">
-          {{ errorMessage }}
-        </p>
-        <el-button
-          class="login-submit"
-          type="primary"
-          native-type="submit"
-          data-testid="change-password-submit"
-          :loading="loading"
-          :disabled="loading"
-        >
+        <a-alert
+          v-if="errorMessage"
+          type="error"
+          show-icon
+          class="login-error"
+          data-testid="change-password-error"
+          role="alert"
+          :message="errorMessage"
+        />
+        <a-button class="login-submit" type="primary" html-type="submit" data-testid="change-password-submit" :loading="loading" :disabled="loading">
           {{ zhCN.password.submit }}
-        </el-button>
-      </el-form>
+        </a-button>
+      </a-form>
     </section>
   </main>
 </template>
@@ -112,7 +99,7 @@ async function submit(): Promise<void> {
 .login-brand__sub {
   margin: 12px 0 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.45);
 }
 .login-panel {
   width: 56%;
@@ -136,13 +123,12 @@ async function submit(): Promise<void> {
   color: var(--admin-muted);
   font-size: 12px;
 }
-.login-card :deep(.el-input__wrapper) {
+.login-card :deep(.ant-input),
+.login-card :deep(.ant-input-affix-wrapper) {
   min-height: 40px;
 }
 .login-error {
   margin: 0 0 12px;
-  color: #f56c6c;
-  font-size: 13px;
 }
 .login-submit {
   width: 100%;

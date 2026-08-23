@@ -61,7 +61,7 @@
 - JDK **26**（本机 `D:\develop\jdk\jdk-26.0.2`，PATH 默认是 25）+ Spring Boot **4.1.x**
 - Jackson 3 包名 `tools.jackson`，只经 `kernel JsonUtil`
 - MyBatis-Plus、Flyway（只在 `platform-db`）、Sa-Token 双 `StpLogic`
-- 前端：pnpm workspace；`web/apps/admin` = vue-pure-admin-thin；`web/apps/client` = Vant 4
+- 前端：pnpm workspace；`web/apps/admin` = vue-pure-admin-thin 骨架 + Ant Design Vue；`web/apps/client` = Vant 4
 - 版本号唯一来源：[dependency-matrix.md](.kiro/specs/platform-v2/dependency-matrix.md)
 - 现网 Redis **6.0.8 / DB 2**（与若依共用 6379）。IT 镜像可用 Redis 7。**禁止**用 db0
 

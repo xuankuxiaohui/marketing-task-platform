@@ -15,7 +15,7 @@
 ```mermaid
 graph TB
     subgraph 客户端
-        AW[管理后台前端<br/>web/apps/admin · Vue3+Element Plus]
+        AW[管理后台前端<br/>web/apps/admin · Vue3+Ant Design Vue]
         CW[门户 H5<br/>web/apps/client · Vant 4]
         EXT[外部业务系统<br/>回调/进度上报调用方]
     end
@@ -332,7 +332,7 @@ graph TB
 
 | 端 | 组件 |
 |----|------|
-| 管理后台 | vue-pure-admin-thin（Vue3 + TS + Element Plus + Pinia + Vite）、vue-flow（任务画布）、ECharts（P1 看板） |
+| 管理后台 | vue-pure-admin-thin 骨架（Vue3 + TS + Ant Design Vue + Pinia + Vite）、vue-flow（任务画布）、ECharts（P1 看板） |
 | 门户 H5 | Vant 4 + unplugin-auto-import，移动端浏览器/WebView 为验收环境（模块 I 基线） |
 | 共享 | openapi-typescript 从后端 OpenAPI 生成类型，禁止手写重复类型（NFR 可维护性 2） |
 

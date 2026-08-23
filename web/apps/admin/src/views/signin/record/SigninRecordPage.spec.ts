@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/signin", () => ({
@@ -39,6 +40,6 @@ describe("SigninRecordPage", () => {
     const wrapper = mount(SigninRecordPage, { global: { plugins: [pinia] } });
     await flushPromises();
     expect(wrapper.get('[data-testid="signin-record-table"]').text()).toContain("CHECKIN");
-    expect(wrapper.get('[data-testid="signin-record-query"]').text()).toContain(zhCN.common.query);
+    expect(visibleText(wrapper, "signin-record-query")).toContain(zhCN.common.query);
   });
 });

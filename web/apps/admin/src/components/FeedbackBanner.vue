@@ -25,28 +25,18 @@ async function copyTrace(): Promise<void> {
 </script>
 
 <template>
-  <p v-if="feedback" class="feedback-banner" data-testid="page-error" role="alert">
-    <span>{{ feedback.message }}</span>
-    <button
-      v-if="feedback.traceId"
-      type="button"
-      data-testid="copy-trace"
-      @click="copyTrace"
-    >
-      {{ copied ? zhCN.common.copied : zhCN.common.copyTrace }}
-    </button>
-  </p>
+  <a-alert
+    v-if="feedback"
+    type="error"
+    show-icon
+    data-testid="page-error"
+    role="alert"
+    :message="feedback.message"
+  >
+    <template v-if="feedback.traceId" #action>
+      <a-button size="small" data-testid="copy-trace" @click="copyTrace">
+        {{ copied ? zhCN.common.copied : zhCN.common.copyTrace }}
+      </a-button>
+    </template>
+  </a-alert>
 </template>
-
-<style scoped>
-.feedback-banner {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  color: #b91c1c;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-</style>

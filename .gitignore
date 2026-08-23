@@ -42,6 +42,7 @@ replay_pid*
 .env.vm
 deploy/.env
 deploy/backups/
+.run/
 .tmp_*.py
 
 # Maven

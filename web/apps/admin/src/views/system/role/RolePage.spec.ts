@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { useSessionStore } from "@/store/session";
-import { setControl } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/identity", () => ({
@@ -43,6 +42,15 @@ describe("RolePermissionPage", () => {
     assignMock.mockResolvedValue(ok({ ok: true }));
   });
 
+  async function checkTreeNode(wrapper: ReturnType<typeof mount>, id: number): Promise<void> {
+    const title = wrapper.get(`[data-testid="perm-${id}"]`);
+    const node = title.element.closest(".ant-tree-treenode");
+    const box = node?.querySelector(".ant-tree-checkbox");
+    expect(box).toBeTruthy();
+    (box as HTMLElement).click();
+    await flushPromises();
+  }
+
   it("hides assign for super-admin and overwrites permissions on submit", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -53,9 +61,25 @@ describe("RolePermissionPage", () => {
     expect(assignButtons).toHaveLength(1);
     await assignButtons[0].trigger("click");
     await flushPromises();
-    await setControl(wrapper, "perm-11", true);
+    expect(wrapper.find(".ant-tree").exists()).toBe(true);
+    expect(wrapper.find(".ant-tree-switcher").exists()).toBe(true);
+    await checkTreeNode(wrapper, 11);
     await wrapper.get('[data-testid="form-dialog"] form').trigger("submit.prevent");
     await flushPromises();
-    expect(assignMock).toHaveBeenCalledWith(2, { permissionIds: [11] });
+    expect(assignMock).toHaveBeenCalledWith(2, { permissionIds: expect.arrayContaining([10, 11]) });
+  });
+
+  it("checks child permissions when a parent menu is checked", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().permissions = Object.values(PERMS);
+    const wrapper = mount(RolePage, { global: { plugins: [pinia], directives: { auth } } });
+    await flushPromises();
+    await wrapper.get('[data-testid="role-assign"]').trigger("click");
+    await flushPromises();
+    await checkTreeNode(wrapper, 10);
+    await wrapper.get('[data-testid="form-dialog"] form').trigger("submit.prevent");
+    await flushPromises();
+    expect(assignMock).toHaveBeenCalledWith(2, { permissionIds: expect.arrayContaining([10, 11]) });
   });
 });

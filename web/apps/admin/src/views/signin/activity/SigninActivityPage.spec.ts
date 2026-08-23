@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/signin", () => ({
@@ -68,7 +69,7 @@ describe("SigninActivityPage", () => {
     );
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="signin-table"]').text()).toContain("daily_check");
-    expect(wrapper.get('[data-testid="signin-create"]').text()).toContain(zhCN.common.create);
+    expect(visibleText(wrapper, "signin-create")).toContain(zhCN.common.create);
     await wrapper.get('[data-testid="signin-publish"]').trigger("click");
     await flushPromises();
     expect(publishMock).toHaveBeenCalledWith(3, { confirm: false, early: true });

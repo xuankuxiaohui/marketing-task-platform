@@ -16,13 +16,14 @@ import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "AdPositionPage" });
 
 const records = ref<AdPositionView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ code: "", form: "", status: "" });
@@ -181,6 +182,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -190,76 +197,67 @@ onMounted(() => {
   <section class="admin-page" data-testid="ad-position-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.ad.positionTitle }}</h2>
-      <el-button type="primary" v-auth="PERMS.AD_POSITION_CREATE" data-testid="ad-position-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.AD_POSITION_CREATE" data-testid="ad-position-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.code" data-testid="filter-code" :placeholder="zhCN.ad.code" />
-      <el-select v-model="filters.form" data-testid="filter-form">
-        <el-option value="" :label="zhCN.ad.form" />
-        <el-option value="CAROUSEL" label="CAROUSEL" />
-        <el-option value="IMAGE" label="IMAGE" />
-        <el-option value="SPLASH" label="SPLASH" />
-        <el-option value="POPUP" label="POPUP" />
-        <el-option value="FLOAT" label="FLOAT" />
-      </el-select>
-      <el-button data-testid="ad-position-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.code" data-testid="filter-code" :placeholder="zhCN.ad.code" />
+      <a-select v-model:value="filters.form" data-testid="filter-form">
+        <a-select-option value="">{{ zhCN.ad.form }}</a-select-option>
+        <a-select-option value="CAROUSEL">CAROUSEL</a-select-option>
+        <a-select-option value="IMAGE">IMAGE</a-select-option>
+        <a-select-option value="SPLASH">SPLASH</a-select-option>
+        <a-select-option value="POPUP">POPUP</a-select-option>
+        <a-select-option value="FLOAT">FLOAT</a-select-option>
+      </a-select>
+      <a-button type="primary" data-testid="ad-position-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.AD_POSITION_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="ad-position-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.AD_POSITION_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="ad-position-table" size="small" stripe>
-      <el-table-column :label="zhCN.ad.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.ad.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.ad.form">
-        <template #default="{ row }">{{ row.form }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.ad.overlap">
-        <template #default="{ row }">{{ row.overlapCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.ad.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.ad.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.ad.form">
+        <template #default="{ record: row }">{{ row.form }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.ad.overlap">
+        <template #default="{ record: row }">{{ row.overlapCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
             {{ adminStatusLabel(row.status) }}
-          </el-tag>
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.AD_POSITION_UPDATE" data-testid="ad-position-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.AD_POSITION_UPDATE" data-testid="ad-position-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text v-auth="PERMS.AD_POSITION_DELETE" data-testid="ad-position-delete" @click="askDelete(row)">
+            </a-button>
+            <a-button size="small" danger v-auth="PERMS.AD_POSITION_DELETE" data-testid="ad-position-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
-            <el-button text
-              v-for="placement in row.placements"
-              :key="placement.id"
-              v-auth="PERMS.AD_POSITION_UPDATE"
-              data-testid="ad-position-unbind"
-              @click="askUnbind(row, placement.materialId)"
-            >
+            </a-button>
+            <a-button size="small" v-for="placement in row.placements" :key="placement.id" v-auth="PERMS.AD_POSITION_UPDATE" data-testid="ad-position-unbind" @click="askUnbind(row, placement.materialId)">
               {{ zhCN.ad.unbind }} {{ placement.materialId }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -267,40 +265,40 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
-      <el-form-item :label="zhCN.ad.code">
-        <el-input v-model="form.code" data-testid="ad-position-code" :disabled="editing != null" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.ad.name">
-        <el-input v-model="form.name" data-testid="ad-position-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.ad.form">
-        <el-select v-model="form.form" data-testid="ad-position-form">
-        <el-option value="CAROUSEL" label="CAROUSEL" />
-        <el-option value="IMAGE" label="IMAGE" />
-        <el-option value="SPLASH" label="SPLASH" />
-        <el-option value="POPUP" label="POPUP" />
-        <el-option value="FLOAT" label="FLOAT" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.ad.platforms">
-        <el-input v-model="form.platforms" data-testid="ad-position-platforms" />
-      </el-form-item>
+      <a-form-item :label="zhCN.ad.code">
+        <a-input v-model:value="form.code" data-testid="ad-position-code" :disabled="editing != null" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.ad.name">
+        <a-input v-model:value="form.name" data-testid="ad-position-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.ad.form">
+        <a-select v-model:value="form.form" data-testid="ad-position-form">
+        <a-select-option value="CAROUSEL">CAROUSEL</a-select-option>
+        <a-select-option value="IMAGE">IMAGE</a-select-option>
+        <a-select-option value="SPLASH">SPLASH</a-select-option>
+        <a-select-option value="POPUP">POPUP</a-select-option>
+        <a-select-option value="FLOAT">FLOAT</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.ad.platforms">
+        <a-input v-model:value="form.platforms" data-testid="ad-position-platforms" />
+      </a-form-item>
       <template v-if="editing">
-        <el-form-item :label="zhCN.ad.materialId">
-        <el-input v-model="form.materialId" data-testid="ad-position-material-id" />
-      </el-form-item>
-        <el-form-item :label="zhCN.ad.weight">
-        <el-input v-model="form.weight" data-testid="ad-position-weight" />
-      </el-form-item>
-        <el-form-item :label="zhCN.ad.startTime">
-        <el-input v-model="form.startTime" type="datetime-local" data-testid="ad-position-start" />
-      </el-form-item>
-        <el-form-item :label="zhCN.ad.endTime">
-        <el-input v-model="form.endTime" type="datetime-local" data-testid="ad-position-end" />
-      </el-form-item>
-        <el-button v-auth="PERMS.AD_POSITION_UPDATE" data-testid="ad-position-bind" @click="onBind">
+        <a-form-item :label="zhCN.ad.materialId">
+        <a-input v-model:value="form.materialId" data-testid="ad-position-material-id" />
+      </a-form-item>
+        <a-form-item :label="zhCN.ad.weight">
+        <a-input v-model:value="form.weight" data-testid="ad-position-weight" />
+      </a-form-item>
+        <a-form-item :label="zhCN.ad.startTime">
+        <a-date-picker v-model:value="form.startTime" data-testid="ad-position-start" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      </a-form-item>
+        <a-form-item :label="zhCN.ad.endTime">
+        <a-date-picker v-model:value="form.endTime" data-testid="ad-position-end" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      </a-form-item>
+        <a-button v-auth="PERMS.AD_POSITION_UPDATE" data-testid="ad-position-bind" @click="onBind">
           {{ zhCN.ad.bind }}
-        </el-button>
+        </a-button>
       </template>
     </FormDialog>
     <ConfirmDialog

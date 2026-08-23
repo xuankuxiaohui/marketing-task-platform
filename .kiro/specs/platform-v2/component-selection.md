@@ -86,7 +86,7 @@
 
 | 能力 | 选型 | 说明 |
 |------|------|------|
-| 管理后台框架 | **vue-pure-admin-thin**（Vue3 + Element Plus + Pinia + Vite） | RBAC 动态路由 / 权限指令 / 多标签开箱即用 |
+| 管理后台框架 | **vue-pure-admin-thin** 骨架（Vue3 + **Ant Design Vue** + Pinia + Vite） | RBAC 动态路由 / 权限指令 / 多标签；组件库为 Ant Design Vue |
 | 任务流程画布（R11 编辑器） | **vue-flow**（MIT） | 任务 37 画布 |
 | 看板图表（P1 R23） | **ECharts**（Apache-2.0） | 事实标准。不引入 Metabase / Superset（独立部署 + 权限打通成本，需求只是趋势图/漏斗） |
 | 活动富文本（P1 R22） | **wangEditor v5**（备选 TipTap） | 中文生态成熟、可控 toolbar（服务端白名单过滤配合 R22） |
@@ -135,4 +135,4 @@
 
 ## 8. 许可证速查（商用友好性）
 
-确定项：Spring 系 / MyBatis-Plus / Sa-Token / Redisson / Caffeine / Flyway(OSS) / springdoc / AviatorScript / ArchUnit / ECharts = Apache-2.0；Vue / Element Plus / Vant / pure-admin / vue-flow / Playwright / Testcontainers / logstash-logback-encoder = MIT；MySQL 客户端 = GPL-2.0（仅作为库依赖分发无传染风险，自用部署无问题）。待任务 1–8 复核项：easy-captcha、aj-captcha、jqwik、wangEditor（以各仓库 LICENSE 为准，均为常见宽松许可）。
+确定项：Spring 系 / MyBatis-Plus / Sa-Token / Redisson / Caffeine / Flyway(OSS) / springdoc / AviatorScript / ArchUnit / ECharts = Apache-2.0；Vue / Ant Design Vue / Vant / pure-admin / vue-flow / Playwright / Testcontainers / logstash-logback-encoder = MIT；MySQL 客户端 = GPL-2.0（仅作为库依赖分发无传染风险，自用部署无问题）。待任务 1–8 复核项：easy-captcha、aj-captcha、jqwik、wangEditor（以各仓库 LICENSE 为准，均为常见宽松许可）。

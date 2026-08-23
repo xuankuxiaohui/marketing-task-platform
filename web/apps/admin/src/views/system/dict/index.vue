@@ -19,13 +19,14 @@ import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "DictManagePage" });
 
 const types = ref<DictTypeView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const selected = ref<DictTypeView | null>(null);
@@ -150,6 +151,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -159,108 +166,95 @@ onMounted(() => {
   <section class="admin-page" data-testid="dict-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.dict.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.DICT_TYPE_CREATE" data-testid="dict-type-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.DICT_TYPE_CREATE" data-testid="dict-type-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="types.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.DICT_TYPE_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="types" class="data-table admin-table" data-testid="dict-type-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.DICT_TYPE_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="types" class="data-table admin-table" data-testid="dict-type-table" size="small" stripe>
-      <el-table-column :label="zhCN.dict.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.dict.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.dict.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.dict.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
             {{ adminStatusLabel(row.status) }}
-          </el-tag>
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.createdAt">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.common.createdAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.createdAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text data-testid="dict-type-select" @click="selectType(row)">{{ zhCN.dict.entries }}</el-button>
-            <el-button text v-auth="PERMS.DICT_TYPE_UPDATE" data-testid="dict-type-edit" @click="openEdit(row)">
+            <a-button size="small" data-testid="dict-type-select" @click="selectType(row)">{{ zhCN.dict.entries }}</a-button>
+            <a-button size="small" v-auth="PERMS.DICT_TYPE_UPDATE" data-testid="dict-type-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text v-auth="PERMS.DICT_TYPE_DELETE" data-testid="dict-type-delete" @click="askDelete(row)">
+            </a-button>
+            <a-button size="small" danger v-auth="PERMS.DICT_TYPE_DELETE" data-testid="dict-type-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
+      </a-table-column>
+    </a-table>
     <div v-if="selected" class="entry-panel" data-testid="dict-entry-panel">
       <h3>{{ zhCN.dict.entries }} · {{ selected.code }}</h3>
       <p class="hint">{{ zhCN.dict.enabledOnly }}</p>
-      <el-button
-        v-auth="PERMS.DICT_ENTRY_CREATE"
-        data-testid="dict-entry-create"
-        @click="entryOpen = true"
-      >
+      <a-button v-auth="PERMS.DICT_ENTRY_CREATE" data-testid="dict-entry-create" @click="entryOpen = true">
         {{ zhCN.dict.addEntry }}
-      </el-button>
-      <el-table :data="entries" class="data-table admin-table" data-testid="dict-entry-table" size="small" stripe>
-      <el-table-column :label="zhCN.dict.label">
-        <template #default="{ row }">{{ row.label }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.dict.value">
-        <template #default="{ row }">{{ row.value }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.dict.sort">
-        <template #default="{ row }">{{ row.sort }}</template>
-      </el-table-column>
-    </el-table>
-    </div>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
+      </a-button>
+      <a-table :data-source="entries" class="data-table admin-table" data-testid="dict-entry-table" size="small" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.dict.label">
+        <template #default="{ record: row }">{{ row.label }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.dict.value">
+        <template #default="{ record: row }">{{ row.value }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.dict.sort">
+        <template #default="{ record: row }">{{ row.sort }}</template>
+      </a-table-column>
+    </a-table>
     </div>
     <FormDialog :visible="formOpen" :title="editing ? zhCN.common.edit : zhCN.common.create" :saving="saving" @submit="submitType" @cancel="formOpen = false">
-      <el-form-item v-if="!editing" :label="zhCN.dict.code">
-        <el-input v-model="form.code" data-testid="dict-code" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.dict.name">
-        <el-input v-model="form.name" data-testid="dict-name" required />
-      </el-form-item>
-      <el-form-item v-if="editing" :label="zhCN.common.status">
-        <el-select v-model="form.status">
-        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
-        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.common.remark">
-        <el-input v-model="form.remark" />
-      </el-form-item>
+      <a-form-item v-if="!editing" :label="zhCN.dict.code">
+        <a-input v-model:value="form.code" data-testid="dict-code" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.dict.name">
+        <a-input v-model:value="form.name" data-testid="dict-name" required />
+      </a-form-item>
+      <a-form-item v-if="editing" :label="zhCN.common.status">
+        <a-select v-model:value="form.status">
+        <a-select-option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</a-select-option>
+        <a-select-option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.common.remark">
+        <a-input v-model:value="form.remark" />
+      </a-form-item>
     </FormDialog>
     <FormDialog :visible="entryOpen" :title="zhCN.dict.addEntry" :saving="saving" @submit="submitEntry" @cancel="entryOpen = false">
-      <el-form-item :label="zhCN.dict.label">
-        <el-input v-model="entryForm.label" data-testid="entry-label" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.dict.value">
-        <el-input v-model="entryForm.value" data-testid="entry-value" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.dict.sort">
-        <el-input v-model.number="entryForm.sort" data-testid="entry-sort" type="number" required />
-      </el-form-item>
+      <a-form-item :label="zhCN.dict.label">
+        <a-input v-model:value="entryForm.label" data-testid="entry-label" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.dict.value">
+        <a-input v-model:value="entryForm.value" data-testid="entry-value" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.dict.sort">
+        <a-input v-model:value.number="entryForm.sort" data-testid="entry-sort" required type="number" />
+      </a-form-item>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"

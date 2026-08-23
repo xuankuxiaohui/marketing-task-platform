@@ -61,6 +61,7 @@ export const zhCN = {
     SIGNED: "已签到",
   },
   layout: {
+    home: "首页",
     logout: "退出",
     emptyMenu: "暂无菜单权限",
     tags: "已打开页面",
@@ -68,6 +69,11 @@ export const zhCN = {
     closeOthers: "关闭其他",
     closeLeft: "关闭左侧",
     closeRight: "关闭右侧",
+    collapseMenu: "收起菜单",
+    expandMenu: "展开菜单",
+    scrollLeft: "向左滚动标签",
+    scrollRight: "向右滚动标签",
+    tagActions: "标签操作",
   },
   menuGroup: {
     dashboard: "工作台",

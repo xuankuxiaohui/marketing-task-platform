@@ -5,7 +5,7 @@
 - **What this is:** 运营编排任务，C 端按步骤完成并发奖。两端账号隔离。
 - **Who it's for:** 后台 = 运营；门户 = C 端用户。
 - **Project type:** 后台是桌面运营台；门户是移动端 H5 / WebView。
-- **UI libraries:** admin = Element Plus；client = Vant 4。禁止第二套 CSS 框架。
+- **UI libraries:** admin = Ant Design Vue；client = Vant 4。禁止第二套 CSS 框架。
 
 ## Aesthetic Direction
 

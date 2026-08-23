@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/activity", () => ({
@@ -42,6 +43,6 @@ describe("ActivityParticipationPage", () => {
     const wrapper = mount(ActivityParticipationPage, { global: { plugins: [pinia] } });
     await flushPromises();
     expect(wrapper.get('[data-testid="activity-participation-table"]').text()).toContain("PASS");
-    expect(wrapper.get('[data-testid="activity-participation-query"]').text()).toContain(zhCN.common.query);
+    expect(visibleText(wrapper, "activity-participation-query")).toContain(zhCN.common.query);
   });
 });

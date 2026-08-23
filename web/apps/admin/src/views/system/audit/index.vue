@@ -5,13 +5,15 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import EllipsisCell from "@/components/EllipsisCell.vue";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "AuditLogPage" });
 
 const records = ref<AuditView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({
@@ -53,6 +55,12 @@ async function load(): Promise<void> {
   total.value = parsed.data?.total ?? 0;
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -64,51 +72,55 @@ onMounted(() => {
       <h2>{{ zhCN.audit.title }}</h2>
     </div>
     <p class="hint" data-testid="audit-no-delete">{{ zhCN.audit.noDelete }}</p>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.operatorId" data-testid="filter-operator" :placeholder="zhCN.audit.operatorId" />
-      <el-input v-model="filters.module" data-testid="filter-module" :placeholder="zhCN.audit.module" />
-      <el-input v-model="filters.action" data-testid="filter-action" :placeholder="zhCN.audit.action" />
-      <el-input v-model="filters.result" data-testid="filter-result" :placeholder="zhCN.audit.result" />
-      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <el-button data-testid="audit-query" @click="load">{{ zhCN.common.query }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.operatorId" data-testid="filter-operator" :placeholder="zhCN.audit.operatorId" />
+      <a-input v-model:value="filters.module" data-testid="filter-module" :placeholder="zhCN.audit.module" />
+      <a-input v-model:value="filters.action" data-testid="filter-action" :placeholder="zhCN.audit.action" />
+      <a-input v-model:value="filters.result" data-testid="filter-result" :placeholder="zhCN.audit.result" />
+      <a-date-picker v-model:value="filters.from" data-testid="filter-from" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-date-picker v-model:value="filters.to" data-testid="filter-to" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-button type="primary" data-testid="audit-query" @click="load">{{ zhCN.common.query }}</a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="audit-table" size="small" stripe>
-      <el-table-column :label="zhCN.audit.module">
-        <template #default="{ row }">{{ row.module }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.audit.action">
-        <template #default="{ row }">{{ row.action }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.audit.operatorName">
-        <template #default="{ row }">{{ row.operatorName }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.audit.result">
-        <template #default="{ row }">{{ row.result }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.audit.summary">
-        <template #default="{ row }">{{ row.requestSummary }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.audit.costMs">
-        <template #default="{ row }">{{ row.costMs }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.audit.traceId">
-        <template #default="{ row }">{{ row.traceId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.createdAt">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
-    </div>
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table audit-table" data-testid="audit-table" table-layout="fixed" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+      </template>
+
+      <a-table-column :title="zhCN.audit.module" :width="120">
+        <template #default="{ record: row }"><EllipsisCell :value="row.module" :max="16" /></template>
+      </a-table-column>
+      <a-table-column :title="zhCN.audit.action" :width="160">
+        <template #default="{ record: row }"><EllipsisCell :value="row.action" :max="20" /></template>
+      </a-table-column>
+      <a-table-column :title="zhCN.audit.operatorName" :width="120">
+        <template #default="{ record: row }"><EllipsisCell :value="row.operatorName" :max="16" /></template>
+      </a-table-column>
+      <a-table-column :title="zhCN.audit.result" :width="100">
+        <template #default="{ record: row }"><EllipsisCell :value="row.result" :max="12" /></template>
+      </a-table-column>
+      <a-table-column :title="zhCN.audit.summary">
+        <template #default="{ record: row }">
+          <span data-testid="audit-summary"><EllipsisCell :value="row.requestSummary" :max="28" /></span>
+        </template>
+      </a-table-column>
+      <a-table-column :title="zhCN.audit.costMs" :width="88">
+        <template #default="{ record: row }">{{ row.costMs }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.audit.traceId" :width="140">
+        <template #default="{ record: row }">
+          <span data-testid="audit-trace"><EllipsisCell :value="row.traceId" :max="16" /></span>
+        </template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.createdAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.createdAt) }}</template>
+      </a-table-column>
+    </a-table>
   </section>
 </template>
+
+<style scoped>
+.audit-table :deep(.ant-table-cell) {
+  overflow: hidden;
+}
+</style>

@@ -50,7 +50,7 @@ async function captchaFromResponsePayload(
   return waitRedisGet(`captcha:${realm}:${captchaId}`);
 }
 
-/** Fill an el-input whether data-testid is on the wrapper or the native input. */
+/** Fill an input whether data-testid is on the wrapper or the native input. */
 export async function fillTestIdInput(page: Page, testId: string, value: string): Promise<void> {
   const root = page.getByTestId(testId);
   const inner = root.locator("input");

@@ -7,13 +7,14 @@ import { TRACK_SOURCES } from "@/constants/track";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "TrackEventPage" });
 
 const records = ref<TrackDebugEventResponse[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({
@@ -52,6 +53,12 @@ function eventsText(row: TrackDebugEventResponse): string {
   return JSON.stringify(row.events ?? []);
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -63,56 +70,50 @@ onMounted(() => {
       <h2>{{ zhCN.trackEvent.title }}</h2>
     </div>
     <p class="hint" data-testid="debug-no-side-effect">{{ zhCN.trackEvent.hint }}</p>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.trackEvent.eventCode" />
-      <el-input v-model="filters.userId" data-testid="filter-user" :placeholder="zhCN.trackEvent.userId" />
-      <el-select v-model="filters.source" data-testid="filter-source">
-        <el-option value="" :label="zhCN.trackEvent.source" />
-        <el-option v-for="item in TRACK_SOURCES" :key="item" :value="item" :label="item" />
-      </el-select>
-      <el-input v-model="filters.deviceId" data-testid="filter-device" :placeholder="zhCN.trackEvent.deviceId" />
-      <el-input v-model="filters.from" data-testid="filter-from" type="datetime-local" />
-      <el-input v-model="filters.to" data-testid="filter-to" type="datetime-local" />
-      <el-button v-auth="PERMS.TRACK_EVENT_QUERY" data-testid="debug-query" @click="load">
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="filters.eventCode" data-testid="filter-code" :placeholder="zhCN.trackEvent.eventCode" />
+      <a-input v-model:value="filters.userId" data-testid="filter-user" :placeholder="zhCN.trackEvent.userId" />
+      <a-select v-model:value="filters.source" data-testid="filter-source">
+        <a-select-option value="">{{ zhCN.trackEvent.source }}</a-select-option>
+        <a-select-option v-for="item in TRACK_SOURCES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      <a-input v-model:value="filters.deviceId" data-testid="filter-device" :placeholder="zhCN.trackEvent.deviceId" />
+      <a-date-picker v-model:value="filters.from" data-testid="filter-from" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-date-picker v-model:value="filters.to" data-testid="filter-to" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
+      <a-button type="primary" v-auth="PERMS.TRACK_EVENT_QUERY" data-testid="debug-query" @click="load">
         {{ zhCN.common.query }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="debug-table" size="small" stripe>
-      <el-table-column :label="zhCN.trackEvent.source">
-        <template #default="{ row }">{{ row.source }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.eventCode">
-        <template #default="{ row }">{{ row.eventCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.userId">
-        <template #default="{ row }">{{ row.userId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.deviceId">
-        <template #default="{ row }">{{ row.deviceId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.registered">
-        <template #default="{ row }">{{ row.registered ? zhCN.common.enabled : zhCN.common.disabled }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.simulated">
-        <template #default="{ row }">{{ row.simulated ? zhCN.common.enabled : zhCN.common.disabled }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.serverTime">
-        <template #default="{ row }">{{ formatDateTime(row.serverTime) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.trackEvent.events">
-        <template #default="{ row }"><span data-testid="debug-events">{{ eventsText(row) }}</span></template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
-    </div>
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="debug-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+      </template>
+
+      <a-table-column :title="zhCN.trackEvent.source">
+        <template #default="{ record: row }">{{ row.source }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.eventCode">
+        <template #default="{ record: row }">{{ row.eventCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.userId">
+        <template #default="{ record: row }">{{ row.userId }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.deviceId">
+        <template #default="{ record: row }">{{ row.deviceId }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.registered">
+        <template #default="{ record: row }">{{ row.registered ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.simulated">
+        <template #default="{ record: row }">{{ row.simulated ? zhCN.common.enabled : zhCN.common.disabled }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.serverTime">
+        <template #default="{ record: row }">{{ formatDateTime(row.serverTime) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.trackEvent.events">
+        <template #default="{ record: row }"><span data-testid="debug-events">{{ eventsText(row) }}</span></template>
+      </a-table-column>
+    </a-table>
   </section>
 </template>

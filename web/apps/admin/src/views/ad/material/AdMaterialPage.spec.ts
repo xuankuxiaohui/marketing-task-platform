@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/ad", () => ({
@@ -52,6 +53,6 @@ describe("AdMaterialPage", () => {
   it("lists materials", async () => {
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="ad-material-table"]').text()).toContain("夏日");
-    expect(wrapper.get('[data-testid="ad-material-create"]').text()).toContain(zhCN.common.create);
+    expect(visibleText(wrapper, "ad-material-create")).toContain(zhCN.common.create);
   });
 });

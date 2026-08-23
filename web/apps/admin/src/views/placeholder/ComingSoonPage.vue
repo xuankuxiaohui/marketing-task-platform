@@ -14,7 +14,7 @@ const title = computed(() => (typeof route.meta.title === "string" ? route.meta.
     <div class="admin-page__header">
       <h2>{{ title }}</h2>
     </div>
-    <p>{{ zhCN.placeholder.hint }}</p>
+    <a-empty :description="zhCN.placeholder.hint" />
   </section>
 </template>
 

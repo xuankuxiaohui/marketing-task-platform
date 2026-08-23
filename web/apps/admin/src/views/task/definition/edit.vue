@@ -335,62 +335,56 @@ onMounted(async () => {
     <div class="admin-page__header">
       <h2>{{ zhCN.task.editTitle }}</h2>
     </div>
+    <a-spin :spinning="loading">
     <p v-if="form.pendingRevision" data-testid="pending-revision">{{ zhCN.task.pendingRevision }}</p>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button
-        type="primary"
-        v-auth="form.id ? PERMS.TASK_DEF_UPDATE : PERMS.TASK_DEF_CREATE"
-        data-testid="task-save"
-        :disabled="saving"
-        @click="save"
-      >
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-button type="primary" v-auth="form.id ? PERMS.TASK_DEF_UPDATE : PERMS.TASK_DEF_CREATE" data-testid="task-save" :disabled="saving" @click="save">
         {{ zhCN.common.save }}
-      </el-button>
-      <el-button v-if="form.id" v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish">
+      </a-button>
+      <a-button v-if="form.id" v-auth="PERMS.TASK_DEF_PUBLISH" data-testid="task-publish" @click="onPublish">
         {{ zhCN.task.publish }}
-      </el-button>
-      <el-button v-if="form.pendingRevision" v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-reset-revision" @click="onResetRevision">
+      </a-button>
+      <a-button v-if="form.pendingRevision" v-auth="PERMS.TASK_DEF_UPDATE" data-testid="task-reset-revision" @click="onResetRevision">
         {{ zhCN.task.resetRevision }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <div class="split-panels">
-      <el-form-item :label="zhCN.task.code">
-        <el-input v-model="form.code" data-testid="task-code" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.task.name">
-        <el-input v-model="form.name" data-testid="task-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.task.category">
-        <el-input v-model="form.category" data-testid="task-category" />
-      </el-form-item>
-      <el-form-item :label="zhCN.task.cycleType">
-        <el-select v-model="form.cycleType" data-testid="task-cycle">
-        <el-option v-for="item in CYCLE_TYPES" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.task.cronExpr">
-        <el-input v-model="form.cronExpr" data-testid="task-cron" />
-      </el-form-item>
-      <el-form-item :label="zhCN.task.sortWeight">
-        <el-input v-model.number="form.sortWeight" data-testid="task-weight" type="number" />
-      </el-form-item>
-      <el-form-item :label="zhCN.task.mutexGroup">
-        <el-select v-model="form.mutexGroupId" data-testid="task-mutex">
-        <el-option value="" label="—" />
-        <el-option v-for="group in mutexGroups" :key="group.id" :value="String(group.id)" :label="group.name" />
-      </el-select>
-      </el-form-item>
-      <el-form-item :label="zhCN.task.grayType">
-        <el-select v-model="form.grayType" data-testid="task-gray">
-        <el-option v-for="item in GRAY_TYPES" :key="item" :value="item" :label="item" />
-      </el-select>
-      </el-form-item>
+      <a-form-item :label="zhCN.task.code">
+        <a-input v-model:value="form.code" data-testid="task-code" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.task.name">
+        <a-input v-model:value="form.name" data-testid="task-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.task.category">
+        <a-input v-model:value="form.category" data-testid="task-category" />
+      </a-form-item>
+      <a-form-item :label="zhCN.task.cycleType">
+        <a-select v-model:value="form.cycleType" data-testid="task-cycle">
+        <a-select-option v-for="item in CYCLE_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.task.cronExpr">
+        <a-input v-model:value="form.cronExpr" data-testid="task-cron" />
+      </a-form-item>
+      <a-form-item :label="zhCN.task.sortWeight">
+        <a-input v-model:value.number="form.sortWeight" data-testid="task-weight" type="number" />
+      </a-form-item>
+      <a-form-item :label="zhCN.task.mutexGroup">
+        <a-select v-model:value="form.mutexGroupId" data-testid="task-mutex">
+        <a-select-option value="">—</a-select-option>
+        <a-select-option v-for="group in mutexGroups" :key="group.id" :value="String(group.id)">{{ group.name }}</a-select-option>
+      </a-select>
+      </a-form-item>
+      <a-form-item :label="zhCN.task.grayType">
+        <a-select v-model:value="form.grayType" data-testid="task-gray">
+        <a-select-option v-for="item in GRAY_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      </a-form-item>
     </div>
-    <el-form-item :label="zhCN.task.filterExpr">
-        <el-input v-model="form.filterExpr" data-testid="task-filter" />
-      </el-form-item>
+    <a-form-item :label="zhCN.task.filterExpr">
+        <a-input v-model:value="form.filterExpr" data-testid="task-filter" />
+      </a-form-item>
     <h3>{{ zhCN.task.canvas }}</h3>
     <ul data-testid="task-canvas-steps">
       <li v-for="node in nodes" :key="node.id">{{ node.data.code }} {{ node.data.type }}</li>
@@ -401,35 +395,36 @@ onMounted(async () => {
       @select-node="selectedNodeId = $event"
       @select-edge="selectedEdgeId = $event"
     />
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="stepForm.code" data-testid="step-code" :placeholder="zhCN.task.stepCode" />
-      <el-input v-model="stepForm.name" data-testid="step-name" :placeholder="zhCN.task.stepName" />
-      <el-select v-model="stepForm.type" data-testid="step-type">
-        <el-option v-for="item in STEP_TYPES" :key="item" :value="item" :label="item" />
-      </el-select>
-      <el-input v-if="stepForm.type === 'PROGRESS'" v-model.number="stepForm.progressTarget" data-testid="step-progress" type="number" />
-      <el-input v-if="stepForm.type === 'REWARD'" v-model="stepForm.prizeId" data-testid="step-prize" :placeholder="zhCN.task.prizeId" />
-      <el-button data-testid="step-add" @click="addStep">{{ zhCN.task.addStep }}</el-button>
-    </el-form>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="edgeForm.fromStepCode" data-testid="edge-from" :placeholder="zhCN.task.fromStep" />
-      <el-input v-model="edgeForm.toStepCode" data-testid="edge-to" :placeholder="zhCN.task.toStep" />
-      <el-input v-model="edgeForm.conditionExpr" data-testid="edge-cond" :placeholder="zhCN.task.condition" />
-      <el-input v-model.number="edgeForm.priority" data-testid="edge-priority" type="number" />
-      <el-button data-testid="edge-add" @click="addEdge">{{ zhCN.task.addEdge }}</el-button>
-    </el-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="stepForm.code" data-testid="step-code" :placeholder="zhCN.task.stepCode" />
+      <a-input v-model:value="stepForm.name" data-testid="step-name" :placeholder="zhCN.task.stepName" />
+      <a-select v-model:value="stepForm.type" data-testid="step-type">
+        <a-select-option v-for="item in STEP_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      <a-input v-if="stepForm.type === 'PROGRESS'" v-model:value.number="stepForm.progressTarget" data-testid="step-progress" type="number" />
+      <a-input v-if="stepForm.type === 'REWARD'" v-model:value="stepForm.prizeId" data-testid="step-prize" :placeholder="zhCN.task.prizeId" />
+      <a-button data-testid="step-add" @click="addStep">{{ zhCN.task.addStep }}</a-button>
+    </a-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="edgeForm.fromStepCode" data-testid="edge-from" :placeholder="zhCN.task.fromStep" />
+      <a-input v-model:value="edgeForm.toStepCode" data-testid="edge-to" :placeholder="zhCN.task.toStep" />
+      <a-input v-model:value="edgeForm.conditionExpr" data-testid="edge-cond" :placeholder="zhCN.task.condition" />
+      <a-input v-model:value.number="edgeForm.priority" data-testid="edge-priority" type="number" />
+      <a-button data-testid="edge-add" @click="addEdge">{{ zhCN.task.addEdge }}</a-button>
+    </a-form>
     <p v-if="selectedNode" data-testid="selected-step">{{ selectedNode.data.code }} {{ selectedNode.data.type }}</p>
     <p v-if="selectedEdge" data-testid="selected-edge">{{ selectedEdge.source }} → {{ selectedEdge.target }}</p>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-select v-model="exprForm.type" data-testid="expr-type">
-        <el-option v-for="item in EXPR_TYPES" :key="item" :value="item" :label="item" />
-      </el-select>
-      <el-input v-model="exprForm.expression" data-testid="expr-input" :placeholder="zhCN.task.condition" />
-      <el-button v-auth="PERMS.TASK_EXPR_VALIDATE" data-testid="expr-validate" @click="onValidate">
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-select v-model:value="exprForm.type" data-testid="expr-type">
+        <a-select-option v-for="item in EXPR_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+      </a-select>
+      <a-input v-model:value="exprForm.expression" data-testid="expr-input" :placeholder="zhCN.task.condition" />
+      <a-button v-auth="PERMS.TASK_EXPR_VALIDATE" data-testid="expr-validate" @click="onValidate">
         {{ zhCN.task.validate }}
-      </el-button>
+      </a-button>
       <span v-if="exprFeedback" data-testid="expr-result">{{ exprFeedback }}</span>
-    </el-form>
+    </a-form>
+    </a-spin>
     <ConfirmDialog
       :visible="confirm != null"
       :message="confirm?.message ?? ''"

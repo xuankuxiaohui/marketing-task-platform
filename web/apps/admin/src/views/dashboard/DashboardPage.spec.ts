@@ -4,7 +4,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
-import { ok } from "@/test-utils/result";
+import { fail, ok } from "@/test-utils/result";
 
 vi.mock("@/api/metrics", () => ({
   fetchFunnel: vi.fn(),
@@ -71,8 +71,17 @@ describe("DashboardPage", () => {
     expect(wrapper.get('[data-testid="card-spend"]').text()).toContain("20");
     expect(wrapper.get('[data-testid="card-risk"]').text()).toContain("2");
     expect(wrapper.get('[data-testid="card-ad"]').text()).toContain("1");
+    expect(wrapper.find(".ant-statistic").exists()).toBe(true);
+    expect(wrapper.get('[data-testid="card-funnel"]').classes().join(" ")).toContain("ant-card");
     expect(wrapper.get('[data-testid="dashboard-inbox"]').text()).toContain(zhCN.dashboard.interceptToday);
     expect(wrapper.get('[data-testid="metrics-link"]').text()).toContain(zhCN.metrics.open);
     expect(wrapper.get('[data-testid="metrics-link"]').attributes("href")).toBe("/metrics");
+  });
+
+  it("shows Ant Design Alert when a KPI request fails", async () => {
+    funnelMock.mockResolvedValue(fail("metrics.funnel.failed", "看板失败", "trace-dash"));
+    const wrapper = await mountPage();
+    expect(wrapper.find(".ant-alert").exists()).toBe(true);
+    expect(wrapper.get('[data-testid="page-error"]').text()).toContain("看板失败");
   });
 });

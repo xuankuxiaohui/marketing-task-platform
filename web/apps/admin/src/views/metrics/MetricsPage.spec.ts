@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
-import { setControl } from "@/test-utils/controls";
+import { setControl, visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("echarts", () => ({
@@ -101,7 +101,7 @@ describe("MetricsDashboardPage", () => {
     expect(wrapper.get('[data-testid="spend-table"]').text()).toContain("POINTS");
     expect(wrapper.get('[data-testid="risk-table"]').text()).toContain("R-a");
     expect(wrapper.get('[data-testid="ad-table"]').text()).toContain("home:m1");
-    expect(wrapper.get('[data-testid="metrics-query"]').text()).toContain(zhCN.common.query);
+    expect(visibleText(wrapper, "metrics-query")).toContain(zhCN.common.query);
   });
 
   it("queries with grain and dimKey", async () => {

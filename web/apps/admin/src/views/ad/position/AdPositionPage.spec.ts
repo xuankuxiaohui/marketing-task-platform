@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/ad", () => ({
@@ -55,6 +56,6 @@ describe("AdPositionPage", () => {
   it("lists positions", async () => {
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="ad-position-table"]').text()).toContain("home_banner");
-    expect(wrapper.get('[data-testid="ad-position-create"]').text()).toContain(zhCN.common.create);
+    expect(visibleText(wrapper, "ad-position-create")).toContain(zhCN.common.create);
   });
 });

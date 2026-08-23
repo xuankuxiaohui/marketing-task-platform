@@ -19,14 +19,15 @@ import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
-import { flattenPermissionTree } from "@/utils/permission-tree";
+import { toPermissionTreeData } from "@/utils/permission-tree";
+import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "RolePermissionPage" });
 
 const records = ref<RoleView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const formOpen = ref(false);
@@ -37,7 +38,7 @@ const form = reactive({ code: "", name: "", description: "", status: STATUS.ENAB
 const tree = ref<PermissionTreeNode[]>([]);
 const selectedIds = ref<number[]>([]);
 const confirm = ref<{ message: string; run: () => Promise<void> } | null>(null);
-const flatPermissions = ref(flattenPermissionTree([]));
+const treeData = ref(toPermissionTreeData([]));
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -84,19 +85,14 @@ async function openAssign(row: RoleView): Promise<void> {
     return;
   }
   tree.value = parsed.data ?? [];
-  flatPermissions.value = flattenPermissionTree(tree.value);
+  treeData.value = toPermissionTreeData(tree.value);
   selectedIds.value = [];
   assignOpen.value = true;
 }
 
-function togglePermission(id: number, checked: boolean): void {
-  if (checked) {
-    if (!selectedIds.value.includes(id)) {
-      selectedIds.value = [...selectedIds.value, id];
-    }
-    return;
-  }
-  selectedIds.value = selectedIds.value.filter((item) => item !== id);
+function onPermCheck(keys: (string | number)[] | { checked: (string | number)[] }): void {
+  const list = Array.isArray(keys) ? keys : keys.checked;
+  selectedIds.value = list.map(Number);
 }
 
 async function submitForm(): Promise<void> {
@@ -153,6 +149,12 @@ async function onConfirm(): Promise<void> {
   await current?.run();
 }
 
+
+function onTableChange(pag: { current?: number }): void {
+  page.value = pag.current ?? 1;
+  void load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -162,74 +164,55 @@ onMounted(() => {
   <section class="admin-page" data-testid="role-page">
     <div class="admin-page__header">
       <h2>{{ zhCN.role.title }}</h2>
-      <el-button type="primary" v-auth="PERMS.ROLE_CREATE" data-testid="role-create" @click="openCreate">
+      <a-button type="primary" v-auth="PERMS.ROLE_CREATE" data-testid="role-create" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
+      </a-button>
     </div>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
-    <div v-else-if="records.length === 0" data-testid="page-empty" class="page-empty">
-      <span>{{ zhCN.common.empty }}</span>
-      <el-button v-auth="PERMS.ROLE_CREATE" text type="primary" @click="openCreate">
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="role-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+<a-button v-auth="PERMS.ROLE_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
-      </el-button>
-    </div>
-    <el-table v-else :data="records" class="data-table admin-table" data-testid="role-table" size="small" stripe>
-      <el-table-column :label="zhCN.role.code">
-        <template #default="{ row }">{{ row.code }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.role.name">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">
-          <el-tag
-            size="small"
-            :type="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'info'"
-            :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'"
-          >
+      </a-button>
+        </a-empty>
+      </template>
+
+      <a-table-column :title="zhCN.role.code">
+        <template #default="{ record: row }">{{ row.code }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.role.name">
+        <template #default="{ record: row }">{{ row.name }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">
+          <a-tag :color="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'success' : 'default'" :class="row.status === 'ENABLED' || row.status === 'PUBLISHED' || row.status === 'SCHEDULED' ? 'status-tag--on' : 'status-tag--off'">
             {{ adminStatusLabel(row.status) }}
-          </el-tag>
+          </a-tag>
         </template>
-      </el-table-column>
-      <el-table-column :label="zhCN.role.userCount">
-        <template #default="{ row }">{{ row.userCount }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.createdAt">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.actions" min-width="240">
-        <template #default="{ row }">
+      </a-table-column>
+      <a-table-column :title="zhCN.role.userCount">
+        <template #default="{ record: row }">{{ row.userCount }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.createdAt">
+        <template #default="{ record: row }">{{ formatDateTime(row.createdAt) }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.actions" :width="240">
+        <template #default="{ record: row }">
           <div class="row-actions">
-            <el-button text v-auth="PERMS.ROLE_UPDATE" data-testid="role-edit" @click="openEdit(row)">
+            <a-button size="small" v-auth="PERMS.ROLE_UPDATE" data-testid="role-edit" @click="openEdit(row)">
               {{ zhCN.common.edit }}
-            </el-button>
-            <el-button text
-              v-if="!isBuiltIn(row)"
-              v-auth="PERMS.ROLE_ASSIGN"
-              data-testid="role-assign"
-              @click="openAssign(row)"
-            >
+            </a-button>
+            <a-button size="small" v-if="!isBuiltIn(row)" v-auth="PERMS.ROLE_ASSIGN" data-testid="role-assign" @click="openAssign(row)">
               {{ zhCN.role.assign }}
-            </el-button>
-            <el-button text
-              v-if="!isBuiltIn(row)"
-              v-auth="PERMS.ROLE_DELETE"
-              data-testid="role-delete"
-              @click="askDelete(row)"
-            >
+            </a-button>
+            <a-button size="small" danger v-if="!isBuiltIn(row)" v-auth="PERMS.ROLE_DELETE" data-testid="role-delete" @click="askDelete(row)">
               {{ zhCN.common.delete }}
-            </el-button>
+            </a-button>
           </div>
         </template>
-      </el-table-column>
-    </el-table>
-    <div class="pager">
-      <span>{{ zhCN.common.total }} {{ total }}</span>
-      <el-button :disabled="page <= 1" @click="page -= 1; load()">{{ zhCN.common.prevPage }}</el-button>
-      <span>{{ page }}</span>
-      <el-button :disabled="page * pageSize >= total" @click="page += 1; load()">{{ zhCN.common.nextPage }}</el-button>
-    </div>
+      </a-table-column>
+    </a-table>
     <FormDialog
       :visible="formOpen"
       :title="editing ? zhCN.common.edit : zhCN.common.create"
@@ -237,21 +220,21 @@ onMounted(() => {
       @submit="submitForm"
       @cancel="formOpen = false"
     >
-      <el-form-item v-if="!editing" :label="zhCN.role.code">
-        <el-input v-model="form.code" data-testid="role-code" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.role.name">
-        <el-input v-model="form.name" data-testid="role-name" required />
-      </el-form-item>
-      <el-form-item :label="zhCN.role.description">
-        <el-input v-model="form.description" data-testid="role-description" />
-      </el-form-item>
-      <el-form-item v-if="editing" :label="zhCN.common.status">
-        <el-select v-model="form.status" data-testid="role-status">
-        <el-option :value="STATUS.ENABLED" :label="zhCN.common.enabled" />
-        <el-option :value="STATUS.DISABLED" :label="zhCN.common.disabled" />
-      </el-select>
-      </el-form-item>
+      <a-form-item v-if="!editing" :label="zhCN.role.code">
+        <a-input v-model:value="form.code" data-testid="role-code" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.role.name">
+        <a-input v-model:value="form.name" data-testid="role-name" required />
+      </a-form-item>
+      <a-form-item :label="zhCN.role.description">
+        <a-input v-model:value="form.description" data-testid="role-description" />
+      </a-form-item>
+      <a-form-item v-if="editing" :label="zhCN.common.status">
+        <a-select v-model:value="form.status" data-testid="role-status">
+        <a-select-option :value="STATUS.ENABLED">{{ zhCN.common.enabled }}</a-select-option>
+        <a-select-option :value="STATUS.DISABLED">{{ zhCN.common.disabled }}</a-select-option>
+      </a-select>
+      </a-form-item>
     </FormDialog>
     <FormDialog
       :visible="assignOpen"
@@ -261,13 +244,23 @@ onMounted(() => {
       @cancel="assignOpen = false"
     >
       <p class="hint">{{ zhCN.role.assignHint }}</p>
-      <label v-for="node in flatPermissions" :key="node.id" class="perm-item" :style="{ paddingLeft: `${node.depth * 16}px` }">
-        <el-checkbox
-          :data-testid="`perm-${node.id}`"
-          :model-value="selectedIds.includes(node.id)"
-          @update:model-value="(val: boolean) => togglePermission(node.id, val)" />
-        {{ node.name }} <span v-if="node.code" class="hint">{{ node.code }}</span>
-      </label>
+      <div class="perm-tree-wrap">
+        <a-tree
+          v-if="treeData.length > 0"
+          class="perm-tree"
+          checkable
+          block-node
+          default-expand-all
+          :selectable="false"
+          :tree-data="treeData"
+          :checked-keys="selectedIds"
+          @check="onPermCheck"
+        >
+          <template #title="{ title, key }">
+            <span :data-testid="`perm-${key}`">{{ title }}</span>
+          </template>
+        </a-tree>
+      </div>
     </FormDialog>
     <ConfirmDialog
       :visible="confirm != null"
@@ -277,3 +270,18 @@ onMounted(() => {
     />
   </section>
 </template>
+
+<style scoped>
+.perm-tree-wrap {
+  grid-column: 1 / -1;
+  max-height: 420px;
+  overflow: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  background: #fff;
+}
+.perm-tree {
+  background: transparent;
+}
+</style>

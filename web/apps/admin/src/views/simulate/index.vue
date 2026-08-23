@@ -16,6 +16,7 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { ADMIN_PAGE_SIZE, adminRowKey } from "@/utils/table";
 
 defineOptions({ name: "SimulateTaskPage" });
 
@@ -66,7 +67,7 @@ async function run<T>(
 }
 
 async function loadList(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateList({ userId: userId(), category: form.category || undefined, page: 1, pageSize: 20 })), (data) => {
+  await run(async () => okOrFeedback(await simulateList({ userId: userId(), category: form.category || undefined, page: 1, pageSize: ADMIN_PAGE_SIZE })), (data) => {
     records.value = data.records ?? [];
     return `${zhCN.simulate.list}: ${data.total ?? 0}`;
   });
@@ -126,68 +127,70 @@ async function reverseRun(): Promise<void> {
     <div class="admin-page__header">
       <h2>{{ zhCN.simulate.title }}</h2>
     </div>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-input v-model="form.userId" data-testid="simulate-user" :placeholder="zhCN.simulate.userId" />
-      <el-input v-model="form.taskId" data-testid="simulate-task" :placeholder="zhCN.simulate.taskId" />
-      <el-input v-model="form.instanceId" data-testid="simulate-instance" :placeholder="zhCN.simulate.instanceId" />
-      <el-input v-model="form.stepCode" data-testid="simulate-step" :placeholder="zhCN.simulate.stepCode" />
-      <el-input v-model="form.category" data-testid="simulate-category" :placeholder="zhCN.simulate.category" />
-    </el-form>
-    <el-form :inline="true" class="admin-toolbar" @submit.prevent>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-list" @click="loadList">
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-input v-model:value="form.userId" data-testid="simulate-user" :placeholder="zhCN.simulate.userId" />
+      <a-input v-model:value="form.taskId" data-testid="simulate-task" :placeholder="zhCN.simulate.taskId" />
+      <a-input v-model:value="form.instanceId" data-testid="simulate-instance" :placeholder="zhCN.simulate.instanceId" />
+      <a-input v-model:value="form.stepCode" data-testid="simulate-step" :placeholder="zhCN.simulate.stepCode" />
+      <a-input v-model:value="form.category" data-testid="simulate-category" :placeholder="zhCN.simulate.category" />
+    </a-form>
+    <a-form layout="inline" class="admin-toolbar" @submit.prevent>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-list" @click="loadList">
         {{ zhCN.simulate.list }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-detail" @click="loadDetail">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-detail" @click="loadDetail">
         {{ zhCN.simulate.detail }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-start" @click="startTask">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-start" @click="startTask">
         {{ zhCN.simulate.start }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-click" @click="clickStep">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-click" @click="clickStep">
         {{ zhCN.simulate.click }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-callback" @click="callbackStep">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-callback" @click="callbackStep">
         {{ zhCN.simulate.callback }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-progress" @click="progressStep">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-progress" @click="progressStep">
         {{ zhCN.simulate.progress }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_FLOW" data-testid="simulate-flow" @click="runFlow">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_FLOW" data-testid="simulate-flow" @click="runFlow">
         {{ zhCN.simulate.flow }}
-      </el-button>
-      <el-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-reverse" @click="reverseRun">
+      </a-button>
+      <a-button v-auth="PERMS.SIMULATE_TASK" data-testid="simulate-reverse" @click="reverseRun">
         {{ zhCN.simulate.reverse }}
-      </el-button>
-    </el-form>
+      </a-button>
+    </a-form>
     <FeedbackBanner :feedback="feedback" />
-    <p v-if="loading" data-testid="page-loading">{{ zhCN.common.loading }}</p>
     <p v-if="lastResult" data-testid="simulate-result">{{ lastResult }}</p>
-    <p v-if="records.length === 0 && !loading" data-testid="page-empty">{{ zhCN.common.empty }}</p>
-    <el-table v-else-if="records.length > 0" :data="records" class="data-table" data-testid="simulate-table" stripe>
-      <el-table-column :label="zhCN.simulate.taskId">
-        <template #default="{ row }">{{ row.taskId }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.simulate.taskCode">
-        <template #default="{ row }">{{ row.taskCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.userStatus }}</template>
-      </el-table-column>
-    </el-table>
-    <el-table v-if="flowSteps.length > 0" :data="flowSteps" class="data-table" data-testid="simulate-flow-table" stripe>
-      <el-table-column :label="zhCN.simulate.stepCode">
-        <template #default="{ row }">{{ row.stepCode }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.simulate.stepType">
-        <template #default="{ row }">{{ row.type }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.simulate.action">
-        <template #default="{ row }">{{ row.action }}</template>
-      </el-table-column>
-      <el-table-column :label="zhCN.common.status">
-        <template #default="{ row }">{{ row.stepStatus }}</template>
-      </el-table-column>
-    </el-table>
+    <a-table size="small" :loading="loading" :data-source="records" class="data-table" data-testid="simulate-table" :pagination="false" :row-key="adminRowKey">
+      <template #emptyText>
+        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+      </template>
+
+      <a-table-column :title="zhCN.simulate.taskId">
+        <template #default="{ record: row }">{{ row.taskId }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.simulate.taskCode">
+        <template #default="{ record: row }">{{ row.taskCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">{{ row.userStatus }}</template>
+      </a-table-column>
+    </a-table>
+    <a-table size="small" v-if="flowSteps.length > 0" :data-source="flowSteps" class="data-table" data-testid="simulate-flow-table" :pagination="false" :row-key="adminRowKey">
+      <a-table-column :title="zhCN.simulate.stepCode">
+        <template #default="{ record: row }">{{ row.stepCode }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.simulate.stepType">
+        <template #default="{ record: row }">{{ row.type }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.simulate.action">
+        <template #default="{ record: row }">{{ row.action }}</template>
+      </a-table-column>
+      <a-table-column :title="zhCN.common.status">
+        <template #default="{ record: row }">{{ row.stepStatus }}</template>
+      </a-table-column>
+    </a-table>
   </section>
 </template>
 

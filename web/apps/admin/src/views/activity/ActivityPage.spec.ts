@@ -5,6 +5,7 @@ import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { visibleText } from "@/test-utils/controls";
 import { ok } from "@/test-utils/result";
 
 vi.mock("@/api/activity", () => ({
@@ -70,9 +71,23 @@ describe("ActivityManagePage", () => {
     );
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="activity-table"]').text()).toContain("summer");
-    expect(wrapper.get('[data-testid="activity-create"]').text()).toContain(zhCN.common.create);
+    expect(wrapper.find(".ant-pagination").exists()).toBe(true);
+    expect(wrapper.find(".pager").exists()).toBe(false);
+    expect(visibleText(wrapper, "activity-create")).toContain(zhCN.common.create);
     await wrapper.get('[data-testid="activity-publish"]').trigger("click");
     await flushPromises();
     expect(publishMock).toHaveBeenCalledWith(3, { confirm: false, early: true });
+  });
+
+  it("shows Ant Design empty and date picker instead of homemade chrome", async () => {
+    pageMock.mockResolvedValue(ok({ total: 0, records: [] }));
+    const wrapper = await mountPage();
+    expect(wrapper.find(".ant-empty").exists()).toBe(true);
+    expect(wrapper.get('[data-testid="page-empty"]').exists()).toBe(true);
+    expect(wrapper.find(".pager").exists()).toBe(false);
+    await wrapper.get('[data-testid="activity-create"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".ant-picker").exists()).toBe(true);
+    expect(wrapper.find('input[type="datetime-local"]').exists()).toBe(false);
   });
 });
