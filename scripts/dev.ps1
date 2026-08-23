@@ -278,10 +278,10 @@ function Resolve-Jar([string]$Name) {
 }
 
 function Invoke-Package {
-    Write-Info "mvn -DskipTests -DskipITs package （JAVA_HOME=$env:JAVA_HOME）"
+    Write-Info "mvn -DskipTests -DskipITs -Djacoco.skip=true package （JAVA_HOME=$env:JAVA_HOME）"
     Push-Location (Join-Path $Root 'server')
     try {
-        & mvn -DskipTests -DskipITs package
+        & mvn '-DskipTests' '-DskipITs' '-Djacoco.skip=true' package
         if ($LASTEXITCODE -ne 0) { throw "mvn package 失败 (exit $LASTEXITCODE)" }
     } finally {
         Pop-Location

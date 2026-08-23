@@ -30,7 +30,7 @@ JDK 用 **26**。本机 PATH 默认是 25，脚本会优先 `D:\develop\jdk\jdk-
 .\scripts\dev.ps1 start              # 四个都起（缺 jar 会先 package）
 .\scripts\dev.ps1 status
 .\scripts\dev.ps1 restart            # 停再起，改完 Java 后用
-.\scripts\dev.ps1 restart -Rebuild   # 重新 mvn package 再起后端
+.\scripts\dev.ps1 restart -Rebuild   # 重新 package 后端（跳过测试和 JaCoCo）
 .\scripts\dev.ps1 stop
 .\scripts\dev.ps1 logs               # 最近日志
 .\scripts\dev.ps1 logs -Target admin -Follow

@@ -29,7 +29,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 .\scripts\dev.ps1 start
 .\scripts\dev.ps1 status
 .\scripts\dev.ps1 restart              # 改完代码后
-.\scripts\dev.ps1 restart -Rebuild     # 重新 package 后端再起
+.\scripts\dev.ps1 restart -Rebuild     # 重新 package 后端再起（跳过测试和覆盖率）
 .\scripts\dev.ps1 stop
 ```
 
