@@ -46,4 +46,17 @@ class AnonymousPathsTest {
         assertThat(AnonymousPaths.portalOptionalAuth("GET", "/api/common/auth/username-available")).isFalse();
         assertThat(AnonymousPaths.portalOptionalAuth("POST", "/api/common/auth/register")).isFalse();
     }
+
+    @Test
+    void apiDocsRemainInfraForNonProdExport() {
+        // Non-prod gen:api:fetch pulls JSON anonymously; prod closes the endpoint via
+        // springdoc.api-docs.enabled=false and the public Nginx deny list.
+        assertThat(AnonymousPaths.adminAnonymous("GET", "/admin/v3/api-docs")).isTrue();
+        assertThat(AnonymousPaths.adminAnonymous("GET", "/admin/v3/api-docs/admin")).isTrue();
+        assertThat(AnonymousPaths.portalAnonymous("GET", "/api/v3/api-docs")).isTrue();
+        assertThat(AnonymousPaths.portalAnonymous("GET", "/api/v3/api-docs/portal")).isTrue();
+        assertThat(AnonymousPaths.portalAnonymous("GET", "/api/v3/api-docs/internal")).isTrue();
+        assertThat(AnonymousPaths.isInfra("/admin/v3/api-docs")).isTrue();
+        assertThat(AnonymousPaths.isInfra("/api/v3/api-docs/internal")).isTrue();
+    }
 }

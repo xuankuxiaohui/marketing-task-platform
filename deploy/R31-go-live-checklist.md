@@ -16,7 +16,7 @@
 ## 安全与配置
 
 - [ ] 镜像、仓库、日志和前端产物无真实密钥；配置来自运行环境或受控配置文件。
-- [ ] 公网不可访问 `/internal/**`、`/actuator/**`、OpenAPI 和调试入口；分别验证网关与应用配置。
+- [ ] 公网不可访问 `/internal/**`、`/actuator/**`、OpenAPI 和调试入口；分别验证网关与应用配置。应用侧：`application-prod.yml` 关闭 `springdoc.api-docs`；网关侧：`deploy/nginx/nginx.conf` 对 `/v3/api-docs`、`/swagger-ui` 返回 404。
 - [ ] 两端账号隔离、后台 Cookie/CSRF、门户 Bearer 和 internal HMAC 均通过对应测试。
 - [ ] 首次管理员密码已初始化并完成改密；确认后撤下初始化密码变量。
 - [ ] Redis DB 2 与数据库隔离正确；生产 Redis 高可用及容量满足本次确认的部署目标，开发共享实例不冒充生产环境。
