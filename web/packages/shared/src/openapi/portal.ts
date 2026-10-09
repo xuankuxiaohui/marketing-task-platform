@@ -578,6 +578,11 @@ export interface components {
             sourceTaskName?: string;
             failReason?: string;
             fulfillFailReason?: string;
+            /** Format: date-time */
+            claimedAt?: string;
+            /** Format: int64 */
+            activityId?: number;
+            activityName?: string;
         };
         ResultPageDataPrizeCardView: {
             code?: unknown;

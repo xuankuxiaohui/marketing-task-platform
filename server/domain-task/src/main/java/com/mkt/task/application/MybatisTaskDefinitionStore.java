@@ -66,6 +66,11 @@ public class MybatisTaskDefinitionStore implements TaskDefinitionStore {
     }
 
     @Override
+    public TaskDefinitionEntity getByIdForShare(long id) {
+        return mapper.selectByIdForShare(id);
+    }
+
+    @Override
     public List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit) {
         return mapper.selectDueScheduled(now, limit);
     }

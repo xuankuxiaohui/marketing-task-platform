@@ -2,6 +2,7 @@ package com.mkt.activity.application;
 
 import com.mkt.activity.command.ActivitySubmoduleCommand;
 import com.mkt.activity.convert.ActivityFieldCodec;
+import com.mkt.activity.convert.ActivityOwnership;
 import com.mkt.activity.domain.ActivityDates;
 import com.mkt.activity.domain.ActivityStatuses;
 import com.mkt.activity.domain.GrayBuckets;
@@ -62,6 +63,22 @@ public class ActivityPortalAppService {
             }
         }
         return out;
+    }
+
+    public List<ActivityOwnership.Ref> ownershipForTask(long taskId) {
+        return ActivityOwnership.forTask(taskId, ownershipCatalog());
+    }
+
+    public ActivityOwnership.Ref ownershipForParticipation(long participationId) {
+        ActParticipationEntity row = participations.getById(participationId);
+        if (row == null || row.getActivityId() == null) {
+            return null;
+        }
+        ActActivityEntity entity = activities.getById(row.getActivityId());
+        if (entity == null || entity.deletedFlag()) {
+            return null;
+        }
+        return new ActivityOwnership.Ref(entity.getId(), entity.getName());
     }
 
     public PortalActivityDetailView detail(long activityId, Long userId) {
@@ -198,16 +215,38 @@ public class ActivityPortalAppService {
         return entity;
     }
 
+    private List<ActivityOwnership.Module> ownershipCatalog() {
+        List<ActivityOwnership.Module> out = new ArrayList<>();
+        addOwnershipModules(out, activities.listPublished());
+        addOwnershipModules(out, activities.listByQuery(null, null, ActivityStatuses.OFFLINE, 0, 500));
+        return out;
+    }
+
+    private static void addOwnershipModules(List<ActivityOwnership.Module> out, List<ActActivityEntity> rows) {
+        if (rows == null) {
+            return;
+        }
+        for (ActActivityEntity entity : rows) {
+            if (entity == null || entity.deletedFlag()) {
+                continue;
+            }
+            out.add(new ActivityOwnership.Module(
+                    entity.getId(), entity.getName(), ActivityFieldCodec.submodules(entity.getSubmodules())));
+        }
+    }
+
     private static PortalActivityView toCard(ActActivityEntity entity) {
+        List<SubmoduleView> subs = submoduleViews(entity);
         return new PortalActivityView(
                 entity.getId(),
                 entity.getCode(),
                 entity.getName(),
                 ActivityDates.toInstant(entity.getStartTime()),
-                ActivityDates.toInstant(entity.getEndTime()));
+                ActivityDates.toInstant(entity.getEndTime()),
+                subs);
     }
 
-    private static PortalActivityDetailView toDetail(ActActivityEntity entity) {
+    private static List<SubmoduleView> submoduleViews(ActActivityEntity entity) {
         List<SubmoduleView> subs = new ArrayList<>();
         int i = 0;
         for (ActivitySubmoduleCommand row : ActivityFieldCodec.submodules(entity.getSubmodules())) {
@@ -215,6 +254,11 @@ public class ActivityPortalAppService {
             subs.add(new SubmoduleView(row.type(), row.refId(), sort));
             i++;
         }
+        return subs;
+    }
+
+    private static PortalActivityDetailView toDetail(ActActivityEntity entity) {
+        List<SubmoduleView> subs = submoduleViews(entity);
         return new PortalActivityDetailView(
                 entity.getId(),
                 entity.getCode(),

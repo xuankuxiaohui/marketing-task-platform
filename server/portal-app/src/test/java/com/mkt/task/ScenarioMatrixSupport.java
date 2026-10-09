@@ -183,6 +183,8 @@ final class ScenarioMatrixSupport implements AutoCloseable {
                 snapshots,
                 defs,
                 rewards::prizeEnabled,
+                instanceStore,
+                settings,
                 clock,
                 null,
                 null,

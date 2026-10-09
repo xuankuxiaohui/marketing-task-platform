@@ -24,11 +24,21 @@ export function shiftIsoDate(iso: string, delta: number): string {
   return `${next.getUTCFullYear()}-${mm}-${dd}`;
 }
 
-export function homeSigninWeek(days: CalendarDayView[], todayIso: string): HomeWeekCell[] {
+export function weekStartSunday(iso: string): string {
+  const [y, month, dayNum] = iso.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, month - 1, dayNum));
+  return shiftIsoDate(iso, -utc.getUTCDay());
+}
+
+export function shiftWeek(weekStartIso: string, deltaWeeks: number): string {
+  return shiftIsoDate(weekStartIso, deltaWeeks * 7);
+}
+
+export function signinWeek(days: CalendarDayView[], weekStartIso: string): HomeWeekCell[] {
   const byDate = new Map(days.map((day) => [day.date.slice(0, 10), day.state]));
   const cells: HomeWeekCell[] = [];
-  for (let i = 6; i >= 0; i -= 1) {
-    const date = shiftIsoDate(todayIso, -i);
+  for (let i = 0; i < 7; i += 1) {
+    const date = shiftIsoDate(weekStartIso, i);
     const [y, month, dayNum] = date.split("-").map(Number);
     const utc = new Date(Date.UTC(y, month - 1, dayNum));
     cells.push({
@@ -39,6 +49,10 @@ export function homeSigninWeek(days: CalendarDayView[], todayIso: string): HomeW
     });
   }
   return cells;
+}
+
+export function homeSigninWeek(days: CalendarDayView[], todayIso: string): HomeWeekCell[] {
+  return signinWeek(days, shiftIsoDate(todayIso, -6));
 }
 
 export const WEEKDAYS = WEEKDAY;

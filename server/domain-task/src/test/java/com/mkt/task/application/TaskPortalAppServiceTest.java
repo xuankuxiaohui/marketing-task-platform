@@ -20,9 +20,11 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
+import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskCardView;
+import com.mkt.task.response.TaskStepSource;
 import com.mkt.task.response.TaskDetailResponse;
 import com.mkt.task.testsupport.MemoryTaskCrowdStore;
 import com.mkt.task.testsupport.MemoryTaskDefinitionStore;
@@ -199,6 +201,25 @@ class TaskPortalAppServiceTest {
         assertThat(service.mine(9L, "COMPLETED", "0", 1, 20).records())
                 .extracting(MineTaskView::instanceId)
                 .containsExactly(done.getId());
+    }
+
+    @Test
+    void sourceForStepReturnsTaskIdAndSnapshotName() {
+        long taskId = publish("demo-claim-01", 1);
+        long snapshotId = snapshots.listByTaskId(taskId).get(0).getId();
+        TaskInstanceEntity instance = inProgress(taskId, snapshotId);
+        instances.insert(instance);
+        TaskInstanceStepEntity step = new TaskInstanceStepEntity();
+        step.setInstanceId(instance.getId());
+        step.setStepCode("click");
+        step.setSeq(2);
+        step.setType("CLICK");
+        step.setStatus("ACTIVE");
+        instances.insertStep(step);
+        TaskStepSource source = service.sourceForStep(step.getId());
+        assertThat(source.taskId()).isEqualTo(taskId);
+        assertThat(source.taskName()).isEqualTo("demo-claim-01");
+        assertThat(service.sourceForStep(9_999_999L)).isNull();
     }
 
     @Test

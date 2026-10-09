@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { homeSigninWeek, monthGrid, shiftIsoDate, shiftYearMonth, toIsoDate } from "./home-week";
+import {
+  homeSigninWeek,
+  monthGrid,
+  shiftIsoDate,
+  shiftWeek,
+  shiftYearMonth,
+  signinWeek,
+  toIsoDate,
+  weekStartSunday,
+} from "./home-week";
 
 describe("homeSigninWeek", () => {
   it("builds seven days ending today and copies calendar states", () => {
@@ -23,6 +32,16 @@ describe("homeSigninWeek", () => {
   it("shifts ISO dates across month bounds", () => {
     expect(shiftIsoDate("2026-08-01", -1)).toBe("2026-07-31");
     expect(toIsoDate(new Date(2026, 7, 22))).toBe("2026-08-22");
+  });
+
+  it("builds a Sunday-start week that can flip backward", () => {
+    expect(weekStartSunday("2026-08-22")).toBe("2026-08-16");
+    const cells = signinWeek([{ date: "2026-08-16", state: "SIGNED" }], "2026-08-16");
+    expect(cells).toHaveLength(7);
+    expect(cells[0]?.date).toBe("2026-08-16");
+    expect(cells[0]?.state).toBe("SIGNED");
+    expect(cells[6]?.date).toBe("2026-08-22");
+    expect(shiftWeek("2026-08-16", -1)).toBe("2026-08-09");
   });
 });
 

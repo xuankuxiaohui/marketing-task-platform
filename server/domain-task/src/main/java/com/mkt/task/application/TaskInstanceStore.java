@@ -11,11 +11,16 @@ public interface TaskInstanceStore {
 
     TaskInstanceEntity getById(long id);
 
+    /** Serializes instance advancement and terminal transitions in the caller's transaction. */
+    TaskInstanceEntity getByIdForUpdate(long id);
+
     TaskInstanceEntity getByUserTaskCycle(long userId, long taskId, String cycleKey);
 
     List<TaskInstanceEntity> listByUser(long userId);
 
     List<TaskInstanceEntity> listInProgressByUser(long userId);
+
+    List<TaskInstanceEntity> listInProgressByTaskAfterId(long taskId, long afterId, int limit);
 
     List<TaskInstanceEntity> listMine(
             long userId, String status, List<Long> categoryTaskIds, long offset, int limit);
@@ -25,6 +30,13 @@ public interface TaskInstanceStore {
     int countToday(long userId, LocalDateTime from, LocalDateTime to);
 
     boolean existsInProgress(long userId, List<Long> taskIds, String cycleKey);
+
+    /** Matches the mutex group frozen in each in-progress instance's bound snapshot. */
+    boolean existsMutexInProgress(long userId, String mutexGroupCode, String cycleKey);
+
+    /** Recomputes a live deadline without extending an already due or terminal instance. */
+    int updateExpireAtCas(
+            long id, LocalDateTime expectedExpireAt, LocalDateTime expireAt, LocalDateTime now);
 
     long countInProgress(long userId);
 
@@ -37,8 +49,6 @@ public interface TaskInstanceStore {
     List<TaskInstanceStepEntity> listSteps(long instanceId);
 
     int activateStep(long id, LocalDateTime activatedAt);
-
-    int completeStep(long id, LocalDateTime completedAt);
 
     TaskInstanceStepEntity getStep(long instanceId, String stepCode);
 

@@ -1,73 +1,53 @@
-# 本机四进程（不走 Compose）
+# Windows 本地开发
 
-本机没有 Docker 时，用虚拟机上的 MySQL / Redis，在 Windows 上直接起：
+[dev.ps1](dev.ps1) 在 Windows 上管理两个 JVM 和两个 Vite 进程，连接已配置的 MySQL/Redis，不启动 Docker。以下描述依据脚本静态检查；本轮未启动应用。
 
-| 进程 | 端口 | 说明 |
-|------|------|------|
-| `admin-app` | 8080 | 后台 API，`/admin/**` + `/actuator` |
-| `portal-app` | 8081 | 门户 API，`/api/**`（`/internal/**` 不上公网） |
-| admin Vite | 5173 | 管理端，代理 `/admin` → 8080 |
-| client Vite | 5174 | C 端，代理 `/api` → 8081 |
+| 目标 | 默认端口 | 浏览器入口或用途 |
+|---|---|---|
+| `admin` | 8080 | 后台 API `/admin/**` |
+| `portal` | 8081 | 门户 API `/api/**`；`/internal/**` 仅内部调用 |
+| `admin-web` | 5173 | [管理端](http://127.0.0.1:5173) |
+| `client` | 5174 | [门户](http://127.0.0.1:5174) |
 
-**不改、不读 `deploy/`。** `deploy/.env` 是 Compose / 线上的（Docker 主机名 `mysql` / `redis`）。本机 JVM 只读仓库根 `.env.local`。
+## 环境准备
 
-## 一次配置
+- 安装 JDK 26、Maven、pnpm；前端版本范围见 [web/package.json](../web/package.json)。
+- 默认配置为仓库根 `.env.local`，可通过 `MKT_ENV_FILE` 指定另一个本地配置文件。变量模板见 [env.example](env.example)。配置文件不能提交到 Git。
+- JDBC/Redis 地址须能被本机解析，不使用 Compose 专用的 `mysql` / `redis` 主机名；共享环境只使用 `mkt_platform` 与 Redis DB 2。
+- JDK 查找顺序：`MKT_JAVA_HOME`、`D:\develop\jdk\jdk-26.0.2`、`JAVA_HOME`，均验证为 JDK 26。
 
-`.env.local` 已被 gitignore，和 `deploy/.env` 不是同一份：
+在仓库根执行：
 
 ```powershell
 .\scripts\dev.ps1 init
-# 或：Copy-Item scripts\env.example .env.local
 ```
 
-`.env.local` 里 JDBC / Redis 必须是虚拟机 IP（例如 `192.168.88.149:3308`），不能是 `mysql` / `redis`。`REDIS_DATABASE` 必须是 `2`。填好后就可以把 `deploy/.env` 还原成 `deploy/.env.example`。
+`init` 在目标配置已存在时不覆盖。若仓库根存在非 Compose 配置的旧 `.env`，当前实现会将其复制到目标配置并删除旧 `.env`；否则复制模板。填写本地配置不需要修改或还原 `deploy/.env`。
 
-JDK 用 **26**。本机 PATH 默认是 25，脚本会优先 `D:\develop\jdk\jdk-26.0.2`。也可设 `MKT_JAVA_HOME`。
-
-## 日常命令
+## 日常操作
 
 ```powershell
-.\scripts\dev.ps1 start              # 四个都起（缺 jar 会先 package）
+.\scripts\dev.ps1 start
 .\scripts\dev.ps1 status
-.\scripts\dev.ps1 restart            # 停再起，改完 Java 后用
-.\scripts\dev.ps1 restart -Rebuild   # 重新 package 后端（跳过测试和 JaCoCo）
-.\scripts\dev.ps1 stop
-.\scripts\dev.ps1 logs               # 最近日志
 .\scripts\dev.ps1 logs -Target admin -Follow
+.\scripts\dev.ps1 restart -Target backend -Rebuild
+.\scripts\dev.ps1 stop
 ```
 
-只动一部分：
+`-Target` 支持 `all`、`backend`、`frontend` 和表格中的单个目标。[dev.cmd](dev.cmd) 是同一入口的包装。
 
-```powershell
-.\scripts\dev.ps1 restart -Target backend
-.\scripts\dev.ps1 restart -Target frontend
-.\scripts\dev.ps1 restart -Target admin
-.\scripts\dev.ps1 restart -Target portal
-.\scripts\dev.ps1 restart -Target admin-web
-.\scripts\dev.ps1 restart -Target client
-```
+- `start` / `restart` 仅在缺少 JAR 或指定 `-Rebuild` 时打包。**修改 Java 后仅执行 `restart` 会继续使用旧 JAR。**
+- 打包命令跳过测试和 JaCoCo，仅用于开发启动，不能作为测试通过的证据。
+- 前端只在 `web/node_modules` 不存在时自动安装依赖；修改依赖后应自行执行 `pnpm install --frozen-lockfile`。
+- 当前 `start -Target frontend` 也会检查本地配置、中间件和 JDK；仅需运行前端时可使用 [web/README.md](../web/README.md) 的命令。
+- 日志和 PID 位于 `.run/`，`logs -Follow` 只能指定单个目标。`stop` / `restart` 会终止保存的进程树及目标端口的占用进程，当前脚本不核验端口进程是否属于本项目；操作前确认端口归属。
 
-IDE 远程调试（JDWP，不 suspend）：
+调试命令：
 
 ```powershell
 .\scripts\dev.ps1 start -Target backend -DebugJvm
-# admin 5005 / portal 5006
 ```
 
-`scripts\dev.cmd` 是同一入口，给不想碰执行策略的终端用。
+JDWP 默认不暂停，admin/portal 分别使用 5005/5006；当前监听地址为 `*`，仅在受控本地网络启用。
 
-## 打开哪里
-
-- 管理端：http://127.0.0.1:5173
-- C 端：http://127.0.0.1:5174
-- admin 健康：http://127.0.0.1:8080/actuator/health/readiness
-- portal 健康：http://127.0.0.1:8081/actuator/health/readiness
-
-日志和 pid 在 `.run/`（gitignore）。停不干净时 `status` 会列出端口占用，`stop` 会按 pid + 端口杀进程树。
-
-## 不要做什么
-
-- 不要为了本机调试去改 `deploy/docker-compose.yml` 或把 Compose 主机名改成虚拟机 IP（那是演示箱 / CI 的）。
-- 不要用 Redis db0 / db1。
-- 不要提交 `.env.local` / `.env` / `deploy/.env`。
-- 不要把本机虚拟机地址写进 `deploy/.env`。
+测试命令与范围见 [后端说明](../server/README.md) 和 [前端说明](../web/README.md)。本机没有 Docker 时，真实 MySQL/Redis 集成测试及部署冒烟留到具备条件的 CI/测试环境。

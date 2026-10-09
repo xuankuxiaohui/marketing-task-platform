@@ -27,7 +27,8 @@ class AggregationIdempotentIT {
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("mkt_platform")
             .withUsername("mkt")
-            .withPassword("mkt");
+            .withPassword("mkt")
+            .withUrlParam("connectionTimeZone", "UTC");
 
     @Test
     void replayThreeTimesKeepsCountsAndDropsSimulated() {

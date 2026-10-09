@@ -6,14 +6,19 @@ import { useSessionStore } from "@/store/session";
 
 export async function ensurePortalSession(): Promise<boolean> {
   const session = useSessionStore();
-  if (!session.token) {
+  const token = session.token;
+  if (!token) {
     return false;
   }
   if (session.userId != null) {
     return true;
   }
+  const currentSessionKnown = () => session.authenticated && session.userId != null;
   try {
     const profile = await fetchProfile();
+    if (session.token !== token) {
+      return currentSessionKnown();
+    }
     if (!isOk(profile) || !profile.data) {
       session.clear();
       return false;
@@ -21,6 +26,9 @@ export async function ensurePortalSession(): Promise<boolean> {
     session.setProfile(profile.data);
     return true;
   } catch {
+    if (session.token !== token) {
+      return currentSessionKnown();
+    }
     session.clear();
     return false;
   }
@@ -31,12 +39,16 @@ export function resetPortalSession(): void {
 }
 
 export async function logoutAndReset(current: Router): Promise<void> {
+  const session = useSessionStore();
+  const token = session.token;
   try {
     await logout();
   } finally {
-    resetPortalSession();
-    if (current.currentRoute.value.path !== LOGIN_ROUTE) {
-      await current.replace(LOGIN_ROUTE);
+    if (session.token === token) {
+      resetPortalSession();
+      if (current.currentRoute.value.path !== LOGIN_ROUTE) {
+        await current.replace(LOGIN_ROUTE);
+      }
     }
   }
 }

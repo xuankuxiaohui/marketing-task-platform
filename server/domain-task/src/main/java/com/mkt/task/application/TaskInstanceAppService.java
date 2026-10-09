@@ -134,7 +134,7 @@ public class TaskInstanceAppService {
 
     @Transactional
     public InstanceAbandonResponse abandonAdmin(long id) {
-        TaskInstanceEntity row = instances.getById(id);
+        TaskInstanceEntity row = instances.getByIdForUpdate(id);
         if (row == null) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
@@ -146,7 +146,7 @@ public class TaskInstanceAppService {
 
     @Transactional
     public InstanceAbandonResponse abandonUser(long instanceId, long userId, String ip, String deviceId) {
-        TaskInstanceEntity row = instances.getById(instanceId);
+        TaskInstanceEntity row = instances.getByIdForUpdate(instanceId);
         if (row == null || row.getUserId() == null || row.getUserId() != userId) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
@@ -181,7 +181,7 @@ public class TaskInstanceAppService {
     }
 
     boolean expireOne(long id, Instant now) {
-        TaskInstanceEntity row = instances.getById(id);
+        TaskInstanceEntity row = instances.getByIdForUpdate(id);
         if (row == null || !InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
             return false;
         }

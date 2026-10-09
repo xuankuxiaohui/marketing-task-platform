@@ -15,7 +15,6 @@ const SKIP_UNAUTHORIZED = [
   "/api/common/auth/username-available",
   "/api/common/track/batch",
   "/api/common/ad/",
-  "/api/common/points/balance",
   "/api/common/signin/activities",
   "/api/common/activity/activities",
   "/api/common/task/list",
@@ -89,6 +88,13 @@ export function createHttp(): AxiosInstance {
   });
   instance.interceptors.response.use((response) => {
     if (response.status === 401 && !shouldSkipUnauthorized(response.config.url)) {
+      const token = readPortalToken();
+      const authorization = String(response.config.headers.get(AUTH_HEADER) ?? "");
+      const currentAuthorization = token ? `Bearer ${token}` : "";
+      // A response from a former login cannot invalidate the current session.
+      if (authorization !== currentAuthorization) {
+        return response;
+      }
       const body = response.data as Result | undefined;
       unauthorizedHandler?.({
         code: typeof body?.code === "string" ? body.code : undefined,

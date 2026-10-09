@@ -13,6 +13,8 @@ public interface TaskVersionSnapshotMapper {
 
     TaskVersionSnapshotEntity selectById(@Param("id") long id);
 
+    List<TaskVersionSnapshotEntity> selectByIds(@Param("ids") List<Long> ids);
+
     TaskVersionSnapshotEntity selectByTaskAndVersion(@Param("taskId") long taskId, @Param("version") int version);
 
     List<TaskVersionSnapshotEntity> selectByTaskId(@Param("taskId") long taskId);

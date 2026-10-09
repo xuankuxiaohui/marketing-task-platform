@@ -18,8 +18,6 @@ public interface TaskInstanceStepMapper extends BaseMapper<TaskInstanceStepEntit
     int activate(
             @Param("id") long id, @Param("activatedAt") LocalDateTime activatedAt);
 
-    int complete(@Param("id") long id, @Param("completedAt") LocalDateTime completedAt);
-
     int completeCas(
             @Param("id") long id,
             @Param("version") int version,

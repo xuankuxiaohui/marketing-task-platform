@@ -9,6 +9,8 @@ import com.mkt.reward.entity.PrizeEntity;
 import com.mkt.reward.response.PrizeCardView;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /** C-end prize list (design §4.9.3). */
@@ -17,10 +19,22 @@ public class PrizePortalAppService {
 
     private final GrantRecordStore grants;
     private final PrizeStore prizes;
+    private final PrizeSourceLookup sources;
 
     public PrizePortalAppService(GrantRecordStore grants, PrizeStore prizes) {
+        this(grants, prizes, (PrizeSourceLookup) null);
+    }
+
+    @Autowired
+    public PrizePortalAppService(
+            GrantRecordStore grants, PrizeStore prizes, ObjectProvider<PrizeSourceLookup> sources) {
+        this(grants, prizes, sources == null ? null : sources.getIfAvailable());
+    }
+
+    public PrizePortalAppService(GrantRecordStore grants, PrizeStore prizes, PrizeSourceLookup sources) {
         this.grants = grants;
         this.prizes = prizes;
+        this.sources = sources;
     }
 
     public PageData<PrizeCardView> list(long userId, String tab, Integer page, Integer pageSize) {
@@ -37,20 +51,37 @@ public class PrizePortalAppService {
 
     private PrizeCardView toView(GrantRecordEntity row) {
         PrizeEntity prize = prizes.getByIdIncludingDeleted(row.getPrizeId());
+        PrizeSourceLookup.SourceRef source = sources == null
+                ? PrizeSourceLookup.SourceRef.empty()
+                : nullToEmpty(sources.resolve(row.getGrantSource(), row.getSourceId()));
         return new PrizeCardView(
                 row.getId(),
                 prize == null ? row.getPrizeCode() : prize.getName(),
                 prize == null ? null : prize.getImageUrl(),
-                row.getCategoryCode(),
+                categoryCode(row, prize),
                 prize == null ? null : prize.getRewardTarget(),
                 prize == null ? null : prize.getFulfillmentMode(),
                 row.getStatus(),
                 row.getFulfillmentStatus(),
                 RewardTime.toInstant(row.getExpireAt()),
                 RewardTime.toInstant(row.getCreatedAt() != null ? row.getCreatedAt() : row.getGrantedAt()),
-                null,
-                null,
+                source.sourceTaskId(),
+                source.sourceTaskName(),
                 row.getFailReason(),
-                row.getFulfillFailReason());
+                row.getFulfillFailReason(),
+                RewardTime.toInstant(row.getClaimedAt()),
+                source.activityId(),
+                source.activityName());
+    }
+
+    private static String categoryCode(GrantRecordEntity row, PrizeEntity prize) {
+        if (row.getCategoryCode() != null && !row.getCategoryCode().isBlank()) {
+            return row.getCategoryCode();
+        }
+        return prize == null ? null : prize.getCategoryCode();
+    }
+
+    private static PrizeSourceLookup.SourceRef nullToEmpty(PrizeSourceLookup.SourceRef ref) {
+        return ref == null ? PrizeSourceLookup.SourceRef.empty() : ref;
     }
 }

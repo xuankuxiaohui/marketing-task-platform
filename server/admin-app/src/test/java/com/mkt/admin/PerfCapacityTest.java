@@ -60,19 +60,21 @@ class PerfCapacityTest {
     }
 
     @Test
-    void slowQueryReviewAndExplainExist() throws IOException {
-        Path review = repoRoot().resolve("perf/slow-query-review.md");
+    void performanceGuideAndExplainSourcesExist() throws IOException {
+        Path review = repoRoot().resolve("perf/README.md");
         Path explain = repoRoot().resolve("perf/seed/explain.sql");
         assertThat(review).exists();
         assertThat(explain).exists();
         String text = Files.readString(review);
-        assertThat(text).contains("idx_status_sort");
-        assertThat(text).contains("evt_event_log");
-        assertThat(text).contains("3000");
-        assertThat(text).contains("不发明索引");
+        assertThat(text).contains("seed/explain_hot.py");
+        assertThat(text).contains("seed/explain.sql");
+        assertThat(text).contains("实际执行计划");
+        assertThat(text).contains("不能推导 P95");
         assertThat(Files.readString(explain)).contains("EXPLAIN");
         assertThat(Files.readString(explain)).contains("task_instance");
         assertThat(Files.readString(explain)).contains("ad_position");
+        assertThat(Files.readString(explain)).contains("evt_event_log");
+        assertThat(Files.readString(explain)).doesNotContain("CREATE INDEX");
     }
 
     @Test

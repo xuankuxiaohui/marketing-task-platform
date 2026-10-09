@@ -1,7 +1,7 @@
 # 设计文档 · API 契约（§4）
 
-> 本文是 [design.md](design.md) **v2.13** 分册。§ 编号与总册索引一致，引用仍写 design §x.y。
-> 需求：[requirements.md](requirements.md) v3.9　选型：[component-selection.md](component-selection.md)
+> 本文是 [design.md](design.md) 的分册。§ 编号与总册索引一致，引用仍写 design §x.y。
+> 需求：[requirements.md](requirements.md)　选型：[component-selection.md](component-selection.md)
 > 总册索引（§ → 锚点）：[design.md](design.md) §0.2。本章跳转：搜索 `<!-- §x.y -->`，不要记行号。
 
 ---

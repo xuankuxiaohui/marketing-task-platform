@@ -1,53 +1,30 @@
-# Design System — 营销任务平台
+# 界面设计与体验基线
 
-## Product Context
+本文件记录两端界面现状和后续设计工作的验收方式。业务行为以 [requirements.md](.kiro/specs/platform-v2/requirements.md) 为准；实现规范见 [前端编码](docs/standards/12-frontend-code.md) 与 [前端工程](docs/standards/13-frontend-engineering.md)。当前只整理文档，没有完成界面重构或视觉验收。
 
-- **What this is:** 运营编排任务，C 端按步骤完成并发奖。两端账号隔离。
-- **Who it's for:** 后台 = 运营；门户 = C 端用户。
-- **Project type:** 后台是桌面运营台；门户是移动端 H5 / WebView。
-- **UI libraries:** admin = Ant Design Vue；client = Vant 4。禁止第二套 CSS 框架。
+## 当前实现
 
-## Aesthetic Direction
+| 范围 | 已存在的结构 | 源码入口 |
+|---|---|---|
+| 管理端 | 桌面运营界面，Ant Design Vue；布局、权限导航、多标签；业务列表与表单 | [AdminLayout.vue](web/apps/admin/src/layout/AdminLayout.vue)、[styles.css](web/apps/admin/src/styles.css) |
+| 门户 | 移动端 H5 / WebView，Vant 4；首页、任务、奖品、我的四个 Tab | [PortalLayout.vue](web/apps/client/src/layout/PortalLayout.vue) |
+| 门户主题 | CSS 变量及单独的主题常量；主色在两个入口维护 | [styles.css](web/apps/client/src/styles.css)、[theme.ts](web/apps/client/src/theme.ts) |
 
-- **Portal:** 积分俱乐部（App UI，不是大促落地页）。第一眼是余额、签到进度、今日可做。
-- **Admin:** 冷静运营台。第一眼是今日 KPI 和待办。
-- **Decoration:** 克制。门户已有开屏 / 弹窗 / 浮标 / 轮播，禁止再加装饰广告。
-- **Do not:** 紫色渐变、三列图标格、Vant 默认蓝 `#1989fa`、整页 Empty 吞掉其他入口。
+配色、字号、间距以当前源码为准，不在文档复制数值。已有布局是待评估基线，不等于已通过交互、无障碍或视觉验收。后续视觉方向先用关键页面验证，再形成共享规范。
 
-## Color
+## 体验约束
 
-门户（`web/apps/client/src/styles.css`）：
+- 门户优先呈现可执行的任务、任务进度、奖励状态与账户信息。一个区域无数据时，其他可用入口仍可访问。
+- 奖励预览、进度、余额和待办均来自真实业务数据；状态文字应忠实表达后端状态，不能编造兑换能力或进度。
+- 列表与表单分别表达加载、空数据、业务失败、网络失败和成功状态。失败不能伪装成空列表；错误后操作应可恢复。
+- 管理端操作保留权限反馈、写入确认和结果反馈；门户不展示风控内部原因。具体鉴权与错误规则沿用规格。
+- 长文本、图片失败、触底加载、下拉刷新、弹层、安全区和键盘操作均是验收场景。颜色不能成为状态的唯一提示。
 
-- Primary `#0f766e` / deep `#115e59` / warm `#0d9488`
-- Accent `#c2410c`（积分奖励、倒计时、可领）
-- Surface `#fffdf8` / bg `#f3eee4` / ink `#1c1917` / muted `#78716c`
+## 后续设计工作
 
-后台（`web/apps/admin/src/styles.css`）：
+1. 先验证门户列表分页、筛选切换、会话切换与后台异常恢复，明确当前行为缺陷；不能用换皮掩盖交互错误。
+2. 选取后台列表/编辑页、门户任务列表/详情/奖励页作为样板，统一信息层级和反馈方式。验证后再推广到其余页面。
+3. 建立语义明确的主题入口，覆盖文字、背景、边框、交互与状态色，以及间距、字阶、圆角。通过 Ant/Vant 的主题能力接入，减少跨页选择器覆盖。
+4. 把布局、查询、提交和分页按职责整理；共享组件须有实际复用场景，不以组件数量或文件长度作为完成标准。
 
-- Primary 同源青绿；内容区冷灰 `#f4f4f5`，不要跟门户抢米色
-- 主色只用于主按钮和当前态
-
-## Typography
-
-- 中文系统字体：苹方 / 微软雅黑 / Segoe UI
-- 门户正文 ≥ 15px；后台表格 13px
-- 数字用 `tabular-nums`（积分、KPI）
-
-## Layout
-
-- 门户 Tab：**首页 / 任务 / 奖品 / 我的**（旧路径 `/mine/tasks`、`/mine/prizes` 保留）
-- 首页第一屏：积分 → 签到 7 日 → 今日可做（≤5）。活动卡第二屏。零活动不整页 Empty。
-- 进度条只用已有数据（积分数字、连签、任务状态）。禁止编造「再得 N 分兑券」。
-- 后台 Dashboard：4 KPI（数字 + 单位）+ 待办，卡片直接铺在冷灰底上，不再套一层白底。
-- 列表：统一 toolbar / 中文状态 Tag / 空态带下一步 / 上一页下一页。状态码仍是后端枚举，展示走 `adminStatusLabel`。
-
-## Empty / Error
-
-- 空态必须带下一步（去签到 / 去任务 / 去登录）
-- 门户不展示风控内部原因（R34.6）
-- 加载 / 空 / 错三态都要有
-
-## Motion
-
-- 仅按钮按压、下拉刷新、领取成功
-- 时长 150–250ms
+视觉验收需记录页面、视口、操作路径和截图。移动端覆盖窄屏、滚动及安全区，管理端覆盖桌面布局与键盘操作；组件测试不能替代真实浏览器检查。工作顺序见 [重构方案](docs/refactoring-blueprint.md)。

@@ -15,6 +15,7 @@ import com.mkt.infra.outbox.JdbcOutboxStore;
 import com.mkt.infra.outbox.OutboxProducer;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
+import com.mkt.kernel.time.MutableClock;
 import com.mkt.task.application.MybatisTaskChildStore;
 import com.mkt.task.application.MybatisTaskCrowdStore;
 import com.mkt.task.application.MybatisTaskDefinitionStore;
@@ -25,6 +26,7 @@ import com.mkt.task.application.MybatisTaskProgressReportStore;
 import com.mkt.task.application.MybatisTaskVersionSnapshotStore;
 import com.mkt.task.application.TaskClaimAppService;
 import com.mkt.task.application.TaskDefinitionAppService;
+import com.mkt.task.application.TaskDefinitionStore;
 import com.mkt.task.application.TaskInstanceAppService;
 import com.mkt.task.application.TaskPortalAppService;
 import com.mkt.task.application.TaskPublishAppService;
@@ -51,9 +53,7 @@ import com.mkt.task.testsupport.MemoryPrizeEnabledLookup;
 import com.mkt.task.testsupport.MemoryRewardPort;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import javax.sql.DataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -80,7 +80,10 @@ final class ClaimITSupport implements AutoCloseable {
     final TransactionTemplate tx;
     final EventPublisher publisher;
     final MemoryRewardPort rewards = new MemoryRewardPort();
-    final Clock clock = Clock.fixed(Instant.parse("2026-08-19T00:00:00Z"), ZoneOffset.UTC);
+    final MutableClock clock = new MutableClock(Instant.parse("2026-08-19T00:00:00Z"));
+    final TaskSettings settings = new TaskSettings();
+    final TaskDefinitionStore definitionStore;
+    final MybatisTaskInstanceStore instanceStore;
 
     ClaimITSupport(MySQLContainer<?> mysql, UserAttributePort users, RiskCheckPort risk, EventPublisher publisher)
             throws Exception {
@@ -93,8 +96,8 @@ final class ClaimITSupport implements AutoCloseable {
         Flyway.configure().dataSource(dataSource).locations("classpath:db/migration").load().migrate();
         jdbc = new JdbcTemplate(dataSource);
         SqlSessionTemplate sql = sqlSession(dataSource);
-        TaskSettings settings = new TaskSettings();
         MybatisTaskDefinitionStore definitions = new MybatisTaskDefinitionStore(sql.getMapper(TaskDefinitionMapper.class));
+        definitionStore = definitions;
         MybatisTaskMutexGroupStore mutex = new MybatisTaskMutexGroupStore(sql.getMapper(TaskMutexGroupMapper.class));
         MybatisTaskCrowdStore crowds =
                 new MybatisTaskCrowdStore(sql.getMapper(TaskCrowdMapper.class), sql.getMapper(TaskCrowdItemMapper.class));
@@ -102,6 +105,7 @@ final class ClaimITSupport implements AutoCloseable {
                 new MybatisTaskVersionSnapshotStore(sql.getMapper(TaskVersionSnapshotMapper.class));
         MybatisTaskInstanceStore instances = new MybatisTaskInstanceStore(
                 sql.getMapper(TaskInstanceMapper.class), sql.getMapper(TaskInstanceStepMapper.class));
+        instanceStore = instances;
         defs = new TaskDefinitionAppService(
                 definitions,
                 new MybatisTaskChildStore(
@@ -119,6 +123,8 @@ final class ClaimITSupport implements AutoCloseable {
                 snapshots,
                 defs,
                 new MemoryPrizeEnabledLookup(),
+                instances,
+                settings,
                 clock,
                 null,
                 null,

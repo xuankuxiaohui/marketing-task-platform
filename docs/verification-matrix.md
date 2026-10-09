@@ -1,18 +1,41 @@
 # 验收矩阵
 
 > 一表对照：任务号 → 需求 → 正确性属性 → 测试类。
-> 权威：属性定义在 [requirements.md](../.kiro/specs/platform-v2/requirements.md)；测试类形态在 design §7.3 / §7.4 / §7.6；任务边界在 [tasks.md](../.kiro/specs/platform-v2/tasks.md) v2.9。
-> 当前是测试阶段（preview 之前，版本未到 0.0.1）。本表是条款对照，不是施工进度；进度见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。
+> 权威：属性定义在 [requirements.md](../.kiro/specs/platform-v2/requirements.md)；测试类形态在 design §7.3 / §7.4 / §7.6；历史任务来源在 [tasks.md](../.kiro/specs/platform-v2/tasks.md)，当前重构工作项见 [重构方案](refactoring-blueprint.md)。
+> 本表是规格要求的验证映射，不证明对应测试已存在、断言充分或当前通过。当前范围和证据状态见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。
 > 人类 reviewer 按任务号筛本表，再打开对应测试类与需求条款。不要用本表发明新属性或新测试类。
 
 ## 用法
 
 1. 验收任务 N：筛「任务」列 = N（或 N.x）。
-2. 对照需求条款 + 属性名。P0 / P1 矩阵都已在 master `6d03ef5`。本表不是施工进度。
-3. 测试类必须在该任务的 `_测试：_` 行或本表出现。绿灯 = 该类在对应模块跑绿。
+2. 对照需求条款和属性名，定位实际测试，核对断言是否验证业务不变量。旧任务号仅供追溯。
+3. 新增或改名的测试同步更新映射。验收须附代码版本、命令、环境、结果；不能只看类名或总覆盖率。
 4. Spike（1–8）无 §7.3 属性，冒烟即验收，不列入属性行。
 
+## 当前代码重构批次 R5-01
+
+用户授权的门户个人中心批次复用现行业务规格，历史任务号不作为新工作队列。以下是新增/补强的验证入口，实际执行结果见 [PROJECT_STATUS](../PROJECT_STATUS.md)。
+
+| 需求 / 边界 | 回归入口 | 重点 |
+|---|---|---|
+| R13.3 / R34 / R35 分页与筛选 | client `usePagedList.spec.ts`、三个 `Mine*Page.spec.ts` | 真实 Vant 加载顺序、分类/类型、失败同页重试、刷新及乱序 |
+| R35 领取与详情 | client `MinePrizesPage.spec.ts`、`PrizeDetailPage.spec.ts` | 待领取移除后的分页重载、旧领取隔离、跨页详情、读取错误恢复 |
+| R32 / R33 当前账号数据 | client `http.spec.ts`、`store/session.spec.ts`、`router/session.spec.ts`、`prize-preview.spec.ts` | 旧 401/档案/登出、切换与退出、跨标签页、私有缓存 |
+| 真实浏览器交互 | [personal-lists.spec.ts](../web/e2e/personal-lists.spec.ts) | 实际滚动与筛选、领取后无漏条、真实 storage 事件；API 使用测试响应 |
+
 ## P0 矩阵
+
+### 生命周期代码批次 R2-01
+
+| 条款 | 验证入口 | 重点 |
+|---|---|---|
+| R11.6 / R12 快照隔离 | `TaskClaimAppServiceTest`、`OfflineLifecycleIT` | OFFLINE 在途占用、旧快照组不随修订/发布改变、跨/非跨周期、终态释放 |
+| R13.6–7 | `TaskClaimAppServiceTest` | 账号状态优先，既有终态幂等不重跑风控/额度，不新建事件 |
+| R14.10 | `TaskPublishAppServiceTest`、`BoundCycleEndTest`、`StepEngineDeadlineTest` | 下线批量期限、NONE 延长、旧周期不漂移、到期/终态不复活、重发不继承旧 offlineAt |
+| R14 推进与恢复 | `TaskStepAppServiceTest`、`StepEngineTest`、`TaskInstanceAppServiceTest` | 到期优先、合法完成幂等、陈旧恢复不跳步骤、CAS 输者不写终态事件、Clock 跨期限 |
+| MySQL 原子性与锁协议 | [OfflineLifecycleIT](../server/domain-task/src/test/java/com/mkt/task/OfflineLifecycleIT.java) | 定义/期限回滚、步骤/Outbox 回滚、共享领取与排他下线、并发编辑不恢复旧状态 |
+
+以上源码随本批交付；本地执行只包含 `*Test` / 属性 / 架构测试，MySQL `*IT` 编译通过但执行留 CI，详见 [状态页](../PROJECT_STATUS.md)。
 
 | 任务 | 需求 | 正确性属性 | 测试类 | 类型 |
 |------|------|------------|--------|------|
@@ -120,7 +143,7 @@
 | 48 | R30.1 | 广告频控不超限 | `ad AdFrequencyIT`（C-11） | 已交付 · 64 线程日上限 10，响应计数 ≤ 10 |
 | 48 | R30.2 | 排期正确 | `ad AdScheduleIT` | 已交付 · MutableClock 拨至排期外不含该素材 |
 | 48 | R30 | 接线 `ad:position` + 门户广告组件 | `AdPortalAppServiceTest` / `AdCarousel.spec.ts` / `AdFloat.spec.ts` / `AdPositionPage.spec.ts` | 已交付 · L2+evict、开屏/弹窗/轮播/悬浮 |
-| 49 | NFR 性能 1–8 | 容量复验 | `perf/run-full.sh` + `perf/ad.js` + `PerfCapacityTest` + `perf/slow-query-review.md` | 已交付 · 全量 1–8；p1 种子 100 万用户 / 50 万实例 / 500 万事件 / 3000 eps；5 分钟 k6 不进例行 PR CI |
+| 49 | NFR 性能 1–8 | 容量复验 | `perf/run-full.sh` + `perf/ad.js` + `PerfCapacityTest` + `perf/README.md` | 已交付 · 全量 1–8；p1 种子 100 万用户 / 50 万实例 / 500 万事件 / 3000 eps；5 分钟 k6 不进例行 PR CI |
 
 无属性行、但仍须交测试的任务：1–8（Spike 冒烟）、9（`mvn compile`）、12/13/14 的编译与迁移失败即失败。
 

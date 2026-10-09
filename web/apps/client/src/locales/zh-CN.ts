@@ -80,6 +80,7 @@ export const zhCN = {
   activity: {
     title: "活动",
     empty: "暂无进行中的活动",
+    owner: "所属活动",
     join: "立即参与",
     joined: "参与成功",
     rejected: "暂不符合参与条件",
@@ -114,6 +115,8 @@ export const zhCN = {
     activities: "进行中的活动",
     streak: "连续签到",
     dayUnit: "天",
+    prevWeek: "上一周",
+    nextWeek: "下一周",
   },
   ad: {
     skip: "跳过",
@@ -135,6 +138,9 @@ export const zhCN = {
     pendingTab: "待领取",
     allTab: "全部",
     obtainedAt: "获得时间",
+    expireAt: "过期时间",
+    claimedAt: "领取时间",
+    prizeType: "奖品类型",
     detail: "详情",
     detailTitle: "奖品详情",
     claim: "领取",
@@ -155,6 +161,7 @@ export const zhCN = {
     contact: "请联系客服",
   },
   points: {
+    allTypes: "全部类型",
     balance: "积分余额",
     earn: "获得",
     consume: "消耗",
@@ -163,6 +170,7 @@ export const zhCN = {
     reversal: "冲正",
   },
   task: {
+    allCategories: "全部分类",
     title: "任务",
     all: "全部",
     claim: "领取",

@@ -16,4 +16,7 @@ public record PrizeCardView(
         Long sourceTaskId,
         String sourceTaskName,
         String failReason,
-        String fulfillFailReason) {}
+        String fulfillFailReason,
+        Instant claimedAt,
+        Long activityId,
+        String activityName) {}

@@ -1,6 +1,7 @@
 package com.mkt.task.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,6 +34,7 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
+import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.response.TaskCallbackResponse;
 import com.mkt.task.response.TaskClickResponse;
@@ -52,8 +54,13 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -259,6 +266,186 @@ class TaskStepAppServiceTest {
         assertThat(clicked.rewardFeedback()).hasSize(1);
         assertThat(clicked.rewardFeedback().get(0).prizeName()).isEqualTo("奖");
         assertThat(rewards.calls).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "CLICK, -1", "CLICK, 0", "CLICK, 1",
+        "CALLBACK, -1", "CALLBACK, 0", "CALLBACK, 1",
+        "PROGRESS, -1", "PROGRESS, 0", "PROGRESS, 1"
+    })
+    void everyActiveAdvanceEntryHonorsDeadlineBeforeSchedulerRuns(String stepType, long elapsedMillis) {
+        long taskId = publish(
+                "deadline_" + stepType.toLowerCase(Locale.ROOT),
+                List.of(
+                        new TaskStepCommand("a", "执行", 1, stepType, "PROGRESS".equals(stepType) ? 1 : null, null),
+                        new TaskStepCommand("r", "奖励", 2, "REWARD", null, 8L)),
+                List.of(new TaskTransitionCommand("a", "r", null, 0)));
+        TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
+        TaskInstanceEntity instance = instances.getById(started.instanceId());
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW.minusMillis(elapsedMillis), ZoneOffset.UTC));
+        clearInvocations(events);
+        ThrowingCallable advance = switch (stepType) {
+            case "CLICK" -> () -> steps.click(started.instanceId(), "a", 9L, "203.0.113.1", null, "WEB");
+            case "CALLBACK" -> () -> steps.callback(
+                    new InternalCallbackCommand(started.instanceId(), null, null, null, "a", "deadline-biz"));
+            case "PROGRESS" -> () -> steps.progress(
+                    new InternalProgressCommand(started.instanceId(), null, null, null, "a", 1, "deadline-report"));
+            default -> throw new IllegalArgumentException(stepType);
+        };
+
+        if (elapsedMillis >= 0) {
+            assertThatThrownBy(advance)
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(ex -> ((BusinessException) ex).errorCode())
+                    .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
+            assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+            assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+            assertThat(instances.getStep(started.instanceId(), "a").getProgressCurrent()).isZero();
+            assertThat(instances.getStep(started.instanceId(), "r").getStatus()).isEqualTo(StepStatuses.INACTIVE);
+            assertThat(reports.rows).isEmpty();
+            assertThat(rewards.calls).isEmpty();
+            verify(events, never()).append(any(), any(), any(), any());
+        } else {
+            assertThatCode(advance).doesNotThrowAnyException();
+            assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+            assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+            assertThat(rewards.calls).hasSize(1);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CLICK", "CALLBACK", "PROGRESS"})
+    void completedStepAcceptedDuplicateRemainsIdempotentAfterOriginalDeadline(String stepType) {
+        long taskId = publish(
+                "completed_deadline_" + stepType.toLowerCase(Locale.ROOT),
+                List.of(
+                        new TaskStepCommand("a", "执行", 1, stepType, "PROGRESS".equals(stepType) ? 1 : null, null),
+                        new TaskStepCommand("r", "奖励", 2, "REWARD", null, 8L)),
+                List.of(new TaskTransitionCommand("a", "r", null, 0)));
+        TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
+        assertThatCode(advance(started.instanceId(), stepType, "accepted")).doesNotThrowAnyException();
+        TaskInstanceEntity instance = instances.getById(started.instanceId());
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+        assertThat(rewards.calls).hasSize(1);
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        clearInvocations(events);
+
+        assertThatCode(advance(started.instanceId(), stepType, "accepted")).doesNotThrowAnyException();
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+        assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(instances.getStep(started.instanceId(), "r").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(rewards.calls).hasSize(1);
+        assertThat(reports.rows).hasSize("PROGRESS".equals(stepType) ? 1 : 0);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"CLICK, CALLBACK", "CALLBACK, CLICK", "PROGRESS, CLICK", "PROGRESS, CALLBACK"})
+    void completedStepRejectsWrongEntryTypeAfterOriginalDeadline(String stepType, String wrongEntry) {
+        long taskId = publish(
+                "completed_type_" + stepType.toLowerCase(Locale.ROOT),
+                List.of(new TaskStepCommand("a", "执行", 1, stepType, "PROGRESS".equals(stepType) ? 1 : null, null)),
+                List.of());
+        TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
+        assertThatCode(advance(started.instanceId(), stepType, "accepted")).doesNotThrowAnyException();
+        TaskInstanceEntity instance = instances.getById(started.instanceId());
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW.minusMillis(1), ZoneOffset.UTC));
+        clearInvocations(events);
+
+        assertThatThrownBy(advance(started.instanceId(), wrongEntry, "wrong-type"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.STEP_STATE_MISMATCH);
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+        assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(reports.rows).hasSize("PROGRESS".equals(stepType) ? 1 : 0);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @Test
+    void completedProgressNewReportAfterOriginalDeadlineRemainsStateMismatch() {
+        long taskId = publish(
+                "completed_progress_new_report", List.of(new TaskStepCommand("a", "进度", 1, "PROGRESS", 1, null)),
+                List.of());
+        TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
+        steps.progress(new InternalProgressCommand(started.instanceId(), null, null, null, "a", 1, "accepted"));
+        TaskInstanceEntity instance = instances.getById(started.instanceId());
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW.minusMillis(1), ZoneOffset.UTC));
+        clearInvocations(events);
+
+        assertThatThrownBy(advance(started.instanceId(), "PROGRESS", "new-report"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.STEP_STATE_MISMATCH);
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+        assertThat(instances.getStep(started.instanceId(), "a").getProgressCurrent()).isEqualTo(1);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CLICK", "CALLBACK", "PROGRESS"})
+    void expiredParentRejectsAcceptedDuplicateOfEarlierCompletedStep(String stepType) {
+        long taskId = publish(
+                "expired_duplicate_" + stepType.toLowerCase(Locale.ROOT),
+                List.of(
+                        new TaskStepCommand("a", "执行", 1, stepType, "PROGRESS".equals(stepType) ? 1 : null, null),
+                        new TaskStepCommand("b", "后续点击", 2, "CLICK", null, null)),
+                List.of(new TaskTransitionCommand("a", "b", null, 0)));
+        TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
+        assertThatCode(advance(started.instanceId(), stepType, "accepted")).doesNotThrowAnyException();
+        TaskInstanceEntity instance = instances.getById(started.instanceId());
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        instance.setStatus(InstanceStatuses.EXPIRED);
+        clearInvocations(events);
+
+        assertThatThrownBy(advance(started.instanceId(), stepType, "accepted"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.EXPIRED);
+        assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(instances.getStep(started.instanceId(), "b").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(reports.rows).hasSize("PROGRESS".equals(stepType) ? 1 : 0);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @Test
+    void acceptedProgressReportReplayedAtDeadlineIsRejectedBeforeDeduplication() {
+        long taskId = publish(
+                "accepted_progress_deadline",
+                List.of(
+                        new TaskStepCommand("a", "进度", 1, "PROGRESS", 10, null),
+                        new TaskStepCommand("r", "奖励", 2, "REWARD", null, 8L)),
+                List.of(new TaskTransitionCommand("a", "r", null, 0)));
+        TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
+        steps.progress(new InternalProgressCommand(started.instanceId(), null, null, null, "a", 1, "accepted"));
+        TaskInstanceEntity instance = instances.getById(started.instanceId());
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        clearInvocations(events);
+
+        assertThatThrownBy(advance(started.instanceId(), "PROGRESS", "accepted"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(instances.getStep(started.instanceId(), "a").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(instances.getStep(started.instanceId(), "a").getProgressCurrent()).isEqualTo(1);
+        assertThat(instances.getStep(started.instanceId(), "r").getStatus()).isEqualTo(StepStatuses.INACTIVE);
+        assertThat(reports.rows).hasSize(1);
+        assertThat(rewards.calls).isEmpty();
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    private ThrowingCallable advance(long instanceId, String stepType, String requestId) {
+        return switch (stepType) {
+            case "CLICK" -> () -> steps.click(instanceId, "a", 9L, "203.0.113.1", null, "WEB");
+            case "CALLBACK" -> () -> steps.callback(
+                    new InternalCallbackCommand(instanceId, null, null, null, "a", requestId));
+            case "PROGRESS" -> () -> steps.progress(
+                    new InternalProgressCommand(instanceId, null, null, null, "a", 1, requestId));
+            default -> throw new IllegalArgumentException(stepType);
+        };
     }
 
     private long publish(String code, List<TaskStepCommand> stepDefs, List<TaskTransitionCommand> transitions) {

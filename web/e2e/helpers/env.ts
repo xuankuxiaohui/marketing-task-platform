@@ -18,11 +18,20 @@ export function repoRoot(): string {
   throw new Error("deploy/docker-compose.yml not found");
 }
 
+export function envFilePath(): string {
+  const override = process.env.E2E_ENV_FILE?.trim();
+  return override ? resolve(repoRoot(), override) : join(repoRoot(), "deploy/.env");
+}
+
 export function loadDotEnv(): Record<string, string> {
-  const file = join(repoRoot(), "deploy/.env");
-  const source = existsSync(file)
-    ? readFileSync(file, "utf8")
-    : readFileSync(join(repoRoot(), "deploy/.env.example"), "utf8");
+  const file = envFilePath();
+  // An explicit file must exist: silently falling back could target another stack.
+  const source = readFileSync(
+    process.env.E2E_ENV_FILE?.trim() || existsSync(file)
+      ? file
+      : join(repoRoot(), "deploy/.env.example"),
+    "utf8",
+  );
   const out: Record<string, string> = {};
   for (const line of source.split("\n")) {
     const trimmed = line.trim();

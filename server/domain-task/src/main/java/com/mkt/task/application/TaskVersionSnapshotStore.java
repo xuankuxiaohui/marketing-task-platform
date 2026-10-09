@@ -9,6 +9,8 @@ public interface TaskVersionSnapshotStore {
 
     TaskVersionSnapshotEntity getById(long id);
 
+    List<TaskVersionSnapshotEntity> listByIds(List<Long> ids);
+
     TaskVersionSnapshotEntity getByTaskAndVersion(long taskId, int version);
 
     List<TaskVersionSnapshotEntity> listByTaskId(long taskId);

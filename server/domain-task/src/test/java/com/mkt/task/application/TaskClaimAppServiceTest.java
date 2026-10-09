@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -50,6 +51,8 @@ import java.util.List;
 import org.apache.ibatis.exceptions.PersistenceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,7 +76,7 @@ class TaskClaimAppServiceTest {
     void setUp() {
         definitions = new MemoryTaskDefinitionStore();
         snapshots = new MemoryTaskVersionSnapshotStore();
-        instances = new MemoryTaskInstanceStore();
+        instances = new MemoryTaskInstanceStore(snapshots);
         crowds = new MemoryTaskCrowdStore();
         mutex = new MemoryTaskMutexGroupStore();
         users = mock(UserAttributePort.class);
@@ -285,6 +288,114 @@ class TaskClaimAppServiceTest {
     }
 
     @Test
+    void offlineTaskStillOccupiesItsUnchangedMutexGroup() {
+        insertMutexGroup(false);
+        long first = publish("offline_owner", "NONE", null, "mutex_a");
+        TaskStartResponse started = service.start(first, 9L, "1.1.1.1", null, "WEB");
+        TaskDefinitionEntity definition = definitions.getById(first);
+        definition.setStatus("OFFLINE");
+        definition.setOfflineAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        definitions.update(definition);
+        long second = publish("offline_other", "NONE", null, "mutex_a");
+        clearInvocations(events);
+
+        assertThatThrownBy(() -> service.start(second, 9L, "1.1.1.1", null, "WEB"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.CLAIM_MUTEX_BLOCKED);
+        assertThat(instances.rows).hasSize(1);
+        assertThat(instances.getById(started.instanceId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void offlineMutexOccupancyUsesConfiguredCycleScope(boolean crossCycle) {
+        insertMutexGroup(crossCycle);
+        long first = publish("cycle_owner", "DAILY", null, "mutex_a");
+        TaskStartResponse started = service.start(first, 9L, "1.1.1.1", null, "WEB");
+        definitions.getById(first).setStatus("OFFLINE");
+        long second = publish("cycle_other", "DAILY", null, "mutex_a");
+        service = serviceAt(NOW.plusSeconds(86400));
+        clearInvocations(events);
+
+        if (crossCycle) {
+            assertThatThrownBy(() -> service.start(second, 9L, "1.1.1.1", null, "WEB"))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(ex -> ((BusinessException) ex).errorCode())
+                    .isEqualTo(TaskErrorCodes.CLAIM_MUTEX_BLOCKED);
+            assertThat(instances.rows).hasSize(1);
+            verify(events, never()).append(any(), any(), any(), any());
+        } else {
+            TaskStartResponse nextCycle = service.start(second, 9L, "1.1.1.1", null, "WEB");
+            assertThat(instances.rows).hasSize(2);
+            assertThat(instances.getById(nextCycle.instanceId()).getCycleKey()).isEqualTo("20260820");
+        }
+        assertThat(instances.getById(started.instanceId()).getCycleKey()).isEqualTo("20260819");
+        assertThat(instances.getById(started.instanceId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"COMPLETED", "ABANDONED", "EXPIRED"})
+    void terminalStartShortCircuitsOfflineVisibilityRiskAndDailyLimit(String status) {
+        long taskId = publish("terminal_once", "NONE", null);
+        TaskStartResponse started = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+        TaskInstanceEntity original = instances.getById(started.instanceId());
+        Long snapshotId = original.getSnapshotId();
+        LocalDateTime expireAt = original.getExpireAt();
+        original.setStatus(status);
+        definitions.getById(taskId).setStatus("OFFLINE");
+        settings.setDailyLimitPerUser(1);
+        when(risk.check(eq(RiskScene.CLAIM), any())).thenReturn(new RiskVerdict(RiskAction.REJECT));
+        clearInvocations(events, risk);
+
+        TaskStartResponse again = service.start(taskId, 9L, "1.1.1.1", null, "WEB");
+
+        assertThat(again.instanceId()).isEqualTo(started.instanceId());
+        assertThat(again.instanceStatus()).isEqualTo(status);
+        assertThat(instances.rows).hasSize(1);
+        assertThat(instances.getById(again.instanceId()).getSnapshotId()).isEqualTo(snapshotId);
+        assertThat(instances.getById(again.instanceId()).getExpireAt()).isEqualTo(expireAt);
+        verify(risk, never()).check(any(), any());
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void editingOrPublishingAnotherMutexGroupDoesNotMoveExistingSnapshotOccupancy(boolean publishRevision) {
+        insertMutexGroup(false);
+        TaskMutexGroupEntity otherGroup = new TaskMutexGroupEntity();
+        otherGroup.setCode("mutex_b");
+        otherGroup.setName("另一互斥组");
+        otherGroup.setCrossCycle(0);
+        mutex.insert(otherGroup);
+        long owner = publish("snapshot_owner", "NONE", null, "mutex_a");
+        TaskStartResponse started = service.start(owner, 9L, "1.1.1.1", null, "WEB");
+        Long boundSnapshotId = instances.getById(started.instanceId()).getSnapshotId();
+        TaskDefinitionEntity definition = definitions.getById(owner);
+        definition.setMutexGroupId(otherGroup.getId());
+        definition.setPendingRevision(1);
+        if (publishRevision) {
+            publishNextSnapshot(owner, "mutex_b");
+            definition.setVersion(2);
+            definition.setPendingRevision(0);
+        }
+        definitions.update(definition);
+        long originalGroupTask = publish("snapshot_original_group", "NONE", null, "mutex_a");
+        long newGroupTask = publish("snapshot_new_group", "NONE", null, "mutex_b");
+
+        assertThatThrownBy(() -> service.start(originalGroupTask, 9L, "1.1.1.1", null, "WEB"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.CLAIM_MUTEX_BLOCKED);
+        TaskStartResponse independent = service.start(newGroupTask, 9L, "1.1.1.1", null, "WEB");
+        assertThat(independent.instanceStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(instances.rows).hasSize(2);
+        assertThat(instances.getById(started.instanceId()).getSnapshotId()).isEqualTo(boundSnapshotId);
+        assertThat(instances.getById(started.instanceId()).getVersion()).isEqualTo(1);
+    }
+
+    @Test
     void notVisibleWhenGrayMisses() {
         long taskId = publish("g", "NONE", new TaskGrayCommand("RATIO", 0, null, null, null));
         assertThatThrownBy(() -> service.start(taskId, 9L, "1.1.1.1", null, "WEB"))
@@ -341,6 +452,9 @@ class TaskClaimAppServiceTest {
         entity.setGrayType(gray == null ? "NONE" : gray.type());
         entity.setSortWeight(0);
         entity.setDeleted(0);
+        if (mutexGroupCode != null) {
+            entity.setMutexGroupId(mutex.getByCode(mutexGroupCode).getId());
+        }
         definitions.insert(entity);
         SnapshotContent content = new SnapshotContent(
                 code,
@@ -372,6 +486,60 @@ class TaskClaimAppServiceTest {
         snap.setPublishedBy(1L);
         snapshots.insert(snap);
         return entity.getId();
+    }
+
+    private void insertMutexGroup(boolean crossCycle) {
+        TaskMutexGroupEntity group = new TaskMutexGroupEntity();
+        group.setCode("mutex_a");
+        group.setName("互斥");
+        group.setCrossCycle(crossCycle ? 1 : 0);
+        mutex.insert(group);
+    }
+
+    private TaskClaimAppService serviceAt(Instant instant) {
+        return new TaskClaimAppService(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                mutex,
+                users,
+                risk,
+                events,
+                Clock.fixed(instant, ZoneOffset.UTC),
+                settings);
+    }
+
+    private void publishNextSnapshot(long taskId, String mutexGroupCode) {
+        SnapshotContent previous = JsonUtil.fromJson(
+                snapshots.getByTaskAndVersion(taskId, 1).getContent(), SnapshotContent.class);
+        SnapshotContent next = new SnapshotContent(
+                previous.code(),
+                previous.name(),
+                previous.description(),
+                previous.category(),
+                previous.iconUrl(),
+                previous.badgeText(),
+                previous.startTime(),
+                previous.endTime(),
+                previous.sortWeight(),
+                previous.cycleType(),
+                previous.cronExpr(),
+                previous.specialStart(),
+                previous.specialEnd(),
+                mutexGroupCode,
+                previous.gray(),
+                previous.filter(),
+                previous.steps(),
+                previous.transitions(),
+                previous.actions());
+        TaskVersionSnapshotEntity snapshot = new TaskVersionSnapshotEntity();
+        snapshot.setTaskId(taskId);
+        snapshot.setVersion(2);
+        snapshot.setContent(JsonUtil.toJson(next));
+        snapshot.setPublishedAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        snapshot.setPublishedBy(1L);
+        snapshots.insert(snapshot);
     }
 
     private static UserAttributes active() {

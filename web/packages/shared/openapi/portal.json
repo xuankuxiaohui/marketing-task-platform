@@ -1411,6 +1411,17 @@
           },
           "fulfillFailReason": {
             "type": "string"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activityId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "activityName": {
+            "type": "string"
           }
         }
       },

@@ -1,12 +1,17 @@
 package com.mkt.task.testsupport;
 
+import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.application.TaskInstanceStore;
+import com.mkt.task.application.TaskVersionSnapshotStore;
+import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
+import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.dao.DuplicateKeyException;
@@ -20,6 +25,15 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
     private final AtomicLong seq = new AtomicLong(1);
     private final AtomicLong stepSeq = new AtomicLong(1);
     private final ConcurrentHashMap<String, Long> unique = new ConcurrentHashMap<>();
+    private final TaskVersionSnapshotStore snapshots;
+
+    public MemoryTaskInstanceStore() {
+        this(null);
+    }
+
+    public MemoryTaskInstanceStore(TaskVersionSnapshotStore snapshots) {
+        this.snapshots = snapshots;
+    }
 
     @Override
     public int insert(TaskInstanceEntity entity) {
@@ -40,6 +54,11 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
     }
 
     @Override
+    public TaskInstanceEntity getByIdForUpdate(long id) {
+        return getById(id);
+    }
+
+    @Override
     public TaskInstanceEntity getByUserTaskCycle(long userId, long taskId, String cycleKey) {
         Long id = unique.get(uniqueKey(userId, taskId, cycleKey));
         return id == null ? null : rows.get(id);
@@ -57,6 +76,16 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
     public List<TaskInstanceEntity> listInProgressByUser(long userId) {
         return rows.values().stream()
                 .filter(row -> row.getUserId() == userId && "IN_PROGRESS".equals(row.getStatus()))
+                .toList();
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listInProgressByTaskAfterId(long taskId, long afterId, int limit) {
+        return rows.values().stream()
+                .filter(row -> row.getTaskId() == taskId && "IN_PROGRESS".equals(row.getStatus()))
+                .filter(row -> row.getId() > afterId)
+                .sorted(Comparator.comparing(TaskInstanceEntity::getId))
+                .limit(limit)
                 .toList();
     }
 
@@ -97,6 +126,47 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
                 && "IN_PROGRESS".equals(row.getStatus())
                 && taskIds.contains(row.getTaskId())
                 && (cycleKey == null || cycleKey.equals(row.getCycleKey())));
+    }
+
+    @Override
+    public boolean existsMutexInProgress(long userId, String mutexGroupCode, String cycleKey) {
+        if (mutexGroupCode == null || mutexGroupCode.isBlank()) {
+            return false;
+        }
+        List<TaskInstanceEntity> candidates = rows.values().stream()
+                .filter(row -> row.getUserId() == userId && "IN_PROGRESS".equals(row.getStatus()))
+                .filter(row -> cycleKey == null || cycleKey.equals(row.getCycleKey()))
+                .toList();
+        if (candidates.isEmpty()) {
+            return false;
+        }
+        if (snapshots == null) {
+            throw new IllegalStateException("Mutex checks require a bound snapshot store");
+        }
+        return candidates.stream().anyMatch(row -> {
+            if (row.getSnapshotId() == null) {
+                return false;
+            }
+            TaskVersionSnapshotEntity snapshot = snapshots.getById(row.getSnapshotId());
+            if (snapshot == null || snapshot.getContent() == null) {
+                return false;
+            }
+            SnapshotContent content = JsonUtil.fromJson(snapshot.getContent(), SnapshotContent.class);
+            return mutexGroupCode.equals(content.mutexGroupCode());
+        });
+    }
+
+    @Override
+    public synchronized int updateExpireAtCas(
+            long id, LocalDateTime expectedExpireAt, LocalDateTime expireAt, LocalDateTime now) {
+        TaskInstanceEntity row = rows.get(id);
+        if (row == null || !"IN_PROGRESS".equals(row.getStatus())
+                || !Objects.equals(row.getExpireAt(), expectedExpireAt)
+                || (row.getExpireAt() != null && !row.getExpireAt().isAfter(now))) {
+            return 0;
+        }
+        row.setExpireAt(expireAt);
+        return 1;
     }
 
     @Override
@@ -154,18 +224,6 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
         }
         row.setStatus("ACTIVE");
         row.setActivatedAt(activatedAt);
-        return 1;
-    }
-
-    @Override
-    public int completeStep(long id, LocalDateTime completedAt) {
-        TaskInstanceStepEntity row = step(id);
-        if (row == null || !"ACTIVE".equals(row.getStatus())) {
-            return 0;
-        }
-        row.setStatus("COMPLETED");
-        row.setCompletedAt(completedAt);
-        row.setVersion((row.getVersion() == null ? 0 : row.getVersion()) + 1);
         return 1;
     }
 

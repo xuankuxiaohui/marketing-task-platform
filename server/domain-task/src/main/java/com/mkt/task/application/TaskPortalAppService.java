@@ -29,6 +29,7 @@ import com.mkt.task.response.CurrentStepView;
 import com.mkt.task.response.InstanceStepView;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskBriefView;
+import com.mkt.task.response.TaskStepSource;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
@@ -85,6 +86,25 @@ public class TaskPortalAppService {
         this.users = users;
         this.risk = risk;
         this.clock = clock;
+    }
+
+    public TaskStepSource sourceForStep(long stepId) {
+        TaskInstanceStepEntity step = instances.getStepById(stepId);
+        if (step == null || step.getInstanceId() == null) {
+            return null;
+        }
+        TaskInstanceEntity instance = instances.getById(step.getInstanceId());
+        if (instance == null || instance.getTaskId() == null) {
+            return null;
+        }
+        TaskVersionSnapshotEntity snap =
+                instance.getSnapshotId() == null ? null : snapshots.getById(instance.getSnapshotId());
+        SnapshotContent content =
+                snap == null ? null : JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+        String name = content == null || content.name() == null || content.name().isBlank()
+                ? instance.getTaskCode()
+                : content.name();
+        return new TaskStepSource(instance.getTaskId(), name);
     }
 
     public PageData<TaskCardView> list(Long userId, String category, Integer page, Integer pageSize) {

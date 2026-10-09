@@ -1,63 +1,76 @@
-# server/ — 后端多模块骨架（任务 9）
+# 后端开发入口
 
-> 任务 9 当时的骨架说明。P1 域与 `web/` 已在树上。现状见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。
+后端是 Maven 多模块工程，包含 4 个平台模块、8 个业务域和 2 个应用，共 14 个子模块。项目尚未上线；模块存在不代表功能或验收已经完成。当前工作范围见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)，重构顺序和已核实问题见 [重构蓝图](../docs/refactoring-blueprint.md)。
 
-`groupId=com.mkt`。目录名 = `artifactId`。父 POM：`platform-parent` `0.1.0-SNAPSHOT`。
+## 模块与入口
 
-版本唯一来源：[dependency-matrix.md](../.kiro/specs/platform-v2/dependency-matrix.md)（任务 1–8）。
+| 模块 | 职责与主要入口 |
+|---|---|
+| `platform-kernel` | 统一响应、错误、JSON、时间与请求上下文；不持有业务实体和持久化规则 |
+| `platform-contract` | 跨域端口、不可变入出参和事件常量；包含 `RewardPort`、`UserAttributePort`、`RiskCheckPort`、`TaskReadPort` |
+| `platform-db` | 数据源配置与 Flyway 迁移；迁移脚本集中在本模块 |
+| `platform-infra` | Redis、缓存、锁、限流、会话基础设施和 Outbox；入口 `InfraAutoConfiguration` |
+| `domain-identity` | 双账号体系、权限、用户画像、配置、字典与审计 |
+| `domain-task` | 任务编排、发布快照、领取、步骤推进、人群与实例；入口 `TaskClaimAppService`、`TaskStepAppService`、`TaskPortalAppService` |
+| `domain-reward` | 奖品、库存、发放、履约、对账与积分；入口 `GrantAppService`、`PointsAppService`；积分属于本域 |
+| `domain-risk` | 名单、风控规则求值与命中记录；实现 `RiskCheckPort` |
+| `domain-tracking` | 埋点元数据、事件接收与查询、服务端事件消费和分区维护 |
+| `domain-signin` | 签到配置、签到与补签、奖励发放编排 |
+| `domain-activity` | 活动配置、展示、参与规则与参与奖励 |
+| `domain-ad` | 广告位、素材、投放、展示筛选与频控；已接入 `ad:position` 缓存 |
+| `admin-app` | `AdminApplication`；管理面装配、命名空间守卫、调度及跨域应用编排；现有看板与模拟实现待按蓝图梳理 |
+| `portal-app` | `PortalApplication`；门户和内部回调装配、命名空间守卫 |
 
-## 模块清单
+实际模块与依赖见 [父 POM](pom.xml) 和各模块 POM。两应用目前均依赖全部 8 个业务域。`domain-signin`、`domain-activity`、`domain-ad` 已有实现，不是待创建的空目录；不存在独立的 `domain-points` 模块。
 
-| artifactId | 包根 | 层 | 本任务装配 |
-|------------|------|----|------------|
-| platform-kernel | `com.mkt.kernel` | 基础 | 空壳（组件在任务 11） |
-| platform-contract | `com.mkt.contract` | 基础 | 空壳，依赖 kernel（端口在任务 12） |
-| platform-db | `com.mkt.db` | 基础 | 空壳，依赖 kernel（Flyway 在任务 13） |
-| platform-infra | `com.mkt.infra` | 基础设施 | 空壳，依赖 kernel（缓存/Outbox 在任务 15–16） |
-| domain-identity | `com.mkt.identity` | 域 | 空壳，依赖 contract + infra |
-| domain-task | `com.mkt.task` | 域 | 空壳，依赖 contract + infra |
-| domain-reward | `com.mkt.reward` | 域 | 空壳，依赖 contract + infra |
-| domain-risk | `com.mkt.risk` | 域 | 空壳，依赖 contract + infra |
-| domain-tracking | `com.mkt.tracking` | 域 | 空壳，依赖 contract + infra |
-| admin-app | `com.mkt.admin` | 应用 | 启动类 + 命名空间守卫；依赖 infra + db；**未**依赖任何 domain-* |
-| portal-app | `com.mkt.portal` | 应用 | 同上；**未**装配 task/reward（RL-05 终态，本任务按「暂不装配」） |
+## 装配与边界
 
-域之间无 Maven 依赖。无 `domain-points`、无 P1 域、无 `web/`。
+域组件通过各模块的 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 及自动配置类装配，管理和门户控制器分别扫描。应用边界如下：
 
-## 与 dependency-matrix 锁定版本对照
+| 应用 | 允许的 HTTP 前缀 | 边界 |
+|---|---|---|
+| `admin-app` | `/admin/**`、`/actuator/**` | 管理端账号、权限和 CSRF；后台写操作审计 |
+| `portal-app` | `/api/**`、`/internal/**`、`/actuator/**` | 门户账号与内部 HMAC 回调分离；`/internal/**` 不得暴露到公网 |
 
-| 组件 | 矩阵锁定 | 父 POM |
-|------|----------|--------|
-| JDK | 26.0.2 | `java.version=26`；enforcer `[26,27)` |
-| Spring Boot | 4.1.0 | `spring-boot-starter-parent` 4.1.0 |
-| Redisson | 4.6.1 | `redisson.version`（本任务未引用） |
-| Sa-Token | 1.45.0 | `sa-token.version`（本任务未引用） |
-| MyBatis-Plus | 3.5.17 | `mybatis-plus.version`（本任务未引用） |
-| Spring Cache + Caffeine + Redis | Boot BOM | 本任务未引用 |
-| springdoc-openapi | 3.1.0 | `springdoc.version`（本任务未引用） |
-| AviatorScript | 5.4.3 | `aviator.version`（本任务未引用） |
-| Hutool core + crypto | 5.8.47 | `hutool.version`（本任务未引用） |
-| easy-captcha | 1.6.2 | `easy-captcha.version`（本任务未引用） |
-| jqwik | 1.9.3 | `jqwik.version`（本任务未引用） |
-| ArchUnit | 1.5.0 | `archunit.version`（本任务未引用） |
-| logstash-logback-encoder | 8.1 | `logstash-logback-encoder.version`（本任务未引用） |
-| Testcontainers | 备选、无锁定版本 | 父 POM 未登记 |
+两应用均有请求命名空间守卫和启动映射检查。鉴权、审计与会话的编码细则统一查 [05-security.md](../docs/standards/05-security.md)，不在本文件另写一套。
 
-enforcer：直接依赖必须是上表已登记坐标、`org.springframework.boot:*` 或 `com.mkt:*`；并禁 H2 / Hutool JSON·HTTP·DB / XXL-Job / Drools / Spring Cloud / RuoYi。
+后续重构必须保留以下业务边界；这些是约束，不能据此宣称所有现有代码均符合：
 
-## 命名空间守卫（RL-08）
+- 依赖方向为应用 → 业务域 → 契约 / 基础设施 → kernel。域之间不建立 Maven 依赖，不直接访问他域 Mapper、Entity、Service 或表。跨域同步经已定义的 contract 端口，异步经 Outbox；新增契约先修订设计。
+- 领取和步骤推进由 application 层建立事务，步骤引擎经进程内 `RewardPort` 调用发奖和积分服务。`portal-app` 必须同时装配 task 与 reward，不能以远程服务拆分破坏原子性。
+- `EventPublisher.append` 要求当前存在事务。Outbox 记录与业务提交或回滚，Relay 按应用 producer 隔离消费；消费者仍需幂等。失败留痕的独立事务范围以设计为准，不能把任意写入移到独立事务。
+- MyBatis Mapper 与实体归所属域，Flyway 迁移归 `platform-db`。发布快照绑定实例后不可变；库存、积分与幂等约束不能仅靠缓存或进程内锁保证。
 
-| 应用 | 允许前缀 | 越界 |
-|------|----------|------|
-| admin-app | `/admin`、`/actuator` | 404 |
-| portal-app | `/api`、`/internal`、`/actuator` | 404 |
+更详细的模块边界、事务和缓存设计从 [design.md 章节索引](../.kiro/specs/platform-v2/design.md) 进入；目录和装配规范见 [03-project-structure.md](../docs/standards/03-project-structure.md)。
 
-启动时 `ApplicationRunner` 扫描 `RequestMappingHandlerMapping`，路径不在前缀集合则 fail-fast。已排除 `ErrorMvcAutoConfiguration`（避免默认 `/error` 踩红线）。
+## 环境与构建
 
-## 验收命令
+使用 JDK 26。本机默认 PATH 是 JDK 25，PowerShell 中先设置 `JAVA_HOME`。版本选型意图记录在 [dependency-matrix.md](../.kiro/specs/platform-v2/dependency-matrix.md)，构建实际采用父 POM、各模块 POM 和继承的 BOM；两者不一致时登记差异，不复制版本表或默认为已对齐。
 
-```text
-$env:JAVA_HOME="D:\develop\jdk\jdk-26.0.2"
-cd server
-mvn -q -DskipTests compile
+以下命令从仓库根目录执行。编译和单元测试无需启动业务应用：
+
+```powershell
+$env:JAVA_HOME = 'D:\develop\jdk\jdk-26.0.2'
+mvn -f server/pom.xml -q -DskipTests compile
+mvn -f server/pom.xml -q -DskipITs test
 ```
+
+Surefire 执行 `*Test`、`*PropertyTest`、`*ArchTest`，排除 `*IT`。`test` 阶段还绑定 JaCoCo 检查，因此单测断言通过不等于整条构建命令通过。
+
+有 Docker 的 CI 环境执行完整验证：
+
+```powershell
+mvn -f server/pom.xml -B verify
+```
+
+`verify` 经 Failsafe 执行 `*IT`。本机无 Docker，MySQL / Redis 集成测试留给 CI；不能用 H2、跳过断言或本机手工数据库替代。流水线定义见 [ci.yml](../.github/workflows/ci.yml)，验收映射见 [verification-matrix.md](../docs/verification-matrix.md)。
+
+本机运行应用使用仓库 [启动脚本说明](../scripts/README.md)；部署约定见 [14-deployment.md](../docs/standards/14-deployment.md)。不要把密码写入应用 YAML 或文档。Redis 使用 DB 2；账号密码和端口等环境值按运行配置提供。
+
+## 如何验证一次重构
+
+先定位需求条款与当前调用链，再补能暴露问题的测试，按用例替换实现；不要同时重写所有域。查询优化需要查询次数与分页语义证据，事务重构需要真实数据库回滚与并发证据，缓存和 Outbox 需要故障及恢复证据。
+
+已有 `ArchLayerRuleTest` 检查域间依赖，`PortalAssemblyIT` 检查 task / reward / points 装配，`ScenarioMatrixIT` 和各域 IT 覆盖业务场景。它们是验证入口，不能用文件存在、旧报告或内存替身单测代替当前基线执行结果。
+
+本文件的模块和调用关系来自 2026-10-07 工作区静态核对。本轮只调整文档，未重新运行编译、测试、应用启动或压测；当前可运行性、CI 结果及容量仍需后续执行验证。

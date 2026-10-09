@@ -26,6 +26,9 @@ public interface TaskDefinitionStore {
 
     TaskDefinitionEntity getByIdForUpdate(long id);
 
+    /** Holds publication state stable while the caller claims a task in the same transaction. */
+    TaskDefinitionEntity getByIdForShare(long id);
+
     List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit);
 
     int countInProgressInstances(long taskId);

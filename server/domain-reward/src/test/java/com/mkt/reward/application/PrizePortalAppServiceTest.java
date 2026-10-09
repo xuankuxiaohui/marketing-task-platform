@@ -64,4 +64,44 @@ class PrizePortalAppServiceTest {
         entity.setUpdatedAt(entity.getCreatedAt());
         return entity;
     }
+
+    @Test
+    void mapsClaimedAtTypeAndLookupActivityOntoTheView() {
+        MemoryGrantRecordStore grants = new MemoryGrantRecordStore();
+        MemoryPrizeStore prizes = new MemoryPrizeStore();
+        PrizeEntity prize = new PrizeEntity();
+        prize.setId(1L);
+        prize.setCode("p1");
+        prize.setName("积分礼包");
+        prize.setCategoryCode("POINTS");
+        prize.setRewardTarget("PLATFORM");
+        prize.setFulfillmentMode("INSTANT");
+        prize.setTotalStock(1);
+        prize.setRemainingStock(0);
+        prize.setDailyClaimLimit(0);
+        prize.setTotalClaimLimit(0);
+        prize.setClaimMode("MANUAL");
+        prize.setStatus("ENABLED");
+        prize.setDeleted(0);
+        prizes.insert(prize);
+        GrantRecordEntity entity = row(11L, GrantRecordStatuses.GRANTED, GrantRecordStatuses.FULFILL_ARRIVED);
+        entity.setExpireAt(LocalDateTime.parse("2026-09-01T00:00:00"));
+        entity.setClaimedAt(LocalDateTime.parse("2026-08-20T04:00:00"));
+        entity.setGrantSource("TASK_STEP");
+        entity.setSourceId("77");
+        grants.insert(entity);
+        PrizeSourceLookup lookup = (grantSource, sourceId) ->
+                new PrizeSourceLookup.SourceRef(22L, "每日浏览", 3L, "夏季专题");
+        PrizePortalAppService portal = new PrizePortalAppService(grants, prizes, lookup);
+        var view = portal.list(9L, "ALL", 1, 20).records().get(0);
+        assertThat(view.prizeName()).isEqualTo("积分礼包");
+        assertThat(view.categoryCode()).isEqualTo("COUPON");
+        assertThat(view.expireAt()).isEqualTo(java.time.Instant.parse("2026-09-01T00:00:00Z"));
+        assertThat(view.obtainedAt()).isEqualTo(java.time.Instant.parse("2026-08-19T00:00:00Z"));
+        assertThat(view.claimedAt()).isEqualTo(java.time.Instant.parse("2026-08-20T04:00:00Z"));
+        assertThat(view.sourceTaskId()).isEqualTo(22L);
+        assertThat(view.sourceTaskName()).isEqualTo("每日浏览");
+        assertThat(view.activityId()).isEqualTo(3L);
+        assertThat(view.activityName()).isEqualTo("夏季专题");
+    }
 }

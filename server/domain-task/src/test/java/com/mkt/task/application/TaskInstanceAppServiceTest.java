@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +47,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class TaskInstanceAppServiceTest {
 
@@ -177,6 +182,80 @@ class TaskInstanceAppServiceTest {
         verify(publisher)
                 .append(eq(EventCodes.TASK_INSTANCE_EXPIRE), eq("task_instance"), eq(String.valueOf(due.getId())), any());
         assertThat(service.expireDue()).isZero();
+    }
+
+    @Test
+    void expireDueAtExactDeadlineEmitsOnlyOneEventAcrossRepeatedScans() {
+        TaskInstanceEntity due = inProgress(1L, 9L, NOW);
+        instances.insert(due);
+        TaskInstanceEntity future = inProgress(2L, 9L, NOW.plusMillis(1));
+        instances.insert(future);
+
+        assertThat(service.expireDue()).isEqualTo(1);
+        assertThat(service.expireDue()).isZero();
+        assertThat(instances.getById(due.getId()).getStatus()).isEqualTo(InstanceStatuses.EXPIRED);
+        assertThat(instances.getById(due.getId()).getCostSeconds()).isEqualTo(60);
+        assertThat(instances.getById(future.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        verify(publisher, times(1))
+                .append(eq(EventCodes.TASK_INSTANCE_EXPIRE), eq("task_instance"), eq(String.valueOf(due.getId())), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"COMPLETED", "ABANDONED", "EXPIRED"})
+    void expireCasLosingToTerminalTransitionDoesNotOverwriteOrEmit(String terminalStatus) {
+        TaskInstanceEntity due = inProgress(1L, 9L, NOW);
+        instances.insert(due);
+        MemoryTaskInstanceStore competing = spy(instances);
+        doAnswer(invocation -> {
+                    due.setStatus(terminalStatus);
+                    due.setCostSeconds(42);
+                    return 0;
+                })
+                .when(competing)
+                .expireCas(eq(due.getId()), any(), eq(60));
+        service = new TaskInstanceAppService(
+                competing,
+                snapshots,
+                timeline,
+                publisher,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                null);
+
+        assertThat(service.expireDue()).isZero();
+        assertThat(service.expireDue()).isZero();
+        assertThat(instances.getById(due.getId()).getStatus()).isEqualTo(terminalStatus);
+        assertThat(instances.getById(due.getId()).getCostSeconds()).isEqualTo(42);
+        verify(publisher, never()).append(any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"COMPLETED", "ABANDONED", "EXPIRED"})
+    void adminAbandonCasLosingToTerminalTransitionDoesNotOverwriteOrEmit(String terminalStatus) {
+        TaskInstanceEntity active = inProgress(1L, 9L, NOW.plusSeconds(86400));
+        instances.insert(active);
+        MemoryTaskInstanceStore competing = spy(instances);
+        doAnswer(invocation -> {
+                    active.setStatus(terminalStatus);
+                    active.setCostSeconds(42);
+                    return 0;
+                })
+                .when(competing)
+                .abandonCas(eq(active.getId()), eq(AbandonSources.ADMIN), any(), eq(60));
+        service = new TaskInstanceAppService(
+                competing,
+                snapshots,
+                timeline,
+                publisher,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                null);
+
+        assertThat(service.abandonAdmin(active.getId()).instanceStatus()).isEqualTo(terminalStatus);
+        assertThat(service.abandonAdmin(active.getId()).instanceStatus()).isEqualTo(terminalStatus);
+        assertThat(instances.getById(active.getId()).getStatus()).isEqualTo(terminalStatus);
+        assertThat(instances.getById(active.getId()).getCostSeconds()).isEqualTo(42);
+        verify(publisher, never()).append(any(), any(), any(), any());
     }
 
     @Test

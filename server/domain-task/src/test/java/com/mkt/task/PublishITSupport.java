@@ -10,6 +10,7 @@ import com.mkt.task.testsupport.MemoryPrizeEnabledLookup;
 import com.mkt.task.application.MybatisTaskChildStore;
 import com.mkt.task.application.MybatisTaskCrowdStore;
 import com.mkt.task.application.MybatisTaskDefinitionStore;
+import com.mkt.task.application.MybatisTaskInstanceStore;
 import com.mkt.task.application.MybatisTaskMutexGroupStore;
 import com.mkt.task.application.MybatisTaskVersionSnapshotStore;
 import com.mkt.task.application.TaskDefinitionAppService;
@@ -20,6 +21,8 @@ import com.mkt.task.command.TaskTransitionCommand;
 import com.mkt.task.mapper.TaskCrowdItemMapper;
 import com.mkt.task.mapper.TaskCrowdMapper;
 import com.mkt.task.mapper.TaskDefinitionMapper;
+import com.mkt.task.mapper.TaskInstanceMapper;
+import com.mkt.task.mapper.TaskInstanceStepMapper;
 import com.mkt.task.mapper.TaskMutexGroupMapper;
 import com.mkt.task.mapper.TaskPlatformActionMapper;
 import com.mkt.task.mapper.TaskStepMapper;
@@ -83,6 +86,9 @@ final class PublishITSupport implements AutoCloseable {
                 new MybatisTaskVersionSnapshotStore(sql.getMapper(TaskVersionSnapshotMapper.class)),
                 defs,
                 new MemoryPrizeEnabledLookup(),
+                new MybatisTaskInstanceStore(
+                        sql.getMapper(TaskInstanceMapper.class), sql.getMapper(TaskInstanceStepMapper.class)),
+                settings,
                 clock,
                 null,
                 null,
@@ -211,6 +217,8 @@ final class PublishITSupport implements AutoCloseable {
         MybatisConfiguration configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(TaskDefinitionMapper.class);
+        configuration.addMapper(TaskInstanceMapper.class);
+        configuration.addMapper(TaskInstanceStepMapper.class);
         configuration.addMapper(TaskStepMapper.class);
         configuration.addMapper(TaskStepTransitionMapper.class);
         configuration.addMapper(TaskPlatformActionMapper.class);

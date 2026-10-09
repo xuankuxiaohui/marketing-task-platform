@@ -21,6 +21,11 @@ vi.mock("@/api/task", () => ({
   abandonTask: vi.fn(),
 }));
 
+vi.mock("@/api/prize", () => ({
+  fetchPrizeList: vi.fn(),
+  claimPrize: vi.fn(),
+}));
+
 vi.mock("@/tracking", () => ({
   TRACK: {
     TASK_DETAIL_VIEW: "task.detail.view",
@@ -46,6 +51,7 @@ vi.mock("vant", async () => {
 });
 
 import { fetchActivities, fetchActivityDetail } from "@/api/activity";
+import { fetchPrizeList } from "@/api/prize";
 import { fetchTaskDetail, fetchTaskList } from "@/api/task";
 import ActivityPage from "./index.vue";
 
@@ -53,6 +59,7 @@ const listMock = vi.mocked(fetchActivities);
 const detailMock = vi.mocked(fetchActivityDetail);
 const taskListMock = vi.mocked(fetchTaskList);
 const taskDetailMock = vi.mocked(fetchTaskDetail);
+const prizeListMock = vi.mocked(fetchPrizeList);
 
 function card(overrides: Partial<TaskCardView> = {}): TaskCardView {
   return {
@@ -101,6 +108,8 @@ describe("ActivityPage", () => {
     taskDetailMock.mockReset();
     taskListMock.mockResolvedValue(ok({ total: 0, records: [] }));
     taskDetailMock.mockResolvedValue(ok({ status: "NOT_STARTED" }));
+    prizeListMock.mockReset();
+    prizeListMock.mockResolvedValue(ok({ total: 0, records: [] }));
   });
 
   it("renders empty when no published activity", async () => {

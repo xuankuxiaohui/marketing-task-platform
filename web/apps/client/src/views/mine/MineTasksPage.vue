@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onScopeDispose, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
+import { Button, DropdownItem, DropdownMenu, Empty, List, NavBar, PullRefresh, Tab, Tabs } from "vant";
 import { isOk } from "@mkt/shared";
+import { fetchActivities, type PortalActivityView } from "@/api/activity";
 import { fetchDict, TASK_CATEGORY_DICT, dictLabel, type DictPortalEntry } from "@/api/dict";
 import { fetchMineTasks, type MineTaskView } from "@/api/task";
-import { useSessionReload } from "@/composables/useSessionReload";
+import { usePagedList } from "@/composables/usePagedList";
 import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
 import { type MineTaskStatus } from "@/utils/mine-status";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatBeijing } from "@/utils/datetime";
-import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
+import { ownersForTask, ownersLabel } from "@/utils/activity-ownership";
 import { terminalStatusLabel } from "@/utils/task-button";
 
 defineOptions({ name: "MineTasksPage" });
 
 const ALL = "ALL";
-const PAGE_SIZE = 20;
 const STATUS_TABS = [
   { name: ALL, title: zhCN.task.all },
   { name: "IN_PROGRESS", title: zhCN.task.inProgress },
@@ -35,80 +35,70 @@ const overlay = useLoginOverlayStore();
 const isTabRoot = computed(() => route.meta.tab === "tasks");
 const categories = ref<DictPortalEntry[]>([]);
 const activeStatus = ref<StatusTab>("IN_PROGRESS");
-const records = ref<MineTaskView[]>([]);
-const page = ref(1);
-const total = ref(0);
-const loading = ref(false);
-const finished = ref(false);
-const refreshing = ref(false);
-const loaded = ref(false);
+const activeCategory = ref("");
 const statusTabs = ref<{ resize?: () => void } | null>(null);
+const activities = ref<PortalActivityView[]>([]);
+let activitiesGeneration = 0;
+let categoriesGeneration = 0;
+let disposed = false;
 
-const empty = computed(() => loaded.value && records.value.length === 0);
+const {
+  records, loading, finished, refreshing, error, errorMessage, empty, loadMore, refresh, retry,
+} = usePagedList<MineTaskView>({
+  scope: () => [session.token, activeStatus.value, activeCategory.value],
+  enabled: () => session.authenticated,
+  fetchPage: (page, pageSize) => fetchMineTasks({
+    status: activeStatus.value === ALL ? undefined : activeStatus.value,
+    category: activeCategory.value || undefined,
+    page,
+    pageSize,
+  }),
+});
+
+const categoryOptions = computed(() => [
+  { text: zhCN.task.allCategories, value: "" },
+  ...categories.value.map((category) => ({ text: category.label ?? category.value ?? "", value: category.value ?? "" })),
+]);
 const emptyCopy = computed(() => (activeStatus.value === "IN_PROGRESS" ? zhCN.empty.tasks : zhCN.task.finishedEmpty));
 
+function activityLabel(row: MineTaskView): string {
+  return ownersLabel(ownersForTask(row.taskId, activities.value));
+}
+
+async function loadActivities(): Promise<void> {
+  const generation = ++activitiesGeneration;
+  const token = session.token;
+  activities.value = [];
+  try {
+    const result = await fetchActivities();
+    if (!disposed && generation === activitiesGeneration && token === session.token) {
+      activities.value = isOk(result) && result.data ? result.data : [];
+    }
+  } catch {
+    if (!disposed && generation === activitiesGeneration && token === session.token) {
+      activities.value = [];
+    }
+  }
+}
+
 async function loadCategories(): Promise<void> {
+  const generation = ++categoriesGeneration;
+  const token = session.token;
+  if (!session.authenticated) {
+    categories.value = [];
+    return;
+  }
   try {
     const result = await fetchDict(TASK_CATEGORY_DICT);
-    if (isOk(result) && Array.isArray(result.data)) {
+    if (!disposed && generation === categoriesGeneration && token === session.token
+      && isOk(result) && Array.isArray(result.data)) {
       categories.value = result.data;
     }
   } catch {
-    categories.value = [];
-  }
-}
-
-async function loadPage(reset: boolean): Promise<void> {
-  if (!session.authenticated) {
-    records.value = [];
-    total.value = 0;
-    finished.value = true;
-    loading.value = false;
-    refreshing.value = false;
-    loaded.value = true;
-    return;
-  }
-  if (reset) {
-    page.value = 1;
-    finished.value = false;
-  }
-  loading.value = true;
-  try {
-    const status = activeStatus.value === ALL ? undefined : activeStatus.value;
-    const result = await fetchMineTasks({
-      status,
-      page: page.value,
-      pageSize: PAGE_SIZE,
-    });
-    if (!isOk(result) || !result.data) {
-      showPortalFail(result);
-      finished.value = true;
-      return;
+    if (!disposed && generation === categoriesGeneration && token === session.token) {
+      categories.value = [];
     }
-    const next = result.data.records ?? [];
-    total.value = Number(result.data.total ?? 0);
-    records.value = reset ? next : [...records.value, ...next];
-    page.value += 1;
-    finished.value = records.value.length >= total.value || next.length === 0;
-  } catch {
-    showNetworkFail();
-    finished.value = true;
-  } finally {
-    loading.value = false;
-    refreshing.value = false;
-    loaded.value = true;
   }
-}
-
-function onRefresh(): void {
-  void loadPage(true);
-}
-
-function onLoadMore(): void {
-  if (refreshing.value || loading.value) {
-    return;
-  }
-  void loadPage(false);
 }
 
 function openTask(row: MineTaskView): void {
@@ -126,20 +116,29 @@ function requestLogin(): void {
   overlay.request({ redirect: route.fullPath });
 }
 
-watch(activeStatus, () => {
-  void loadPage(true);
-});
-
-useSessionReload(() => {
+watch(() => session.token, () => {
+  categories.value = [];
   void loadCategories();
-  void loadPage(true);
-});
+  void loadActivities();
+}, { flush: "sync" });
+
+function onRefresh(): void {
+  void loadCategories();
+  void loadActivities();
+  void refresh();
+}
 
 onMounted(async () => {
   void loadCategories();
-  void loadPage(true);
+  void loadActivities();
   await nextTick();
   statusTabs.value?.resize?.();
+});
+
+onScopeDispose(() => {
+  disposed = true;
+  activitiesGeneration += 1;
+  categoriesGeneration += 1;
 });
 
 defineExpose({ selectStatus });
@@ -157,10 +156,18 @@ defineExpose({ selectStatus });
         :data-testid="'mine-status-' + tab.name"
       />
     </Tabs>
+    <DropdownMenu data-testid="mine-task-categories">
+      <DropdownItem v-model="activeCategory" :options="categoryOptions" />
+    </DropdownMenu>
     <PullRefresh v-model="refreshing" class="mine-list" data-testid="mine-list" @refresh="onRefresh">
       <Empty v-if="!session.authenticated" :description="zhCN.session.missing" data-testid="mine-tasks-login">
         <Button type="primary" size="small" data-testid="mine-tasks-login-action" @click="requestLogin">
           {{ zhCN.login.submit }}
+        </Button>
+      </Empty>
+      <Empty v-else-if="error && records.length === 0" :description="errorMessage" data-testid="mine-tasks-error">
+        <Button type="primary" size="small" data-testid="mine-tasks-retry" @click="retry">
+          {{ zhCN.common.retry }}
         </Button>
       </Empty>
       <Empty v-else-if="empty" :description="emptyCopy" data-testid="mine-tasks-empty">
@@ -177,11 +184,13 @@ defineExpose({ selectStatus });
       <List
         v-else
         v-model:loading="loading"
+        v-model:error="error"
+        :error-text="errorMessage"
         :finished="finished"
         :finished-text="zhCN.task.noMore"
         :immediate-check="false"
         data-testid="mine-tasks-list"
-        @load="onLoadMore"
+        @load="loadMore"
       >
         <button
           v-for="row in records"
@@ -196,6 +205,9 @@ defineExpose({ selectStatus });
             <strong>{{ row.taskName }}</strong>
             <span v-if="row.currentStepName">{{ row.currentStepName }}</span>
             <span>{{ dictLabel(categories, row.category) }} · {{ terminalStatusLabel(row.status) }}</span>
+            <span v-if="activityLabel(row)" data-testid="mine-task-activity">
+              {{ zhCN.activity.owner }} {{ activityLabel(row) }}
+            </span>
             <span v-if="row.startedAt">{{ formatBeijing(row.startedAt) }}</span>
           </span>
         </button>

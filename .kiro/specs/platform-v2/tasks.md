@@ -1,9 +1,10 @@
-# 任务列表（营销任务平台 v2）
+# 历史实现计划（营销任务平台 v2）
 
+> 本文已退出日常工作入口。当前范围见 [PROJECT_STATUS](../../../PROJECT_STATUS.md)，后续重构顺序见 [重构方案](../../../docs/refactoring-blueprint.md)。以下版本、数量、依赖与勾选均保留原始计划语境。
 > 版本：**v2.9**　需求：[requirements.md](requirements.md) v3.9　设计：[design.md](design.md) v2.13
 > 施工进度见仓库根 [PROJECT_STATUS.md](../../../PROJECT_STATUS.md)。本文件是规格交付清单，不是下一题队列。
 > 输入：requirements 验收标准 = 任务完成定义；design §2–§7 为实现锚点（分册见 design §0）；component-selection §6 = Spike 八项；三份 feasibility §2 = 步骤 24 + 对账 28 + 风控 30
-> 验收对照：[../../docs/verification-matrix.md](../../docs/verification-matrix.md)
+> 验收对照：[verification-matrix.md](../../../docs/verification-matrix.md)
 > 格式：可勾选动作 + 三行元信息（`_需求：_` / `_设计：_` / `_测试：_`）；依赖只写在《任务总览》与文末《任务依赖图》
 > 口径：**39 表** · **66 属性** · **三份场景矩阵** · **三端口** · **JDK 26 + Spring Boot 4** · **11 个 Maven 模块**
 
@@ -11,9 +12,9 @@
 
 本文件记录全部实现计划（**53 个可追踪任务**：原 49，37/38 正式拆为 37.1–37.3 与 38.1–38.3），映射 [requirements.md](requirements.md) v3.9 与 [design.md](design.md) v2.13。
 
-**状态**：`- [ ]` 待办，`- [x]` 完成且验收通过。
+**历史标记**：勾选仅保留当时的交付记录，不代表当前代码已验证或测试通过。不要从下一空勾自动开始工作。
 
-**纪律**：① 测试与实现同任务交付（场景矩阵 / E2E / k6 属编组 I）；② 依赖见文末依赖图，无环；③ 实现锚点 = design §2–§7；与 requirements 冲突则停笔写冲突，禁止静默跟 design；④ P1（编组 J）不与 P0 交叉；⑤ Spike、编码、提交需授权。
+**原始交付纪律（历史记录，不作为当前授权或分支规则）**：① 测试与实现同任务交付（场景矩阵 / E2E / k6 属编组 I）；② 依赖见文末依赖图，无环；③ 实现锚点 = design §2–§7；与 requirements 冲突则停笔写冲突，禁止静默跟 design；④ P1（编组 J）不与 P0 交叉；⑤ Spike、编码、提交需授权。
 
 **范围**：编组 A–J，任务 1–49（37/38 以子号交付与勾选）。
 
@@ -204,7 +205,7 @@ _测试：SpringdocSmokeTest（三分组导出 + UI 关闭断言）_
 - [x] 编译含自定义函数表达式（`province() == 'GD' AND userLevel() >= 3`）求值冒烟
 - [x] AST 逐节点类型可枚举（可判定白名单拒绝，校验流程步骤 2）
 - [x] 无限循环函数场景求值可中断（中断标志/超时异常可控）
-- [x] 性能基准：编译缓存后求值 P99 < 1ms（1 万次采样，`perf/expression-benchmark.md` 归档）
+- [x] 性能基准：编译缓存后求值 P99 < 1ms（1 万次采样，`perf/README.md` 归档）
 - [x] 整数域与长度上限前置校验冒烟（long 域拒绝，M-08 口径）
 - [x] 不可用时采用 design §2.7.1 备选（自建极简解释器），结论写入矩阵
 - [x] 交付 `spike/6-aviator/REPORT.md` + 矩阵行

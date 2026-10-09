@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.mkt.activity.command.ActivityGrayCommand;
 import com.mkt.activity.command.ActivityPublishCommand;
 import com.mkt.activity.command.ActivitySaveCommand;
+import com.mkt.activity.command.ActivitySubmoduleCommand;
+import com.mkt.activity.convert.ActivityOwnership;
 import com.mkt.activity.domain.HitRules;
 import com.mkt.activity.response.ParticipateResponse;
 import com.mkt.activity.support.ActivityErrorCodes;
@@ -89,6 +91,45 @@ class ActivityPortalAppServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(ActivityErrorCodes.NOT_FOUND);
+    }
+
+    @Test
+    void listIncludesTaskSubmodulesAndOwnershipJoinsParticipation() {
+        UserContext.set(new UserPrincipal(1L, "admin", "op"));
+        long id = admin.save(new ActivitySaveCommand(
+                        null,
+                        "withtask",
+                        "带任务专题",
+                        Instant.parse("2026-08-01T00:00:00Z"),
+                        Instant.parse("2026-08-31T16:00:00Z"),
+                        "<p>ok</p>",
+                        new ActivityGrayCommand("NONE", null),
+                        List.of(new ActivitySubmoduleCommand("TASK", 22L, 1)),
+                        10L,
+                        List.of(),
+                        List.of(),
+                        false,
+                        7,
+                        null,
+                        null,
+                        null,
+                        List.of()))
+                .id();
+        admin.publish(id, new ActivityPublishCommand(true, false));
+        UserContext.set(new UserPrincipal(9L, "client", "bob"));
+        assertThat(portal.listPublished(9L))
+                .anySatisfy(card -> {
+                    assertThat(card.id()).isEqualTo(id);
+                    assertThat(card.submodules()).hasSize(1);
+                    assertThat(card.submodules().get(0).type()).isEqualTo("TASK");
+                    assertThat(card.submodules().get(0).refId()).isEqualTo(22L);
+                });
+        List<ActivityOwnership.Ref> refs = portal.ownershipForTask(22L);
+        assertThat(refs).extracting(ActivityOwnership.Ref::activityId).contains(id);
+        ParticipateResponse pass = portal.participate(id, 9L);
+        ActivityOwnership.Ref owned = portal.ownershipForParticipation(pass.participationId());
+        assertThat(owned.activityId()).isEqualTo(id);
+        assertThat(owned.activityName()).isEqualTo("带任务专题");
     }
 
     @Test

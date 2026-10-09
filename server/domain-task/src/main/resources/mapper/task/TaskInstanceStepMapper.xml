@@ -28,14 +28,6 @@
         WHERE id = #{id} AND status = 'INACTIVE'
     </update>
 
-    <update id="complete">
-        UPDATE task_instance_step
-        SET status = 'COMPLETED',
-            completed_at = #{completedAt},
-            version = version + 1
-        WHERE id = #{id} AND status = 'ACTIVE'
-    </update>
-
     <update id="completeCas">
         UPDATE task_instance_step
         SET status = 'COMPLETED',

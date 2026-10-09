@@ -31,6 +31,16 @@ public final class MemoryTaskVersionSnapshotStore implements TaskVersionSnapshot
     }
 
     @Override
+    public List<TaskVersionSnapshotEntity> listByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return rows.values().stream()
+                .filter(row -> ids.contains(row.getId()))
+                .toList();
+    }
+
+    @Override
     public TaskVersionSnapshotEntity getByTaskAndVersion(long taskId, int version) {
         return rows.values().stream()
                 .filter(row -> row.getTaskId() == taskId && row.getVersion() == version)

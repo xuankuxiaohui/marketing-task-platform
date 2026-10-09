@@ -99,11 +99,10 @@ public class TaskDefinitionAppService {
     @Transactional
     public TaskDefinitionSaveResponse saveAggregate(TaskDefinitionSaveCommand command) {
         ValidatedAggregate validated = validate(command);
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
         if (command.id() == null) {
-            return insertNew(validated, now);
+            return insertNew(validated, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         }
-        return updateExisting(validated, now);
+        return updateExisting(validated);
     }
 
     @Transactional
@@ -140,7 +139,7 @@ public class TaskDefinitionAppService {
     @Transactional
     public void restoreEditState(long id, TaskDefinitionSaveCommand command) {
         ValidatedAggregate validated = validate(command);
-        TaskDefinitionEntity existing = requireLive(id);
+        TaskDefinitionEntity existing = requireLockedLive(id);
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
         TaskDefinitionConvert.applyHeader(validated.command(), existing);
         existing.setPendingRevision(0);
@@ -151,7 +150,7 @@ public class TaskDefinitionAppService {
 
     @Transactional
     public void delete(long id) {
-        TaskDefinitionEntity existing = requireLive(id);
+        TaskDefinitionEntity existing = requireLockedLive(id);
         if (!DefinitionStatuses.deletable(existing.getStatus())) {
             throw new BusinessException(TaskErrorCodes.PUBLISHED_NOT_DELETABLE);
         }
@@ -182,8 +181,9 @@ public class TaskDefinitionAppService {
         return new TaskDefinitionSaveResponse(entity.getId(), entity.getCode(), 0, entity.getStatus());
     }
 
-    private TaskDefinitionSaveResponse updateExisting(ValidatedAggregate validated, LocalDateTime now) {
-        TaskDefinitionEntity existing = requireLive(validated.command().id());
+    private TaskDefinitionSaveResponse updateExisting(ValidatedAggregate validated) {
+        TaskDefinitionEntity existing = requireLockedLive(validated.command().id());
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
         if (!existing.getCode().equals(validated.command().code())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 不可修改");
         }
@@ -526,6 +526,14 @@ public class TaskDefinitionAppService {
 
     private TaskDefinitionEntity requireLive(long id) {
         TaskDefinitionEntity existing = definitions.getById(id);
+        if (existing == null || existing.deletedFlag()) {
+            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
+        }
+        return existing;
+    }
+
+    private TaskDefinitionEntity requireLockedLive(long id) {
+        TaskDefinitionEntity existing = definitions.getByIdForUpdate(id);
         if (existing == null || existing.deletedFlag()) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }

@@ -16,6 +16,11 @@ vi.mock("@/api/task", () => ({
   INSTANCE_FROZEN_CODE: "task.instance.frozen",
 }));
 
+vi.mock("@/api/prize", () => ({
+  fetchPrizeList: vi.fn(),
+  claimPrize: vi.fn(),
+}));
+
 vi.mock("@/tracking", () => ({
   TRACK: {
     TASK_DETAIL_VIEW: "task.detail.view",
@@ -38,10 +43,12 @@ vi.mock("vant", async () => {
   };
 });
 
+import { fetchPrizeList } from "@/api/prize";
 import { fetchTaskDetail, startTask } from "@/api/task";
 import { showFailToast } from "vant";
 import TaskCompleteSheet from "./TaskCompleteSheet.vue";
 
+const prizeListMock = vi.mocked(fetchPrizeList);
 const detailMock = vi.mocked(fetchTaskDetail);
 const startMock = vi.mocked(startTask);
 const failToast = vi.mocked(showFailToast);
@@ -102,6 +109,8 @@ async function mountSheet(loggedIn = true) {
 describe("TaskCompleteSheet", () => {
   beforeEach(() => {
     detailMock.mockReset();
+    prizeListMock.mockReset();
+    prizeListMock.mockResolvedValue(ok({ total: 0, records: [] }));
     startMock.mockReset();
     failToast.mockReset();
   });

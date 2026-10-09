@@ -156,6 +156,11 @@ public final class MemoryActivityStores {
         }
 
         @Override
+        public ActParticipationEntity getById(long id) {
+            return copy(byId.get(id));
+        }
+
+        @Override
         public int countPass(long activityId, Long userId, String periodKey) {
             return (int) byId.values().stream()
                     .filter(row -> Objects.equals(row.getActivityId(), activityId))

@@ -1,6 +1,9 @@
 package com.mkt.task.domain;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -50,6 +53,27 @@ public final class CycleKeyResolver {
             }
             case CycleTypes.SPECIAL -> specialEnd;
             default -> null;
+        };
+    }
+
+    /** Derives a bound instance's period from its stable key, independent of timestamp rounding. */
+    public static Instant cycleEndForKey(
+            String cycleType, String cronExpr, Instant specialEnd, String cycleKey) {
+        if (cycleType == null || CycleTypes.NONE.equals(cycleType)) {
+            return null;
+        }
+        return switch (cycleType) {
+            case CycleTypes.DAILY -> LocalDate.parse(cycleKey, DateTimeFormatter.BASIC_ISO_DATE)
+                    .plusDays(1).atStartOfDay(ZONE).toInstant().minusMillis(1);
+            case CycleTypes.MONTHLY -> YearMonth.parse(cycleKey, MONTH)
+                    .plusMonths(1).atDay(1).atStartOfDay(ZONE).toInstant().minusMillis(1);
+            case CycleTypes.CRON -> {
+                ZonedDateTime start = LocalDateTime.parse(cycleKey, TS).atZone(ZONE);
+                ZonedDateTime next = CronExprs.nextAfter(cronExpr, start);
+                yield next == null ? null : next.toInstant().minusMillis(1);
+            }
+            case CycleTypes.SPECIAL -> specialEnd;
+            default -> throw new IllegalArgumentException("Unsupported instance cycle type: " + cycleType);
         };
     }
 

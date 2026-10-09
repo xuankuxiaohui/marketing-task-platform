@@ -25,6 +25,14 @@ public class MybatisTaskVersionSnapshotStore implements TaskVersionSnapshotStore
     }
 
     @Override
+    public List<TaskVersionSnapshotEntity> listByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return mapper.selectByIds(ids);
+    }
+
+    @Override
     public TaskVersionSnapshotEntity getByTaskAndVersion(long taskId, int version) {
         return mapper.selectByTaskAndVersion(taskId, version);
     }

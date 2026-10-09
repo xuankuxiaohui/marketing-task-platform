@@ -105,7 +105,8 @@ public final class RiskITSupport implements AutoCloseable {
         return new MySQLContainer<>("mysql:8.0")
                 .withDatabaseName("mkt_platform")
                 .withUsername("mkt")
-                .withPassword("mkt");
+                .withPassword("mkt")
+                .withUrlParam("connectionTimeZone", "UTC");
     }
 
     public static GenericContainer<?> redis() {

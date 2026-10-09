@@ -5,6 +5,8 @@ import FallbackImage from "@/components/FallbackImage.vue";
 import TaskTimeline from "@/components/TaskTimeline.vue";
 import { useTaskComplete } from "@/composables/useTaskComplete";
 import { zhCN } from "@/locales/zh-CN";
+import { formatBeijing } from "@/utils/datetime";
+import { activityAttributionLabel } from "@/utils/activity-ownership";
 import { progressFraction, progressLabel } from "@/utils/timeline";
 import { terminalStatusLabel } from "@/utils/task-button";
 
@@ -18,6 +20,7 @@ const props = defineProps<{
 const router = useRouter();
 const {
   detail,
+  grants,
   acting,
   title,
   reward,
@@ -54,10 +57,30 @@ const {
         <FallbackImage :src="detail.task.iconUrl" :alt="detail.task.name ?? title" />
         <div>
           <h2>{{ detail.task.name }}</h2>
-          <p v-if="reward" data-testid="task-detail-reward">{{ reward }}</p>
+          <p v-if="reward && grants.length === 0" data-testid="task-detail-reward">{{ reward }}</p>
           <p v-if="detail.task.description">{{ detail.task.description }}</p>
         </div>
       </header>
+      <dl v-if="grants.length" class="task-detail__prizes" data-testid="task-prize-facts">
+        <div v-for="grant in grants" :key="grant.recordId" class="task-detail__prize" data-testid="task-prize-grant">
+          <dt data-testid="task-prize-name">{{ grant.prizeName }}</dt>
+          <dd>
+            <span data-testid="task-prize-type">{{ zhCN.prize.prizeType }} {{ grant.categoryCode || "—" }}</span>
+            <span data-testid="task-prize-expire-at">
+              {{ zhCN.prize.expireAt }} {{ grant.expireAt ? formatBeijing(grant.expireAt) : "—" }}
+            </span>
+            <span data-testid="task-prize-obtained-at">
+              {{ zhCN.prize.obtainedAt }} {{ grant.obtainedAt ? formatBeijing(grant.obtainedAt) : "—" }}
+            </span>
+            <span data-testid="task-prize-claimed-at">
+              {{ zhCN.prize.claimedAt }} {{ grant.claimedAt ? formatBeijing(grant.claimedAt) : "—" }}
+            </span>
+            <span v-if="activityAttributionLabel(grant)" data-testid="task-prize-activity">
+              {{ zhCN.activity.owner }} {{ activityAttributionLabel(grant) }}
+            </span>
+          </dd>
+        </div>
+      </dl>
       <ul v-if="notStarted && detail.stepsPreview?.length" class="task-detail__preview" data-testid="task-steps-preview">
         <li v-for="step in detail.stepsPreview" :key="step.seq ?? step.name">{{ step.name }}</li>
       </ul>
@@ -158,6 +181,30 @@ const {
   margin: 0;
   color: var(--portal-muted);
   font-size: 13px;
+}
+.task-detail__prizes {
+  margin: 0 16px 12px;
+  padding: 12px 16px;
+  border-radius: var(--portal-radius);
+  background: var(--portal-surface);
+}
+.task-detail__prize {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+.task-detail__prize dt {
+  font-weight: 600;
+}
+.task-detail__prize dd {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  color: var(--portal-muted);
+  font-size: 12px;
 }
 .task-detail__preview {
   margin: 0 16px 12px;

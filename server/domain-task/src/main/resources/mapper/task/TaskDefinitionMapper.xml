@@ -85,6 +85,13 @@
         FOR UPDATE
     </select>
 
+    <select id="selectByIdForShare" resultType="com.mkt.task.entity.TaskDefinitionEntity">
+        SELECT <include refid="cols"/>
+        FROM task_definition
+        WHERE id = #{id} AND deleted = 0
+        FOR SHARE
+    </select>
+
     <select id="selectDueScheduled" resultType="com.mkt.task.entity.TaskDefinitionEntity">
         SELECT <include refid="cols"/>
         FROM task_definition
@@ -121,6 +128,7 @@
             version = #{nextVersion},
             pending_revision = 0,
             schedule_publish_at = NULL,
+            offline_at = NULL,
             updated_at = #{updatedAt}
         WHERE id = #{id}
           AND deleted = 0

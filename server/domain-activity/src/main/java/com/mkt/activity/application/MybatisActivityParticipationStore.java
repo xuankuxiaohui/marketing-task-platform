@@ -21,6 +21,11 @@ public class MybatisActivityParticipationStore implements ActivityParticipationS
     }
 
     @Override
+    public ActParticipationEntity getById(long id) {
+        return mapper.selectById(id);
+    }
+
+    @Override
     public int countPass(long activityId, Long userId, String periodKey) {
         return mapper.countPass(activityId, userId, periodKey);
     }

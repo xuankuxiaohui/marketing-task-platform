@@ -1,10 +1,10 @@
 # 设计文档：营销任务平台 v2
 
-> 版本：**v2.16**　需求：[requirements.md](requirements.md) v3.10　选型：[component-selection.md](component-selection.md)
+> 版本：**v2.17**　需求：[requirements.md](requirements.md) v3.11　选型：[component-selection.md](component-selection.md)
 > 步骤引擎：[feasibility-step-engine.md](feasibility-step-engine.md)　对账：[feasibility-recon.md](feasibility-recon.md)　风控：[feasibility-risk.md](feasibility-risk.md)
-> 验收矩阵：[../../docs/verification-matrix.md](../../docs/verification-matrix.md)　历史差异：[CHANGELOG-design.md](CHANGELOG-design.md)
+> 验收矩阵：[verification-matrix.md](../../../docs/verification-matrix.md)；历史差异由 Git 追溯。本文描述设计约定，当前实现偏差及待定方案见 [重构方案](../../../docs/refactoring-blueprint.md) 与 [决策记录](../../../docs/decisions.md)。
 >
-> v2.16 相对 v2.15：§4.9.3 奖品卡补 `obtainedAt`（获得时间）。v2.15 相对 v2.14：§4.2 补角色当前权限集 GET。v2.14 相对 v2.13：§4.9.0 匿名清单补活动中心 GET 与绑卡任务 GET（R32.1 / #91）。v2.13 相对 v2.12：**按章拆册**。§ 编号不变；引用仍写 `design §x.y`；跳转搜 `<!-- §x.y -->`（不行号）。`ad:position` 明确为 P0 预留名 / 任务 48 接线。
+> 分册引用使用稳定的 `design §x.y` 与 `<!-- §x.y -->` 锚点。P0/P1 和任务号是原始设计分期，不是当前施工状态；不得据此重新创建已有模块或占位实现。
 
 <!-- §0 -->
 ## 0. 分册与章节索引
@@ -115,7 +115,7 @@
 <!-- §1.1 -->
 ### 1.1 设计目标
 
-将 requirements.md v3.9 落实为可实施、可验证的技术方案。业务语义自建；通用能力使用开源组件。运行时：**JDK 26 + Spring Boot 4**。组件坐标由任务 1 写入 `dependency-matrix.md`；无官方 starter 时手动装配。
+将 requirements.md 的业务约定落实为可实施、可验证的技术方案。业务语义自建；通用能力使用开源组件。运行时：**JDK 26 + Spring Boot 4**。组件坐标由任务 1 写入 `dependency-matrix.md`；无官方 starter 时手动装配。
 
 <!-- §1.2 -->
 ### 1.2 设计原则（全部源于需求，编号可追溯）
@@ -164,7 +164,7 @@ marketing-task-platform/
 <!-- §8 -->
 ## 8. 附录：需求追溯与终检
 
-> 需求权威 = [requirements.md](requirements.md) v3.9；实现权威 = 本设计（总册 + 分册）。条款互斥时停笔写冲突，禁止静默跟 design。
+> 需求权威 = [requirements.md](requirements.md)；实现权威 = 本设计（总册 + 分册）。条款互斥时停笔写冲突，禁止静默跟 design。
 
 <!-- §8.1 -->
 ### 8.1 需求编号 ↔ 设计章节映射表
@@ -235,7 +235,7 @@ NFR 与附录落点：
 | 项 | 值 |
 |----|-----|
 | 表 | 39（sys 12 + task 12 + rwd 7 + pnt 2 + risk 4 + evt 2） |
-| 正确性属性 | 66（§7.3）；任务级对照见 [verification-matrix.md](../../docs/verification-matrix.md) |
+| 正确性属性 | 66（§7.3）；任务级对照见 [verification-matrix.md](../../../docs/verification-matrix.md) |
 | 场景矩阵 | 步骤 24 + 对账 28 + 风控 30（三份 feasibility） |
 | 配置键 | 附录 A 52 键 |
 | 服务端事件 | 附录 D 与 §6.4 路由表 |
@@ -252,7 +252,7 @@ D-01 修订草稿存储、D-02 401 原因码、D-03 时钟注入、D-04 覆盖�
 <!-- §8.4 -->
 ### 8.4 任务编排输入
 
-requirements.md v3.9 + 本设计 §2–§7 + component-selection.md §6 + 三份 feasibility §2 + [verification-matrix.md](../../docs/verification-matrix.md)。
+requirements.md + 本设计 §2–§7 + component-selection.md §6 + 三份 feasibility §2 + [verification-matrix.md](../../../docs/verification-matrix.md)。
 
 1. 每个任务对应模块、需求编号、设计锚点；验收 = 需求验收标准 + §7 测试类（一表见 verification-matrix）。
 2. 顺序：Spike → 骨架 → kernel/contract/db → 风控埋点 → identity → task → reward → 双前端（37/38 已拆号）→ 集成/部署 → P1。

@@ -8,6 +8,8 @@ public interface ActivityParticipationStore {
 
     int insert(ActParticipationEntity entity);
 
+    ActParticipationEntity getById(long id);
+
     int countPass(long activityId, Long userId, String periodKey);
 
     long countByQuery(Long activityId, Long userId, String result, String periodKey);

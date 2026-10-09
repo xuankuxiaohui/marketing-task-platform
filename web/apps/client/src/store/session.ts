@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { computed, onScopeDispose, ref } from "vue";
 import type { PortalAuthData, PortalProfileData } from "@/api/auth";
-import { readPortalToken, writePortalToken } from "@/utils/token";
+import { PORTAL_TOKEN_KEY, readPortalToken, writePortalToken } from "@/utils/token";
 
 export const useSessionStore = defineStore("session", () => {
   const token = ref(readPortalToken());
@@ -23,10 +23,15 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   function setLogin(data: PortalAuthData): void {
-    persistToken(data.token ?? "");
-    userId.value = data.userId != null ? Number(data.userId) : null;
+    const nextToken = data.token ?? "";
+    const nextUserId = data.userId != null ? Number(data.userId) : null;
+    if (nextToken !== token.value || nextUserId !== userId.value) {
+      resetProfile();
+    }
+    userId.value = nextUserId;
     nickname.value = data.nickname ?? "";
     mustChangePassword.value = Boolean(data.mustChangePassword);
+    persistToken(nextToken);
   }
 
   function setProfile(data: PortalProfileData): void {
@@ -51,8 +56,7 @@ export const useSessionStore = defineStore("session", () => {
     pointsBalance.value = Number(balance);
   }
 
-  function clear(): void {
-    persistToken("");
+  function resetProfile(): void {
     userId.value = null;
     username.value = "";
     nickname.value = "";
@@ -62,6 +66,31 @@ export const useSessionStore = defineStore("session", () => {
     tags.value = [];
     pointsBalance.value = 0;
     mustChangePassword.value = false;
+  }
+
+  function clear(): void {
+    resetProfile();
+    persistToken("");
+  }
+
+  function syncStoredSession(event: StorageEvent): void {
+    if (event.key !== PORTAL_TOKEN_KEY && event.key !== null) {
+      return;
+    }
+    if (event.storageArea !== null && event.storageArea !== window.localStorage) {
+      return;
+    }
+    // Read the latest value rather than a potentially superseded queued event.
+    const nextToken = readPortalToken();
+    if (nextToken !== token.value) {
+      resetProfile();
+      token.value = nextToken;
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", syncStoredSession);
+    onScopeDispose(() => window.removeEventListener("storage", syncStoredSession));
   }
 
   return {

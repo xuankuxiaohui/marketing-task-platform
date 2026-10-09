@@ -10,6 +10,7 @@ export type PortalActivityView = {
   coverUrl?: string;
   imageUrl?: string;
   bannerUrl?: string;
+  submodules?: SubmoduleView[];
 };
 
 export type SubmoduleView = {

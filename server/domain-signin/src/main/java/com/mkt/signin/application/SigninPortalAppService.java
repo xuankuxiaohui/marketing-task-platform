@@ -66,6 +66,11 @@ public class SigninPortalAppService {
         this.clock = clock;
     }
 
+    public String activityName(long activityId) {
+        SgnActivityEntity entity = activities.getById(activityId);
+        return entity == null ? null : entity.getName();
+    }
+
     public List<PortalActivityView> listPublished(Instant now) {
         Instant at = now == null ? clock.instant() : now;
         List<PortalActivityView> out = new ArrayList<>();

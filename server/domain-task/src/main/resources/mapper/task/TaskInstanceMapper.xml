@@ -8,6 +8,13 @@
         abandoned_at, expire_at, started_at, completed_at, cost_seconds, simulated, created_at, updated_at
     </sql>
 
+    <select id="selectByIdForUpdate" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
     <select id="selectByUserTaskCycle" resultType="com.mkt.task.entity.TaskInstanceEntity">
         SELECT <include refid="cols"/>
         FROM task_instance
@@ -25,6 +32,16 @@
         SELECT <include refid="cols"/>
         FROM task_instance
         WHERE user_id = #{userId} AND status = 'IN_PROGRESS'
+    </select>
+
+    <select id="selectInProgressByTaskAfterId" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE task_id = #{taskId}
+          AND status = 'IN_PROGRESS'
+          AND id &gt; #{afterId}
+        ORDER BY id ASC
+        LIMIT #{limit}
     </select>
 
     <sql id="mineWhere">
@@ -77,6 +94,31 @@
               </if>
         ) THEN 1 ELSE 0 END
     </select>
+
+    <select id="existsMutexInProgress" resultType="int">
+        SELECT CASE WHEN EXISTS (
+            SELECT 1
+            FROM task_instance instance
+            JOIN task_version_snapshot snapshot ON snapshot.id = instance.snapshot_id
+            WHERE instance.user_id = #{userId}
+              AND instance.status = 'IN_PROGRESS'
+              AND JSON_TYPE(JSON_EXTRACT(snapshot.content, '$.mutexGroupCode')) = 'STRING'
+              AND JSON_UNQUOTE(JSON_EXTRACT(snapshot.content, '$.mutexGroupCode'))
+                  COLLATE utf8mb4_bin = #{mutexGroupCode}
+              <if test="cycleKey != null">
+                  AND instance.cycle_key = #{cycleKey}
+              </if>
+        ) THEN 1 ELSE 0 END
+    </select>
+
+    <update id="updateExpireAtCas">
+        UPDATE task_instance
+        SET expire_at = #{expireAt}
+        WHERE id = #{id}
+          AND status = 'IN_PROGRESS'
+          AND expire_at &lt;=&gt; #{expectedExpireAt}
+          AND (expire_at IS NULL OR expire_at &gt; #{now})
+    </update>
 
     <select id="countInProgress" resultType="long">
         SELECT COUNT(*)

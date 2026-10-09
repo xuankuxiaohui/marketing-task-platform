@@ -1,7 +1,7 @@
 # 设计文档 · 架构与横切（§2 / §6 / §3.11）
 
-> 本文是 [design.md](design.md) **v2.13** 分册。§ 编号与总册索引一致，引用仍写 design §x.y。
-> 需求：[requirements.md](requirements.md) v3.9　选型：[component-selection.md](component-selection.md)
+> 本文是 [design.md](design.md) 的分册。§ 编号与总册索引一致，引用仍写 design §x.y。
+> 需求：[requirements.md](requirements.md)　选型：[component-selection.md](component-selection.md)
 > 总册索引（§ → 锚点）：[design.md](design.md) §0.2。本章跳转：搜索 `<!-- §x.y -->`，不要记行号。
 
 ---
@@ -303,7 +303,7 @@ graph TB
 
 容量设计假设（NFR 性能 8）：门户用户 100 万、日活 10 万、日新增实例 50 万、日事件 500 万（峰值 3000 events/s，事件表按月分区）。
 
-图中 Redis 7 / 哨兵集群是 **R31.5 目标拓扑**。现网开发机共用 Redis **6.0.8 / DB 2**（与若依同实例）；P0 所用 SET/ZSET/pub-sub/Lua 在 6.0.8 足够。Compose / Testcontainers 可用 Redis 7 镜像。正式升 7 与哨兵另排，P0 不升级共享实例。
+图中 Redis 7 / 哨兵集群是 **R31.5 目标拓扑**。共享开发环境使用 Redis **6.0.8 / DB 2**（与若依同实例）；P0 所用 SET/ZSET/pub-sub/Lua 在 6.0.8 足够。Compose / Testcontainers 可用 Redis 7 镜像。正式升 7 与哨兵另排，P0 不升级共享实例。
 
 <!-- §2.7 -->
 ### 2.7 技术栈清单与版本策略

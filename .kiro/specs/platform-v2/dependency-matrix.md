@@ -1,57 +1,50 @@
-# 依赖版本矩阵
+# 依赖选型基线
 
-> 父 POM 唯一版本来源。编组 A 冒烟已绿（2026-08-18），结论见下表。
-> 运行时：**JDK 26.0.2** + **Spring Boot 4.1.0**
+本表记录项目已选组件与版本意图。实际构建由 [server/pom.xml](../../../server/pom.xml)、前端 `package.json` 和 [pnpm-lock.yaml](../../../web/pnpm-lock.yaml) 决定；变更时同步本表与构建文件，差异必须核实，不能静默以其中一份覆盖另一份。
 
-## 口径（预研，冒烟前可改）
+以下是仓库基线，不是最新版本推荐。本轮只核对声明与历史记录，没有解析全部依赖树、联网验证兼容性或重新运行 Spike。
 
-| 项 | 候选 | 依据 | 未决 |
-|----|------|------|------|
-| JDK | **26.0.2**（已核实） | 项目约束；路径 `D:\develop\jdk\jdk-26.0.2` | 默认 `java` 仍是 25.0.4，spike 须显式设 `JAVA_HOME` |
-| Spring Boot | **4.1.0**（优先） | [系统要求](https://docs.spring.io/spring-boot/system-requirements.html)：4.1.0 支持 Java 17–26；4.0.x 只到 Java 25 | 规格写「Boot 4」，未钉小版本。要用 JDK 26 必须走 4.1 |
-| Maven | 3.9.5（本机已有） | — | 可用 |
-| Testcontainers | Redis 7 + MySQL 8 | 任务 1/3/4/8 | 本机 **PATH 无 docker**，容器冒烟会红 |
+## 后端
 
-八项冒烟已绿。本机无 Docker：Redis/MySQL 冒烟打 `192.168.88.149`（DB 2 / `mkt_platform`）。Testcontainers 标备选，不阻塞任务 9。
+| 组件 | 项目基线 | 说明 |
+|---|---|---|
+| JDK | 26；本机约定路径 `D:\develop\jdk\jdk-26.0.2` | POM enforcer 限制 `[26,27)`；不要使用默认 PATH 的 25 |
+| Spring Boot | 4.1.0 | 父 POM；JSON 使用 Jackson 3 `tools.jackson` |
+| Redisson | 4.6.1 | 手动装配；Lua StringCodec 注意事项见历史报告 |
+| Sa-Token | 1.45.0 | boot4 starter + redis-template；双 StpLogic |
+| MyBatis-Plus | 3.5.17 | boot4 starter |
+| Spring Cache / Caffeine / Redis 客户端 | Boot BOM | 项目封装 PlatformCache |
+| springdoc-openapi | 3.1.0 | 两应用命名空间内导出三分组契约 |
+| AviatorScript | 5.4.3 | 表达式白名单约束见设计 §5.10 |
+| Hutool core / crypto | 5.8.47 | 禁用 JSON/HTTP/DB/all 模块 |
+| easy-captcha | 1.6.2 | 图形验证码 |
+| jqwik | 1.9.3 | 属性测试 |
+| ArchUnit | 1.5.0 | 模块与架构检查 |
+| logstash-logback-encoder | 8.1 | JSON 日志 |
+| Flyway / MySQL driver / Micrometer | Boot BOM | Flyway 仅 platform-db；Prometheus 内网抓取 |
+| Testcontainers | Boot BOM | kernel 测试依赖；真实 MySQL/Redis IT，不是可被 H2 替代的占位 |
 
-## 矩阵
+## 前端与环境
 
-| 组件 | 锁定版本 | 验证任务 | 结论 | 冒烟证据 | 备注 |
-|------|----------|----------|------|----------|------|
-| JDK | 26.0.2 | 1–8 共用 | 采用 | — | `D:\develop\jdk\jdk-26.0.2`。默认 PATH 仍是 25 |
-| Spring Boot | 4.1.0 | 1–8 共用 | 采用 | — | JSON = `tools.jackson` |
-| Redisson | 4.6.1（手动 `RedissonClient`） | 1 | 采用 | spike/1-redisson/REPORT.md | Lua 必须 `StringCodec`。starter 可解析，任务 15 继续手动装配 |
-| Sa-Token | spring-boot4-starter + redis-template **1.45.0** | 2 | 采用 | spike/2-sa-token/REPORT.md | 双 StpLogic 不要注册成两个 Bean |
-| MyBatis-Plus | spring-boot4-starter **3.5.17** | 3 | 采用 | spike/3-mybatis-plus/REPORT.md | 对 LAN MySQL 8.0.25 |
-| Spring Cache + Caffeine + Redis | Boot BOM + `com.github.ben-manes.caffeine:caffeine` | 4 / 15 | 采用 | spike/4-cache/REPORT.md | `PUBLISH cache:evict`；任务 15 封装 `PlatformCache` |
-| springdoc-openapi | starter-webmvc-ui **3.1.0** | 5 | 采用 | spike/5-springdoc/REPORT.md | Boot 4 用 RestClient 测分组 |
-| AviatorScript | **5.4.3** | 6 | 采用 | spike/6-aviator/REPORT.md | P99<1ms 通过 |
-| Hutool | core + crypto **5.8.47** | 7 | 采用 | spike/7-hutool/REPORT.md | HMAC 在 crypto；禁 hutool-json |
-| easy-captcha | **1.6.2** | 8 | 采用 | spike/8-misc/REPORT.md | — |
-| jqwik | **1.9.3** | 8 | 采用 | spike/8-misc/REPORT.md | 与 JUnit 5 并存 |
-| Testcontainers | — | 8 | 备选 | spike/8-misc/REPORT.md | 本机无 Docker；LAN 连通替代 |
-| ArchUnit | **1.5.0** | 8 | 采用 | spike/8-misc/REPORT.md | 1.4.1 不支持 class file 70 |
-| logstash-logback-encoder | **8.1** | 8 | 采用 | spike/8-misc/REPORT.md | JSON 含 MDC `traceId` |
-| micrometer-registry-prometheus | Boot BOM（Micrometer 1.17） | 42 | 采用 | — | `/actuator/prometheus`；仅内网抓取 |
-| Flyway | Boot BOM starter-flyway + `flyway-mysql` | 13 | 采用 | — | 脚本只在 platform-db；仅 admin-app 执行 |
-| MySQL driver | Boot BOM `mysql-connector-j` | 13 | 采用 | — | 现网 MySQL 8.0.25 |
-| Testcontainers | Boot BOM 2.0.5 `testcontainers-junit-jupiter` + `testcontainers-mysql` | 13 | 备选本机 / CI 采用 | — | `FlywayV1IT`；本机无 Docker 走 `-DskipITs` |
+- pnpm 基线见 [web/package.json](../../../web/package.json) 的 `packageManager`（当前为 9.15.9），Node 约束见同文件 `engines`。
+- 管理端 Vue 3 + Ant Design Vue，门户 Vue 3 + Vant 4；确切组件版本以各包清单及锁文件为准。
+- 共享开发环境约定为 MySQL 8.0.25、Redis 6.0.8 / DB 2；这不是已上线环境。本轮未连接验证服务版本，也不升级共享实例。
+- Compose / IT 使用 MySQL 8 与 Redis 7 镜像。环境差异需在兼容验证中记录，不能用测试镜像替代部署验收。
+- 本机无 Docker；单元测试本地执行，Testcontainers IT 留给具备 Docker 的 CI。无需为本轮文档整理安装 Docker 或执行实验。
 
-结论枚举：`待冒烟` / `采用` / `备选` / `阻塞`。
+## 历史验证资料
 
-## 本机环境（2026-08-18 探测）
+2026-08-18 的组件验证记录如下，结论仅对当时环境与代码有效。报告用于解释选型和装配注意事项，不代表当前应用、集成或容量验收通过。
 
-| 项 | 实测 | 编组 A 要求 |
-|----|------|-------------|
-| `java -version`（默认 PATH） | Oracle JDK **25.0.4** LTS（`D:\develop\jdk\jdk-25.0.4`） | 不要用这个跑 spike |
-| JDK 26 | Oracle **26.0.2**（`D:\develop\jdk\jdk-26.0.2`，已 `java -version` 核实） | 编组 A 必须用这个 |
-| Maven | 3.9.5 | 有即可 |
-| Docker | 本机无；虚拟机 19.03.13 | Testcontainers 备选；冒烟用 LAN |
+| 组件 | 历史报告 |
+|---|---|
+| Redisson | [spike/1-redisson](../../../spike/1-redisson/REPORT.md) |
+| Sa-Token | [spike/2-sa-token](../../../spike/2-sa-token/REPORT.md) |
+| MyBatis-Plus | [spike/3-mybatis-plus](../../../spike/3-mybatis-plus/REPORT.md) |
+| 两级缓存 | [spike/4-cache](../../../spike/4-cache/REPORT.md) |
+| springdoc | [spike/5-springdoc](../../../spike/5-springdoc/REPORT.md) |
+| AviatorScript | [spike/6-aviator](../../../spike/6-aviator/REPORT.md) |
+| Hutool | [spike/7-hutool](../../../spike/7-hutool/REPORT.md) |
+| 其他测试与日志组件 | [spike/8-misc](../../../spike/8-misc/REPORT.md) |
 
-## 执行纪律（仍不写业务代码）
-
-1. JDK 26 已就绪：`D:\develop\jdk\jdk-26.0.2`。跑 spike 时设 `JAVA_HOME=D:\develop\jdk\jdk-26.0.2`，不要用 PATH 里的 25。
-2. 先装 Docker Desktop（或等价引擎），`docker version` 能连上 daemon。仍未装，任务 1/3/4/8 的 Testcontainers 会红。
-3. spike 工程放仓库根 `spike/<任务号>-<名称>/`，不进 `server/`。
-4. 每项绿了再改本表对应行；任一项阻塞则停在编组 A，不进任务 9。
-5. 冒烟与正式编码仍需单独授权。
+版本升级单独说明原因、影响与验证结果，不借业务重构顺手升级。组件选择理由见 [component-selection.md](component-selection.md)。

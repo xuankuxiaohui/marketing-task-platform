@@ -6,6 +6,7 @@ import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { remainLabel } from "@/utils/countdown";
 import { formatBeijing } from "@/utils/datetime";
+import { activityAttributionLabel } from "@/utils/activity-ownership";
 import { prizeButtonState } from "@/utils/prize-button";
 
 defineOptions({ name: "PrizeCard" });
@@ -39,6 +40,8 @@ const countdown = computed(() => {
   return remainLabel(props.prize.expireAt, nowMs.value);
 });
 
+const activityLabel = computed(() => activityAttributionLabel(props.prize));
+
 const loading = computed(() => Boolean(props.claiming) || button.value.loading);
 
 onMounted(() => {
@@ -64,6 +67,9 @@ onUnmounted(() => {
         <strong>{{ prize.prizeName }}</strong>
         <span v-if="prize.obtainedAt" class="prize-card__obtained" data-testid="prize-obtained-at">
           {{ zhCN.prize.obtainedAt }} {{ formatBeijing(prize.obtainedAt) }}
+        </span>
+        <span v-if="activityLabel" class="prize-card__activity" data-testid="prize-activity">
+          {{ zhCN.activity.owner }} {{ activityLabel }}
         </span>
         <span class="prize-card__detail-link">{{ zhCN.prize.detail }}</span>
         <span v-if="countdown" class="prize-card__countdown" data-testid="prize-countdown">{{ countdown }}</span>
@@ -132,6 +138,7 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 .prize-card__obtained,
+.prize-card__activity,
 .prize-card__countdown,
 .prize-card__reason,
 .prize-card__contact,

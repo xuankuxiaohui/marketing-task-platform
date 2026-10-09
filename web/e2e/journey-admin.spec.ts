@@ -53,12 +53,14 @@ test.describe("journey-admin", () => {
     await page.getByTestId("step-code").fill("clk");
     await page.getByTestId("step-name").fill("click");
     await page.getByTestId("step-type").click();
-    await page.getByRole("option", { name: "CLICK", exact: true }).click();
+    await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content").filter({ hasText: /^CLICK$/ }).click();
+    await expect(page.getByTestId("step-type").locator(".ant-select-selection-item")).toHaveText("CLICK");
     await page.getByTestId("step-add").click();
     await page.getByTestId("step-code").fill("rwd");
     await page.getByTestId("step-name").fill("reward");
     await page.getByTestId("step-type").click();
-    await page.getByRole("option", { name: "REWARD", exact: true }).click();
+    await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content").filter({ hasText: /^REWARD$/ }).click();
+    await expect(page.getByTestId("step-type").locator(".ant-select-selection-item")).toHaveText("REWARD");
     await page.getByTestId("step-prize").fill(String(state.prizeId));
     await page.getByTestId("step-add").click();
     await page.getByTestId("edge-from").fill("clk");

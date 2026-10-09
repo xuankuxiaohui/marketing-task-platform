@@ -1,30 +1,90 @@
-# PROJECT_STATUS
-> 阶段：**测试阶段**（preview 之前，版本未到 0.0.1） / 基线：master `6d03ef5` / 更新：2026-08-21
+# 当前状态
 
-## 项目一句话
+更新：2026-10-09。**项目尚未上线；本批已修复门户评审发现的账号数据残留与历史奖品分页缺失。文档治理、门户个人中心 R5-01、任务生命周期 R2-01 及上一批真实全流程核验保留；反馈名称、后台类型和部署等门禁仍未通过。**
 
-营销任务平台：运营编排任务，C 端按步骤完成，平台发奖。两端账号隔离。双应用：admin-app（`/admin/**`）、portal-app（`/api/**`）。`/internal/**` 不对外。
+## 本轮范围
 
-## 现在做到哪
+用户授权修复 2026-10-09 评审中的三个问题，并要求代码可读性。本批只修改门户：首页随令牌变化立即清空旧活动、余额与签到状态，并按当前身份重载；任务详情按账号和任务隔离详情、奖品及操作响应；任务奖品按既有分页契约读取全部匹配记录，用首次总数限制扫描、去重跨页记录，失败可手动刷新重试。
 
-- 已走出 0→1 叠链口径。任务 29–49 **已在** master `6d03ef5`，不是「29–49 未合」。
-- 主干 `6d03ef5` 是 0→1 第一刀，还没过测审。当前是**测试阶段**（preview 之前，版本未到 0.0.1）。
-- 打开的 issue：[#69](https://github.com/xuankuxiaohui/marketing-task-platform/issues/69)、[#70](https://github.com/xuankuxiaohui/marketing-task-platform/issues/70) 为 P1 待修，[#71](https://github.com/xuankuxiaohui/marketing-task-platform/issues/71) 为 P2。远端只有 `master`。新工作从 `origin/master` 开 `fix/<slug>`，先测后审；除非点名，不要合 master。修完再接下一条。
-- 进行中：领取 / 步骤 / 发奖 / 风控 常规测。
-- 腾讯云 Lighthouse 演示箱另走，还没起来，不挡本仓库测试。
+新增 `useLatestRequest`，集中处理请求替换、作用域变化及卸载后的失效判断。读取与操作分别使用守卫，过期的成功、失败和 finally 不改写当前页面；放弃确认期间切换账号不再发送旧实例请求。沿用现有 API、依赖和交互，不处理 DEC-008 的产品决定。
 
-## 待修 P1（不是「记账不修」）
+验证：新增 23 项组件回归；门户 **51 个文件、268 项测试通过**，类型检查通过，整个 client 源码 ESLint **零错误、零警告**，Vite 生产构建通过。实际执行安装好的工具 CLI：client 目录 `node node_modules/vitest/vitest.mjs run --reporter=dot`、`node node_modules/vue-tsc/bin/vue-tsc.js --noEmit`、`node node_modules/vite/bin/vite.js build`；web 目录 `node node_modules/eslint/bin/eslint.js apps/client/src --max-warnings=0`。
 
-1. #69 互斥扫不到 OFFLINE 在途：互斥只扫已发布任务，OFFLINE 但仍 IN_PROGRESS 的组员拦不住新领取（R13.6）
-2. #70 下线不重算 expire_at：任务下线后在途实例 expire_at 仍按领取窗口（R14.10）
+使用 `gen:api` 相同的已安装 openapi-typescript CLI 将三组 JSON 生成到临时文件，规范化换行后与现有 TypeScript 内容全部一致（internal 原文件为 CRLF）。正式 OpenAPI 生成物和已有自动声明均未改写，临时文件已清理。本批修复未运行后端测试、真实数据库 IT 或浏览器 E2E。用户随后明确授权本地提交整个工作区，包含此前的后端、门户、文档改动与文件删除；不推送远端。
 
-## 也已知
+## 上一批全流程核验（2026-10-07）
 
-- callback/progress 级联 GRANT 不带 IP/设备，这两条上 R-f 空（#71，P2）
-- CrowdPort / 看板直读他域表
+当前用户授权使用已启动的虚拟机验证全流程并盘点功能，已完成。后端 14 模块最新报告汇总 **956 项单元/属性/架构 + 123 项 IT，失败/错误/跳过均 0**；67 个 IT 源文件均有本轮报告，排除 2 份旧报告。结果来自四段执行与受影响用例重跑，不称一次完整 reactor 原命令通过。真实 Nginx 浏览器 15 项已完整执行（14 通过、奖品反馈名称 1 项失败，无跳过），补充 HTTP 10 项业务/安全检查与 1 项准备检查通过。
 
-## 下一步（最多 3 步）
+两端前端 376 项测试通过；client 类型通过，admin 9 处类型错误；admin ESLint 124 警告，Vite 产物通过不代表完整 build 通过。三个测试连接补齐生产一致的 UTC 参数，原断言重跑通过。原 Compose 构建受 Docker 19.03 默认策略下 JDK 26 / MySQL 8.0.46 创建线程失败阻塞。
 
-1. 从 `origin/master` 开 `fix/<slug>` 修 #69 / #70
-2. 继续领取 / 步骤 / 发奖 / 风控 常规测
-3. 演示箱另走，不挡测试
+结果、环境、历史失败和覆盖边界见 [核验报告](docs/full-flow-verification-2026-10-07.md)，入口盘点见 [功能清单](docs/current-features.md)。本轮没有修改业务实现、迁移或生产部署模板；保留前两批成果。独立测试进程/容器/卷/隧道与临时凭据已清理，原 VM 三个容器保持运行，没有提交或推送。
+
+前一批 R2-01 交付领取、下线、重新发布、到期及奖励恢复的生命周期保护；用户已明确 [DEC-007](docs/decisions.md) 的旧实例规则。沿用既有 API、表结构、依赖、事件和错误码；其当时“未运行真实数据库或部署”的边界由本轮实际结果逐项补充。
+
+实施基线仍为本地 `feat/portal-guest-home-ux` 的 HEAD `dd9feba` 加既有未提交工作区，本地 `origin/master` 为 `745485a`。保留原门户、活动、奖品来源和文档改动；未切分支、提交或推送。远端引用和 GitHub issue 状态未联网核验。
+
+## R2-01 已交付
+
+- 互斥按 IN_PROGRESS 实例绑定快照的组编码判定，包含 OFFLINE 任务；修订和重新发布不改变旧实例归属，终态释放占用。
+- 下线按 ID 分批读取并批量读取快照，用冻结的 cycleKey 求旧周期结束；更新期限带旧值和状态前置，允许未到期 NONE 延长，禁止到期/终态复活。
+- 发布清除定义本轮 offlineAt，新领取不继承旧下线；旧实例快照、周期键和期限保持原值。
+- 领取共享定义锁，所有定义写入先取排他锁，防下线遗漏并发领取、旧编辑覆盖下线；推进与终态操作锁父实例，再按 CAS 写步骤、期限和事件。
+- 每次推进重新检查 Clock，到期优先于报告去重；保留 COMPLETED 的合法幂等，错误入口类型继续拒绝。
+- 奖励恢复锁后重读步骤，仅获得 REWARD 完成权的请求级联；到期停止恢复但保留成功权益，不跳过后续等待步骤。
+- 删除无版本完成步骤的旧 Store/Mapper 入口；需求 v3.11、设计 v2.17 和验收映射同步更新。
+
+## R2-01 验证（前批与本轮补齐）
+
+| 检查 | 结果 |
+|---|---|
+| 后端完整回归 | JDK 26，`mvn -q -f server/pom.xml -DskipITs test` 通过；全 reactor 单元/属性/架构报告汇总 956 次，失败/错误/跳过均为 0 |
+| 最新周期键边界 | 修改后额外执行 `-pl domain-task -am -DskipITs test` 通过；任务域 242 次，含新增的日/月/CRON/SPECIAL 绑定周期回归 |
+| 覆盖率与装配编译 | 原 JaCoCo 阈值通过；两应用和全部 `*IT` 测试源编译通过，没有降低门禁 |
+| MySQL 验证 | 本轮 VM 缓存 MySQL 8.0.25、默认容器安全策略，实际执行 [OfflineLifecycleIT](server/domain-task/src/test/java/com/mkt/task/OfflineLifecycleIT.java) 11 项，全部通过；其余完整 reactor 结果见本轮核验报告 |
+| 打包 | 两应用 JAR 打包通过；常规镜像源解析阻塞后，使用临时 settings 和已有缓存离线 `package`，未修改全局 Maven 配置或依赖版本 |
+
+前一批本机 Maven 通过临时 Node 启动器设置 JDK 26；默认沙箱的 Mockito 自附加受限后用获准的本机执行重跑。本轮 MySQL 用例覆盖定义/期限回滚、步骤/Outbox 回滚、快照 JOIN、到期释放、共享领取/排他下线，以及编辑不恢复旧状态，已经实际执行通过。数据库环境与标准镜像部署的差异见核验报告；仍无容量或上线结论。
+
+## R5-01 已交付
+
+- 三个列表统一分页、刷新及失败重试；页码仅成功后前进，旧筛选/刷新响应不会回写，重试等待期间显示加载态。
+- 我的任务增加分类筛选，积分流水增加类型筛选；保留状态/奖品 Tab、来源导航、活动归属、倒计时与埋点。
+- 领取成功重载第一页，解决待领取记录移除后的 offset 漏条；读取与领取都隔离旧账号和卸载后的响应。
+- 登录、退出、直接替换会话及跨标签页切换立即清除私有列表、档案、余额与奖品预览。旧 401、资料、登出、余额和领取响应不会污染新会话。
+- 奖品详情在无预览时按既有分页查找，修复第 51 条之后刷新丢失；找到、读到扫描预算或空页即停止，失败可重试，路由/账号变化终止旧查找。
+
+## R5-01 验证（前一批）
+
+| 检查 | 结果与实际命令 |
+|---|---|
+| 门户回归 | 51 个文件、245 项测试通过；client 目录：`node node_modules/vitest/vitest.mjs run --reporter=dot` |
+| 类型 | 通过；client 目录：`node node_modules/vue-tsc/bin/vue-tsc.js --noEmit` |
+| Lint | 无错误或警告；web 目录：`node node_modules/eslint/bin/eslint.js apps/client/src e2e/personal-lists.spec.ts playwright.personal-lists.config.ts` |
+| 浏览器 | 4 项通过；web 目录：`node node_modules/@playwright/test/cli.js test -c playwright.personal-lists.config.ts` |
+| 生产产物 | 门户 Vite 构建通过；client 目录：`node node_modules/vite/bin/vite.js build` |
+
+浏览器使用已安装 Chromium、390×844 移动视口、真实 Vant 页面和测试 API 响应，覆盖真实滚动续页、原页重试、筛选、领取后分页及跨标签页切换。独立 Vite 自动退出。本机 pnpm 启动入口尝试下载失败，以上使用等价的已安装工具 CLI；未安装或升级依赖。未执行真实后端 IT、Compose 业务旅程或容量压测，不能据此宣称平台达到上线条件。
+
+## 已知事实与验证边界
+
+- `server/pom.xml` 包含 14 个子模块；两个后端应用和两套前端均已存在，签到、活动、广告代码也在树上。
+- 当前代码与规格之间仍有偏差；代码存在、旧任务已勾选、历史冒烟成功，都不能作为当前验收通过的证据。
+- 上一轮文档治理完成本地链接、代码围栏和 75 个设计索引锚点核对。其“未改代码/未运行测试”记录只适用于当时；本批验证以本页上表为准。
+- 启动脚本、Compose、CI 和性能脚本已有实现；部署及性能目标未由本轮验证。
+
+项目诊断、各领域覆盖范围及分阶段出口见 [重构方案](docs/refactoring-blueprint.md)。待定项见 [决策记录](docs/decisions.md)。
+
+## 优先问题
+
+1. **已发现的验收失败**：反馈奖品名、后台 9 处类型错误、prod OpenAPI JSON 匿名可读与 Docker 宿主兼容问题；门户交互规格按 DEC-008 对齐。R2-01 的 11 项真实 MySQL 验证已补齐；独立事务与审计语义继续按 DEC-004 准备。
+2. **读写与基础设施边界**：任务列表查询放大、跨域 SQL、发布缓存时机、缓存并发失效、Outbox 消费预算。
+3. **其余前端与验证能力**：后台失败恢复、后端到 OpenAPI 的真实导出门禁、有效业务压测及可观测证据。个人中心本批分页与隔离问题已修复，其他页面不据此视为全部完成。
+
+旧状态页登记过 #69 / #70 / #71；#69/#70 对应的本地实现问题已在 R2-01 修复。远端 issue 状态仍待核实，#71 不在本批范围。
+
+## 下一步
+
+1. 在兼容宿主补跑标准 MySQL 8.0 镜像与原 Compose 门禁；本轮 MySQL 8.0.25 的分段真实核验已完成。交付提交时按文件归属整理，不能把混合工作区整体提交。
+2. 先修复已确认的反馈奖品名、后台类型与 prod JSON 暴露，门户交互按 DEC-008 对齐；再做门户任务读取与发布缓存：统一快照入口、有界批量用户状态、提交后缓存处理与失效竞争回归。
+3. Outbox、人群与事务等工作按 [DEC-002～006](docs/decisions.md) 明确相应决定；不自动合并或上线。

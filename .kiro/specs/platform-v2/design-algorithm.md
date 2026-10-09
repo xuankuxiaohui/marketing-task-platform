@@ -1,7 +1,7 @@
 # 设计文档 · 算法与测试策略（§5 / §7）
 
-> 本文是 [design.md](design.md) **v2.13** 分册。§ 编号与总册索引一致，引用仍写 design §x.y。
-> 需求：[requirements.md](requirements.md) v3.9　选型：[component-selection.md](component-selection.md)
+> 本文是 [design.md](design.md) 的分册。§ 编号与总册索引一致，引用仍写 design §x.y。
+> 需求：[requirements.md](requirements.md)　选型：[component-selection.md](component-selection.md)
 > 总册索引（§ → 锚点）：[design.md](design.md) §0.2。本章跳转：搜索 `<!-- §x.y -->`，不要记行号。
 
 ---
@@ -18,12 +18,12 @@
 
 | 入口 | 来源 | 前置检查（顺序） |
 |------|------|-----------------|
-| enter | 领取成功后（§5.5） | 实例刚创建必为 IN_PROGRESS |
-| click | C 端 §4.9.2 | 实例 IN_PROGRESS → 用户黑名单冻结检查（R25.4）→ 步骤 ACTIVE |
-| callback | internal §4.8 | HMAC 已过 → 实例存在 → IN_PROGRESS → 冻结检查 → 步骤 ACTIVE |
+| enter | 领取成功后（§5.5）或恢复级联 | 实例存在 → 实例状态与到期守卫；新建实例必为 IN_PROGRESS，终态不可重新激活 |
+| click | C 端 §4.9.2 | 实例存在 → 实例状态与到期守卫 → 用户黑名单冻结检查（R25.4）→ 步骤检查 |
+| callback | internal §4.8 | HMAC 已过 → 实例存在 → 实例状态与到期守卫 → 冻结检查 → 步骤检查 |
 | progress | internal §4.8 | 同 callback + reportId 非空 |
 
-前置检查语义（R14.6/属性 3/4）：实例终态且步骤已完成 → **200 幂等**返回终态快照；实例终态而步骤未完成 → 拒绝（expired/abandoned）；步骤 COMPLETED（实例仍 IN_PROGRESS）重复 click/callback → **200 幂等**返回当前快照，不得二次推进或二次发奖；步骤 INACTIVE/SKIPPED 或乱序 → `task.step.state-mismatch`(400)；用户黑名单冻结 → C 端 click `task.instance.frozen`(403)，internal callback `risk.blocked.account-restricted`(400)（实例保持原状态，R25.4；HTTP 差异有意，码分叉保留）。
+前置检查语义（R14.6/属性 3/4）：**实例 EXPIRED，或实例 IN_PROGRESS 且 `expire_at <= Clock.instant()` → `task.instance.expired`(400)，优先于已完成步骤、重复 reportId 的幂等返回；四入口均执行，不依赖调度先翻转状态。** 其余终态且步骤已完成的重复 click/callback → **200 幂等**返回终态快照；终态而步骤未完成 → 拒绝（abandoned）；步骤 COMPLETED（实例仍 IN_PROGRESS）重复 click/callback → **200 幂等**返回当前快照，不得二次推进或二次发奖。COMPLETED 不放宽步骤存在性、入口类型或 progress 的原有 reportId 去重校验；enter 不重新激活终态。步骤 INACTIVE/SKIPPED 或乱序 → `task.step.state-mismatch`(400)；用户黑名单冻结 → C 端 click `task.instance.frozen`(403)，internal callback `risk.blocked.account-restricted`(400)（实例保持原状态，R25.4；HTTP 差异有意，码分叉保留）。
 
 #### 5.1.2 步骤完成 CAS（exactly-once 第一道防线）
 
@@ -38,6 +38,8 @@ WHERE id = ? AND version = ? AND status = 'ACTIVE';
 ```
 
 `affected = 1` 持有完成权的请求在**同事务**内追加 Outbox 事件 `task.step.complete` `{instanceId, taskId, stepCode, seq}`（服务端事件全集 = D-05，§6.4；R14.11）。
+
+状态推进的到期校验不能只在入口执行：每次步骤激活、进度累加、完成/跳过 CAS、实例完成 CAS 前，都重新读取注入的 `Clock` 并检查 §5.1.1 的到期守卫；不能复用激活前或上一次 SQL 前的时间，把入口时未到期视作整段级联的无限准入。只有 CAS 获得转换权的调用能追加对应事件并继续级联，失败者不凭旧步骤对象推进后续步骤。
 
 #### 5.1.3 级联推进 cascade（R14.2/14.4/14.5）
 
@@ -71,10 +73,13 @@ SET status = 'COMPLETED', completed_at = NOW(3),
 WHERE id = ? AND status = 'IN_PROGRESS';     -- 放弃/过期同模式 CAS（abandonSource 填 USER/ADMIN，R13.9/R14.8）
 ```
 
+发放重试恢复先锁定实例，再重读关联 REWARD 步骤；实例终态或已到期时结束恢复，保留已成功发放的权益。只有 ACTIVE REWARD 的完成 CAS 获得转换权才继续级联；重复恢复不得跳过已激活的等待步骤。恢复级联中途触发到期守卫时停止推进，不因该守卫回滚重试已经发放成功的权益。
+
 #### 5.1.4 progress 累加与 reportId 去重（R14.3，feasibility §3.3）
 
 ```text
 onProgress(instance, stepCode, value, reportId):        # 单事务
+  实例状态与到期守卫（5.1.1）                          # EXPIRED/到期拒绝先于 reportId 幂等
   INSERT task_progress_report(instance_id, step_code, report_id, value)   # §3.3.8 uk_dedup
   → 唯一冲突 = 重复投递：读当前步骤进度，幂等返回（不累加，R14 属性 2）
   step 前置检查（5.1.1）；value ∈ [1,1000]（R11.2）
@@ -153,23 +158,24 @@ visible(task, user, now) = task.status == PUBLISHED
 
 ```text
 startInstance(user, taskId, ip, deviceId):            # 单事务（隔离级别 READ COMMITTED，§5.7）
+  definition = SELECT task_definition WHERE id=? FOR SHARE  # 先持同域定义共享锁，不是可见性检查
   attrs = UserAttributePort.lockAndGet(userId)         # identity 内 FOR UPDATE；禁止本域直查 sys_portal_user（D-12）
   if attrs.accountStatus != ACTIVE → 403 auth.account.disabled   # DISABLED/DELETED/NOT_FOUND 同一对外码，不暴露原因
-  cycleKey = CycleKeyResolver(task 定义，此时只读定义不算可见性)
+  cycleKey = CycleKeyResolver(当前发布快照的周期配置；从未发布则只读定义)  # 只解析周期，不执行可见性；草稿不改变线上 cycleKey
   existing = SELECT 既有实例 WHERE user_id=? AND task_id=? AND cycle_key=?
   if existing: return existing                         # R13.7：任意终态都 200 返回，先于可见性/风控/每日上限
-  task = 发布索引/快照
+  task = 发布索引/快照                                  # 主状态与版本以本事务锁定的 definition 为准，不能仅凭发布缓存
   if !visible(task, user, now) → task.claim.not-visible(400)
   risk.check(scene=CLAIM, user, ip, deviceId)  → REJECT → risk.blocked.generic
-  if task.mutexGroupId:
-      groupTaskIds = SELECT id FROM task_definition WHERE mutex_group_id=? AND deleted=0
-      if group.cross_cycle:                                              # R11.6 跨周期：任意 cycleKey 的未完成即拦
-          busy = EXISTS( SELECT 1 FROM task_instance
-                         WHERE user_id=? AND task_id IN groupTaskIds AND status='IN_PROGRESS' )
-      else:                                                              # 非跨周期：仅同 cycleKey
-          busy = EXISTS( SELECT 1 FROM task_instance
-                         WHERE user_id=? AND task_id IN groupTaskIds
-                           AND status='IN_PROGRESS' AND cycle_key = ? )
+  if task.snapshot.mutexGroupCode:
+      group = SELECT task_mutex_group WHERE code = task.snapshot.mutexGroupCode  # cross_cycle 取组当前配置
+      busy = EXISTS( SELECT 1 FROM task_instance i
+                     JOIN task_version_snapshot s ON s.id = i.snapshot_id
+                     WHERE i.user_id=? AND i.status='IN_PROGRESS'
+                       AND JSON_UNQUOTE(JSON_EXTRACT(s.content, '$.mutexGroupCode')) = group.code
+                       AND (group.cross_cycle OR i.cycle_key = 本次cycleKey) )
+      # 不筛任务定义的主状态/deleted，不读编辑态 mutex_group_id；OFFLINE 存量继续占用。
+      # 旧实例属于绑定快照的组，草稿或新版本换组不能迁移其占用。
       if busy → task.claim.mutex-blocked
   todayCount = COUNT(task_instance WHERE user_id=? AND created_at ∈ [今日00:00,24:00) UTC+8)   # 跨任务全局口径 R13.6
   if todayCount >= config(task.start.daily-limit-per-user) → task.claim.daily-limit
@@ -179,7 +185,28 @@ startInstance(user, taskId, ip, deviceId):            # 单事务（隔离级别
   Outbox: task.instance.start {instanceId, taskId, userId}（R14.11；步骤/实例状态服务端事件全集 = D-05，§6.4）
 ```
 
-`expire_at` 计算（R14.10，INSERT 前求值）：`base = min(coalesce(快照.end_time, +∞), coalesce(definition.offline_at, +∞))`；周期任务再 `min(当前周期结束时刻)`（周期结束 = 下一周期起点 − 1ms，由 §5.4 cycleKey 推导）；`base = +∞`（无窗未下线的一次性任务）→ `base = now`；`expire_at = base + task.instance.expire-after-window-days 天`（默认 7，附录 A）。
+`expire_at` 计算（R14.10）：`base = min(coalesce(绑定快照.endTime, +∞), coalesce(本轮offlineAt, +∞), coalesce(实例所属周期结束, +∞))`。所属周期使用绑定快照周期配置与领取时记录的 `cycle_key` 推导（`CycleKeyResolver.cycleEndForKey`），不重新生成 key；DAILY/MONTHLY/CRON 的周期结束 = 下一周期起点 − 1ms，SPECIAL 沿用绑定快照 `specialEnd`。不能从 DATETIME(3) 保存后可能已舍入的 `started_at`、下线当天或最新编辑态重新判定周期。`base = +∞`（无窗未下线的 NONE）→ `base = started_at`；`expire_at = base + task.instance.expire-after-window-days 天`（默认 7，附录 A）。读取 `started_at` 仍用于无界公式兜底、缺失保护及耗时计算，不改写该字段或实例已冻结的 `cycle_key`。新建实例 INSERT 前求值；每次下线按下面规则重算：
+
+```text
+offline(taskId):                                      # 与定义 PUBLISHED→OFFLINE 同一事务
+  definition = SELECT task_definition WHERE id=? FOR UPDATE  # 排斥 start 的定义共享锁
+  offlineAt = Clock.instant()                          # 同一次操作共享时间与配置 N
+  definition.offline_at = offlineAt
+  for instance WHERE task_id=? AND status='IN_PROGRESS' AND expire_at > offlineAt:
+      snapshot = 该实例绑定快照
+      candidate = expireAt(snapshot, instance.cycle_key, instance.started_at, offlineAt, 本次配置N)
+      UPDATE expire_at = candidate
+        WHERE id=? AND status='IN_PROGRESS' AND expire_at > offlineAt
+  # 旧期限 <= offlineAt 或已终态：不重算、不复活；新的到期实例交兜底守卫/调度处理。
+  # 无窗 NONE 未到期时允许从 started_at+N 延至 offlineAt+N，不能用 LEAST(旧期限,candidate)。
+
+publish(taskId):
+  definition = SELECT task_definition WHERE id=? FOR UPDATE
+  固化新快照、更新发布版本并清除 definition.offline_at  # 同一发布事务
+  # 新实例只读取新发布快照与本轮 offline_at；不修改旧实例快照、cycleKey 或 expire_at。
+```
+
+领取与定义写入共用定义行的读写锁协议：`start` 先取得定义 `FOR SHARE`，再由 identity `lockAndGet` 锁用户；业务拒绝仍按账号状态 → 同 cycleKey 实例幂等 → 可见性 → 风控 → 互斥 → 每日上限顺序执行。定义锁前置只固定发布状态与版本，不是提前执行可见性校验。多个用户领取同一任务可共持共享锁。发布/下线、既有定义编辑、修订恢复、逻辑删除、设定/取消定时、到点发布，均先持同一定义的 `FOR UPDATE`，再读取主状态并写主体或子配置；新建定义不涉及既有定义行。下线等待已通过旧发布状态的领取事务提交后再扫描在途实例，避免漏算并发新实例。需要定义锁的写路径遵循定义 → 用户/实例顺序，不在已持用户或实例锁后反向获取定义锁；用户表的锁始终由 identity 端口封装。
 
 <!-- §5.6 -->
 ### 5.6 发放：领取状态机、履约与幂等（R18）
@@ -540,8 +567,8 @@ UPDATE rwd_grant_record
 | R13.4 风控拒绝幂等 | 集成 | `risk RiskRejectIdempotentIT` | 黑名单用户重复领取 10 次 → 0 实例、10 次响应一致（`risk.blocked.generic`，与 §4.9.2/§5.5 契约同码）、`risk_hit_log` 恰 10 条 |
 | R14.1 推进恰一次 | 并发集成 | `task StepAdvanceExactlyOnceIT` | 见 §7.4 C-2 |
 | R14.2 进度去重正确性 | 并发集成 | `task ProgressDedupIT` | 见 §7.4 C-3 |
-| R14.3 状态机合法性 | jqwik | `task StepStateMachinePropertyTest` | 随机合法操作序列（生成器产四入口 × 当前/重复/乱序三类目标）→ 任意时刻步骤状态 ∈ {未激活, ACTIVE, COMPLETED, SKIPPED} 且无回退；乱序/INACTIVE/SKIPPED → `task.step.state-mismatch`；已完成步骤重复 click/callback → 200 幂等 |
-| R14.4 过期终局性 | 集成 | `task ExpiredFinalityIT` | `MutableClock` 拨过 expireAt → 手动触发过期调度 → click/progress/callback/enter 四入口全拒且实例状态不再变化；不触发调度时兜底校验同样拒绝 |
+| R14.3 状态机合法性 | jqwik | `task StepStateMachinePropertyTest` | 随机合法操作序列（生成器产四入口 × 当前/重复/乱序三类目标）→ 任意时刻步骤状态 ∈ {未激活, ACTIVE, COMPLETED, SKIPPED} 且无回退；乱序/INACTIVE/SKIPPED → `task.step.state-mismatch`；未触发过期守卫时已完成步骤重复 click/callback → 200 幂等 |
+| R14.4 过期终局性 | 集成 | `task ExpiredFinalityIT` | `MutableClock` 覆盖 expireAt 前 1ms、等号、后 1ms；到期后手动触发过期调度 → click/progress/callback/enter 四入口全拒且实例状态不再变化；不触发调度时同样拒绝，已完成步骤或重复 reportId 不绕过过期守卫 |
 | R15.1 防重放不变量 | 集成 | `internal ReplayAttackIT` | §7.7 恶意样本库逐条：重放/篡改/过期时间戳全部拒绝（`internal.*` 分段错误码）且业务表零变化 |
 | R16.1 动作合并确定性 | jqwik | `task ActionMergePropertyTest` | 随机快照（任务级/步骤级 × 5 端动作配置）× 端枚举 → 合并结果 == §4.9 回退链首命中；重复求值一致；非法/缺失端标识按 WEB |
 | R16.2 回退链完备性 | jqwik | `task ActionFallbackPropertyTest` | 缺步骤级 / 缺任务级 / 仅 WEB / 全空四类快照 → 首命中即停；全空返回 NONE 占位，不抛异常 |
@@ -741,7 +768,7 @@ void grayVisibilityIsStableWhileConfigUnchanged(@ForAll @Size(min=1, max=50) Lis
 | 性能 7 后台查询 | `perf/admin-list.js` | 任务/实例/流水典型列表（50 万实例数据量） | P95 ≤ 800 ms | 发布前 |
 | 性能 8 容量假设验证 | `perf/seed/*` | 上述全部脚本的种子规模即容量假设落库验证 | 种子装载后全部脚本门槛达标 | P1 任务 49 / 容量复验（非 P0 发布门禁） |
 
-补充：Spike T2 的 Aviator 求值 P99 < 1ms 结论（feasibility §3.5）以 `perf/expression-benchmark.js` 复测归档，不设 CI 门槛。
+补充：Aviator 求值 P99 < 1ms 的复测不设 CI 门槛。原计划的 `perf/expression-benchmark.js` 尚不存在；现有微基准在 `spike/6-aviator/src/test/java/com/mkt/spike/aviator/AviatorSmokeTest.java`。执行入口与历史证据局限见 [性能说明](../../../perf/README.md)，本轮未复测。
 
 <!-- §7.9 -->
 ### 7.9 前端测试与契约联动（R32–R36 客户端条款）

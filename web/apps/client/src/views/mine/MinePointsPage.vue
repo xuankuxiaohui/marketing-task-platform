@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import { useSessionReload } from "@/composables/useSessionReload";
-import { Empty, List, NavBar, PullRefresh } from "vant";
+import { onMounted, onScopeDispose, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { Button, DropdownItem, DropdownMenu, Empty, List, NavBar, PullRefresh } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchPointsBalance, fetchPointsTransactions, type PointsPortalTxView } from "@/api/points";
+import { usePagedList } from "@/composables/usePagedList";
 import { zhCN } from "@/locales/zh-CN";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { useSessionStore } from "@/store/session";
 import { TRACK, track } from "@/tracking";
 import { formatBeijing } from "@/utils/datetime";
-import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
+import { resultMessage } from "@/utils/portal-error";
 
 defineOptions({ name: "MinePointsPage" });
-
-const PAGE_SIZE = 20;
 
 const TYPE_LABEL: Record<string, string> = {
   EARN: zhCN.points.earn,
@@ -23,18 +22,46 @@ const TYPE_LABEL: Record<string, string> = {
   REVERSAL: zhCN.points.reversal,
 };
 
+const TYPE_OPTIONS = [
+  { text: zhCN.points.allTypes, value: "" },
+  ...Object.entries(TYPE_LABEL).map(([value, text]) => ({ text, value })),
+];
+
+const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
-const balance = ref<number>(session.pointsBalance);
-const records = ref<PointsPortalTxView[]>([]);
-const page = ref(1);
-const total = ref(0);
-const loading = ref(false);
-const finished = ref(false);
+const overlay = useLoginOverlayStore();
+const activeType = ref("");
+const balance = ref(0);
+const balanceLoading = ref(false);
+const balanceError = ref("");
 const refreshing = ref(false);
-const loaded = ref(false);
+const { records, loading, finished, error, errorMessage, empty, loadMore, refresh, retry } =
+  usePagedList<PointsPortalTxView>({
+    scope: () => [session.token, activeType.value],
+    enabled: () => session.authenticated,
+    fetchPage: (page, pageSize) => fetchPointsTransactions({
+      type: activeType.value || undefined,
+      page,
+      pageSize,
+    }),
+  });
+let balanceGeneration = 0;
+let refreshGeneration = 0;
+let disposed = false;
+let nextRowKey = 0;
+const rowKeys = new WeakMap<PointsPortalTxView, number>();
 
-const empty = computed(() => loaded.value && records.value.length === 0);
+// The ledger contract has no row ID. Object keys remain stable when pages append,
+// and distinguish separate transactions whose displayed fields happen to match.
+function rowKey(row: PointsPortalTxView): number {
+  let key = rowKeys.get(row);
+  if (key == null) {
+    key = ++nextRowKey;
+    rowKeys.set(row, key);
+  }
+  return key;
+}
 
 function typeLabel(type?: string): string {
   if (!type) {
@@ -52,70 +79,54 @@ function formatAmount(amount?: number): string {
 }
 
 async function loadBalance(): Promise<void> {
+  const generation = ++balanceGeneration;
+  const token = session.token;
+  balanceError.value = "";
   if (!session.authenticated) {
+    balance.value = 0;
+    balanceLoading.value = false;
     return;
   }
-  const result = await fetchPointsBalance();
-  if (!isOk(result) || !result.data) {
-    showPortalFail(result);
-    return;
-  }
-  const next = Number(result.data.balance ?? 0);
-  balance.value = next;
-  session.setPointsBalance(next);
-}
-
-async function loadPage(reset: boolean): Promise<void> {
-  if (!session.authenticated) {
-    records.value = [];
-    total.value = 0;
-    finished.value = true;
-    loading.value = false;
-    refreshing.value = false;
-    loaded.value = true;
-    return;
-  }
-  if (reset) {
-    page.value = 1;
-    finished.value = false;
-  }
-  loading.value = true;
+  balanceLoading.value = true;
+  const current = () => !disposed && generation === balanceGeneration && session.token === token;
   try {
-    const result = await fetchPointsTransactions({ page: page.value, pageSize: PAGE_SIZE });
-    if (!isOk(result) || !result.data) {
-      showPortalFail(result);
-      finished.value = true;
+    const result = await fetchPointsBalance();
+    if (!current()) {
       return;
     }
-    const next = result.data.records ?? [];
-    total.value = Number(result.data.total ?? 0);
-    records.value = reset ? next : [...records.value, ...next];
-    page.value += 1;
-    finished.value = records.value.length >= total.value || next.length === 0;
+    if (!isOk(result) || !result.data) {
+      balanceError.value = resultMessage(result);
+      return;
+    }
+    const next = Number(result.data.balance ?? 0);
+    balance.value = next;
+    session.setPointsBalance(next);
   } catch {
-    showNetworkFail();
-    finished.value = true;
+    if (current()) {
+      balanceError.value = zhCN.common.networkError;
+    }
   } finally {
-    loading.value = false;
-    refreshing.value = false;
-    loaded.value = true;
+    if (current()) {
+      balanceLoading.value = false;
+    }
   }
 }
 
 async function onRefresh(): Promise<void> {
+  const generation = ++refreshGeneration;
+  const token = session.token;
+  refreshing.value = true;
   try {
-    await loadBalance();
-  } catch {
-    showNetworkFail();
+    await Promise.all([loadBalance(), refresh()]);
+  } finally {
+    if (!disposed && generation === refreshGeneration && session.token === token) {
+      refreshing.value = false;
+    }
   }
-  await loadPage(true);
 }
 
-function onLoadMore(): void {
-  if (refreshing.value || loading.value) {
-    return;
-  }
-  void loadPage(false);
+function requestLogin(): void {
+  overlay.request({ redirect: route.fullPath });
 }
 
 function openSource(row: PointsPortalTxView): void {
@@ -125,19 +136,21 @@ function openSource(row: PointsPortalTxView): void {
   void router.push(`/task/${row.sourceTaskId}`);
 }
 
-useSessionReload(() => {
-  void loadBalance().catch(() => {
-    showNetworkFail();
-  });
-  void loadPage(true);
+watch(() => session.token, () => {
+  refreshGeneration += 1;
+  refreshing.value = false;
+  balance.value = 0;
+  void loadBalance();
+}, { immediate: true, flush: "sync" });
+
+onScopeDispose(() => {
+  disposed = true;
+  balanceGeneration += 1;
+  refreshGeneration += 1;
 });
 
 onMounted(() => {
   track(TRACK.POINTS_PAGE_VIEW);
-  void loadBalance().catch(() => {
-    showNetworkFail();
-  });
-  void loadPage(true);
 });
 </script>
 
@@ -146,22 +159,50 @@ onMounted(() => {
     <NavBar :title="zhCN.mine.pointsDetail" left-arrow @click-left="router.back()" />
     <div class="points-balance" data-testid="points-balance">
       <span>{{ zhCN.points.balance }}</span>
-      <strong>{{ balance }}</strong>
+      <span v-if="!session.authenticated">{{ zhCN.home.pointsLogin }}</span>
+      <span v-else-if="balanceLoading" data-testid="points-balance-loading">{{ zhCN.common.loading }}</span>
+      <div v-else-if="balanceError" role="alert" data-testid="points-balance-error">
+        <span>{{ balanceError }}</span>
+        <Button size="small" data-testid="points-balance-retry" @click="loadBalance">
+          {{ zhCN.common.retry }}
+        </Button>
+      </div>
+      <strong v-else data-testid="points-balance-amount">{{ balance }}</strong>
     </div>
+    <DropdownMenu v-if="session.authenticated" data-testid="points-types">
+      <DropdownItem v-model="activeType" :options="TYPE_OPTIONS" />
+    </DropdownMenu>
     <PullRefresh v-model="refreshing" @refresh="onRefresh">
-      <Empty v-if="empty" :description="zhCN.empty.points" data-testid="mine-points-empty" />
+      <Empty v-if="!session.authenticated" :description="zhCN.session.missing" data-testid="mine-points-login">
+        <Button type="primary" size="small" data-testid="mine-points-login-action" @click="requestLogin">
+          {{ zhCN.login.submit }}
+        </Button>
+      </Empty>
+      <div v-else-if="error && records.length === 0" class="points-error" role="alert" data-testid="mine-points-error">
+        <p>{{ errorMessage }}</p>
+        <Button type="primary" size="small" data-testid="mine-points-retry" @click="retry">
+          {{ zhCN.common.retry }}
+        </Button>
+      </div>
+      <Empty v-else-if="empty" :description="zhCN.empty.points" data-testid="mine-points-empty">
+        <Button type="primary" size="small" data-testid="empty-go-home" @click="router.push('/home')">
+          {{ zhCN.empty.goTasks }}
+        </Button>
+      </Empty>
       <List
         v-else
         v-model:loading="loading"
+        v-model:error="error"
+        :error-text="errorMessage"
         :finished="finished"
         :finished-text="zhCN.task.noMore"
         :immediate-check="false"
         data-testid="mine-points-list"
-        @load="onLoadMore"
+        @load="loadMore"
       >
         <button
-          v-for="(row, index) in records"
-          :key="`${row.createdAt}-${row.type}-${row.amount}-${row.balanceAfter}-${index}`"
+          v-for="row in records"
+          :key="rowKey(row)"
           class="points-row"
           type="button"
           data-testid="points-row"
@@ -187,6 +228,22 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.mine-points {
+  min-height: 100%;
+  background: var(--portal-bg);
+}
+.points-error {
+  padding: 24px 16px;
+  text-align: center;
+}
+.points-balance [role="alert"] {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.mine-points :deep(.van-pull-refresh) {
+  padding-top: 12px;
+}
 .points-balance {
   display: flex;
   flex-direction: column;

@@ -1,52 +1,34 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Empty, NavBar, showToast } from "vant";
+import { Empty, NavBar } from "vant";
 import { isOk } from "@mkt/shared";
-import { fetchAdPosition, type PortalAdMaterialView } from "@/api/ad";
+import { fetchActivities, type PortalActivityView } from "@/api/activity";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
-import { TRACK, track } from "@/tracking";
-import { resolveAdJump } from "@/utils/ad-jump";
+import { activityCover, activityWindow } from "@/utils/activity-cover";
+import { showNetworkFail } from "@/utils/portal-error";
 
 defineOptions({ name: "ActivityHubPage" });
 
-const POSITION = "home_banner";
-
 const router = useRouter();
-const materials = ref<PortalAdMaterialView[]>([]);
+const activities = ref<PortalActivityView[]>([]);
 const loaded = ref(false);
 
 async function load(): Promise<void> {
   try {
-    const result = await fetchAdPosition(POSITION);
-    materials.value = isOk(result) && result.data ? (result.data.materials ?? []) : [];
+    const result = await fetchActivities();
+    activities.value = isOk(result) && result.data ? result.data : [];
   } catch {
-    materials.value = [];
+    showNetworkFail();
+    activities.value = [];
   } finally {
     loaded.value = true;
   }
 }
 
-async function onClick(material: PortalAdMaterialView): Promise<void> {
-  track(TRACK.AD_CAROUSEL_CLICK, {
-    positionCode: POSITION,
-    materialTrackId: material.trackId,
-  });
-  const jump = resolveAdJump(material);
-  if (!jump) {
-    showToast(zhCN.ad.jumpUnavailable);
-    return;
-  }
-  if (jump.kind === "link") {
-    window.open(jump.target, "_blank", "noopener");
-    return;
-  }
-  if (jump.kind === "scheme") {
-    window.location.href = jump.target;
-    return;
-  }
-  await router.push(jump.target);
+function openActivity(row: PortalActivityView): void {
+  void router.push({ path: "/activity", query: { id: String(row.id) } });
 }
 
 onMounted(() => {
@@ -57,18 +39,24 @@ onMounted(() => {
 <template>
   <section class="activity-hub">
     <NavBar :title="zhCN.mine.activityHub" left-arrow @click-left="router.back()" />
-    <Empty v-if="loaded && materials.length === 0" :description="zhCN.activity.empty" data-testid="activity-hub-empty" />
-    <div v-else data-testid="activity-hub-list">
+    <Empty v-if="loaded && activities.length === 0" :description="zhCN.activity.empty" data-testid="activity-hub-empty" />
+    <div v-else-if="activities.length > 0" data-testid="activity-hub-list">
       <button
-        v-for="item in materials"
-        :key="item.materialId"
+        v-for="row in activities"
+        :key="row.id"
         type="button"
-        class="activity-hub__banner"
-        data-testid="activity-hub-banner"
-        @click="onClick(item)"
+        class="activity-hub__card"
+        data-testid="activity-hub-card"
+        @click="openActivity(row)"
       >
-        <FallbackImage :src="item.imageUrl" :alt="item.title || zhCN.ad.carousel" />
-        <span v-if="item.title" class="activity-hub__title">{{ item.title }}</span>
+        <FallbackImage v-if="activityCover(row)" :src="activityCover(row)" :alt="row.name" />
+        <span v-else class="activity-hub__fallback">{{ row.name.slice(0, 1) }}</span>
+        <span class="activity-hub__meta">
+          <strong>{{ row.name }}</strong>
+          <em v-if="activityWindow(row.startTime, row.endTime)">{{
+            activityWindow(row.startTime, row.endTime)
+          }}</em>
+        </span>
       </button>
     </div>
   </section>
@@ -80,35 +68,47 @@ onMounted(() => {
   padding-bottom: 16px;
   background: var(--portal-bg);
 }
-.activity-hub__banner {
-  position: relative;
-  display: block;
-  overflow: hidden;
+.activity-hub__card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
   width: calc(100% - 32px);
   margin: 12px 16px 0;
-  padding: 0;
+  padding: 12px;
   border: 0;
-  border-radius: var(--portal-radius-lg);
+  border-radius: var(--portal-radius);
   background: var(--portal-surface);
-  box-shadow: var(--portal-shadow);
-}
-.activity-hub__banner :deep(.fallback-image),
-.activity-hub__banner :deep(img) {
-  width: 100%;
-  height: 148px;
-  border-radius: 0;
-  object-fit: cover;
-}
-.activity-hub__title {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: 24px 14px 12px;
-  background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.72) 100%);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  box-shadow: var(--portal-shadow-soft);
   text-align: left;
+}
+.activity-hub__card :deep(.fallback-image),
+.activity-hub__fallback {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 16px;
+  background: var(--portal-primary-soft);
+}
+.activity-hub__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--portal-primary);
+  font-size: 22px;
+  font-weight: 700;
+}
+.activity-hub__meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.activity-hub__meta strong {
+  font-size: 16px;
+}
+.activity-hub__meta em {
+  color: var(--portal-muted);
+  font-size: 12px;
+  font-style: normal;
 }
 </style>

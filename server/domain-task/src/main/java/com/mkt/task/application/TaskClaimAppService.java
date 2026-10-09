@@ -41,7 +41,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
@@ -143,11 +142,13 @@ public class TaskClaimAppService {
         if (users == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
         }
+        // Definition admission precedes the user lock: readers may run together,
+        // while publish/offline waits for all admitted claims to finish.
+        TaskDefinitionEntity definition = definitions.getByIdForShare(taskId);
         UserAttributes attrs = users.lockAndGet(userId);
         if (attrs.accountStatus() != AccountStatus.ACTIVE) {
             throw new BusinessException(TaskErrorCodes.ACCOUNT_DISABLED);
         }
-        TaskDefinitionEntity definition = definitions.getById(taskId);
         if (definition == null || definition.deletedFlag()) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
@@ -273,25 +274,10 @@ public class TaskClaimAppService {
         if (group == null) {
             return;
         }
-        List<Long> groupTaskIds = liveMutexTaskIds(mutexCode);
-        if (groupTaskIds.isEmpty()) {
-            return;
-        }
         String matchCycle = group.crossCycleFlag() ? null : cycleKey;
-        if (instances.existsInProgress(userId, groupTaskIds, matchCycle)) {
+        if (instances.existsMutexInProgress(userId, mutexCode, matchCycle)) {
             throw new BusinessException(TaskErrorCodes.CLAIM_MUTEX_BLOCKED);
         }
-    }
-
-    private List<Long> liveMutexTaskIds(String mutexGroupCode) {
-        List<Long> ids = new ArrayList<>();
-        for (TaskDefinitionEntity published : definitions.listPublished()) {
-            SnapshotContent content = snapshotOf(published);
-            if (content != null && mutexGroupCode.equals(content.mutexGroupCode())) {
-                ids.add(published.getId());
-            }
-        }
-        return ids;
     }
 
     private void checkDailyLimit(long userId, Instant now) {

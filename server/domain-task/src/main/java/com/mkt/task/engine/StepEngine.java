@@ -93,8 +93,12 @@ public final class StepEngine {
             CrowdResolver crowds,
             String ip,
             String deviceId) {
-        List<TaskStepCommand> steps = snapshot.steps() == null ? List.of() : snapshot.steps();
         Instant now = clock.instant();
+        rejectIfExpired(instance, now);
+        if (!InstanceStatuses.IN_PROGRESS.equals(instance.getStatus())) {
+            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
+        }
+        List<TaskStepCommand> steps = snapshot.steps() == null ? List.of() : snapshot.steps();
         LocalDateTime utc = TaskTime.toUtc(now);
         for (TaskStepCommand step : steps) {
             TaskInstanceStepEntity row = new TaskInstanceStepEntity();
@@ -150,6 +154,8 @@ public final class StepEngine {
             String bizNo,
             String ip,
             String deviceId) {
+        rejectIfExpired(instance, clock.instant());
+        requireEntryType(Entry.CALLBACK, step);
         if (bizNo != null && !bizNo.isBlank()) {
             instances.updateLastBizNo(step.getId(), bizNo.trim());
             step.setLastBizNo(bizNo.trim());
@@ -165,6 +171,8 @@ public final class StepEngine {
             CrowdResolver crowds,
             int value,
             String reportId) {
+        rejectIfExpired(instance, clock.instant());
+        requireEntryType(Entry.PROGRESS, step);
         if (reports == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
         }
@@ -177,6 +185,7 @@ public final class StepEngine {
         try {
             reports.insert(report);
         } catch (DuplicateKeyException ex) {
+            rejectIfExpired(instance, clock.instant());
             TaskInstanceStepEntity fresh = reloadStep(instance.getId(), step.getStepCode());
             return snapshotOf(instance, fresh == null ? step : fresh, snapshot, List.of(), true);
         }
@@ -205,10 +214,12 @@ public final class StepEngine {
             return blocked;
         }
         for (int attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
+            rejectIfExpired(instance, clock.instant());
             TaskInstanceStepEntity current = reloadStep(instance.getId(), step.getStepCode());
             if (current == null) {
                 throw new BusinessException(TaskErrorCodes.STEP_NOT_FOUND);
             }
+            rejectIfExpired(instance, clock.instant());
             if (done(current.getStatus())) {
                 return snapshotOf(instance, current, snapshot, List.of(), true);
             }
@@ -216,6 +227,7 @@ public final class StepEngine {
                 throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
             }
             Instant now = clock.instant();
+            rejectIfExpired(instance, now);
             int version = current.getVersion() == null ? 0 : current.getVersion();
             int affected = instances.completeStepCas(current.getId(), version, TaskTime.toUtc(now), progressCurrent);
             if (affected == 1) {
@@ -234,6 +246,7 @@ public final class StepEngine {
             }
         }
         TaskInstanceStepEntity again = reloadStep(instance.getId(), step.getStepCode());
+        rejectIfExpired(instance, clock.instant());
         if (again != null && done(again.getStatus())) {
             return snapshotOf(instance, again, snapshot, List.of(), true);
         }
@@ -253,10 +266,12 @@ public final class StepEngine {
         Integer target = progressTarget(snapshot, step.getStepCode());
         int goal = target == null ? Integer.MAX_VALUE : target;
         for (int attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
+            rejectIfExpired(instance, clock.instant());
             TaskInstanceStepEntity current = reloadStep(instance.getId(), step.getStepCode());
             if (current == null) {
                 throw new BusinessException(TaskErrorCodes.STEP_NOT_FOUND);
             }
+            rejectIfExpired(instance, clock.instant());
             if (done(current.getStatus())) {
                 throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
             }
@@ -269,6 +284,7 @@ public final class StepEngine {
                         Entry.PROGRESS, instance, current, snapshot, attrs, crowds, newCur, ip, deviceId);
             }
             int version = current.getVersion() == null ? 0 : current.getVersion();
+            rejectIfExpired(instance, clock.instant());
             int affected = instances.addProgressCas(current.getId(), version, newCur);
             if (affected == 1) {
                 current.setProgressCurrent(newCur);
@@ -276,6 +292,7 @@ public final class StepEngine {
                 return snapshotOf(instance, current, snapshot, List.of(), false);
             }
         }
+        rejectIfExpired(instance, clock.instant());
         throw new BusinessException(TaskErrorCodes.PROGRESS_PROCESSING);
     }
 
@@ -291,6 +308,7 @@ public final class StepEngine {
         if (StepStatuses.SKIPPED.equals(step.getStatus()) || StepStatuses.INACTIVE.equals(step.getStatus())) {
             throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
         }
+        requireEntryType(entry, step);
         if (StepStatuses.COMPLETED.equals(step.getStatus())) {
             if (entry == Entry.PROGRESS) {
                 throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
@@ -306,16 +324,19 @@ public final class StepEngine {
         if (!StepStatuses.ACTIVE.equals(step.getStatus())) {
             throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
         }
-        if (entry == Entry.CLICK && !StepTypes.CLICK.equals(step.getType())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        if (entry == Entry.CALLBACK && !StepTypes.CALLBACK.equals(step.getType())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        if (entry == Entry.PROGRESS && !StepTypes.PROGRESS.equals(step.getType())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
         return null;
+    }
+
+    private static void requireEntryType(Entry entry, TaskInstanceStepEntity step) {
+        String expected = switch (entry) {
+            case CLICK -> StepTypes.CLICK;
+            case CALLBACK -> StepTypes.CALLBACK;
+            case PROGRESS -> StepTypes.PROGRESS;
+            case ENTER -> null;
+        };
+        if (expected != null && !expected.equals(step.getType())) {
+            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
+        }
     }
 
     private void cascade(
@@ -337,11 +358,16 @@ public final class StepEngine {
                 return;
             }
             Instant now = clock.instant();
-            instances.activateStep(next.getId(), TaskTime.toUtc(now));
+            rejectIfExpired(instance, now);
+            if (instances.activateStep(next.getId(), TaskTime.toUtc(now)) != 1) {
+                return;
+            }
             next.setStatus(StepStatuses.ACTIVE);
             next.setActivatedAt(TaskTime.toUtc(now));
             if (StepTypes.PASSIVE.equals(next.getType())) {
-                holdComplete(instance, next, now, null);
+                if (!holdComplete(instance, next)) {
+                    return;
+                }
                 seq = seqOf(next);
                 continue;
             }
@@ -372,12 +398,25 @@ public final class StepEngine {
         if (InstanceStatuses.terminal(instance.getStatus())) {
             return;
         }
-        if (!StepStatuses.ACTIVE.equals(step.getStatus())) {
+        if (!StepStatuses.ACTIVE.equals(step.getStatus()) || !StepTypes.REWARD.equals(step.getType())) {
             return;
         }
         Instant now = clock.instant();
-        holdComplete(instance, step, now, null);
-        cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>(), null, null);
+        if (expired(instance, now)) {
+            return;
+        }
+        try {
+            if (!holdComplete(instance, step)) {
+                return;
+            }
+            cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>(), null, null);
+        } catch (BusinessException ex) {
+            if (ex.errorCode() != TaskErrorCodes.INSTANCE_EXPIRED) {
+                throw ex;
+            }
+            // A retry has already granted the reward. Stop the now-expired cascade
+            // without rolling back that entitlement.
+        }
     }
 
     private boolean grantReward(
@@ -414,25 +453,26 @@ public final class StepEngine {
                     ctx);
             if (result != null
                     && (result.status() == GrantStatus.GRANTED || result.status() == GrantStatus.WON)) {
-                holdComplete(instance, step, now, null);
+                if (!holdComplete(instance, step)) {
+                    return false;
+                }
                 String name = def.name() == null ? step.getStepCode() : def.name();
                 feedback.add(new RewardFeedbackView(name, 1));
                 return true;
             }
             if (result != null && result.status() == GrantStatus.PERMANENT_FAILED) {
-                skipPermanentFailed(step, now);
-                return true;
+                return skipPermanentFailed(instance, step, clock.instant());
             }
             return false;
         } catch (RetryableGrantException ex) {
             return false;
         } catch (PermanentGrantException ex) {
-            skipPermanentFailed(step, now);
-            return true;
+            return skipPermanentFailed(instance, step, clock.instant());
         }
     }
 
-    private void skipPermanentFailed(TaskInstanceStepEntity step, Instant now) {
+    private boolean skipPermanentFailed(TaskInstanceEntity instance, TaskInstanceStepEntity step, Instant now) {
+        rejectIfExpired(instance, now);
         int version = step.getVersion() == null ? 0 : step.getVersion();
         int affected = instances.skipStepCas(
                 step.getId(), version, TaskTime.toUtc(now), SkipReasons.GRANT_PERMANENT_FAILED);
@@ -441,21 +481,24 @@ public final class StepEngine {
             step.setSkipReason(SkipReasons.GRANT_PERMANENT_FAILED);
             step.setCompletedAt(TaskTime.toUtc(now));
             step.setVersion(version + 1);
+            return true;
         }
+        return false;
     }
 
-    private void holdComplete(TaskInstanceEntity instance, TaskInstanceStepEntity step, Instant now, Integer progress) {
+    private boolean holdComplete(TaskInstanceEntity instance, TaskInstanceStepEntity step) {
+        Instant now = clock.instant();
+        rejectIfExpired(instance, now);
         int version = step.getVersion() == null ? 0 : step.getVersion();
-        int affected = instances.completeStepCas(step.getId(), version, TaskTime.toUtc(now), progress);
-        if (affected == 0) {
-            affected = instances.completeStep(step.getId(), TaskTime.toUtc(now));
-        }
+        int affected = instances.completeStepCas(step.getId(), version, TaskTime.toUtc(now), null);
         if (affected == 1) {
             step.setStatus(StepStatuses.COMPLETED);
             step.setCompletedAt(TaskTime.toUtc(now));
             step.setVersion(version + 1);
             appendStepComplete(instance, step);
+            return true;
         }
+        return false;
     }
 
     private TaskInstanceStepEntity resolveNext(
@@ -522,12 +565,15 @@ public final class StepEngine {
 
     private void completeInstance(TaskInstanceEntity instance) {
         Instant now = clock.instant();
+        rejectIfExpired(instance, now);
         Instant started = TaskTime.toInstant(instance.getStartedAt());
         int cost = 0;
         if (started != null) {
             cost = (int) Math.max(0, Duration.between(started, now).toSeconds());
         }
-        instances.completeInstance(instance.getId(), TaskTime.toUtc(now), cost);
+        if (instances.completeInstance(instance.getId(), TaskTime.toUtc(now), cost) != 1) {
+            return;
+        }
         instance.setStatus(InstanceStatuses.COMPLETED);
         instance.setCompletedAt(TaskTime.toUtc(now));
         instance.setCostSeconds(cost);
@@ -579,8 +625,17 @@ public final class StepEngine {
         if (InstanceStatuses.EXPIRED.equals(instance.getStatus())) {
             return true;
         }
+        if (!InstanceStatuses.IN_PROGRESS.equals(instance.getStatus())) {
+            return false;
+        }
         Instant expireAt = TaskTime.toInstant(instance.getExpireAt());
         return expireAt != null && !now.isBefore(expireAt);
+    }
+
+    private static void rejectIfExpired(TaskInstanceEntity instance, Instant now) {
+        if (expired(instance, now)) {
+            throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
+        }
     }
 
     private static boolean done(String status) {

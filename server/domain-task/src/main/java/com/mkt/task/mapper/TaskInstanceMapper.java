@@ -10,6 +10,8 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface TaskInstanceMapper extends BaseMapper<TaskInstanceEntity> {
 
+    TaskInstanceEntity selectByIdForUpdate(@Param("id") long id);
+
     TaskInstanceEntity selectByUserTaskCycle(
             @Param("userId") long userId, @Param("taskId") long taskId, @Param("cycleKey") String cycleKey);
 
@@ -29,6 +31,9 @@ public interface TaskInstanceMapper extends BaseMapper<TaskInstanceEntity> {
 
     List<TaskInstanceEntity> selectInProgressByUser(@Param("userId") long userId);
 
+    List<TaskInstanceEntity> selectInProgressByTaskAfterId(
+            @Param("taskId") long taskId, @Param("afterId") long afterId, @Param("limit") int limit);
+
     int countToday(
             @Param("userId") long userId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
@@ -36,6 +41,17 @@ public interface TaskInstanceMapper extends BaseMapper<TaskInstanceEntity> {
             @Param("userId") long userId,
             @Param("taskIds") List<Long> taskIds,
             @Param("cycleKey") String cycleKey);
+
+    int existsMutexInProgress(
+            @Param("userId") long userId,
+            @Param("mutexGroupCode") String mutexGroupCode,
+            @Param("cycleKey") String cycleKey);
+
+    int updateExpireAtCas(
+            @Param("id") long id,
+            @Param("expectedExpireAt") LocalDateTime expectedExpireAt,
+            @Param("expireAt") LocalDateTime expireAt,
+            @Param("now") LocalDateTime now);
 
     long countInProgress(@Param("userId") long userId);
 

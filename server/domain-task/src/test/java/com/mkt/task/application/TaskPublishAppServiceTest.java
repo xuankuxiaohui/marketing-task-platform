@@ -3,15 +3,21 @@ package com.mkt.task.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.mkt.contract.AccountStatus;
+import com.mkt.contract.UserAttributePort;
+import com.mkt.contract.UserAttributes;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
 import com.mkt.kernel.json.JsonUtil;
+import com.mkt.kernel.time.MutableClock;
 import com.mkt.task.command.PublishCommand;
 import com.mkt.task.command.ScheduleCommand;
 import com.mkt.task.command.TaskDefinitionSaveCommand;
 import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.command.TaskTransitionCommand;
+import com.mkt.task.domain.InstanceStatuses;
+import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.response.BatchItemResponse;
 import com.mkt.task.response.PublishCheckError;
 import com.mkt.task.response.PublishCheckResponse;
@@ -23,11 +29,12 @@ import com.mkt.task.testsupport.MemoryPrizeEnabledLookup;
 import com.mkt.task.testsupport.MemoryTaskChildStore;
 import com.mkt.task.testsupport.MemoryTaskCrowdStore;
 import com.mkt.task.testsupport.MemoryTaskDefinitionStore;
+import com.mkt.task.testsupport.MemoryTaskInstanceStore;
 import com.mkt.task.testsupport.MemoryTaskMutexGroupStore;
 import com.mkt.task.testsupport.MemoryTaskVersionSnapshotStore;
 import java.sql.Timestamp;
-import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,11 +45,16 @@ import org.junit.jupiter.api.Test;
 
 class TaskPublishAppServiceTest {
 
+    private static final Instant NOW = Instant.parse("2026-08-19T00:00:00Z");
+
     private MemoryTaskDefinitionStore definitions;
     private MemoryTaskChildStore children;
     private MemoryTaskVersionSnapshotStore snapshots;
     private MemoryPrizeEnabledLookup prizes;
     private CapturingAudit audits;
+    private MemoryTaskInstanceStore instances;
+    private TaskSettings settings;
+    private MutableClock clock;
     private TaskDefinitionAppService defs;
     private TaskPublishAppService publishes;
 
@@ -53,9 +65,10 @@ class TaskPublishAppServiceTest {
         snapshots = new MemoryTaskVersionSnapshotStore();
         prizes = new MemoryPrizeEnabledLookup();
         audits = new CapturingAudit();
-        TaskSettings settings = new TaskSettings();
+        instances = new MemoryTaskInstanceStore(snapshots);
+        settings = new TaskSettings();
         settings.setStepMaxCount(10);
-        Clock clock = Clock.fixed(Instant.parse("2026-08-19T00:00:00Z"), ZoneOffset.UTC);
+        clock = new MutableClock(NOW);
         defs = new TaskDefinitionAppService(
                 definitions,
                 children,
@@ -69,6 +82,8 @@ class TaskPublishAppServiceTest {
                 snapshots,
                 defs,
                 prizes,
+                instances,
+                settings,
                 clock,
                 null,
                 audits,
@@ -158,6 +173,155 @@ class TaskPublishAppServiceTest {
         assertThat(definitions.getById(id).getStatus()).isEqualTo("OFFLINE");
         defs.saveAggregate(withName(legal("off_task"), id, "再编辑"));
         assertThat(definitions.getById(id).getStatus()).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void offlineRecomputesWindowDeadlineFromBoundSnapshotAndCurrentSetting() {
+        long id = defs.saveAggregate(withTiming(legal("offline_window"), "NONE", NOW.plusSeconds(30L * 86400))).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskInstanceEntity row = insertInstance(id, 9L, NOW, NOW.plusSeconds(37L * 86400));
+        defs.saveAggregate(withName(withTiming(legal("offline_window"), "NONE", NOW.minusSeconds(86400)), id, "草稿窗"));
+        settings.setExpireAfterWindowDays(3);
+
+        publishes.offline(id);
+
+        assertThat(row.getExpireAt()).isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(3L * 86400), ZoneOffset.UTC));
+        assertThat(row.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(row.getSnapshotId()).isEqualTo(snapshots.getByTaskAndVersion(id, 1).getId());
+        assertThat(definitions.getById(id).getOfflineAt()).isEqualTo(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    void offlineUsesOriginalStartedAtCycleWhenInstanceIsFromYesterday() {
+        long id = defs.saveAggregate(withTiming(legal("offline_daily"), "DAILY", null)).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        Instant startedAt = NOW.minusSeconds(86400);
+        TaskInstanceEntity row = insertInstance(id, 9L, startedAt, NOW.plusSeconds(30L * 86400), "20260818");
+
+        publishes.offline(id);
+
+        Instant originalCycleEnd = Instant.parse("2026-08-18T15:59:59.999Z");
+        assertThat(row.getExpireAt())
+                .isEqualTo(LocalDateTime.ofInstant(originalCycleEnd.plusSeconds(7L * 86400), ZoneOffset.UTC));
+        assertThat(row.getCycleKey()).isEqualTo("20260818");
+    }
+
+    @Test
+    void offlineMayExtendUnboundedOnceInstanceThatHasNotExpired() {
+        long id = defs.saveAggregate(legal("offline_once")).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskInstanceEntity row = insertInstance(id, 9L, NOW.minusSeconds(86400), NOW.plusSeconds(6L * 86400));
+
+        publishes.offline(id);
+
+        assertThat(row.getExpireAt()).isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(7L * 86400), ZoneOffset.UTC));
+        assertThat(row.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+    }
+
+    @Test
+    void offlineDoesNotResurrectDueInstancesOrChangeTerminalAndOtherTaskDeadlines() {
+        long id = defs.saveAggregate(legal("offline_preserve")).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskInstanceEntity due = insertInstance(id, 9L, NOW.minusSeconds(86400), NOW);
+        TaskInstanceEntity expiredEarlier = insertInstance(id, 10L, NOW.minusSeconds(86400), NOW.minusMillis(1));
+        TaskInstanceEntity completed = insertInstance(id, 11L, NOW.minusSeconds(86400), NOW.plusSeconds(86400));
+        completed.setStatus(InstanceStatuses.COMPLETED);
+        TaskInstanceEntity abandoned = insertInstance(id, 12L, NOW.minusSeconds(86400), NOW.plusSeconds(86400));
+        abandoned.setStatus(InstanceStatuses.ABANDONED);
+        TaskInstanceEntity expired = insertInstance(id, 13L, NOW.minusSeconds(86400), NOW.plusSeconds(86400));
+        expired.setStatus(InstanceStatuses.EXPIRED);
+        long unrelatedId = defs.saveAggregate(legal("offline_unrelated")).id();
+        publishes.publish(unrelatedId, new PublishCommand(null, null));
+        TaskInstanceEntity unrelated = insertInstance(unrelatedId, 9L, NOW, NOW.plusSeconds(86400));
+
+        publishes.offline(id);
+
+        assertThat(due.getExpireAt()).isEqualTo(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        assertThat(expiredEarlier.getExpireAt()).isEqualTo(LocalDateTime.ofInstant(NOW.minusMillis(1), ZoneOffset.UTC));
+        assertThat(due.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(expiredEarlier.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(List.of(completed, abandoned, expired, unrelated))
+                .allSatisfy(row -> assertThat(row.getExpireAt())
+                        .isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(86400), ZoneOffset.UTC)));
+        assertThat(completed.getStatus()).isEqualTo(InstanceStatuses.COMPLETED);
+        assertThat(abandoned.getStatus()).isEqualTo(InstanceStatuses.ABANDONED);
+        assertThat(expired.getStatus()).isEqualTo(InstanceStatuses.EXPIRED);
+        assertThat(definitions.getById(unrelatedId).getStatus()).isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    void republishKeepsOldInstanceDeadlineAndNewClaimDoesNotInheritPastOfflineTime() {
+        long id = defs.saveAggregate(
+                withTiming(legal("republish_deadline"), "NONE", NOW.plusSeconds(30L * 86400))).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskInstanceEntity original = insertInstance(id, 9L, NOW, NOW.plusSeconds(37L * 86400));
+        publishes.offline(id);
+        LocalDateTime oldDeadline = original.getExpireAt();
+        Long boundSnapshot = original.getSnapshotId();
+        clock.setInstant(NOW.plusSeconds(86400));
+        defs.saveAggregate(withName(
+                withTiming(legal("republish_deadline"), "NONE", NOW.plusSeconds(40L * 86400)), id, "重发"));
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskClaimAppService claims = new TaskClaimAppService(
+                definitions, snapshots, instances, new MemoryTaskCrowdStore(), new MemoryTaskMutexGroupStore(),
+                activeUsers(), null, null, clock, settings);
+
+        var created = claims.start(id, 10L, "203.0.113.1", null, "WEB");
+
+        assertThat(original.getExpireAt()).isEqualTo(oldDeadline);
+        assertThat(original.getSnapshotId()).isEqualTo(boundSnapshot);
+        assertThat(original.getVersion()).isEqualTo(1);
+        assertThat(instances.getById(created.instanceId()).getVersion()).isEqualTo(2);
+        assertThat(instances.getById(created.instanceId()).getExpireAt())
+                .isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(47L * 86400), ZoneOffset.UTC));
+        assertThat(definitions.getById(id).getOfflineAt()).isNull();
+    }
+
+    @Test
+    void offlineRecomputesEveryInFlightDeadlineAcrossMoreThanOneBatch() {
+        long id = defs.saveAggregate(legal("offline_many")).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        List<TaskInstanceEntity> rows = new ArrayList<>(105);
+        for (long userId = 100L; userId < 205L; userId++) {
+            rows.add(insertInstance(id, userId, NOW.minusSeconds(86400), NOW.plusSeconds(6L * 86400)));
+        }
+
+        publishes.offline(id);
+
+        assertThat(rows).hasSize(105).allSatisfy(row -> {
+            assertThat(row.getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+            assertThat(row.getExpireAt())
+                    .isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(7L * 86400), ZoneOffset.UTC));
+        });
+    }
+
+    @Test
+    void secondOfflineRecomputesEachVersionFromItsOwnBoundWindowEnd() {
+        String code = "offline_twice";
+        long id = defs.saveAggregate(withTiming(legal(code), "NONE", NOW.plusSeconds(86400))).id();
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskInstanceEntity original = insertInstance(id, 9L, NOW, NOW.plusSeconds(8L * 86400));
+        publishes.offline(id);
+        assertThat(original.getExpireAt())
+                .isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(7L * 86400), ZoneOffset.UTC));
+        clock.setInstant(NOW.plusSeconds(2L * 86400));
+        defs.saveAggregate(withName(withTiming(legal(code), "NONE", NOW.plusSeconds(30L * 86400)), id, "新窗口"));
+        publishes.publish(id, new PublishCommand(null, null));
+        TaskClaimAppService claims = new TaskClaimAppService(
+                definitions, snapshots, instances, new MemoryTaskCrowdStore(), new MemoryTaskMutexGroupStore(),
+                activeUsers(), null, null, clock, settings);
+        var current = claims.start(id, 10L, "203.0.113.1", null, "WEB");
+        Long originalSnapshotId = original.getSnapshotId();
+
+        publishes.offline(id);
+
+        assertThat(original.getVersion()).isEqualTo(1);
+        assertThat(original.getSnapshotId()).isEqualTo(originalSnapshotId);
+        assertThat(original.getExpireAt())
+                .isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(8L * 86400), ZoneOffset.UTC));
+        assertThat(instances.getById(current.instanceId()).getVersion()).isEqualTo(2);
+        assertThat(instances.getById(current.instanceId()).getExpireAt())
+                .isEqualTo(LocalDateTime.ofInstant(NOW.plusSeconds(9L * 86400), ZoneOffset.UTC));
     }
 
     @Test
@@ -365,6 +529,51 @@ class TaskPublishAppServiceTest {
                         new TaskStepCommand("go_page", "浏览", 1, "PASSIVE", null, null),
                         new TaskStepCommand("click", "点击", 2, "CLICK", null, null)),
                 List.of(new TaskTransitionCommand("go_page", "click", null, 0)));
+    }
+
+    private TaskInstanceEntity insertInstance(long taskId, long userId, Instant startedAt, Instant expireAt) {
+        return insertInstance(taskId, userId, startedAt, expireAt, "NONE");
+    }
+
+    private TaskInstanceEntity insertInstance(
+            long taskId, long userId, Instant startedAt, Instant expireAt, String cycleKey) {
+        TaskInstanceEntity row = new TaskInstanceEntity();
+        row.setTaskId(taskId);
+        row.setTaskCode(definitions.getById(taskId).getCode());
+        row.setVersion(1);
+        row.setSnapshotId(snapshots.getByTaskAndVersion(taskId, 1).getId());
+        row.setUserId(userId);
+        row.setCycleKey(cycleKey);
+        row.setStatus(InstanceStatuses.IN_PROGRESS);
+        row.setStartedAt(LocalDateTime.ofInstant(startedAt, ZoneOffset.UTC));
+        row.setCreatedAt(LocalDateTime.ofInstant(startedAt, ZoneOffset.UTC));
+        row.setExpireAt(LocalDateTime.ofInstant(expireAt, ZoneOffset.UTC));
+        row.setSimulated(0);
+        instances.insert(row);
+        return row;
+    }
+
+    private static TaskDefinitionSaveCommand withTiming(
+            TaskDefinitionSaveCommand base, String cycleType, Instant endTime) {
+        return new TaskDefinitionSaveCommand(
+                base.id(), base.code(), base.name(), base.description(), base.category(), base.iconUrl(),
+                base.badgeText(), base.startTime(), endTime, base.sortWeight(), cycleType, base.cronExpr(),
+                base.specialStart(), base.specialEnd(), base.mutexGroupId(), base.gray(), base.filter(),
+                base.steps(), base.transitions(), base.actions());
+    }
+
+    private static UserAttributePort activeUsers() {
+        return new UserAttributePort() {
+            @Override
+            public UserAttributes attributes(long userId) {
+                return new UserAttributes(null, null, null, null, List.of(), null, AccountStatus.ACTIVE);
+            }
+
+            @Override
+            public UserAttributes lockAndGet(long userId) {
+                return attributes(userId);
+            }
+        };
     }
 
     private static TaskDefinitionSaveCommand emptySteps(String code) {

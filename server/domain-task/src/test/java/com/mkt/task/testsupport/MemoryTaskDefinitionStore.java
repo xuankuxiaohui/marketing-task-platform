@@ -96,6 +96,12 @@ public final class MemoryTaskDefinitionStore implements TaskDefinitionStore {
     }
 
     @Override
+    public TaskDefinitionEntity getByIdForShare(long id) {
+        TaskDefinitionEntity row = getById(id);
+        return row == null || row.deletedFlag() ? null : row;
+    }
+
+    @Override
     public List<TaskDefinitionEntity> listDueScheduled(java.time.LocalDateTime now, int limit) {
         return rows.values().stream()
                 .filter(row -> !row.deletedFlag())
@@ -160,6 +166,7 @@ public final class MemoryTaskDefinitionStore implements TaskDefinitionStore {
         row.setVersion(nextVersion);
         row.setPendingRevision(0);
         row.setSchedulePublishAt(null);
+        row.setOfflineAt(null);
         row.setUpdatedAt(updatedAt);
         return 1;
     }

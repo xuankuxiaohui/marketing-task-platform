@@ -1,7 +1,7 @@
 # 设计文档 · 领域模型与 Schema（§3）
 
-> 本文是 [design.md](design.md) **v2.13** 分册。§ 编号与总册索引一致，引用仍写 design §x.y。
-> 需求：[requirements.md](requirements.md) v3.9　选型：[component-selection.md](component-selection.md)
+> 本文是 [design.md](design.md) 的分册。§ 编号与总册索引一致，引用仍写 design §x.y。
+> 需求：[requirements.md](requirements.md)　选型：[component-selection.md](component-selection.md)
 > 总册索引（§ → 锚点）：[design.md](design.md) §0.2。本章跳转：搜索 `<!-- §x.y -->`，不要记行号。
 
 ---
@@ -310,7 +310,7 @@ CREATE TABLE task_definition (
   filter_allow_crowd_ids  JSON         NULL COMMENT '允许人群包 ID 数组',
   filter_exclude_crowd_ids JSON        NULL COMMENT '排除人群包 ID 数组',
   pending_revision        TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '修订草稿标记（D-01）',
-  offline_at              DATETIME(3)  NULL COMMENT '最近下线时刻，expireAt 计算输入（R14.10）',
+  offline_at              DATETIME(3)  NULL COMMENT '本轮下线时刻；发布清除，不改旧实例已存期限（R14.10）',
   deleted                 TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '仅未发布可删（R11.12）',
   created_by              BIGINT       NULL,
   created_at              DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -323,6 +323,8 @@ CREATE TABLE task_definition (
   CHECK (gray_type IN ('NONE','RATIO','AB','CROWD'))
 ) COMMENT '任务定义（编辑态主体）';
 ```
+
+`offline_at` 在下线事务内用于重算尚未到期的在途实例，使用每条实例的绑定快照与领取时记录的 `cycle_key` 推导所属周期，不从 DATETIME(3) 保存后的 `started_at` 重新生成 key；SPECIAL 沿用绑定快照 `specialEnd`。读取 `started_at` 用于无界期限兜底与缺失保护，不改写实例开始时间或已冻结周期。发布清除该字段只影响新实例，不让旧实例改用新时间窗或重新计算期限。完整边界见 R14.10 / §5.5。
 
 #### 3.3.3 task_step / task_step_transition（R11.2/11.3）
 
@@ -430,6 +432,8 @@ CREATE TABLE task_version_snapshot (
   UNIQUE KEY uk_task_version (task_id, version)
 ) COMMENT '版本快照（写入后禁止 UPDATE/DELETE 服务方法，RL-12 同款架构测试覆盖）';
 ```
+
+实例的互斥归属取 `snapshot_id` 指向的快照内容 `mutexGroupCode`；占用查询 JOIN 此快照，不以当前编辑态 `task_definition.mutex_group_id` 或任务主状态枚举任务。是否跨周期仍取互斥组当前配置，见 R11.6 / §5.5。
 
 #### 3.3.7 task_instance / task_instance_step（R13/R14）
 

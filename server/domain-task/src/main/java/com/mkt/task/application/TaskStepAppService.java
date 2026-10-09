@@ -17,6 +17,7 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
+import com.mkt.task.domain.StepTypes;
 import com.mkt.task.engine.StepAdvanceResult;
 import com.mkt.task.engine.StepEngine;
 import com.mkt.task.entity.TaskDefinitionEntity;
@@ -103,7 +104,7 @@ public class TaskStepAppService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskClickResponse click(
             long instanceId, String stepCode, long userId, String ip, String deviceId, String platform) {
-        TaskInstanceEntity instance = instances.getById(instanceId);
+        TaskInstanceEntity instance = instances.getByIdForUpdate(instanceId);
         if (instance == null || instance.getUserId() == null || instance.getUserId() != userId) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
@@ -154,7 +155,7 @@ public class TaskStepAppService {
 
     private TaskInstanceEntity locate(Long instanceId, Long userId, String taskCode, String cycleKey) {
         if (instanceId != null) {
-            TaskInstanceEntity row = instances.getById(instanceId);
+            TaskInstanceEntity row = instances.getByIdForUpdate(instanceId);
             if (row == null) {
                 throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
             }
@@ -171,7 +172,11 @@ public class TaskStepAppService {
         if (row == null) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
-        return row;
+        TaskInstanceEntity locked = instances.getByIdForUpdate(row.getId());
+        if (locked == null) {
+            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
+        }
+        return locked;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -186,11 +191,17 @@ public class TaskStepAppService {
             return;
         }
         TaskInstanceStepEntity step = instances.getStepById(stepId);
-        if (step == null) {
+        if (step == null || !StepStatuses.ACTIVE.equals(step.getStatus())
+                || !StepTypes.REWARD.equals(step.getType())) {
             return;
         }
-        TaskInstanceEntity instance = instances.getById(step.getInstanceId());
-        if (instance == null) {
+        TaskInstanceEntity instance = instances.getByIdForUpdate(step.getInstanceId());
+        if (instance == null || InstanceStatuses.terminal(instance.getStatus())
+                || StepEngine.expired(instance, clock.instant())) {
+            return;
+        }
+        step = instances.getStepById(stepId);
+        if (step == null) {
             return;
         }
         engine.resumeFromReward(

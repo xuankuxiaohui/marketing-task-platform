@@ -18,12 +18,16 @@ import com.mkt.task.command.TaskTransitionCommand;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.TaskDefinitionConvert;
 import com.mkt.task.convert.TaskTime;
+import com.mkt.task.domain.CycleKeyResolver;
 import com.mkt.task.domain.DefinitionStatuses;
+import com.mkt.task.domain.ExpireAtCalculator;
 import com.mkt.task.domain.GraphEdge;
 import com.mkt.task.domain.GraphStep;
+import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepTypes;
 import com.mkt.task.domain.TaskGraphValidator;
 import com.mkt.task.entity.TaskDefinitionEntity;
+import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskMutexGroupEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.ExpressionCompileException;
@@ -40,6 +44,7 @@ import com.mkt.task.response.VersionDiffResponse;
 import com.mkt.task.support.AlertWebhook;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskOperator;
+import com.mkt.task.support.TaskSettings;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
@@ -69,6 +74,7 @@ public class TaskPublishAppService {
 
     private static final Logger log = LoggerFactory.getLogger(TaskPublishAppService.class);
     private static final int SCAN_BATCH = 100;
+    private static final int OFFLINE_BATCH = 100;
     static final String SCHEDULE_FAILURE_ACTION = "schedule-publish-failure";
     private final ConcurrentHashMap<Long, String> lastFailureFingerprint = new ConcurrentHashMap<>();
 
@@ -77,6 +83,8 @@ public class TaskPublishAppService {
     private final TaskVersionSnapshotStore snapshots;
     private final TaskDefinitionAppService definitionsApp;
     private final PrizeEnabledLookup prizes;
+    private final TaskInstanceStore instances;
+    private final TaskSettings settings;
     private final Clock clock;
     private final ObjectProvider<PlatformCache> cache;
     private final ObjectProvider<TaskAuditAppender> audits;
@@ -96,6 +104,8 @@ public class TaskPublishAppService {
             TaskVersionSnapshotStore snapshots,
             TaskDefinitionAppService definitionsApp,
             PrizeEnabledLookup prizes,
+            TaskInstanceStore instances,
+            TaskSettings settings,
             Clock clock,
             ObjectProvider<PlatformCache> cache,
             ObjectProvider<TaskAuditAppender> audits,
@@ -107,6 +117,8 @@ public class TaskPublishAppService {
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
+        this.instances = instances;
+        this.settings = settings;
         this.clock = clock;
         this.cache = cache;
         this.audits = audits;
@@ -126,6 +138,8 @@ public class TaskPublishAppService {
             TaskVersionSnapshotStore snapshots,
             TaskDefinitionAppService definitionsApp,
             PrizeEnabledLookup prizes,
+            TaskInstanceStore instances,
+            TaskSettings settings,
             Clock clock,
             PlatformCache cache,
             TaskAuditAppender audits,
@@ -137,6 +151,8 @@ public class TaskPublishAppService {
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
+        this.instances = instances;
+        this.settings = settings;
         this.clock = clock;
         this.cache = null;
         this.audits = null;
@@ -153,7 +169,7 @@ public class TaskPublishAppService {
     @Transactional
     public PublishResponse publish(long id, PublishCommand command) {
         PublishCommand cmd = command == null ? new PublishCommand(null, null) : command;
-        TaskDefinitionEntity entity = requireLive(id);
+        TaskDefinitionEntity entity = requireLockedLive(id);
         if (pending(entity) && !cmd.confirmTrue()) {
             return PublishResponse.preview(
                     entity.getId(),
@@ -192,7 +208,7 @@ public class TaskPublishAppService {
         if (command == null || command.publishAt() == null) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "publishAt 必填");
         }
-        TaskDefinitionEntity entity = requireLive(id);
+        TaskDefinitionEntity entity = requireLockedLive(id);
         if (!DefinitionStatuses.DRAFT.equals(entity.getStatus())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅草稿可设定时发布");
         }
@@ -211,7 +227,7 @@ public class TaskPublishAppService {
 
     @Transactional
     public PublishResponse cancelSchedule(long id) {
-        TaskDefinitionEntity entity = requireLive(id);
+        TaskDefinitionEntity entity = requireLockedLive(id);
         if (!DefinitionStatuses.SCHEDULED.equals(entity.getStatus())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅定时任务可取消定时");
         }
@@ -225,7 +241,7 @@ public class TaskPublishAppService {
 
     @Transactional
     public PublishResponse offline(long id) {
-        TaskDefinitionEntity entity = requireLive(id);
+        TaskDefinitionEntity entity = requireLockedLive(id);
         if (!DefinitionStatuses.PUBLISHED.equals(entity.getStatus())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅已发布任务可下线");
         }
@@ -234,13 +250,60 @@ public class TaskPublishAppService {
         entity.setOfflineAt(now);
         entity.setUpdatedAt(now);
         definitions.update(entity);
+        recomputeInProgressExpiry(id, now);
         evictPublishedIndex();
         return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
     }
 
+    private void recomputeInProgressExpiry(long taskId, LocalDateTime offlineAt) {
+        Instant offline = TaskTime.toInstant(offlineAt);
+        int days = settings.expireAfterWindowDays();
+        long afterId = 0L;
+        List<TaskInstanceEntity> batch;
+        do {
+            batch = instances.listInProgressByTaskAfterId(taskId, afterId, OFFLINE_BATCH);
+            List<Long> snapshotIds = batch.stream()
+                    .map(TaskInstanceEntity::getSnapshotId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            Map<Long, SnapshotContent> contents = new LinkedHashMap<>(snapshotIds.size());
+            for (TaskVersionSnapshotEntity snapshot : snapshots.listByIds(snapshotIds)) {
+                contents.put(snapshot.getId(), JsonUtil.fromJson(snapshot.getContent(), SnapshotContent.class));
+            }
+            for (TaskInstanceEntity instance : batch) {
+                afterId = instance.getId();
+                LocalDateTime expectedExpiry = instance.getExpireAt();
+                if (expectedExpiry != null && !expectedExpiry.isAfter(offlineAt)) {
+                    continue;
+                }
+                SnapshotContent content = contents.get(instance.getSnapshotId());
+                Instant startedAt = TaskTime.toInstant(instance.getStartedAt());
+                if (content == null || startedAt == null) {
+                    throw new BusinessException(CommonErrorCodes.SERVER_ERROR, "实例快照或开始时间缺失");
+                }
+                Instant cycleEnd = CycleKeyResolver.cycleEndForKey(
+                        content.cycleType(), content.cronExpr(), content.specialEnd(), instance.getCycleKey());
+                LocalDateTime expiry = TaskTime.toUtc(ExpireAtCalculator.compute(
+                        content.endTime(), offline, cycleEnd, startedAt, days));
+                if (Objects.equals(expectedExpiry, expiry)) {
+                    continue;
+                }
+                int affected = instances.updateExpireAtCas(instance.getId(), expectedExpiry, expiry, offlineAt);
+                if (affected != 1) {
+                    TaskInstanceEntity fresh = instances.getByIdForUpdate(instance.getId());
+                    if (fresh != null && InstanceStatuses.IN_PROGRESS.equals(fresh.getStatus())
+                            && (fresh.getExpireAt() == null || fresh.getExpireAt().isAfter(offlineAt))) {
+                        throw new BusinessException(CommonErrorCodes.SERVER_ERROR, "实例期限更新冲突，请重试");
+                    }
+                }
+            }
+        } while (batch.size() == OFFLINE_BATCH);
+    }
+
     @Transactional
     public PublishResponse resetRevision(long id) {
-        TaskDefinitionEntity entity = requireLive(id);
+        TaskDefinitionEntity entity = requireLockedLive(id);
         int version = versionOf(entity);
         if (version < 1) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "没有可重置的版本快照");
@@ -382,6 +445,7 @@ public class TaskPublishAppService {
         entity.setStatus(DefinitionStatuses.PUBLISHED);
         entity.setPendingRevision(0);
         entity.setSchedulePublishAt(null);
+        entity.setOfflineAt(null);
         entity.setUpdatedAt(now);
         evictPublishedIndex();
         cacheSnapshot(entity.getId(), nextVersion);
@@ -657,6 +721,14 @@ public class TaskPublishAppService {
 
     private TaskDefinitionEntity requireLive(long id) {
         TaskDefinitionEntity existing = definitions.getById(id);
+        if (existing == null || existing.deletedFlag()) {
+            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
+        }
+        return existing;
+    }
+
+    private TaskDefinitionEntity requireLockedLive(long id) {
+        TaskDefinitionEntity existing = definitions.getByIdForUpdate(id);
         if (existing == null || existing.deletedFlag()) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }

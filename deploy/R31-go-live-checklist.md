@@ -1,55 +1,48 @@
-# R31 上线检查清单（签署项）
+# 首次上线验收清单
 
-上线前逐项打勾并签字。k6 P0 脚本：`perf/list.js` `advance.js` `complete.js` `risk-delta.js` `track.js` `admin-list.js`；执行 `perf/run-p0.sh`。P1 全量（含性能 6/8）：`perf/ad.js` + `perf/run-full.sh`（`--scale p1`，100 万用户 / 3000 eps）。**均不进例行 PR CI**（§7.8 发布签署项）。
+项目尚未上线。本清单是首次发布前需要取得的证据，空勾不表示已经执行。规则来源：[requirements.md](../.kiro/specs/platform-v2/requirements.md) R31 / NFR，以及 [部署规范](../docs/standards/14-deployment.md)。本轮只整理文档，未运行 Compose、恢复演练或压测。
 
-## 安全（R31.2 / NFR 安全）
+## 当前交付物与缺口
 
-- [ ] 仓库与镜像无明文密钥；仅 `deploy/.env`（gitignore）与运行时环境变量
-- [ ] `.env.example` 仍是占位符；`REDIS_DATABASE=2`
-- [ ] TLS 1.2+（`deploy/nginx/tls.conf.example` 已纳入生产 Nginx）
-- [ ] 公网 Nginx 无 `/internal`、无 `/actuator`、无 springdoc UI
-- [ ] 无关闭鉴权的开关；生产 profile 无调试免登
-- [ ] `MKT_INIT_ADMIN_PASSWORD` 写入哈希后已从编排移除
-- [ ] Cookie HttpOnly + Secure + SameSite=Strict；CSRF 双重提交仍在
+| 范围 | 仓库事实 | 尚需证明 |
+|---|---|---|
+| 测试拓扑 | [docker-compose.yml](docker-compose.yml) 声明 admin ×1、portal ×2、MySQL、Redis、Nginx、Prometheus | 成功启动、运行资源、服务就绪和真实业务链路 |
+| 网关与静态资源 | [nginx.conf](nginx/nginx.conf) 为 HTTP API 反代；Compose 没有挂载两端前端构建产物 | 正式域名、HTTPS、两端静态资源部署、路由及缓存策略 |
+| TLS | [tls.conf.example](nginx/tls.conf.example) 是示例，当前网关没有 include 它 | 证书、TLS 1.2+、跳转及安全 Cookie 的真实浏览器验证 |
+| 监控 | [alerts.yml](prometheus/alerts.yml) 已定义告警表达式 | 指标实际注册、名称/标签/单位匹配，告警可触发并恢复 |
+| 备份恢复 | 存在备份/恢复脚本 | 修正恢复起点等缺口后，完成[隔离演练](backup/RESTORE-DRILL.md) |
+| 容量 | 存在 k6 与容量种子 | 先修正[测量缺口](../perf/README.md)，再形成可复现容量报告 |
 
-## 发布与回滚（R31.4）
+## 安全与配置
 
-- [ ] 迁移只由 **admin-app** 执行；portal `SPRING_FLYWAY_ENABLED=false`
-- [ ] `flyway validate` 通过后再切流量
-- [ ] 本次 schema 变更遵守先兼容后破坏（02 §2.3）；回滚代码能在新列存在时运行
-- [ ] portal-app ≥ 2 实例滚动，始终保留 1 个就绪实例
-- [ ] 同一 git commit 的 admin/portal 镜像打相同版本标签
-- [ ] 回滚预案：切回 n-1 镜像；不回放已应用的 Flyway 版本；数据回退走备份
+- [ ] 镜像、仓库、日志和前端产物无真实密钥；配置来自运行环境或受控配置文件。
+- [ ] 公网不可访问 `/internal/**`、`/actuator/**`、OpenAPI 和调试入口；分别验证网关与应用配置。
+- [ ] 两端账号隔离、后台 Cookie/CSRF、门户 Bearer 和 internal HMAC 均通过对应测试。
+- [ ] 首次管理员密码已初始化并完成改密；确认后撤下初始化密码变量。
+- [ ] Redis DB 2 与数据库隔离正确；生产 Redis 高可用及容量满足 R31.5，开发共享实例不冒充生产环境。
 
-## 备份（R31.3）
+## 构建、迁移与发布
 
-- [ ] 每日全量 + binlog 已调度
-- [ ] staging 已按 `deploy/backup/RESTORE-DRILL.md` 演练到指定时间点并留档
+- [ ] 同一提交的后端镜像与前端产物有可追溯版本，构建及必要测试通过。
+- [ ] 从空库执行完整迁移并启动；存量测试库的升级路径按保留策略另外验证。
+- [ ] admin 执行迁移，portal 关闭 Flyway；迁移校验成功后再接入流量。
+- [ ] 首次发布失败的恢复步骤与数据保留策略明确。将来采用滚动发布时，再验证新旧版本共存与回退兼容；不能把未上线理解成可以随意改已应用迁移。
+- [ ] portal 双实例及就绪检查有效，单节点退出时服务可继续使用。
+- [ ] [deploy-smoke.sh](../ci/deploy-smoke.sh) 的重复启动与业务幂等验证有运行结果；不能仅凭脚本存在认定通过。
+- [ ] 真实浏览器验证静态资源、登录、刷新路由、领取、完成任务和领奖。
 
-## Redis（R31.5）
+## 数据与运行保障
 
-- [ ] P0 compose / 现网开发机：单实例 Redis 7 镜像或现网 6.0.8 **DB 2**（不升级共享实例）
-- [ ] 生产目标：哨兵或集群，容量 ≥ 4GB（100 万双账号会话 + 缓存冗余）——本清单签署时确认容量规划，P0 不在共享机上启哨兵
+- [ ] 全量备份与连续 binlog 归档已调度，备份校验与独立存储可用。
+- [ ] 在隔离环境完成指定时间点恢复，验证目标时点前后数据、资金余额和引用关系。
+- [ ] Prometheus 可查询实际业务指标；告警通过受控故障验证，埋点比例使用一致的事件单位。
+- [ ] 性能报告记录有效业务吞吐、P95、错误/丢弃、积压恢复及资源条件，满足规格 NFR。
+- [ ] 容量场景与正常/异常业务回归均有证据；压测不属于例行 PR CI，入口与限制见 [perf/README.md](../perf/README.md)。
 
-## 可观测（NFR 可观测性 3）
+## 验收记录
 
-- [ ] Prometheus 仅内网抓取两应用 `/actuator/prometheus`（存活/就绪走 health probes）
-- [ ] 告警项已加载 `deploy/prometheus/alerts.yml`（HTTP 5xx/P95、Outbox 积压、发放永久失败、库存 ≤10%、Redis 故障、降级事件、埋点丢弃 >0.1%）
-- [ ] Grafana 看板可后置
+每一勾均附提交、环境、日期、执行人和报告位置；失败项保留复现步骤及修复追踪。报告不得包含令牌或密钥。
 
-## 性能（R31.2，任务 43 / 49 签署）
-
-- [ ] k6 NFR 性能 1–5、7 在 staging compose（portal ×2）通过（`perf/run-p0.sh`，报告 `perf/reports/<日期>/`）
-- [ ] k6 NFR 性能 1–8 全量 + 容量 100 万用户 / 3000 eps + 慢查询复盘（`perf/run-full.sh`，P1 任务 49；不进例行 PR CI）
-
-## 部署幂等（R31.1）
-
-- [ ] `ci/deploy-smoke.sh` 连续两次 `up -d`：两应用就绪绿、Flyway validate、登录冒烟、注册-领取-发奖-积分两次结果一致
-
-## 签署
-
-| 角色 | 姓名 | 日期 | 结果 |
-|------|------|------|------|
-| 研发 | | | |
-| 运维 | | | |
-| 安全 | | | |
+| 提交/版本 | 环境 | 日期 | 责任人 | 证据位置 | 未解决项 / 发布结论 |
+|---|---|---|---|---|---|
+| 待执行 | | | | | |

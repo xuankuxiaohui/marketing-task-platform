@@ -34,6 +34,8 @@ public interface TaskDefinitionMapper extends BaseMapper<TaskDefinitionEntity> {
 
     TaskDefinitionEntity selectByIdForUpdate(@Param("id") long id);
 
+    TaskDefinitionEntity selectByIdForShare(@Param("id") long id);
+
     List<TaskDefinitionEntity> selectDueScheduled(
             @Param("now") java.time.LocalDateTime now, @Param("limit") int limit);
 

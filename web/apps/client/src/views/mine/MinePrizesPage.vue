@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onScopeDispose, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Button, Empty, List, NavBar, PullRefresh, Tab, Tabs, showToast } from "vant";
 import { isOk } from "@mkt/shared";
 import { claimPrize, fetchPrizeList, type PrizeCardView, type PrizeTab } from "@/api/prize";
 import PrizeCard from "@/components/PrizeCard.vue";
-import { useSessionReload } from "@/composables/useSessionReload";
+import { usePagedList } from "@/composables/usePagedList";
+import { useLoginOverlayStore } from "@/store/login-overlay";
 import { usePrizePreviewStore } from "@/store/prize-preview";
 import { useSessionStore } from "@/store/session";
 import { zhCN } from "@/locales/zh-CN";
 import { TRACK, track } from "@/tracking";
 import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
-import { isPendingPrizeTab, prizeButtonState } from "@/utils/prize-button";
+import { prizeButtonState } from "@/utils/prize-button";
 
 defineOptions({ name: "MinePrizesPage" });
 
@@ -24,74 +25,37 @@ const TABS: { name: PrizeTab; title: string }[] = [
 const route = useRoute();
 const router = useRouter();
 const session = useSessionStore();
+const overlay = useLoginOverlayStore();
 const preview = usePrizePreviewStore();
 const isTabRoot = computed(() => route.meta.tab === "prizes");
 const activeTab = ref<PrizeTab>("ALL");
-const records = ref<PrizeCardView[]>([]);
-const page = ref(1);
-const total = ref(0);
-const loading = ref(false);
-const finished = ref(false);
-const refreshing = ref(false);
-const loaded = ref(false);
 const claiming = ref<number | null>(null);
-
-const empty = computed(() => loaded.value && records.value.length === 0);
+let claimSequence = 0;
+const {
+  records,
+  loading,
+  finished,
+  refreshing,
+  error,
+  errorMessage,
+  empty,
+  loadMore,
+  reload,
+  refresh,
+  retry,
+} = usePagedList<PrizeCardView>({
+  scope: () => [session.token, activeTab.value],
+  enabled: () => session.authenticated,
+  fetchPage: (page, pageSize) => fetchPrizeList({ tab: activeTab.value, page, pageSize }),
+  pageSize: PAGE_SIZE,
+});
 
 function reportView(tab: PrizeTab): void {
   track(TRACK.REWARD_LIST_VIEW, { tab });
 }
 
-async function loadPage(reset: boolean): Promise<void> {
-  if (!session.authenticated) {
-    records.value = [];
-    total.value = 0;
-    finished.value = true;
-    loading.value = false;
-    refreshing.value = false;
-    loaded.value = true;
-    return;
-  }
-  if (reset) {
-    page.value = 1;
-    finished.value = false;
-  }
-  loading.value = true;
-  try {
-    const result = await fetchPrizeList({
-      tab: activeTab.value,
-      page: page.value,
-      pageSize: PAGE_SIZE,
-    });
-    if (!isOk(result) || !result.data) {
-      showPortalFail(result);
-      finished.value = true;
-      return;
-    }
-    const next = result.data.records ?? [];
-    total.value = Number(result.data.total ?? 0);
-    records.value = reset ? next : [...records.value, ...next];
-    page.value += 1;
-    finished.value = records.value.length >= total.value || next.length === 0;
-  } catch {
-    showNetworkFail();
-    finished.value = true;
-  } finally {
-    loading.value = false;
-    refreshing.value = false;
-    loaded.value = true;
-  }
-}
-
-function onRefresh(): void {
-  void loadPage(true);
-}
-
-function onLoadMore(): void {
-  if (refreshing.value || loading.value) {
-    return;
-  }
-  void loadPage(false);
+function requestLogin(): void {
+  overlay.request({ redirect: route.fullPath });
 }
 
 function openDetail(row: PrizeCardView): void {
@@ -104,13 +68,19 @@ function openDetail(row: PrizeCardView): void {
 
 async function onClaim(row: PrizeCardView): Promise<void> {
   const state = prizeButtonState(row);
-  if (state.disabled || row.recordId == null || claiming.value != null) {
+  if (!session.authenticated || state.disabled || row.recordId == null || claiming.value != null) {
     return;
   }
   track(TRACK.REWARD_CLAIM_CLICK, { recordId: row.recordId });
+  const token = session.token;
+  const sequence = ++claimSequence;
+  const isCurrent = () => token === session.token && sequence === claimSequence;
   claiming.value = row.recordId;
   try {
     const result = await claimPrize(row.recordId);
+    if (!isCurrent()) {
+      return;
+    }
     if (!isOk(result) || !result.data) {
       showPortalFail(result);
       return;
@@ -122,32 +92,32 @@ async function onClaim(row: PrizeCardView): Promise<void> {
     };
     const mapped = prizeButtonState(next);
     showToast(mapped.label);
-    if (activeTab.value === "PENDING" && !isPendingPrizeTab(next)) {
-      records.value = records.value.filter((item) => item.recordId !== row.recordId);
-      total.value = Math.max(0, total.value - 1);
-      return;
-    }
-    records.value = records.value.map((item) => (item.recordId === row.recordId ? next : item));
+    await reload();
   } catch {
-    showNetworkFail();
+    if (isCurrent()) {
+      showNetworkFail();
+    }
   } finally {
-    claiming.value = null;
+    if (isCurrent()) {
+      claiming.value = null;
+    }
   }
 }
 
-watch(activeTab, (tab) => {
-  reportView(tab);
-  void loadPage(true);
-});
-
-useSessionReload(() => {
-  reportView(activeTab.value);
-  void loadPage(true);
-});
-
-onMounted(() => {
-  reportView(activeTab.value);
-  void loadPage(true);
+watch(activeTab, reportView, { immediate: true });
+watch(
+  () => session.token,
+  () => {
+    claimSequence += 1;
+    claiming.value = null;
+    if (session.authenticated) {
+      reportView(activeTab.value);
+    }
+  },
+  { flush: "sync" },
+);
+onScopeDispose(() => {
+  claimSequence += 1;
 });
 </script>
 
@@ -163,8 +133,18 @@ onMounted(() => {
         :data-testid="'prize-tab-' + tab.name"
       />
     </Tabs>
-    <PullRefresh v-model="refreshing" class="mine-list" data-testid="mine-list" @refresh="onRefresh">
-      <Empty v-if="empty" :description="zhCN.empty.prizes" data-testid="mine-prizes-empty">
+    <PullRefresh v-model="refreshing" class="mine-list" data-testid="mine-list" @refresh="refresh">
+      <Empty v-if="!session.authenticated" :description="zhCN.session.missing" data-testid="mine-prizes-login">
+        <Button type="primary" size="small" data-testid="mine-prizes-login-action" @click="requestLogin">
+          {{ zhCN.login.submit }}
+        </Button>
+      </Empty>
+      <Empty v-else-if="error && records.length === 0" :description="errorMessage" data-testid="mine-prizes-error">
+        <Button type="primary" size="small" data-testid="mine-prizes-retry" @click="retry">
+          {{ zhCN.common.retry }}
+        </Button>
+      </Empty>
+      <Empty v-else-if="empty" :description="zhCN.empty.prizes" data-testid="mine-prizes-empty">
         <Button type="primary" size="small" data-testid="empty-go-home" @click="router.push('/home')">
           {{ zhCN.empty.goTasks }}
         </Button>
@@ -172,11 +152,13 @@ onMounted(() => {
       <List
         v-else
         v-model:loading="loading"
+        v-model:error="error"
+        :error-text="errorMessage"
         :finished="finished"
         :finished-text="zhCN.task.noMore"
         :immediate-check="false"
         data-testid="mine-prizes-list"
-        @load="onLoadMore"
+        @load="loadMore"
       >
         <PrizeCard
           v-for="row in records"

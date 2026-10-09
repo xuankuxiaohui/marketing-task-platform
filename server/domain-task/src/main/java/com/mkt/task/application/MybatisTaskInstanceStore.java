@@ -30,6 +30,11 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
     }
 
     @Override
+    public TaskInstanceEntity getByIdForUpdate(long id) {
+        return instances.selectByIdForUpdate(id);
+    }
+
+    @Override
     public TaskInstanceEntity getByUserTaskCycle(long userId, long taskId, String cycleKey) {
         return instances.selectByUserTaskCycle(userId, taskId, cycleKey);
     }
@@ -42,6 +47,11 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
     @Override
     public List<TaskInstanceEntity> listInProgressByUser(long userId) {
         return instances.selectInProgressByUser(userId);
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listInProgressByTaskAfterId(long taskId, long afterId, int limit) {
+        return instances.selectInProgressByTaskAfterId(taskId, afterId, limit);
     }
 
     @Override
@@ -66,6 +76,20 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
             return false;
         }
         return instances.existsInProgress(userId, taskIds, cycleKey) > 0;
+    }
+
+    @Override
+    public boolean existsMutexInProgress(long userId, String mutexGroupCode, String cycleKey) {
+        if (mutexGroupCode == null || mutexGroupCode.isBlank()) {
+            return false;
+        }
+        return instances.existsMutexInProgress(userId, mutexGroupCode, cycleKey) > 0;
+    }
+
+    @Override
+    public int updateExpireAtCas(
+            long id, LocalDateTime expectedExpireAt, LocalDateTime expireAt, LocalDateTime now) {
+        return instances.updateExpireAtCas(id, expectedExpireAt, expireAt, now);
     }
 
     @Override
@@ -96,11 +120,6 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
     @Override
     public int activateStep(long id, LocalDateTime activatedAt) {
         return steps.activate(id, activatedAt);
-    }
-
-    @Override
-    public int completeStep(long id, LocalDateTime completedAt) {
-        return steps.complete(id, completedAt);
     }
 
     @Override

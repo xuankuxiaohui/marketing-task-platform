@@ -1,20 +1,30 @@
 package com.mkt.task.engine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.mkt.contract.AccountStatus;
+import com.mkt.contract.GrantContext;
 import com.mkt.contract.GrantSource;
+import com.mkt.contract.GrantStatus;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
+import com.mkt.kernel.time.MutableClock;
 import com.mkt.task.command.TaskFilterCommand;
 import com.mkt.task.command.TaskGrayCommand;
 import com.mkt.task.command.TaskStepCommand;
@@ -37,6 +47,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class StepEngineTest {
 
@@ -135,8 +147,8 @@ class StepEngineTest {
     @Test
     void expiredInstanceRejectsClick() {
         TaskInstanceEntity instance = insertInstance();
-        instance.setExpireAt(LocalDateTime.ofInstant(NOW.minusSeconds(1), ZoneOffset.UTC));
         engine.enter(instance, singleClick(), attrs(), null);
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW.minusSeconds(1), ZoneOffset.UTC));
         TaskInstanceStepEntity step = store.getStep(instance.getId(), "a");
         assertThatThrownBy(() -> engine.click(instance, step, singleClick(), attrs(), null))
                 .isInstanceOf(BusinessException.class)
@@ -291,6 +303,184 @@ class StepEngineTest {
         assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.EXPIRED);
     }
 
+    @ParameterizedTest
+    @ValueSource(longs = {0, -1})
+    void resumeFromGrantedRewardDoesNotAdvanceDueInstanceBeforeScannerRuns(long deadlineOffsetMillis) {
+        TaskInstanceEntity instance = insertInstance();
+        SnapshotContent snap = rewardThenClick();
+        rewards.behavior = MemoryRewardPort.Behavior.RETRYABLE;
+        engine.enter(instance, snap, attrs(), null);
+        TaskInstanceStepEntity rewardStep = store.getStep(instance.getId(), "r");
+        rewards.behavior = MemoryRewardPort.Behavior.GRANTED;
+        var grant = rewards.grant(
+                8L, 9L, GrantSource.TASK_STEP, String.valueOf(rewardStep.getId()),
+                new GrantContext(null, List.of(), null, false, null, null, null));
+        instance.setExpireAt(LocalDateTime.ofInstant(NOW.plusMillis(deadlineOffsetMillis), ZoneOffset.UTC));
+        clearInvocations(events);
+
+        assertThatCode(() -> engine.resumeFromReward(instance, rewardStep, snap, attrs(), null))
+                .doesNotThrowAnyException();
+
+        assertThat(grant.status()).isEqualTo(GrantStatus.GRANTED);
+        assertThat(rewards.calls).hasSize(2);
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(store.getStep(instance.getId(), "c").getStatus()).isEqualTo(StepStatuses.INACTIVE);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @Test
+    void staleActiveRewardResumeCannotSkipAlreadyActiveNextClick() {
+        TaskInstanceEntity instance = insertInstance();
+        SnapshotContent snap = rewardThenClick();
+        rewards.behavior = MemoryRewardPort.Behavior.RETRYABLE;
+        engine.enter(instance, snap, attrs(), null);
+        TaskInstanceStepEntity rewardStep = store.getStep(instance.getId(), "r");
+        TaskInstanceStepEntity stale = new TaskInstanceStepEntity();
+        stale.setId(rewardStep.getId());
+        stale.setInstanceId(instance.getId());
+        stale.setStepCode(rewardStep.getStepCode());
+        stale.setSeq(rewardStep.getSeq());
+        stale.setType(rewardStep.getType());
+        stale.setStatus(rewardStep.getStatus());
+        stale.setVersion(rewardStep.getVersion());
+        engine.resumeFromReward(instance, rewardStep, snap, attrs(), null);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(store.getStep(instance.getId(), "c").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        int attempts = rewards.calls.size();
+        clearInvocations(events);
+
+        engine.resumeFromReward(instance, stale, snap, attrs(), null);
+
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.COMPLETED);
+        assertThat(store.getStep(instance.getId(), "r").getVersion()).isEqualTo(1);
+        assertThat(store.getStep(instance.getId(), "c").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(rewards.calls).hasSize(attempts);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @Test
+    void rewardResumeCasFailureDoesNotFallBackOrCascade() {
+        TaskInstanceEntity instance = insertInstance();
+        SnapshotContent snap = rewardThenClick();
+        rewards.behavior = MemoryRewardPort.Behavior.RETRYABLE;
+        engine.enter(instance, snap, attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "r");
+        store.remainingCompleteCasFailures = 1;
+        clearInvocations(events);
+
+        engine.resumeFromReward(instance, step, snap, attrs(), null);
+
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(store.getStep(instance.getId(), "r").getVersion()).isZero();
+        assertThat(store.getStep(instance.getId(), "c").getStatus()).isEqualTo(StepStatuses.INACTIVE);
+        assertThat(rewards.calls).hasSize(1);
+        verify(events, never()).append(any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"REWARD", "NONE"})
+    void deadlineReachedDuringClickCasPreventsFurtherGrantAndParentCompletion(String nextType) {
+        Instant deadline = NOW.plusSeconds(1);
+        MutableClock clock = new MutableClock(NOW);
+        MemoryTaskInstanceStore advancing = spy(store);
+        doAnswer(invocation -> {
+                    int affected = (Integer) invocation.callRealMethod();
+                    clock.setInstant(deadline);
+                    return affected;
+                })
+                .when(advancing)
+                .completeStepCas(anyLong(), anyInt(), any(), any());
+        engine = new StepEngine(advancing, reports, events, clock, new TaskSettings(), rewards);
+        TaskInstanceEntity instance = insertInstance();
+        instance.setExpireAt(LocalDateTime.ofInstant(deadline, ZoneOffset.UTC));
+        SnapshotContent snap = "REWARD".equals(nextType) ? clickThenReward() : singleClick();
+        engine.enter(instance, snap, attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "a");
+        clearInvocations(events);
+
+        assertThatThrownBy(() -> engine.click(instance, step, snap, attrs(), null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
+
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(rewards.calls).isEmpty();
+        if ("REWARD".equals(nextType)) {
+            assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.INACTIVE);
+        }
+        verify(events, never()).append(eq(EventCodes.TASK_INSTANCE_COMPLETE), any(), any(), any());
+    }
+
+    @Test
+    void deadlineReachedDuringGrantPreventsStepAndParentFinalization() {
+        Instant deadline = NOW.plusSeconds(1);
+        MutableClock clock = new MutableClock(NOW);
+        MemoryRewardPort advancing = spy(rewards);
+        doAnswer(invocation -> {
+                    Object grant = invocation.callRealMethod();
+                    clock.setInstant(deadline);
+                    return grant;
+                })
+                .when(advancing)
+                .grant(anyLong(), anyLong(), any(), any(), any());
+        engine = new StepEngine(store, reports, events, clock, new TaskSettings(), advancing);
+        TaskInstanceEntity instance = insertInstance();
+        instance.setExpireAt(LocalDateTime.ofInstant(deadline, ZoneOffset.UTC));
+        SnapshotContent snap = clickThenReward();
+        engine.enter(instance, snap, attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "a");
+        clearInvocations(events);
+
+        assertThatThrownBy(() -> engine.click(instance, step, snap, attrs(), null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(TaskErrorCodes.INSTANCE_EXPIRED);
+
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(store.getStep(instance.getId(), "r").getStatus()).isEqualTo(StepStatuses.ACTIVE);
+        assertThat(store.getStep(instance.getId(), "r").getVersion()).isZero();
+        assertThat(rewards.calls).hasSize(1);
+        verify(events, never()).append(eq(EventCodes.TASK_INSTANCE_COMPLETE), any(), any(), any());
+    }
+
+    @Test
+    void deadlineReachedDuringRewardResumeStopsCascadeWithoutRollingBackGrantedEntitlement() {
+        Instant deadline = NOW.plusSeconds(1);
+        MutableClock clock = new MutableClock(NOW);
+        MemoryTaskInstanceStore advancing = spy(store);
+        doAnswer(invocation -> {
+                    int affected = (Integer) invocation.callRealMethod();
+                    clock.setInstant(deadline);
+                    return affected;
+                })
+                .when(advancing)
+                .completeStepCas(anyLong(), anyInt(), any(), any());
+        engine = new StepEngine(advancing, reports, events, clock, new TaskSettings(), rewards);
+        TaskInstanceEntity instance = insertInstance();
+        instance.setExpireAt(LocalDateTime.ofInstant(deadline, ZoneOffset.UTC));
+        SnapshotContent snap = rewardThenClick();
+        rewards.behavior = MemoryRewardPort.Behavior.RETRYABLE;
+        engine.enter(instance, snap, attrs(), null);
+        TaskInstanceStepEntity step = store.getStep(instance.getId(), "r");
+        rewards.behavior = MemoryRewardPort.Behavior.GRANTED;
+        var grant = rewards.grant(
+                8L, 9L, GrantSource.TASK_STEP, String.valueOf(step.getId()),
+                new GrantContext(null, List.of(), null, false, null, null, null));
+        clearInvocations(events);
+
+        assertThatCode(() -> engine.resumeFromReward(instance, step, snap, attrs(), null))
+                .doesNotThrowAnyException();
+
+        assertThat(grant.status()).isEqualTo(GrantStatus.GRANTED);
+        assertThat(rewards.calls).hasSize(2);
+        assertThat(store.getById(instance.getId()).getStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        assertThat(store.getStep(instance.getId(), "c").getStatus()).isEqualTo(StepStatuses.INACTIVE);
+        verify(events, never()).append(eq(EventCodes.TASK_INSTANCE_COMPLETE), any(), any(), any());
+    }
+
     @Test
     void rewardPermanentSkipsAndCompletesInstance() {
         TaskInstanceEntity instance = insertInstance();
@@ -374,6 +564,14 @@ class StepEngineTest {
                         new TaskStepCommand("a", "A", 1, "CLICK", null, null),
                         new TaskStepCommand("r", "R", 2, "REWARD", null, 8L)),
                 List.of(new TaskTransitionCommand("a", "r", null, 0)));
+    }
+
+    private static SnapshotContent rewardThenClick() {
+        return snapshot(
+                List.of(
+                        new TaskStepCommand("r", "奖励", 1, "REWARD", null, 8L),
+                        new TaskStepCommand("c", "点击", 2, "CLICK", null, null)),
+                List.of(new TaskTransitionCommand("r", "c", null, 0)));
     }
 
     private static SnapshotContent snapshot(List<TaskStepCommand> steps, List<TaskTransitionCommand> transitions) {

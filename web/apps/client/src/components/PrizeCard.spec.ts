@@ -44,12 +44,21 @@ describe("PrizeCard", () => {
     expect(wrapper.find('[data-testid="prize-countdown"]').exists()).toBe(false);
   });
 
-  it("renders obtain time from the shipped prize view", () => {
+  it("renders obtain time and activity attribution from the shipped prize view", () => {
     const wrapper = mount(PrizeCard, {
-      props: { prize: prize({ obtainedAt: "2026-08-19T04:00:00.000Z", expireAt: undefined }) },
+      props: {
+        prize: prize({
+          obtainedAt: "2026-08-19T04:00:00.000Z",
+          expireAt: undefined,
+          activityId: 3,
+          activityName: "夏季专题",
+        }),
+      },
     });
     expect(wrapper.get('[data-testid="prize-obtained-at"]').text()).toContain(zhCN.prize.obtainedAt);
     expect(wrapper.get('[data-testid="prize-obtained-at"]').text()).toMatch(/2026/);
+    expect(wrapper.get('[data-testid="prize-activity"]').text()).toContain("3");
+    expect(wrapper.get('[data-testid="prize-activity"]').text()).toContain("夏季专题");
   });
 
   it("emits claim when the action button is clicked", async () => {
