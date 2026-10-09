@@ -27,7 +27,7 @@ pnpm --filter @mkt/shared gen:api
 
 `gen:api:fetch` 从正在运行且可访问 springdoc 的两应用导出 admin/portal/internal JSON，再生成 TypeScript；服务地址可配置 `ADMIN_OPENAPI_BASE` / `PORTAL_OPENAPI_BASE`。`gen:api` 只从本地 JSON 生成，不访问后端。生产 profile（`SPRING_PROFILES_ACTIVE=prod`，Compose 默认）关闭 `springdoc.api-docs`；公网 Nginx 也对 `/v3/api-docs` 与 `/swagger-ui` 返回 404。导出请直连非 prod 本机应用，不要经生产网关。
 
-JSON 位于 `packages/shared/openapi/`，生成类型位于 `packages/shared/src/openapi/`，生成入口为 [gen-api.mjs](packages/shared/scripts/gen-api.mjs)。不要手改生成类型；变更契约时连同生成源和调用方一起检查。当前 CI 的 [check-openapi-types.sh](../ci/check-openapi-types.sh) 只检查 JSON→TS 一致，尚不能发现后端→JSON 的漂移；这是后续重构要补的验证链路。
+JSON 位于 `packages/shared/openapi/`，生成类型位于 `packages/shared/src/openapi/`，生成入口为 [gen-api.mjs](packages/shared/scripts/gen-api.mjs)。不要手改生成类型；变更契约时连同生成源和调用方一起检查。CI 门禁：[check-openapi-backend.sh](../ci/check-openapi-backend.sh) 在非 prod 应用上导出 live springdoc JSON，与已提交 `openapi/*.json` 语义对比，再跑 [check-openapi-types.sh](../ci/check-openapi-types.sh)（JSON→TS）。Compose 默认 `SPRING_PROFILES_ACTIVE=prod` 会关闭 api-docs（见 #99）；导出必须用非 prod / 本机应用，不要经生产网关，也不要期望 Nginx `/v3/api-docs` 返回 200。
 
 ## 测试边界
 

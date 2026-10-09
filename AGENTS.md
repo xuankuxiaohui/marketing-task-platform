@@ -30,7 +30,7 @@
 - **鉴权与会话**：后台写入保留权限校验、CSRF 与审计；门户私有资源验证当前用户归属。踢会话使用会话服务，禁止用缓存 evict 代替。公开浏览不等于匿名写入授权。
 - **代码组织**：Controller 处理协议和身份，application 编排用例及事务，domain/engine 放规则，store/mapper 负责本域持久化。复用 kernel 的 `JsonUtil`（Jackson 3）与注入的 `Clock`；沿用现有错误码、权限码和缓存命名，新增时同步调用方、说明和测试。
 - **前端状态**：两端各自管理认证与 UI，shared 不放应用会话。异步读取覆盖 loading、空、错和重试；切换账号、筛选或路由后旧响应不得回写。界面工作按需查 [DESIGN.md](DESIGN.md)。
-- **生成文件**：不手改 `web/packages/shared/src/openapi/`；契约变更从后端导出 JSON、生成 TS，再核对调用方。命令及当前门禁局限见 [前端 API 类型](web/README.md#api-类型)。
+- **生成文件**：不手改 `web/packages/shared/src/openapi/`；契约变更从后端导出 JSON、生成 TS，再核对调用方。命令及 CI 门禁（backend→JSON→TS）见 [前端 API 类型](web/README.md#api-类型)。
 - **环境数据**：共享开发 Redis 使用 DB 2。真实凭据仅放被忽略的环境文件或部署注入，不写入源码、文档、日志和提交；性能种子、恢复和清库仅在明确授权的目标环境执行。
 
 ## 常用检查

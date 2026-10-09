@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(pkgRoot, "../../..");
 const specDir = join(pkgRoot, "openapi");
 const committedDir = join(pkgRoot, "src/openapi");
 const GROUPS = ["admin", "portal", "internal"] as const;
@@ -17,6 +18,25 @@ function generate(jsonPath: string, outPath: string): void {
     cwd: pkgRoot,
     stdio: "pipe",
   });
+}
+
+/** Same semantic compare as ci/check-openapi-backend.sh json_equal. */
+function openApiJsonEqual(aPath: string, bPath: string): boolean {
+  try {
+    execFileSync(
+      "python3",
+      [
+        "-c",
+        "import json,sys; a=json.load(open(sys.argv[1],encoding='utf-8')); b=json.load(open(sys.argv[2],encoding='utf-8')); raise SystemExit(0 if a==b else 1)",
+        aPath,
+        bPath,
+      ],
+      { stdio: "pipe" },
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 describe("openapi-typescript contract gate", () => {
@@ -59,4 +79,34 @@ describe("openapi-typescript contract gate", () => {
     expect(committed).not.toContain("/api/common/__contract-probe");
     expect(generated).not.toBe(committed);
   }, 20_000);
+});
+
+describe("F12 backend→JSON drift gate", () => {
+  afterEach(() => {
+    for (const dir of temps) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    temps.length = 0;
+  });
+
+  it("ci/check-openapi-backend.sh --self-test passes", () => {
+    const out = execFileSync("bash", ["ci/check-openapi-backend.sh", "--self-test"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    expect(out).toContain("openapi-backend self-test ok");
+  });
+
+  it("semantic equal ignores key order / whitespace; path drift fails", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openapi-backend-eq-"));
+    temps.push(dir);
+    const left = join(dir, "left.json");
+    const right = join(dir, "right.json");
+    writeFileSync(left, '{"openapi":"3.1.0","paths":{"/a":{},"/b":{}}}\n');
+    writeFileSync(right, '{ "paths" : { "/b" : {} , "/a" : {} } , "openapi" : "3.1.0" }\n');
+    expect(openApiJsonEqual(left, right)).toBe(true);
+
+    writeFileSync(right, '{"openapi":"3.1.0","paths":{"/a":{},"/b":{},"/drift":{}}}\n');
+    expect(openApiJsonEqual(left, right)).toBe(false);
+  });
 });
