@@ -11,7 +11,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SPEC_DIR="$ROOT/web/packages/shared/openapi"
-GROUPS=(admin portal internal)
+# Never name this GROUPS: bash treats GROUPS as a special readonly array of GIDs;
+# assignments are ignored, so the loop would look for "$LIVE_DIR/1001.json" etc.
+SPEC_GROUPS=(admin portal internal)
+if [ "${#SPEC_GROUPS[@]}" -ne 3 ] || [ "${SPEC_GROUPS[*]}" != "admin portal internal" ]; then
+  echo "SPEC_GROUPS must be exactly: admin portal internal (got: ${SPEC_GROUPS[*]-})" >&2
+  echo "Do not rename SPEC_GROUPS back to GROUPS — bash GROUPS is special." >&2
+  exit 1
+fi
 
 json_equal() {
   python3 - "$1" "$2" <<'PY'
@@ -25,6 +32,15 @@ PY
 }
 
 self_test() {
+  # Regression: SPEC_GROUPS must stay a real name list (bash GROUPS is GIDs).
+  if [ "${#SPEC_GROUPS[@]}" -ne 3 ] || [ "${SPEC_GROUPS[*]}" != "admin portal internal" ]; then
+    echo "self-test SPEC_GROUPS broken: ${SPEC_GROUPS[*]-}" >&2
+    exit 1
+  fi
+  if [ "${SPEC_GROUPS[*]}" = "${GROUPS[*]-}" ]; then
+    echo "self-test: SPEC_GROUPS must not equal bash GROUPS (${GROUPS[*]-})" >&2
+    exit 1
+  fi
   local dir
   dir="$(mktemp -d)"
   trap 'rm -rf "$dir"' RETURN
@@ -137,7 +153,7 @@ trap 'rm -rf "$LIVE_DIR"; cleanup' EXIT
 "${COMPOSE[@]}" exec -T portal-app-1 curl -fsS http://127.0.0.1:8081/api/v3/api-docs/internal >"$LIVE_DIR/internal.json"
 
 # Match gen-api:fetch: validate JSON + trailing newline when rewriting would be needed.
-for name in "${GROUPS[@]}"; do
+for name in "${SPEC_GROUPS[@]}"; do
   python3 -c "import json,sys; json.load(open(sys.argv[1],encoding='utf-8'))" "$LIVE_DIR/$name.json"
   # Ensure trailing newline like gen-api.mjs writeFileSync(`${body}\n`)
   if [ -s "$LIVE_DIR/$name.json" ] && [ "$(tail -c1 "$LIVE_DIR/$name.json" | wc -l)" -eq 0 ]; then
