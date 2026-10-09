@@ -2,6 +2,10 @@ package com.mkt.portal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cn.dev33.satoken.SaManager;
+import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
+import cn.dev33.satoken.listener.SaTokenEventCenter;
+
 import com.mkt.contract.RewardPort;
 import com.mkt.identity.application.RewardPortStub;
 import com.mkt.reward.application.PointsAppService;
@@ -71,6 +75,10 @@ class PortalAssemblyIT {
             assertThat(redis.host()).isEqualTo(REDIS.getHost());
             assertThat(redis.port()).isEqualTo(REDIS.getMappedPort(6379));
             assertThat(redis.database()).isEqualTo(2);
+        } finally {
+            // Redisson destroyMethod shutdown leaves SaToken listeners pointing at a dead client.
+            SaTokenEventCenter.clearListener();
+            SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
         }
     }
 

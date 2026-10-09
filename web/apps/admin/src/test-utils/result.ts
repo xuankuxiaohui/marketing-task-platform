@@ -4,6 +4,6 @@ export function ok<T>(data: T): Result<T> {
   return { code: 0, message: "ok", data };
 }
 
-export function fail(code: string, message: string, traceId = "trace-1"): Result {
+export function fail(code: string, message: string, traceId = "trace-1"): Result<any> {
   return { code, message, traceId };
 }

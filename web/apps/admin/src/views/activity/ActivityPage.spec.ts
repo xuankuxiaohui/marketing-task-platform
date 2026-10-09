@@ -102,7 +102,7 @@ describe("ActivityManagePage", () => {
     pageMock.mockResolvedValue(ok({ total: 0, records: [] }));
     const wrapper = await mountPage();
     expect(wrapper.find(".ant-empty").exists()).toBe(true);
-    expect(wrapper.get('[data-testid="page-empty"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="page-empty"]').exists()).toBe(true);
     expect(wrapper.find(".pager").exists()).toBe(false);
     await wrapper.get('[data-testid="activity-create"]').trigger("click");
     await flushPromises();

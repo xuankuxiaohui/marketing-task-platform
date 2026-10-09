@@ -61,7 +61,7 @@ describe("FormDialog", () => {
       attachTo: document.body,
     });
     expect(wrapper.get('[data-testid="form-dialog"]').text()).toContain("配置值不合法");
-    expect(wrapper.get('[data-testid="page-error"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="page-error"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -74,8 +74,8 @@ describe("FormDialog", () => {
       },
     });
     expect(wrapper.get('[data-testid="form-dialog-body"]').text()).toContain("字段一");
-    expect(wrapper.get('[data-testid="form-submit"]').exists()).toBe(true);
-    expect(wrapper.get(".ant-modal-footer").exists()).toBe(true);
+    expect(wrapper.find('[data-testid="form-submit"]').exists()).toBe(true);
+    expect(wrapper.find(".ant-modal-footer").exists()).toBe(true);
     wrapper.unmount();
   });
 });

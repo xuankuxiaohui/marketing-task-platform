@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.dao.SaTokenDaoDefaultImpl;
+import cn.dev33.satoken.listener.SaTokenEventCenter;
 import com.mkt.identity.application.SessionService;
 import com.mkt.identity.support.SessionAuthFilter;
 import com.mkt.identity.support.SessionSide;
 import com.mkt.infra.degrade.SessionAvailability;
 import com.mkt.infra.redis.MemoryKeyValueStore;
+import com.mkt.infra.session.KickReasonListener;
 import com.mkt.infra.session.KickReasonStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
@@ -23,9 +25,13 @@ class KickoutConsistencyIT {
 
     @Test
     void kickOnOneInstanceRejectsTheOtherImmediately() throws Exception {
+        // PortalAssemblyIT (and other Spring ITs) leave SaToken listeners holding a shut-down
+        // Redisson KeyValueStore; reset static Sa-Token state for this in-memory IT.
         SaManager.setSaTokenDao(new SaTokenDaoDefaultImpl());
         MemoryKeyValueStore kv = new MemoryKeyValueStore();
         KickReasonStore kicks = new KickReasonStore(kv);
+        SaTokenEventCenter.clearListener();
+        SaTokenEventCenter.registerListener(new KickReasonListener(kicks));
         SessionAvailability availability = new SessionAvailability(kv);
         SessionService sessions = new SessionService(kicks);
         String token = sessions.loginClient(9L, 3, "dev-1", "bob_01", "10.0.0.2");
