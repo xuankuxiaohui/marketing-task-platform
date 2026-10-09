@@ -6,5 +6,15 @@ public record GrantResult(
         GrantStatus status,
         FulfillmentStatus fulfillmentStatus,
         long prizeId,
-        boolean hitIdempotent) {
+        boolean hitIdempotent,
+        String prizeName) {
+
+    public GrantResult(
+            long recordId,
+            GrantStatus status,
+            FulfillmentStatus fulfillmentStatus,
+            long prizeId,
+            boolean hitIdempotent) {
+        this(recordId, status, fulfillmentStatus, prizeId, hitIdempotent, null);
+    }
 }

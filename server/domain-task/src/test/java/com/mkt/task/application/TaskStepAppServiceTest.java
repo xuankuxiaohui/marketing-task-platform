@@ -264,7 +264,8 @@ class TaskStepAppServiceTest {
         TaskClickResponse clicked = steps.click(started.instanceId(), "a", 9L, "203.0.113.1", null, "WEB");
         assertThat(clicked.instanceStatus()).isEqualTo(InstanceStatuses.COMPLETED);
         assertThat(clicked.rewardFeedback()).hasSize(1);
-        assertThat(clicked.rewardFeedback().get(0).prizeName()).isEqualTo("奖");
+        assertThat(clicked.rewardFeedback().get(0).prizeName()).isEqualTo("积分礼包");
+        assertThat(clicked.rewardFeedback().get(0).prizeName()).isNotEqualTo("奖");
         assertThat(rewards.calls).hasSize(1);
     }
 

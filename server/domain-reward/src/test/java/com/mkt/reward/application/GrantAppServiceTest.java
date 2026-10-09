@@ -118,6 +118,7 @@ class GrantAppServiceTest {
         assertThat(result.status()).isEqualTo(GrantStatus.GRANTED);
         assertThat(result.fulfillmentStatus()).isEqualTo(FulfillmentStatus.SENDING);
         assertThat(result.hitIdempotent()).isFalse();
+        assertThat(result.prizeName()).isEqualTo("red_g");
         GrantRecordEntity row = grants.getById(result.recordId());
         assertThat(row.getCostFen()).isEqualTo(100);
         assertThat(row.getFaceFen()).isEqualTo(100);
@@ -143,6 +144,8 @@ class GrantAppServiceTest {
         GrantResult again = grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s", GrantContext.defaults());
         assertThat(again.hitIdempotent()).isTrue();
         assertThat(again.recordId()).isEqualTo(first.recordId());
+        assertThat(again.prizeName()).isEqualTo("red_id");
+        assertThat(first.prizeName()).isEqualTo("red_id");
         assertThat(prizes.getById(prizeId).getRemainingStock()).isEqualTo(2);
     }
 

@@ -655,13 +655,26 @@ public class GrantAppService {
         return row.getSimulated() != null && row.getSimulated() == 1;
     }
 
-    private static GrantResult toResult(GrantRecordEntity row, boolean hitIdempotent) {
+    private GrantResult toResult(GrantRecordEntity row, boolean hitIdempotent) {
         return new GrantResult(
                 row.getId() == null ? 0L : row.getId(),
                 GrantStatus.valueOf(row.getStatus()),
                 FulfillmentStatus.valueOf(row.getFulfillmentStatus()),
                 row.getPrizeId(),
-                hitIdempotent);
+                hitIdempotent,
+                prizeDisplayName(row.getPrizeId()));
+    }
+
+    /** Display name owned by the prize row. Callers must not substitute a task step title. */
+    private String prizeDisplayName(Long prizeId) {
+        if (prizeId == null) {
+            return "";
+        }
+        PrizeEntity prize = prizes.getByIdIncludingDeleted(prizeId);
+        if (prize == null || prize.getName() == null) {
+            return "";
+        }
+        return prize.getName();
     }
 
     private static final class IdempotentHit extends RuntimeException {

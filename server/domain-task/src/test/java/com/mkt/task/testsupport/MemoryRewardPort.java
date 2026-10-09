@@ -28,6 +28,8 @@ public final class MemoryRewardPort implements RewardPort {
     }
 
     public Behavior behavior = Behavior.GRANTED;
+    /** Distinct from any REWARD step title so feedback tests cannot pass on def.name(). */
+    public String prizeName = "积分礼包";
     public final List<GrantCall> calls = new ArrayList<>();
 
     public record GrantCall(long prizeId, long userId, GrantSource source, String sourceId, GrantContext ctx) {}
@@ -36,8 +38,9 @@ public final class MemoryRewardPort implements RewardPort {
     public GrantResult grant(long prizeId, long userId, GrantSource grantSource, String sourceId, GrantContext ctx) {
         calls.add(new GrantCall(prizeId, userId, grantSource, sourceId, ctx));
         return switch (behavior) {
-            case GRANTED -> new GrantResult(1L, GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, prizeId, false);
-            case WON -> new GrantResult(2L, GrantStatus.WON, FulfillmentStatus.NONE, prizeId, false);
+            case GRANTED ->
+                new GrantResult(1L, GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, prizeId, false, prizeName);
+            case WON -> new GrantResult(2L, GrantStatus.WON, FulfillmentStatus.NONE, prizeId, false, prizeName);
             case RETRYABLE -> throw new RetryableGrantException(RetryableGrantReason.STOCK_INSUFFICIENT);
             case PERMANENT -> throw new PermanentGrantException(PermanentGrantReason.PRIZE_DISABLED);
             case PERMANENT_STATUS ->

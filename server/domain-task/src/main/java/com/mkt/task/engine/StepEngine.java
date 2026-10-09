@@ -456,8 +456,7 @@ public final class StepEngine {
                 if (!holdComplete(instance, step)) {
                     return false;
                 }
-                String name = def.name() == null ? step.getStepCode() : def.name();
-                feedback.add(new RewardFeedbackView(name, 1));
+                feedback.add(new RewardFeedbackView(prizeDisplayName(result), 1));
                 return true;
             }
             if (result != null && result.status() == GrantStatus.PERMANENT_FAILED) {
@@ -469,6 +468,14 @@ public final class StepEngine {
         } catch (PermanentGrantException ex) {
             return skipPermanentFailed(instance, step, clock.instant());
         }
+    }
+
+    /** Prize title from the grant result. Never the REWARD step definition name. */
+    private static String prizeDisplayName(GrantResult result) {
+        if (result == null || result.prizeName() == null) {
+            return "";
+        }
+        return result.prizeName().trim();
     }
 
     private boolean skipPermanentFailed(TaskInstanceEntity instance, TaskInstanceStepEntity step, Instant now) {
