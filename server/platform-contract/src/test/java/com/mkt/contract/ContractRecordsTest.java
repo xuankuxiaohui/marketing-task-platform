@@ -92,7 +92,7 @@ class ContractRecordsTest {
 
     @Test
     void summaryRecordsHoldSpecifiedFields() {
-        GrantResult grant = new GrantResult(9L, GrantStatus.WON, FulfillmentStatus.NONE, 3L, true);
+        GrantResult grant = new GrantResult(9L, GrantStatus.WON, FulfillmentStatus.NONE, 3L, true, "奖品A");
         assertThat(grant.hitIdempotent()).isTrue();
         assertThat(grant.status()).isEqualTo(GrantStatus.WON);
 

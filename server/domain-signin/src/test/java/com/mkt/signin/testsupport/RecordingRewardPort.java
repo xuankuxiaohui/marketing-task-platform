@@ -42,7 +42,7 @@ public final class RecordingRewardPort implements RewardPort {
         String key = grantSource + ":" + sourceId + ":" + prizeId;
         boolean hit = !grantKeys.add(key);
         grants.add(new GrantCall(prizeId, userId, grantSource, sourceId, ctx));
-        return new GrantResult(ids.getAndIncrement(), GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, prizeId, hit);
+        return new GrantResult(ids.getAndIncrement(), GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, prizeId, hit, "prize-" + prizeId);
     }
 
     @Override

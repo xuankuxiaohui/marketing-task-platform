@@ -456,7 +456,10 @@ public final class StepEngine {
                 if (!holdComplete(instance, step)) {
                     return false;
                 }
-                String name = def.name() == null ? step.getStepCode() : def.name();
+                String name = result.prizeName();
+                if (name == null || name.isBlank()) {
+                    name = def.name() == null ? step.getStepCode() : def.name();
+                }
                 feedback.add(new RewardFeedbackView(name, 1));
                 return true;
             }

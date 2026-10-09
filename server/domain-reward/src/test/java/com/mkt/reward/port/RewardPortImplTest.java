@@ -49,7 +49,7 @@ class RewardPortImplTest {
         GrantAppService grants = mock(GrantAppService.class);
         GrantContext ctx = GrantContext.defaults();
         when(grants.grant(1L, 2L, GrantSource.TASK_STEP, "s", ctx))
-                .thenReturn(new GrantResult(9L, GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, 1L, false));
+                .thenReturn(new GrantResult(9L, GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, 1L, false, "奖品"));
         RewardPortImpl port = new RewardPortImpl(grants, store);
         GrantResult result = port.grant(1L, 2L, GrantSource.TASK_STEP, "s", ctx);
         assertThat(result.recordId()).isEqualTo(9L);
