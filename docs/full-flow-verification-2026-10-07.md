@@ -71,7 +71,7 @@ Nginx 使用仓库原规则，临时副本仅将监听改为 VM 回环 `18090`�
 | 后台类型门禁失败 | `FormDialog.spec.ts` 3 处、`ActivityPage.spec.ts` 1 处：`get(...).exists()` 类型不允许；`AdminLayout.vue` 的 `open` 隐式 any；`table.spec.ts` 调用参数不符；Dashboard / Config / Role 测试的 `Result<unknown>` 泛型不符，共 9 处 |
 | prod 匿名 OpenAPI JSON | 经真实 Nginx，`/admin/v3/api-docs`、`/api/v3/api-docs` 和门户 internal 文档分组均 200；分别包含 127、31、3 个 path。UI 关闭不能满足 [上线检查单](../deploy/R31-go-live-checklist.md) 的 OpenAPI 公网不可访问要求；需要单独收口 JSON 与导出环境 |
 | Docker 宿主兼容阻塞 | 标准 JDK 镜像默认 `java -version` 创建线程 EPERM；一次独立 `seccomp=unconfined` 对照成功，推断为旧默认 seccomp 与新用户态线程创建的兼容问题。该选项只用于诊断，不用于业务/IT或生产模板；MySQL 8.0.46 默认启动也失败 |
-| 门户 UI 与规格不一致 | [R32.1](../.kiro/specs/platform-v2/requirements.md) / design-api 仍写领取等跳登录、活动半屏；当前组件及既有组件测试使用登录弹层、活动卡进入全页任务详情。本轮按当前行为核验，未把源码反向改为已批准规格，见 [DEC-008](decisions.md#dec-008门户交互与规格的待对齐项) |
+| 门户 UI 与当时规格不一致 | 当时的 R32.1 / design-api 写领取等跳登录、活动半屏；组件及既有组件测试使用登录弹层、活动卡进入全页任务详情。本轮按当时实现核验，未把源码反向改为已批准规格，见 [DEC-008](decisions.md#dec-008门户交互与规格的待对齐项)。旧规格已于 2026-10-09 退役，历史原文见 [追溯说明](README.md)；不改变本报告的执行结果 |
 
 ## 3. 执行入口与证据口径
 

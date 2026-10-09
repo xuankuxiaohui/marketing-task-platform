@@ -1,6 +1,6 @@
 # 前端开发
 
-pnpm workspace 包含 `apps/admin`（Vue + Ant Design Vue）、`apps/client`（Vue + Vant）和 `packages/shared`（无 UI 的工具及 OpenAPI 类型）。两端各自维护路由、会话和 HTTP 适配器。规范见 [12](../docs/standards/12-frontend-code.md) / [13](../docs/standards/13-frontend-engineering.md)，体验基线见 [DESIGN.md](../DESIGN.md)。
+pnpm workspace 包含 `apps/admin`（Vue + Ant Design Vue）、`apps/client`（Vue + Vant）和 `packages/shared`（无 UI 的工具及 OpenAPI 类型）。两端各自维护路由、会话和 HTTP 适配器。仓库约束见 [AGENTS.md](../AGENTS.md)，格式和类型规则由 ESLint / TypeScript 配置执行，体验基线见 [DESIGN.md](../DESIGN.md)。
 
 ## 常用命令
 
@@ -42,4 +42,4 @@ JSON 位于 `packages/shared/openapi/`，生成类型位于 `packages/shared/src
 
 验证码读取可通过另一个本机 SSH TCP 隧道：同时设置 `E2E_REDIS_HOST=127.0.0.1` 和 `E2E_REDIS_PORT=<独立隧道端口>`。只允许 loopback 地址及非 `6379` 端口，隧道目标必须是本轮独立测试 Redis；helper 只执行认证、选择 DB 2 和读取 `captcha:admin:*` / `captcha:portal:*`，无需本机 Docker。未配置这两个变量时沿用本地 Docker Compose 读取方式；独立 Compose 项目需设置 `COMPOSE_PROJECT_NAME`。环境文件、E2E 状态文件和会话凭据不要放进测试报告。
 
-个人中心列表与会话隔离已完成一批代码重构，包含任务分类、积分类型、分页/刷新/重试、奖品领取与详情，以及旧请求隔离。最新执行结果见 [PROJECT_STATUS](../PROJECT_STATUS.md)，其余重构范围见 [重构方案](../docs/refactoring-blueprint.md)。
+个人中心列表与会话隔离已完成一批代码重构，包含任务分类、积分类型、分页/刷新/重试、奖品领取与详情，以及旧请求隔离。回归入口见 [验证映射](../docs/verification-matrix.md)，后续候选工作见 [重构方案](../docs/refactoring-blueprint.md)；历史完成记录不代替本次执行结果。

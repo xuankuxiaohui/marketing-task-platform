@@ -1,20 +1,20 @@
-# 验收矩阵
+# 历史验证映射
 
-> 一表对照：任务号 → 需求 → 正确性属性 → 测试类。
-> 权威：属性定义在 [requirements.md](../.kiro/specs/platform-v2/requirements.md)；测试类形态在 design §7.3 / §7.4 / §7.6；历史任务来源在 [tasks.md](../.kiro/specs/platform-v2/tasks.md)，当前重构工作项见 [重构方案](refactoring-blueprint.md)。
-> 本表是规格要求的验证映射，不证明对应测试已存在、断言充分或当前通过。当前范围和证据状态见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。
-> 人类 reviewer 按任务号筛本表，再打开对应测试类与需求条款。不要用本表发明新属性或新测试类。
+> 旧任务号 → 旧需求编号 → 正确性属性 → 测试类，仅作历史检索。
+> Kiro 规格已于 2026-10-09 退役，原文见 [追溯说明](README.md)；本表不再是当前验收权威，也不要求恢复旧规格流程。重构候选工作见 [重构方案](refactoring-blueprint.md)。
+> 本表不证明对应测试已存在、断言充分或当前通过。真实环境的历史结果见 [2026-10-07 核验报告](full-flow-verification-2026-10-07.md)；新改动另行记录实际检查结果。
+> 表中的“已交付”、主干提交和容量数字保留当时记录，不代表本轮核验。以本次要求、已确认决定和实际测试确定验收。
 
 ## 用法
 
-1. 验收任务 N：筛「任务」列 = N（或 N.x）。
-2. 对照需求条款和属性名，定位实际测试，核对断言是否验证业务不变量。旧任务号仅供追溯。
-3. 新增或改名的测试同步更新映射。验收须附代码版本、命令、环境、结果；不能只看类名或总覆盖率。
-4. Spike（1–8）无 §7.3 属性，冒烟即验收，不列入属性行。
+1. 追溯旧任务 N 时筛「任务」列，按属性名定位实际测试；旧编号不决定新工作顺序。
+2. 对照本次确认的行为，核对测试是否存在及其断言是否覆盖业务不变量。
+3. 新增或改名的相关测试可更新映射；不要求创建旧规格编号。验收附代码版本、命令、环境、结果，不能只看类名或总覆盖率。
+4. Spike（旧任务 1–8）只作历史组件实验，不证明正式业务通过。
 
 ## 当前代码重构批次 R5-01
 
-用户授权的门户个人中心批次复用现行业务规格，历史任务号不作为新工作队列。以下是新增/补强的验证入口，实际执行结果见 [PROJECT_STATUS](../PROJECT_STATUS.md)。
+门户个人中心批次保留了当时业务行为，历史任务号不作为新工作队列。以下是该批新增/补强的验证入口，执行方式见 [前端说明](../web/README.md)，本表不登记运行结果。
 
 | 需求 / 边界 | 回归入口 | 重点 |
 |---|---|---|
@@ -35,7 +35,7 @@
 | R14 推进与恢复 | `TaskStepAppServiceTest`、`StepEngineTest`、`TaskInstanceAppServiceTest` | 到期优先、合法完成幂等、陈旧恢复不跳步骤、CAS 输者不写终态事件、Clock 跨期限 |
 | MySQL 原子性与锁协议 | [OfflineLifecycleIT](../server/domain-task/src/test/java/com/mkt/task/OfflineLifecycleIT.java) | 定义/期限回滚、步骤/Outbox 回滚、共享领取与排他下线、并发编辑不恢复旧状态 |
 
-以上源码随本批交付；本地执行只包含 `*Test` / 属性 / 架构测试，MySQL `*IT` 编译通过但执行留 CI，详见 [状态页](../PROJECT_STATUS.md)。
+以上是生命周期批次交付的验证入口；后续真实 MySQL 执行已记录在 [2026-10-07 核验报告](full-flow-verification-2026-10-07.md)，不得把早期“执行留 CI”描述当作最新结果。
 
 | 任务 | 需求 | 正确性属性 | 测试类 | 类型 |
 |------|------|------------|--------|------|
@@ -127,7 +127,7 @@
 
 ## P1 矩阵（任务 44–49）
 
-> 任务 44–49 已在 master `6d03ef5`。进度见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)。§7.3 属性 / 测试类名如下。
+> 历史记录称任务 44–49 已在 master `6d03ef5`；本轮未核验远端主干。旧 §7.3 属性 / 测试类名如下，不作为当前进度证明。
 
 | 任务 | 需求 | 正确性属性 | 测试类 | 状态 |
 |------|------|------------|--------|------|
@@ -149,12 +149,12 @@
 
 ## 与场景矩阵的关系
 
-| 矩阵 | 文件 | 落地任务 | 测试类 |
+| 矩阵 | 旧文件名（原文从 Git 追溯） | 落地任务 | 测试类 |
 |------|------|----------|--------|
-| 步骤引擎 24 场景 | [feasibility-step-engine.md](../.kiro/specs/platform-v2/feasibility-step-engine.md) | 40（01–23）、41（24） | `ScenarioMatrixIT` / `TwoAdminAppIT` |
-| 对账 28 场景 | [feasibility-recon.md](../.kiro/specs/platform-v2/feasibility-recon.md) | 34 | `ReconExhaustiveIT` / `ReconReissueIT` / `ReconReviewGateIT` |
-| 风控 30 场景 | [feasibility-risk.md](../.kiro/specs/platform-v2/feasibility-risk.md) | 17、18 | 名单/规则 §7.3 行 + C-12 |
+| 步骤引擎 24 场景 | `feasibility-step-engine.md` | 40（01–23）、41（24） | `ScenarioMatrixIT` / `TwoAdminAppIT` |
+| 对账 28 场景 | `feasibility-recon.md` | 34 | `ReconExhaustiveIT` / `ReconReissueIT` / `ReconReviewGateIT` |
+| 风控 30 场景 | `feasibility-risk.md` | 17、18 | 名单/规则 §7.3 行 + C-12 |
 
 ## 属性计数
 
-§7.3 声明 66 条。P0 矩阵覆盖 P0 属性 + RL / Outbox / Spike 基建行。P1 属性与任务 49 容量复验在「P1 矩阵」表。新增属性必须先改 requirements，再改 §7.3，再改本表。
+旧设计 §7.3 曾声明 66 条。P0 / P1 表保留历史属性与任务映射；这不是当前测试计数，也不约束新增回归必须经过旧 requirements / design 流程。新增行为按本次任务同步说明与测试。

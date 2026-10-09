@@ -1,6 +1,6 @@
 # 后端开发入口
 
-后端是 Maven 多模块工程，包含 4 个平台模块、8 个业务域和 2 个应用，共 14 个子模块。项目尚未上线；模块存在不代表功能或验收已经完成。当前工作范围见 [PROJECT_STATUS.md](../PROJECT_STATUS.md)，重构顺序和已核实问题见 [重构蓝图](../docs/refactoring-blueprint.md)。
+后端是 Maven 多模块工程，包含 4 个平台模块、8 个业务域和 2 个应用，共 14 个子模块。项目尚未上线；模块存在不代表功能或验收已经完成。现有入口见 [功能清单](../docs/current-features.md)，历史诊断与候选批次见 [重构蓝图](../docs/refactoring-blueprint.md)；本次工作以用户要求为准。
 
 ## 模块与入口
 
@@ -32,20 +32,20 @@
 | `admin-app` | `/admin/**`、`/actuator/**` | 管理端账号、权限和 CSRF；后台写操作审计 |
 | `portal-app` | `/api/**`、`/internal/**`、`/actuator/**` | 门户账号与内部 HMAC 回调分离；`/internal/**` 不得暴露到公网 |
 
-两应用均有请求命名空间守卫和启动映射检查。鉴权、审计与会话的编码细则统一查 [05-security.md](../docs/standards/05-security.md)，不在本文件另写一套。
+两应用均有请求命名空间守卫和启动映射检查。后台写入须校验权限、CSRF 并保留审计；门户私有资源须校验归属，踢会话走会话服务而非缓存 evict。仓库约束见 [AGENTS.md](../AGENTS.md)，失败审计与事务的待定语义见 [DEC-004](../docs/decisions.md#dec-004独立事务与失败审计语义)。
 
 后续重构必须保留以下业务边界；这些是约束，不能据此宣称所有现有代码均符合：
 
-- 依赖方向为应用 → 业务域 → 契约 / 基础设施 → kernel。域之间不建立 Maven 依赖，不直接访问他域 Mapper、Entity、Service 或表。跨域同步经已定义的 contract 端口，异步经 Outbox；新增契约先修订设计。
+- 依赖方向为应用 → 业务域 → 契约 / 基础设施 → kernel。域之间不建立 Maven 依赖，不直接访问他域 Mapper、Entity、Service 或表。跨域同步经已定义的 contract 端口，异步经 Outbox；新增契约同批记录职责、语义与验收场景。
 - 领取和步骤推进由 application 层建立事务，步骤引擎经进程内 `RewardPort` 调用发奖和积分服务。`portal-app` 必须同时装配 task 与 reward，不能以远程服务拆分破坏原子性。
-- `EventPublisher.append` 要求当前存在事务。Outbox 记录与业务提交或回滚，Relay 按应用 producer 隔离消费；消费者仍需幂等。失败留痕的独立事务范围以设计为准，不能把任意写入移到独立事务。
+- `EventPublisher.append` 要求当前存在事务。Outbox 记录与业务提交或回滚，Relay 按应用 producer 隔离消费；消费者仍需幂等。失败留痕的独立事务范围需结合 DEC-004 明确，不能把任意写入移到独立事务。
 - MyBatis Mapper 与实体归所属域，Flyway 迁移归 `platform-db`。发布快照绑定实例后不可变；库存、积分与幂等约束不能仅靠缓存或进程内锁保证。
 
-更详细的模块边界、事务和缓存设计从 [design.md 章节索引](../.kiro/specs/platform-v2/design.md) 进入；目录和装配规范见 [03-project-structure.md](../docs/standards/03-project-structure.md)。
+边界检查入口包括 `admin-app` 的 `ArchLayerRuleTest` / `ArchTxRemoteCallTest`、`portal-app` 的 `PortalAssemblyIT`。按改动核对相关端口、自动配置、迁移与测试；待改问题见 [重构方案](../docs/refactoring-blueprint.md)，不要把现有实现或历史规格直接当作已验证结论。
 
 ## 环境与构建
 
-使用 JDK 26。本机默认 PATH 是 JDK 25，PowerShell 中先设置 `JAVA_HOME`。版本选型意图记录在 [dependency-matrix.md](../.kiro/specs/platform-v2/dependency-matrix.md)，构建实际采用父 POM、各模块 POM 和继承的 BOM；两者不一致时登记差异，不复制版本表或默认为已对齐。
+使用 JDK 26。本机默认 Java 不是 26，PowerShell 中先设置 `JAVA_HOME`。实际版本和依赖限制以父 POM、各模块 POM、继承的 BOM 与 Maven Enforcer 配置为准；旧依赖矩阵已退役。
 
 以下命令从仓库根目录执行。编译和单元测试无需启动业务应用：
 
@@ -65,7 +65,7 @@ mvn -f server/pom.xml -B verify
 
 `verify` 经 Failsafe 执行 `*IT`。本机无 Docker，MySQL / Redis 集成测试留给 CI；不能用 H2、跳过断言或本机手工数据库替代。流水线定义见 [ci.yml](../.github/workflows/ci.yml)，验收映射见 [verification-matrix.md](../docs/verification-matrix.md)。
 
-本机运行应用使用仓库 [启动脚本说明](../scripts/README.md)；部署约定见 [14-deployment.md](../docs/standards/14-deployment.md)。不要把密码写入应用 YAML 或文档。Redis 使用 DB 2；账号密码和端口等环境值按运行配置提供。
+本机运行应用使用仓库 [启动脚本说明](../scripts/README.md)；部署检查见 [首次上线清单](../deploy/R31-go-live-checklist.md)。不要把密码写入应用 YAML 或文档。Redis 使用 DB 2；账号密码和端口等环境值按运行配置提供。
 
 ## 如何验证一次重构
 

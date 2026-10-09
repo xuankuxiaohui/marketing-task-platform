@@ -1,6 +1,8 @@
 # 项目诊断与重构方案
 
-审计日期：2026-10-07。范围：当前本地工作区的重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据，实施后的最新结果见 [PROJECT_STATUS](../PROJECT_STATUS.md)。目前已推进门户个人中心 R5-01 与任务生命周期 R2-01；不能据此声称全仓重构或全部业务验收完成。
+审计日期：2026-10-07。范围：当时本地工作区的重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据；当日运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
+
+2026-10-09 文档清理说明：旧 Kiro 规格已退役。下文设计章节、需求编号和“设计允许”等描述是初次审计背景，不再构成实施授权；执行任何批次前核实现状，以用户本次要求和 [已确认决定](decisions.md) 确定行为及验收。
 
 ## 1. 总体判断
 
@@ -19,13 +21,13 @@
 | F01 | [TaskPortalAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPortalAppService.java) 的 `list` 遍历发布任务，逐项取快照及用户周期实例，再内存分页；`mine` 还扫描用户历史 | 查询量随目录/历史增长。建立统一快照入口与有界状态批读，保留可见性过滤后的分页语义 |
 | F02 | [TaskPublishAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPublishAppService.java) 的 `freezeToPublished` 在事务提交前写共享快照缓存，索引则在提交后失效 | 回滚可能提前暴露快照，需提交/回滚交错回归后改缓存时机 |
 | F03 | [TwoLevelPlatformCache](../server/platform-infra/src/main/java/com/mkt/infra/cache/TwoLevelPlatformCache.java) 为查缓存 → loader → put；evict 不约束正在进行的 loader | 静态竞争风险：并发加载放大、失效后旧值回填。验证同 key 合并加载、跨节点失效与故障回源 |
-| F04 | 原领取互斥只扫 PUBLISHED，原下线操作未更新在途期限 | 已在 R2-01 修复为绑定快照互斥、下线有界重算及并发保护；规则由 DEC-007 明确，真实 MySQL 执行结果留 CI |
+| F04 | 原领取互斥只扫 PUBLISHED，原下线操作未更新在途期限 | 已在 R2-01 修复为绑定快照互斥、下线有界重算及并发保护；规则由 DEC-007 明确，后续真实 MySQL 结果见 2026-10-07 核验报告 |
 | F05 | [AdPortalAppService.visible](../server/domain-ad/src/main/java/com/mkt/ad/application/AdPortalAppService.java) 未应用登录用户的人群条件；[ParticipationRules.firstReject](../server/domain-activity/src/main/java/com/mkt/activity/domain/ParticipationRules.java) 未求值人群包 | 广告定向缺失；活动只配置人群包时会拒绝用户。先补最小跨域只读契约与行为回归，见 DEC-003 |
 | F06 | [MetricsAggregateService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsAggregateService.java)、[MetricsQueryService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsQueryService.java)、[JdbcSimulateGrantLookup](../server/admin-app/src/main/java/com/mkt/admin/simulate/JdbcSimulateGrantLookup.java) 直接查询其他域表 | 应用层跨域 SQL 的归属与范围需明确；设计允许聚合扫描，不能一概判为违规。一般读模型与聚合例外分别约束，见 DEC-003 |
 | F07 | [GrantFailureLedger](../server/domain-reward/src/main/java/com/mkt/reward/application/GrantFailureLedger.java) 永久失败独立事务与设计例外不一致；任务保存的控制器审计晚于业务提交，存在分开提交窗口 | 资金与留痕语义先决策、再改实现，见 DEC-004 |
 | F08 | [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每轮单批 100，调度间隔 5 秒 | 需明确持续事件吞吐与恢复预算；这不是可通过清理代码风格解决的问题，见 DEC-002 |
 | F09 | [TrackBatchService](../server/domain-tracking/src/main/java/com/mkt/tracking/application/TrackBatchService.java) 在 accepted event 路径重复读取元数据状态 | 批次按事件码去重和批读；跨请求缓存另按命名空间设计处理 |
-| F10 | [我的列表页面](../web/apps/client/src/views/mine/) 原实现把 Vant `v-model:loading` 与请求入口的 loading 拦截混用，缺少请求代次隔离 | 已在 R5-01 通过统一分页、错误恢复和会话隔离修复；组件与真实浏览器回归结果见状态页 |
+| F10 | [我的列表页面](../web/apps/client/src/views/mine/) 原实现把 Vant `v-model:loading` 与请求入口的 loading 拦截混用，缺少请求代次隔离 | 已在 R5-01 通过统一分页、错误恢复和会话隔离修复；组件与浏览器回归入口见验证映射，历史结果不代替本次执行 |
 | F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | 失败后加载状态可能不恢复。先统一请求生命周期，再按页面迁移；不以文件长短单独判定质量 |
 | F12 | [check-openapi-types.sh](../ci/check-openapi-types.sh) 从已提交 JSON 生成 TS，没有在该门禁中导出构建后的后端契约 | 只能证明 JSON→TS 一致，不能发现后端→JSON 漂移。补全真实导出链 |
 | F13 | [server/pom.xml](../server/pom.xml) 的关键覆盖率范围包含 `com.mkt.reward.grant`，主体 `GrantAppService` 却在 `reward.application`；架构规则只覆盖部分访问形式 | 覆盖率百分比不等于关键链路覆盖；核对实际包范围和架构检查盲区 |
@@ -60,7 +62,7 @@ flowchart LR
 
 R5-01：已按用户追加授权实施“门户个人中心完整列表体验”，覆盖任务/奖品/积分分页、筛选、刷新、错误恢复、领取后的重载、详情查找与会话隔离。复用既有 API，可独立交付，不依赖 Outbox 或跨域契约决策；其余后端与页面批次继续按下表准备。验证入口为三个 MinePage、PrizeDetailPage、usePagedList、HTTP/会话测试与独立 `personal-lists.spec.ts` 浏览器回归。
 
-R2-01：用户明确 DEC-007 后实施任务生命周期，覆盖旧快照互斥、下线/重新发布、冻结周期键、到期与幂等优先级、奖励恢复和并发状态保护。保留唯一约束与 CAS，删除无版本完成步骤的旧入口；定时、编辑、恢复及删除加入一致定义锁协议。具体检查与 CI 未执行项见状态页。
+R2-01：用户明确 DEC-007 后实施任务生命周期，覆盖旧快照互斥、下线/重新发布、冻结周期键、到期与幂等优先级、奖励恢复和并发状态保护。保留唯一约束与 CAS，删除无版本完成步骤的旧入口；定时、编辑、恢复及删除加入一致定义锁协议。后续真实检查及环境差异见 2026-10-07 核验报告。
 
 每批都交付必要规格修订、回归、实现、旧路径清理及实际检查记录。批次表示技术依赖；已具备条件的独立前端批次可以先行。可以进一步拆为可独立验收的 PR，不自动实施全部剩余批次。
 
@@ -93,10 +95,10 @@ R2-01：用户明确 DEC-007 后实施任务生命周期，覆盖旧快照互斥
 
 ## 6. 验收方式与止损边界
 
-业务验收仍使用 [需求](../.kiro/specs/platform-v2/requirements.md)、三份场景矩阵、C-1～C-12 并发不变量与 [验证映射](verification-matrix.md)。性能数字只维护在需求与设计 §7.8，新增候选目标见 DEC-006。
+业务验收按本次要求、已确认决定和相关行为回归确定；[验证映射](verification-matrix.md) 仅用于查找历史测试。保留事务、幂等、库存、账号与资源归属边界；性能目标按 DEC-006 确认，不沿用退役规格中的数字作为新门禁。
 
-每个工作项写明：问题与证据、触及的需求/设计章节、保留行为、改动范围、回归场景、检查命令和未验证项。对查询记录 SQL 数量/候选规模，对事务验证回滚及重复请求，对性能同时记录有效状态变更、延迟、错误和资源条件。
+每个工作项写明：问题与证据、相关契约或决定、保留行为、改动范围、回归场景、检查命令和未验证项。对查询记录 SQL 数量/候选规模，对事务验证回滚及重复请求，对性能同时记录有效状态变更、延迟、错误和资源条件。
 
 本机运行可用的单元/属性/组件测试；需要真实 MySQL/Redis 的集成验证在 Docker CI 完成，不引 H2、不降低断言。浏览器交互与视觉验收覆盖加载、空、错、窄屏、键盘、长文本及会话切换。新接口契约必须贯通后端 → 导出 JSON → TS → 两端调用。
 
-纯结构整理不能顺带修改业务语义。确需改变行为、契约、迁移历史或事务例外时，先关闭相应[决策项](decisions.md)并更新规格。只有一个可描述的完成状态：新路径已验证、旧路径及无效规则已删除，剩余风险明确列出；不以“文件更短”或“测试数量更多”宣称完成。
+纯结构整理不能顺带修改业务语义。确需改变行为、契约、迁移历史或事务例外时，明确相应[决策项](decisions.md)，同批同步说明与验证。只有一个可描述的完成状态：新路径已验证、旧路径及无效规则已删除，剩余风险明确列出；不以“文件更短”或“测试数量更多”宣称完成。
