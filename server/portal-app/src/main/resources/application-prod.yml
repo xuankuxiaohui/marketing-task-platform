@@ -1,0 +1,5 @@
+# Production profile (Compose default SPRING_PROFILES_ACTIVE=prod).
+# Close OpenAPI JSON; keep namespace path in application.yml for non-prod gen:api:fetch.
+springdoc:
+  api-docs:
+    enabled: false
