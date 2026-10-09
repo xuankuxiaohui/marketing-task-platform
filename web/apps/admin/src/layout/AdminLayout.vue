@@ -382,7 +382,7 @@ onUnmounted(() => {
                 :trigger="['contextmenu']"
                 :open="menuPath === tag.path"
                 :get-popup-container="popupContainer"
-                @open-change="(open) => onTagMenuOpenChange(tag.path, open)"
+                @open-change="(open: boolean) => onTagMenuOpenChange(tag.path, open)"
               >
                 <div
                   class="admin-tag"

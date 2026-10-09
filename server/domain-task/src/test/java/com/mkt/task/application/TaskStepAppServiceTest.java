@@ -258,13 +258,14 @@ class TaskStepAppServiceTest {
                 "rwd",
                 List.of(
                         new TaskStepCommand("a", "A", 1, "CLICK", null, null),
-                        new TaskStepCommand("r", "奖", 2, "REWARD", null, 8L)),
+                        new TaskStepCommand("r", "reward", 2, "REWARD", null, 8L)),
                 List.of(new TaskTransitionCommand("a", "r", null, 0)));
+        rewards.prizeName = "积分礼包";
         TaskStartResponse started = claims.start(taskId, 9L, "203.0.113.1", null, "WEB");
         TaskClickResponse clicked = steps.click(started.instanceId(), "a", 9L, "203.0.113.1", null, "WEB");
         assertThat(clicked.instanceStatus()).isEqualTo(InstanceStatuses.COMPLETED);
         assertThat(clicked.rewardFeedback()).hasSize(1);
-        assertThat(clicked.rewardFeedback().get(0).prizeName()).isEqualTo("奖");
+        assertThat(clicked.rewardFeedback().get(0).prizeName()).isEqualTo("积分礼包");
         assertThat(rewards.calls).hasSize(1);
     }
 

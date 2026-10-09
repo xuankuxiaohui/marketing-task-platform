@@ -655,13 +655,16 @@ public class GrantAppService {
         return row.getSimulated() != null && row.getSimulated() == 1;
     }
 
-    private static GrantResult toResult(GrantRecordEntity row, boolean hitIdempotent) {
+    private GrantResult toResult(GrantRecordEntity row, boolean hitIdempotent) {
+        PrizeEntity prize = prizes.getByIdIncludingDeleted(row.getPrizeId());
+        String prizeName = prize != null ? prize.getName() : row.getPrizeCode();
         return new GrantResult(
                 row.getId() == null ? 0L : row.getId(),
                 GrantStatus.valueOf(row.getStatus()),
                 FulfillmentStatus.valueOf(row.getFulfillmentStatus()),
                 row.getPrizeId(),
-                hitIdempotent);
+                hitIdempotent,
+                prizeName);
     }
 
     private static final class IdempotentHit extends RuntimeException {

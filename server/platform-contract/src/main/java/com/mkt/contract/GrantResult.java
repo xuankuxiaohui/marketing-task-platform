@@ -6,5 +6,6 @@ public record GrantResult(
         GrantStatus status,
         FulfillmentStatus fulfillmentStatus,
         long prizeId,
-        boolean hitIdempotent) {
+        boolean hitIdempotent,
+        String prizeName) {
 }

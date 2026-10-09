@@ -21,7 +21,7 @@ describe("adminPagination", () => {
     expect(pagination.size).toBe("small");
     expect(pagination.showSizeChanger).toBe(false);
     expect(pagination.hideOnSinglePage).toBe(false);
-    expect(pagination.showTotal?.(41, [21, 40])).toBe(`${zhCN.common.total} 41`);
+    expect(pagination.showTotal?.(41)).toBe(`${zhCN.common.total} 41`);
   });
 });
 

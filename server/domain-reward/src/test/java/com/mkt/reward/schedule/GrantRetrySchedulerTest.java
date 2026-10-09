@@ -56,7 +56,7 @@ class GrantRetrySchedulerTest {
         row.setSimulated(0);
         when(grants.listDueRetry()).thenReturn(List.of(row));
         when(grants.grant(eq(8L), eq(9L), eq(GrantSource.TASK_STEP), eq("12"), any()))
-                .thenReturn(new GrantResult(4L, GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, 8L, false));
+                .thenReturn(new GrantResult(4L, GrantStatus.GRANTED, FulfillmentStatus.ARRIVED, 8L, false, "奖品"));
         new GrantRetryScheduler(grants, resumer, locks, java.time.Clock.systemUTC()).tick();
         verify(resumer).resume(GrantSource.TASK_STEP, "12");
     }
