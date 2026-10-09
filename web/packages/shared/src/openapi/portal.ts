@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/common/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 门户档案 */
+        get: operations["profile"];
+        /** 修改昵称 */
+        put: operations["updateProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 修改密码 */
+        put: operations["changePassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/common/track/batch": {
         parameters: {
             query?: never;
@@ -69,6 +104,40 @@ export interface paths {
         put?: never;
         /** 用户放弃进行中任务 */
         post: operations["abandon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/signin/{activityId}/checkin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 今日签到 */
+        post: operations["checkin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/signin/{activityId}/catchup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 补签 */
+        post: operations["catchup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -143,25 +212,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/common/auth/profile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 门户档案 */
-        get: operations["profile"];
-        /** 修改昵称 */
-        put: operations["updateProfile"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/common/auth/password": {
+    "/api/common/ad/materials/{id}/dismiss": {
         parameters: {
             query?: never;
             header?: never;
@@ -169,9 +220,26 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** 修改密码 */
-        put: operations["changePassword"];
-        post?: never;
+        put?: never;
+        /** 关闭悬浮素材，消耗当日剩余频控（R30.11） */
+        post: operations["dismiss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/activity/{activityId}/participate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 参与活动 */
+        post: operations["participate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -185,7 +253,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** C 端任务详情三分渲染 */
+        /** C 端任务详情三分渲染（匿名可访问公开卡，R32.1） */
         get: operations["detail"];
         put?: never;
         post?: never;
@@ -219,8 +287,42 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** C 端任务投放列表 */
+        /** C 端任务投放列表（匿名可访问公开卡，R32.1） */
         get: operations["list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/signin/{activityId}/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 当月签到日历 */
+        get: operations["calendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/signin/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** C 端进行中签到活动 */
+        get: operations["activities"];
         put?: never;
         post?: never;
         delete?: never;
@@ -334,10 +436,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/common/ad/positions/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 拉取广告位素材（匿名可访问，R30.6） */
+        get: operations["pull"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/activity/{activityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** C 端活动详情（ETag；匿名可访问，R32.1） */
+        get: operations["detail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/common/activity/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** C 端进行中活动（匿名可访问，R32.1） */
+        get: operations["activities_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PortalNicknameCommand: {
+            nickname: string;
+        };
+        OkResponse: {
+            ok?: boolean;
+        };
+        ResultOkResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["OkResponse"];
+            traceId?: string;
+        };
+        ChangePasswordCommand: {
+            oldPassword: string;
+            newPassword: string;
+        };
         TrackBatchCommand: {
             events?: components["schemas"]["TrackEventCommand"][];
             platform?: string;
@@ -417,6 +586,33 @@ export interface components {
             data?: components["schemas"]["InstanceAbandonResponse"];
             traceId?: string;
         };
+        GrantFeedbackView: {
+            /** Format: int32 */
+            day?: number;
+            /** Format: int64 */
+            prizeId?: number;
+            status?: string;
+            hitIdempotent?: boolean;
+        };
+        ResultSigninActionResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SigninActionResponse"];
+            traceId?: string;
+        };
+        SigninActionResponse: {
+            alreadySigned?: boolean;
+            message?: string;
+            /** Format: int64 */
+            recordId?: number;
+            source?: string;
+            /** Format: int32 */
+            consecutiveDays?: number;
+            rewards?: components["schemas"]["GrantFeedbackView"][];
+        };
+        CatchupCommand: {
+            signDate: string;
+        };
         ClaimResponse: {
             status?: string;
             fulfillmentStatus?: string;
@@ -446,20 +642,28 @@ export interface components {
             data?: components["schemas"]["PortalAuthResponse"];
             traceId?: string;
         };
-        OkResponse: {
-            ok?: boolean;
-        };
-        ResultOkResponse: {
-            code?: unknown;
-            message?: string;
-            data?: components["schemas"]["OkResponse"];
-            traceId?: string;
-        };
         PortalLoginCommand: {
             username: string;
             password: string;
             captchaId: string;
             captchaCode: string;
+        };
+        AdDismissCommand: {
+            positionCode: string;
+        };
+        ParticipateResponse: {
+            /** Format: int64 */
+            participationId?: number;
+            result?: string;
+            granted?: boolean;
+            /** Format: int64 */
+            grantRecordId?: number;
+        };
+        ResultParticipateResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["ParticipateResponse"];
+            traceId?: string;
         };
         InstanceStepView: {
             stepCode?: string;
@@ -553,6 +757,63 @@ export interface components {
             userStatus?: string;
             /** Format: int32 */
             sortWeight?: number;
+        };
+        CalendarDayView: {
+            /** Format: date */
+            date?: string;
+            state?: string;
+        };
+        ResultSigninCalendarResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SigninCalendarResponse"];
+            traceId?: string;
+        };
+        SigninCalendarResponse: {
+            /** Format: int64 */
+            activityId?: number;
+            activityCode?: string;
+            activityName?: string;
+            yearMonth?: string;
+            /** Format: int32 */
+            consecutiveDays?: number;
+            /** Format: int32 */
+            catchupWindowDays?: number;
+            /** Format: int32 */
+            catchupDailyLimit?: number;
+            /** Format: int32 */
+            catchupCostPoints?: number;
+            /** Format: int64 */
+            pointsBalance?: number;
+            /** Format: int32 */
+            nextRewardDay?: number;
+            /** Format: int64 */
+            nextRewardPrizeId?: number;
+            nextRewardHint?: string;
+            days?: components["schemas"]["CalendarDayView"][];
+            tiers?: components["schemas"]["SigninTierView"][];
+        };
+        SigninTierView: {
+            /** Format: int32 */
+            day?: number;
+            /** Format: int64 */
+            prizeId?: number;
+        };
+        PortalActivityView: {
+            /** Format: int64 */
+            activityId?: number;
+            code?: string;
+            name?: string;
+            /** Format: date-time */
+            startTime?: string;
+            /** Format: date-time */
+            endTime?: string;
+        };
+        ResultListPortalActivityView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PortalActivityView"][];
+            traceId?: string;
         };
         PageDataPrizeCardView: {
             /** Format: int64 */
@@ -654,13 +915,6 @@ export interface components {
             available?: boolean;
             reason?: string;
         };
-        PortalNicknameCommand: {
-            nickname: string;
-        };
-        ChangePasswordCommand: {
-            oldPassword: string;
-            newPassword: string;
-        };
         PortalProfileResponse: {
             /** Format: int64 */
             userId?: number;
@@ -680,6 +934,63 @@ export interface components {
             data?: components["schemas"]["PortalProfileResponse"];
             traceId?: string;
         };
+        PortalAdMaterialView: {
+            /** Format: int64 */
+            materialId?: number;
+            trackId?: string;
+            title?: string;
+            subtitle?: string;
+            imageUrl?: string;
+            jumpType?: string;
+            jumpParams?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            weight?: number;
+        };
+        PortalAdPositionView: {
+            code?: string;
+            form?: string;
+            materials?: components["schemas"]["PortalAdMaterialView"][];
+            /** Format: int32 */
+            splashDurationSeconds?: number;
+            /** Format: int32 */
+            carouselIntervalSeconds?: number;
+        };
+        ResultPortalAdPositionView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PortalAdPositionView"];
+            traceId?: string;
+        };
+        PortalActivityDetailView: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            name?: string;
+            /** Format: date-time */
+            startTime?: string;
+            /** Format: date-time */
+            endTime?: string;
+            richText?: string;
+            contentHash?: string;
+            /** Format: int32 */
+            version?: number;
+            submodules?: components["schemas"]["SubmoduleView"][];
+        };
+        ResultPortalActivityDetailView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PortalActivityDetailView"];
+            traceId?: string;
+        };
+        SubmoduleView: {
+            type?: string;
+            /** Format: int64 */
+            refId?: number;
+            /** Format: int32 */
+            sort?: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -689,6 +1000,74 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPortalProfileResponse"];
+                };
+            };
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalNicknameCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
     batch: {
         parameters: {
             query?: never;
@@ -790,6 +1169,58 @@ export interface operations {
             };
         };
     };
+    checkin: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Device-Id"?: string;
+            };
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninActionResponse"];
+                };
+            };
+        };
+    };
+    catchup: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Device-Id"?: string;
+            };
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatchupCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninActionResponse"];
+                };
+            };
+        };
+    };
     claim: {
         parameters: {
             query?: never;
@@ -884,11 +1315,43 @@ export interface operations {
             };
         };
     };
-    profile: {
+    dismiss: {
         parameters: {
             query?: never;
-            header?: never;
-            path?: never;
+            header?: {
+                "X-Device-Id"?: string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdDismissCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    participate: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Device-Id"?: string;
+            };
+            path: {
+                activityId: number;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -899,55 +1362,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ResultPortalProfileResponse"];
-                };
-            };
-        };
-    };
-    updateProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PortalNicknameCommand"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ResultOkResponse"];
-                };
-            };
-        };
-    };
-    changePassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangePasswordCommand"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ResultOkResponse"];
+                    "*/*": components["schemas"]["ResultParticipateResponse"];
                 };
             };
         };
@@ -1021,6 +1436,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResultPageDataTaskCardView"];
+                };
+            };
+        };
+    };
+    calendar: {
+        parameters: {
+            query?: {
+                yearMonth?: string;
+            };
+            header?: never;
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninCalendarResponse"];
+                };
+            };
+        };
+    };
+    activities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultListPortalActivityView"];
                 };
             };
         };
@@ -1153,6 +1612,75 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResultUsernameAvailableResponse"];
+                };
+            };
+        };
+    };
+    pull: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Device-Id"?: string;
+                "X-Client-Platform"?: string;
+            };
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPortalAdPositionView"];
+                };
+            };
+        };
+    };
+    detail_1: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-None-Match"?: string;
+            };
+            path: {
+                activityId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPortalActivityDetailView"];
+                };
+            };
+        };
+    };
+    activities_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultListPortalActivityView"];
                 };
             };
         };

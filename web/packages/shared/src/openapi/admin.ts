@@ -156,6 +156,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/risk/rules/{ruleCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 更新风控规则
+         * @description 权限 risk:rule:config；实时生效+审计；错误 risk.rule.range-violated
+         */
+        put: operations["update_6"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/reward/prizes/{id}": {
         parameters: {
             query?: never;
@@ -172,7 +192,7 @@ export interface paths {
          * 更新奖品
          * @description 权限 reward:prize:update；reconActionPolicy 启用后可改
          */
-        put: operations["update_6"];
+        put: operations["update_7"];
         post?: never;
         /**
          * 删除奖品
@@ -200,7 +220,7 @@ export interface paths {
          * 更新奖品分类
          * @description 权限 reward:category:update；reconActionPolicy 启用后可改
          */
-        put: operations["update_7"];
+        put: operations["update_8"];
         post?: never;
         /**
          * 删除奖品分类
@@ -264,7 +284,7 @@ export interface paths {
          * 更新后台用户
          * @description 权限 identity:admin-user:update
          */
-        put: operations["update_8"];
+        put: operations["update_9"];
         post?: never;
         /**
          * 逻辑删除后台用户
@@ -288,7 +308,7 @@ export interface paths {
          * 更新角色
          * @description 权限 identity:role:update
          */
-        put: operations["update_9"];
+        put: operations["update_10"];
         post?: never;
         /**
          * 删除角色
@@ -356,7 +376,7 @@ export interface paths {
          * 更新权限节点
          * @description 权限 identity:permission:update
          */
-        put: operations["update_10"];
+        put: operations["update_11"];
         post?: never;
         /**
          * 删除权限节点
@@ -785,6 +805,210 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/simulate/task/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 模拟开始任务
+         * @description 权限 simulate:task；GrantContext.simulated=true
+         */
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 模拟冲正
+         * @description 权限 simulate:task；回补库存/反向积分，不调渠道
+         */
+        post: operations["reverse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 模拟进度上报
+         * @description 权限 simulate:task；进程内无 HMAC
+         */
+        post: operations["progress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 一键模拟全流程
+         * @description 权限 simulate:flow
+         */
+        post: operations["flow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/click": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 模拟点击步骤
+         * @description 权限 simulate:task
+         */
+        post: operations["click"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 模拟回调步骤
+         * @description 权限 simulate:task；进程内无 HMAC
+         */
+        post: operations["callback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/signin/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 分页查询签到活动
+         * @description 权限 signin:config:query
+         */
+        get: operations["page_5"];
+        put?: never;
+        /**
+         * 保存签到活动
+         * @description 新建 signin:config:create / 更新 signin:config:update
+         */
+        post: operations["save_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/signin/activities/{id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 定时发布签到活动
+         * @description 权限 signin:config:schedule
+         */
+        post: operations["schedule_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/signin/activities/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 发布签到活动
+         * @description 权限 signin:config:publish
+         */
+        post: operations["publish_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/signin/activities/{id}/offline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 下线签到活动
+         * @description 权限 signin:config:offline
+         */
+        post: operations["offline_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/risk/list-items": {
         parameters: {
             query?: never;
@@ -796,7 +1020,7 @@ export interface paths {
          * 分页查询风控名单
          * @description 权限 risk:blacklist:query / risk:whitelist:query（按 listType；缺省两者都要）
          */
-        get: operations["page_5"];
+        get: operations["page_6"];
         put?: never;
         /**
          * 新增名单条目
@@ -1044,7 +1268,7 @@ export interface paths {
          * 分页查询奖品
          * @description 权限 reward:prize:query
          */
-        get: operations["page_6"];
+        get: operations["page_7"];
         put?: never;
         /**
          * 新建奖品
@@ -1128,7 +1352,7 @@ export interface paths {
          * 分页查询奖品分类
          * @description 权限 reward:category:query
          */
-        get: operations["page_7"];
+        get: operations["page_8"];
         put?: never;
         /**
          * 新建奖品分类
@@ -1172,7 +1396,7 @@ export interface paths {
          * 分页查询后台用户
          * @description 权限 identity:admin-user:query；默认过滤已删除
          */
-        get: operations["page_8"];
+        get: operations["page_9"];
         put?: never;
         /**
          * 创建后台用户
@@ -1276,7 +1500,7 @@ export interface paths {
          * 分页查询角色
          * @description 权限 identity:role:query；all=true 返回启用全量
          */
-        get: operations["page_9"];
+        get: operations["page_10"];
         put?: never;
         /**
          * 创建角色
@@ -1380,7 +1604,7 @@ export interface paths {
          * 分页查询 internal 调用方
          * @description 权限 identity:internal-app:query；secret 永不回显
          */
-        get: operations["page_10"];
+        get: operations["page_11"];
         put?: never;
         /**
          * 登记 internal 调用方
@@ -1487,6 +1711,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/ad/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 分页查询广告位
+         * @description 权限 ad:position:query
+         */
+        get: operations["pagePositions"];
+        put?: never;
+        /**
+         * 保存广告位
+         * @description 新建 ad:position:create / 更新 ad:position:update
+         */
+        post: operations["savePosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ad/positions/{id}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 绑定或更新投放
+         * @description 权限 ad:position:update
+         */
+        post: operations["bind"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ad/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 分页查询素材
+         * @description 权限 ad:material:query
+         */
+        get: operations["pageMaterials"];
+        put?: never;
+        /**
+         * 保存素材
+         * @description 新建 ad:material:create / 更新 ad:material:update
+         */
+        post: operations["saveMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 分页查询活动
+         * @description 权限 activity:query
+         */
+        get: operations["page_12"];
+        put?: never;
+        /**
+         * 保存活动
+         * @description 新建 activity:create / 更新 activity:update
+         */
+        post: operations["save_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/activities/{id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 定时发布/下线
+         * @description 权限 activity:publish
+         */
+        post: operations["schedule_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/activities/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 发布活动
+         * @description 权限 activity:publish
+         */
+        post: operations["publish_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/activities/{id}/offline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 下线活动
+         * @description 权限 activity:offline
+         */
+        post: operations["offline_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/track/events/debug": {
         parameters: {
             query?: never;
@@ -1518,7 +1894,7 @@ export interface paths {
          * 后台实例分页
          * @description 权限 task:instance:query
          */
-        get: operations["page_11"];
+        get: operations["page_13"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1558,7 +1934,7 @@ export interface paths {
          * 分页查询任务定义
          * @description 权限 task:definition:query
          */
-        get: operations["page_12"];
+        get: operations["page_14"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1702,7 +2078,111 @@ export interface paths {
          * 审计日志分页
          * @description 权限 system:audit:query；只读，无删除入口
          */
-        get: operations["page_13"];
+        get: operations["page_15"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 模拟任务列表
+         * @description 权限 simulate:task；C 端可见性
+         */
+        get: operations["list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/simulate/task/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 模拟任务详情
+         * @description 权限 simulate:task
+         */
+        get: operations["detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/signin/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 分页查询签到记录
+         * @description 权限 signin:record:query
+         */
+        get: operations["records"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/signin/activities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 签到活动详情
+         * @description 权限 signin:config:query
+         */
+        get: operations["get_7"];
+        put?: never;
+        post?: never;
+        /**
+         * 删除签到活动
+         * @description 权限 signin:config:delete
+         */
+        delete: operations["delete_11"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/risk/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 查询风控规则
+         * @description 权限 risk:rule:query；全量 R-a–R-f
+         */
+        get: operations["list_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1831,6 +2311,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/metrics/spend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 奖励成本
+         * @description 权限 metrics:dashboard:view；读 mtr_reward_spend_d
+         */
+        get: operations["spend_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/metrics/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 风控命中
+         * @description 权限 metrics:dashboard:view；读 mtr_risk_hit_d
+         */
+        get: operations["risk"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/metrics/funnel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 任务漏斗
+         * @description 权限 metrics:dashboard:view；读 mtr_task_funnel_d
+         */
+        get: operations["funnel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/metrics/ad": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 广告素材
+         * @description 权限 metrics:dashboard:view；读 mtr_ad_material_d
+         */
+        get: operations["ad"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/identity/sessions": {
         parameters: {
             query?: never;
@@ -1842,7 +2402,7 @@ export interface paths {
          * 在线会话列表
          * @description 权限 identity:session:query；按 accountType + account 筛选
          */
-        get: operations["page_14"];
+        get: operations["page_16"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1862,7 +2422,7 @@ export interface paths {
          * 分页查询门户用户
          * @description 权限 identity:portal-user:query
          */
-        get: operations["page_15"];
+        get: operations["page_17"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1882,14 +2442,14 @@ export interface paths {
          * 门户用户详情
          * @description 权限 identity:portal-user:query；R5.6 经跨域端口聚合
          */
-        get: operations["detail"];
+        get: operations["detail_1"];
         put?: never;
         post?: never;
         /**
          * 逻辑删除门户用户
          * @description 权限 identity:portal-user:delete
          */
-        delete: operations["delete_11"];
+        delete: operations["delete_12"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1972,6 +2532,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/ad/positions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 广告位详情（含投放与重叠数）
+         * @description 权限 ad:position:query
+         */
+        get: operations["getPosition"];
+        put?: never;
+        post?: never;
+        /**
+         * 删除广告位
+         * @description 权限 ad:position:delete
+         */
+        delete: operations["deletePosition"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ad/materials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 素材详情
+         * @description 权限 ad:material:query
+         */
+        get: operations["getMaterial"];
+        put?: never;
+        post?: never;
+        /**
+         * 删除素材
+         * @description 权限 ad:material:delete
+         */
+        delete: operations["deleteMaterial"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/participations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 分页查询参与记录
+         * @description 权限 activity:participation:query
+         */
+        get: operations["participations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/activities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 活动详情
+         * @description 权限 activity:query
+         */
+        get: operations["get_8"];
+        put?: never;
+        post?: never;
+        /**
+         * 删除活动
+         * @description 权限 activity:delete
+         */
+        delete: operations["delete_13"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/activity/activities/{id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 参与统计
+         * @description 权限 activity:participation:query
+         */
+        get: operations["stats_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/risk/list-items/{id}": {
         parameters: {
             query?: never;
@@ -1987,6 +2659,26 @@ export interface paths {
          * @description 权限 risk:blacklist:remove / risk:whitelist:remove；body.reason 必填
          */
         delete: operations["remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ad/positions/{id}/materials/{materialId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 解绑投放
+         * @description 权限 ad:position:update
+         */
+        delete: operations["unbind"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2056,13 +2748,13 @@ export interface components {
             null?: boolean;
             object?: boolean;
             float?: boolean;
-            valueNode?: boolean;
-            container?: boolean;
             missingNode?: boolean;
             /** @enum {string} */
             nodeType?: "ARRAY" | "BINARY" | "BOOLEAN" | "MISSING" | "NULL" | "NUMBER" | "OBJECT" | "POJO" | "STRING";
             string?: boolean;
             integralNumber?: boolean;
+            valueNode?: boolean;
+            container?: boolean;
             pojo?: boolean;
             floatingPointNumber?: boolean;
             short?: boolean;
@@ -2077,6 +2769,32 @@ export interface components {
             binary?: boolean;
             number?: boolean;
             embeddedValue?: boolean;
+        };
+        RiskRuleUpdateCommand: {
+            enabled: boolean;
+            /** Format: int64 */
+            threshold: number;
+            /** Format: int64 */
+            windowSeconds?: number;
+            /** @enum {string} */
+            action: "PASS" | "REJECT" | "SILENT_REJECT" | "MARK";
+        };
+        ResultRiskRuleResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["RiskRuleResponse"];
+            traceId?: string;
+        };
+        RiskRuleResponse: {
+            ruleCode?: string;
+            enabled?: boolean;
+            /** Format: int64 */
+            threshold?: number;
+            /** Format: int64 */
+            windowSeconds?: number;
+            action?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         PrizeSaveCommand: {
             code: string;
@@ -2132,15 +2850,6 @@ export interface components {
         };
         RoleAssignPermissionsCommand: {
             permissionIds: number[];
-        };
-        RolePermissionIdsResponse: {
-            permissionIds?: number[];
-        };
-        ResultRolePermissionIdsResponse: {
-            code?: unknown;
-            message?: string;
-            data?: components["schemas"]["RolePermissionIdsResponse"];
-            traceId?: string;
         };
         PortalUserProfileCommand: {
             province?: string;
@@ -2392,6 +3101,215 @@ export interface components {
             message?: string;
             data?: components["schemas"]["CacheEvictResponse"];
             traceId?: string;
+        };
+        SimulateStartCommand: {
+            /** Format: int64 */
+            userId: number;
+            /** Format: int64 */
+            taskId: number;
+        };
+        CurrentStepView: {
+            stepCode?: string;
+            name?: string;
+            type?: string;
+            /** Format: int32 */
+            progressCurrent?: number;
+            /** Format: int32 */
+            progressTarget?: number;
+            action?: components["schemas"]["PlatformActionView"];
+        };
+        PlatformActionView: {
+            actionType?: string;
+            params?: {
+                [key: string]: unknown;
+            };
+            buttonText?: string;
+        };
+        ResultTaskStartResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["TaskStartResponse"];
+            traceId?: string;
+        };
+        TaskStartResponse: {
+            /** Format: int64 */
+            instanceId?: number;
+            instanceStatus?: string;
+            currentStep?: components["schemas"]["CurrentStepView"];
+        };
+        SimulateReverseCommand: {
+            /** Format: int64 */
+            instanceId: number;
+        };
+        ResultSimulateReverseResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SimulateReverseResponse"];
+            traceId?: string;
+        };
+        SimulateReverseResponse: {
+            /** Format: int64 */
+            instanceId?: number;
+            /** Format: int32 */
+            pointsReversed?: number;
+            /** Format: int32 */
+            stockRestored?: number;
+            /** Format: int32 */
+            sendingMarked?: number;
+            channelRevoked?: boolean;
+        };
+        SimulateProgressCommand: {
+            /** Format: int64 */
+            userId: number;
+            /** Format: int64 */
+            instanceId: number;
+            stepCode: string;
+            /** Format: int32 */
+            value: number;
+            reportId: string;
+        };
+        ResultTaskProgressResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["TaskProgressResponse"];
+            traceId?: string;
+        };
+        TaskProgressResponse: {
+            /** Format: int64 */
+            instanceId?: number;
+            stepCode?: string;
+            /** Format: int32 */
+            progressCurrent?: number;
+            /** Format: int32 */
+            progressTarget?: number;
+            stepStatus?: string;
+        };
+        SimulateFlowCommand: {
+            /** Format: int64 */
+            userId: number;
+            /** Format: int64 */
+            taskId: number;
+        };
+        ResultSimulateFlowResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SimulateFlowResponse"];
+            traceId?: string;
+        };
+        SimulateFlowResponse: {
+            /** Format: int64 */
+            instanceId?: number;
+            instanceStatus?: string;
+            steps?: components["schemas"]["SimulateFlowStepView"][];
+            grantRecordIds?: number[];
+        };
+        SimulateFlowStepView: {
+            stepCode?: string;
+            type?: string;
+            action?: string;
+            stepStatus?: string;
+        };
+        SimulateClickCommand: {
+            /** Format: int64 */
+            userId: number;
+            /** Format: int64 */
+            instanceId: number;
+            stepCode: string;
+        };
+        ResultTaskClickResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["TaskClickResponse"];
+            traceId?: string;
+        };
+        RewardFeedbackView: {
+            prizeName?: string;
+            /** Format: int32 */
+            count?: number;
+        };
+        TaskClickResponse: {
+            /** Format: int64 */
+            instanceId?: number;
+            stepStatus?: string;
+            instanceStatus?: string;
+            nextStep?: components["schemas"]["CurrentStepView"];
+            rewardFeedback?: components["schemas"]["RewardFeedbackView"][];
+        };
+        SimulateCallbackCommand: {
+            /** Format: int64 */
+            userId: number;
+            /** Format: int64 */
+            instanceId: number;
+            stepCode: string;
+            bizNo?: string;
+        };
+        ResultTaskCallbackResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["TaskCallbackResponse"];
+            traceId?: string;
+        };
+        TaskCallbackResponse: {
+            /** Format: int64 */
+            instanceId?: number;
+            stepCode?: string;
+            stepStatus?: string;
+            instanceStatus?: string;
+        };
+        SigninActivitySaveCommand: {
+            /** Format: int64 */
+            id?: number;
+            code: string;
+            name: string;
+            /** Format: date-time */
+            startTime: string;
+            /** Format: date-time */
+            endTime: string;
+            tiers?: components["schemas"]["SigninTierCommand"][];
+        };
+        SigninTierCommand: {
+            /** Format: int32 */
+            day: number;
+            /** Format: int64 */
+            prizeId: number;
+        };
+        ResultSigninActivitySaveResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SigninActivitySaveResponse"];
+            traceId?: string;
+        };
+        SigninActivitySaveResponse: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            /** Format: int32 */
+            version?: number;
+            status?: string;
+        };
+        SigninScheduleCommand: {
+            /** Format: date-time */
+            publishAt: string;
+        };
+        ResultSigninPublishResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SigninPublishResponse"];
+            traceId?: string;
+        };
+        SigninPublishResponse: {
+            requiresConfirm?: boolean;
+            message?: string;
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            /** Format: int32 */
+            version?: number;
+            status?: string;
+        };
+        SigninPublishCommand: {
+            confirm?: boolean;
+            early?: boolean;
         };
         RiskListItemCreateCommand: {
             /** @enum {string} */
@@ -2717,6 +3635,139 @@ export interface components {
             message?: string;
             data?: components["schemas"]["AdminLoginResponse"];
             traceId?: string;
+        };
+        AdPositionSaveCommand: {
+            /** Format: int64 */
+            id?: number;
+            code: string;
+            name: string;
+            form: string;
+            platforms?: string[];
+            status?: string;
+        };
+        AdSaveResponse: {
+            /** Format: int64 */
+            id?: number;
+        };
+        ResultAdSaveResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["AdSaveResponse"];
+            traceId?: string;
+        };
+        AdPlacementSaveCommand: {
+            /** Format: int64 */
+            materialId: number;
+            /** Format: int32 */
+            weight: number;
+            /** Format: date-time */
+            startTime: string;
+            /** Format: date-time */
+            endTime: string;
+            platforms?: string[];
+            grayType?: string;
+            /** Format: int32 */
+            grayRatio?: number;
+            /** Format: int64 */
+            crowdId?: number;
+            status?: string;
+        };
+        AdMaterialSaveCommand: {
+            /** Format: int64 */
+            id?: number;
+            title: string;
+            subtitle?: string;
+            imageUrl: string;
+            jumpType?: string;
+            jumpParams?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            weight: number;
+            /** Format: date-time */
+            startTime: string;
+            /** Format: date-time */
+            endTime: string;
+            status?: string;
+        };
+        ActivityGrayCommand: {
+            type?: string;
+            /** Format: int32 */
+            ratio?: number;
+        };
+        ActivitySaveCommand: {
+            /** Format: int64 */
+            id?: number;
+            code: string;
+            name: string;
+            /** Format: date-time */
+            startTime: string;
+            /** Format: date-time */
+            endTime: string;
+            richText: string;
+            gray?: components["schemas"]["ActivityGrayCommand"];
+            submodules?: components["schemas"]["ActivitySubmoduleCommand"][];
+            /** Format: int64 */
+            participationPrizeId?: number;
+            allowUserIds?: number[];
+            allowCrowdCodes?: string[];
+            newUserOnly?: boolean;
+            /** Format: int32 */
+            newUserDays?: number;
+            /** Format: int32 */
+            userDailyLimit?: number;
+            /** Format: int32 */
+            userTotalLimit?: number;
+            /** Format: int32 */
+            globalDailyLimit?: number;
+            regions?: string[];
+        };
+        ActivitySubmoduleCommand: {
+            type: string;
+            /** Format: int64 */
+            refId: number;
+            /** Format: int32 */
+            sort?: number;
+        };
+        ActivitySaveResponse: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            /** Format: int32 */
+            version?: number;
+            status?: string;
+        };
+        ResultActivitySaveResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["ActivitySaveResponse"];
+            traceId?: string;
+        };
+        ActivityScheduleCommand: {
+            /** Format: date-time */
+            publishAt?: string;
+            /** Format: date-time */
+            offlineAt?: string;
+        };
+        ActivityPublishResponse: {
+            requiresConfirm?: boolean;
+            message?: string;
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            /** Format: int32 */
+            version?: number;
+            status?: string;
+        };
+        ResultActivityPublishResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["ActivityPublishResponse"];
+            traceId?: string;
+        };
+        ActivityPublishCommand: {
+            confirm?: boolean;
+            early?: boolean;
         };
         PageDataTrackMetadataResponse: {
             /** Format: int64 */
@@ -3134,6 +4185,145 @@ export interface components {
             data?: components["schemas"]["PageDataAuditView"];
             traceId?: string;
         };
+        PageDataTaskCardView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["TaskCardView"][];
+        };
+        ResultPageDataTaskCardView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataTaskCardView"];
+            traceId?: string;
+        };
+        RewardPreviewView: {
+            firstName?: string;
+            /** Format: int32 */
+            totalCount?: number;
+        };
+        TaskCardView: {
+            /** Format: int64 */
+            taskId?: number;
+            taskCode?: string;
+            name?: string;
+            category?: string;
+            iconUrl?: string;
+            badgeText?: string;
+            rewardPreview?: components["schemas"]["RewardPreviewView"];
+            userStatus?: string;
+            /** Format: int32 */
+            sortWeight?: number;
+        };
+        InstanceStepView: {
+            stepCode?: string;
+            name?: string;
+            type?: string;
+            status?: string;
+            /** Format: int32 */
+            progressCurrent?: number;
+            /** Format: int32 */
+            progressTarget?: number;
+        };
+        ResultTaskDetailResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["TaskDetailResponse"];
+            traceId?: string;
+        };
+        StepPreviewView: {
+            /** Format: int32 */
+            seq?: number;
+            name?: string;
+            type?: string;
+            /** Format: int32 */
+            progressTarget?: number;
+        };
+        TaskBriefView: {
+            name?: string;
+            iconUrl?: string;
+            description?: string;
+            category?: string;
+        };
+        TaskDetailResponse: {
+            status?: string;
+            /** Format: int64 */
+            instanceId?: number;
+            task?: components["schemas"]["TaskBriefView"];
+            stepsPreview?: components["schemas"]["StepPreviewView"][];
+            rewardPreview?: components["schemas"]["RewardPreviewView"];
+            steps?: components["schemas"]["InstanceStepView"][];
+            currentStep?: components["schemas"]["CurrentStepView"];
+        };
+        PageDataSigninRecordView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["SigninRecordView"][];
+        };
+        ResultPageDataSigninRecordView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataSigninRecordView"];
+            traceId?: string;
+        };
+        SigninRecordView: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            activityId?: number;
+            /** Format: int64 */
+            userId?: number;
+            /** Format: date */
+            signDate?: string;
+            source?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        PageDataSigninActivityView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["SigninActivityView"][];
+        };
+        ResultPageDataSigninActivityView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataSigninActivityView"];
+            traceId?: string;
+        };
+        SigninActivityView: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            name?: string;
+            /** Format: date-time */
+            startTime?: string;
+            /** Format: date-time */
+            endTime?: string;
+            status?: string;
+            /** Format: int32 */
+            version?: number;
+            pendingRevision?: boolean;
+            /** Format: date-time */
+            schedulePublishAt?: string;
+            tiers?: components["schemas"]["SigninTierView"][];
+        };
+        SigninTierView: {
+            /** Format: int32 */
+            day?: number;
+            /** Format: int64 */
+            prizeId?: number;
+        };
+        ResultSigninActivityView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SigninActivityView"];
+            traceId?: string;
+        };
+        ResultListRiskRuleResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["RiskRuleResponse"][];
+            traceId?: string;
+        };
         PageDataRiskListItemResponse: {
             /** Format: int64 */
             total?: number;
@@ -3404,6 +4594,92 @@ export interface components {
             data?: components["schemas"]["PageDataPointsAccountView"];
             traceId?: string;
         };
+        ResultSpendMetricsResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["SpendMetricsResponse"];
+            traceId?: string;
+        };
+        SpendMetricsResponse: {
+            records?: components["schemas"]["SpendPointView"][];
+        };
+        SpendPointView: {
+            period?: string;
+            dimKey?: string;
+            /** Format: int64 */
+            arrivedCount?: number;
+            /** Format: int64 */
+            arrivedCostFen?: number;
+            /** Format: int64 */
+            sendingCount?: number;
+            /** Format: int64 */
+            sendingCostFen?: number;
+            /** Format: int64 */
+            remainingStock?: number;
+            /** Format: int64 */
+            totalStock?: number;
+        };
+        ResultRiskMetricsResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["RiskMetricsResponse"];
+            traceId?: string;
+        };
+        RiskMetricsResponse: {
+            records?: components["schemas"]["RiskPointView"][];
+        };
+        RiskPointView: {
+            period?: string;
+            dimKey?: string;
+            /** Format: int64 */
+            hitCount?: number;
+            /** Format: int64 */
+            interceptCount?: number;
+            /** Format: double */
+            interceptRate?: number;
+        };
+        FunnelPointView: {
+            period?: string;
+            dimKey?: string;
+            /** Format: int64 */
+            exposureCount?: number;
+            /** Format: int64 */
+            startCount?: number;
+            /** Format: int64 */
+            completeCount?: number;
+            /** Format: double */
+            startRate?: number;
+            /** Format: double */
+            completeRate?: number;
+        };
+        FunnelResponse: {
+            records?: components["schemas"]["FunnelPointView"][];
+        };
+        ResultFunnelResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["FunnelResponse"];
+            traceId?: string;
+        };
+        AdMetricsResponse: {
+            records?: components["schemas"]["AdPointView"][];
+        };
+        AdPointView: {
+            period?: string;
+            dimKey?: string;
+            /** Format: int64 */
+            exposureCount?: number;
+            /** Format: int64 */
+            clickCount?: number;
+            /** Format: double */
+            ctr?: number;
+        };
+        ResultAdMetricsResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["AdMetricsResponse"];
+            traceId?: string;
+        };
         AdminUserView: {
             /** Format: int64 */
             id?: number;
@@ -3470,6 +4746,15 @@ export interface components {
             userCount?: number;
             /** Format: date-time */
             createdAt?: string;
+        };
+        ResultRolePermissionIdsResponse: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["RolePermissionIdsResponse"];
+            traceId?: string;
+        };
+        RolePermissionIdsResponse: {
+            permissionIds?: number[];
         };
         PageDataPortalUserView: {
             /** Format: int64 */
@@ -3624,6 +4909,203 @@ export interface components {
             code?: unknown;
             message?: string;
             data?: components["schemas"]["MenuNodeResponse"][];
+            traceId?: string;
+        };
+        AdMaterialView: {
+            /** Format: int64 */
+            id?: number;
+            title?: string;
+            subtitle?: string;
+            imageUrl?: string;
+            jumpType?: string;
+            jumpParams?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            weight?: number;
+            /** Format: date-time */
+            startTime?: string;
+            /** Format: date-time */
+            endTime?: string;
+            status?: string;
+        };
+        AdPlacementView: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            positionId?: number;
+            /** Format: int64 */
+            materialId?: number;
+            /** Format: int32 */
+            weight?: number;
+            /** Format: date-time */
+            startTime?: string;
+            /** Format: date-time */
+            endTime?: string;
+            platforms?: string[];
+            grayType?: string;
+            /** Format: int32 */
+            grayRatio?: number;
+            /** Format: int64 */
+            crowdId?: number;
+            status?: string;
+            material?: components["schemas"]["AdMaterialView"];
+        };
+        AdPositionView: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            name?: string;
+            form?: string;
+            platforms?: string[];
+            status?: string;
+            placements?: components["schemas"]["AdPlacementView"][];
+            /** Format: int32 */
+            overlapCount?: number;
+        };
+        PageDataAdPositionView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["AdPositionView"][];
+        };
+        ResultPageDataAdPositionView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataAdPositionView"];
+            traceId?: string;
+        };
+        ResultAdPositionView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["AdPositionView"];
+            traceId?: string;
+        };
+        PageDataAdMaterialView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["AdMaterialView"][];
+        };
+        ResultPageDataAdMaterialView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataAdMaterialView"];
+            traceId?: string;
+        };
+        ResultAdMaterialView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["AdMaterialView"];
+            traceId?: string;
+        };
+        PageDataParticipationView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["ParticipationView"][];
+        };
+        ParticipationView: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            activityId?: number;
+            /** Format: int64 */
+            userId?: number;
+            periodKey?: string;
+            result?: string;
+            hitRule?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ResultPageDataParticipationView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataParticipationView"];
+            traceId?: string;
+        };
+        ActivityGrayView: {
+            type?: string;
+            /** Format: int32 */
+            ratio?: number;
+        };
+        ActivityView: {
+            /** Format: int64 */
+            id?: number;
+            code?: string;
+            name?: string;
+            /** Format: date-time */
+            startTime?: string;
+            /** Format: date-time */
+            endTime?: string;
+            status?: string;
+            /** Format: int32 */
+            version?: number;
+            pendingRevision?: boolean;
+            /** Format: date-time */
+            schedulePublishAt?: string;
+            /** Format: date-time */
+            scheduleOfflineAt?: string;
+            richText?: string;
+            contentHash?: string;
+            gray?: components["schemas"]["ActivityGrayView"];
+            submodules?: components["schemas"]["SubmoduleView"][];
+            /** Format: int64 */
+            participationPrizeId?: number;
+            allowUserIds?: number[];
+            allowCrowdCodes?: string[];
+            newUserOnly?: boolean;
+            /** Format: int32 */
+            newUserDays?: number;
+            /** Format: int32 */
+            userDailyLimit?: number;
+            /** Format: int32 */
+            userTotalLimit?: number;
+            /** Format: int32 */
+            globalDailyLimit?: number;
+            regions?: string[];
+        };
+        PageDataActivityView: {
+            /** Format: int64 */
+            total?: number;
+            records?: components["schemas"]["ActivityView"][];
+        };
+        ResultPageDataActivityView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["PageDataActivityView"];
+            traceId?: string;
+        };
+        SubmoduleView: {
+            type?: string;
+            /** Format: int64 */
+            refId?: number;
+            /** Format: int32 */
+            sort?: number;
+        };
+        ResultActivityView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["ActivityView"];
+            traceId?: string;
+        };
+        HitRuleCountView: {
+            hitRule?: string;
+            /** Format: int64 */
+            count?: number;
+        };
+        ParticipationStatsView: {
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            passCount?: number;
+            /** Format: int64 */
+            rejectCount?: number;
+            /** Format: double */
+            passRate?: number;
+            rejectReasons?: components["schemas"]["HitRuleCountView"][];
+        };
+        ResultParticipationStatsView: {
+            code?: unknown;
+            message?: string;
+            data?: components["schemas"]["ParticipationStatsView"];
             traceId?: string;
         };
         RiskListItemRemoveCommand: {
@@ -3970,6 +5452,32 @@ export interface operations {
             };
         };
     };
+    update_6: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RiskRuleUpdateCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultRiskRuleResponse"];
+                };
+            };
+        };
+    };
     get_3: {
         parameters: {
             query?: never;
@@ -3992,7 +5500,7 @@ export interface operations {
             };
         };
     };
-    update_6: {
+    update_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -4062,7 +5570,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    update_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -4154,7 +5662,7 @@ export interface operations {
             };
         };
     };
-    update_8: {
+    update_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -4202,7 +5710,7 @@ export interface operations {
             };
         };
     };
-    update_9: {
+    update_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -4324,7 +5832,7 @@ export interface operations {
             };
         };
     };
-    update_10: {
+    update_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -4975,7 +6483,275 @@ export interface operations {
             };
         };
     };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateStartCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultTaskStartResponse"];
+                };
+            };
+        };
+    };
+    reverse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateReverseCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSimulateReverseResponse"];
+                };
+            };
+        };
+    };
+    progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateProgressCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultTaskProgressResponse"];
+                };
+            };
+        };
+    };
+    flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateFlowCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSimulateFlowResponse"];
+                };
+            };
+        };
+    };
+    click: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateClickCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultTaskClickResponse"];
+                };
+            };
+        };
+    };
+    callback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateCallbackCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultTaskCallbackResponse"];
+                };
+            };
+        };
+    };
     page_5: {
+        parameters: {
+            query?: {
+                code?: string;
+                name?: string;
+                status?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataSigninActivityView"];
+                };
+            };
+        };
+    };
+    save_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SigninActivitySaveCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninActivitySaveResponse"];
+                };
+            };
+        };
+    };
+    schedule_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SigninScheduleCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninPublishResponse"];
+                };
+            };
+        };
+    };
+    publish_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SigninPublishCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninPublishResponse"];
+                };
+            };
+        };
+    };
+    offline_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninPublishResponse"];
+                };
+            };
+        };
+    };
+    page_6: {
         parameters: {
             query?: {
                 dimension?: "USER" | "IP" | "DEVICE";
@@ -5315,7 +7091,7 @@ export interface operations {
             };
         };
     };
-    page_6: {
+    page_7: {
         parameters: {
             query?: {
                 code?: string;
@@ -5445,7 +7221,7 @@ export interface operations {
             };
         };
     };
-    page_7: {
+    page_8: {
         parameters: {
             query?: {
                 page?: number;
@@ -5516,7 +7292,7 @@ export interface operations {
             };
         };
     };
-    page_8: {
+    page_9: {
         parameters: {
             query?: {
                 username?: string;
@@ -5661,7 +7437,7 @@ export interface operations {
             };
         };
     };
-    page_9: {
+    page_10: {
         parameters: {
             query?: {
                 all?: boolean;
@@ -5803,7 +7579,7 @@ export interface operations {
             };
         };
     };
-    page_10: {
+    page_11: {
         parameters: {
             query?: {
                 page?: number;
@@ -5960,6 +7736,255 @@ export interface operations {
             };
         };
     };
+    pagePositions: {
+        parameters: {
+            query?: {
+                code?: string;
+                form?: string;
+                status?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataAdPositionView"];
+                };
+            };
+        };
+    };
+    savePosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdPositionSaveCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultAdSaveResponse"];
+                };
+            };
+        };
+    };
+    bind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdPlacementSaveCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultAdSaveResponse"];
+                };
+            };
+        };
+    };
+    pageMaterials: {
+        parameters: {
+            query?: {
+                title?: string;
+                status?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataAdMaterialView"];
+                };
+            };
+        };
+    };
+    saveMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdMaterialSaveCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultAdSaveResponse"];
+                };
+            };
+        };
+    };
+    page_12: {
+        parameters: {
+            query?: {
+                code?: string;
+                name?: string;
+                status?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataActivityView"];
+                };
+            };
+        };
+    };
+    save_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivitySaveCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultActivitySaveResponse"];
+                };
+            };
+        };
+    };
+    schedule_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityScheduleCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultActivityPublishResponse"];
+                };
+            };
+        };
+    };
+    publish_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ActivityPublishCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultActivityPublishResponse"];
+                };
+            };
+        };
+    };
+    offline_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultActivityPublishResponse"];
+                };
+            };
+        };
+    };
     debug: {
         parameters: {
             query?: {
@@ -5989,7 +8014,7 @@ export interface operations {
             };
         };
     };
-    page_11: {
+    page_13: {
         parameters: {
             query?: {
                 taskId?: number;
@@ -6040,7 +8065,7 @@ export interface operations {
             };
         };
     };
-    page_12: {
+    page_14: {
         parameters: {
             query?: {
                 code?: string;
@@ -6223,7 +8248,7 @@ export interface operations {
             };
         };
     };
-    page_13: {
+    page_15: {
         parameters: {
             query?: {
                 operatorId?: number;
@@ -6248,6 +8273,145 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResultPageDataAuditView"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query: {
+                userId: number;
+                category?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataTaskCardView"];
+                };
+            };
+        };
+    };
+    detail: {
+        parameters: {
+            query: {
+                userId: number;
+                taskId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultTaskDetailResponse"];
+                };
+            };
+        };
+    };
+    records: {
+        parameters: {
+            query?: {
+                activityId?: number;
+                userId?: number;
+                from?: string;
+                to?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataSigninRecordView"];
+                };
+            };
+        };
+    };
+    get_7: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSigninActivityView"];
+                };
+            };
+        };
+    };
+    delete_11: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultListRiskRuleResponse"];
                 };
             };
         };
@@ -6410,7 +8574,107 @@ export interface operations {
             };
         };
     };
-    page_14: {
+    spend_1: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                grain?: string;
+                dimKey?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultSpendMetricsResponse"];
+                };
+            };
+        };
+    };
+    risk: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                grain?: string;
+                dimKey?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultRiskMetricsResponse"];
+                };
+            };
+        };
+    };
+    funnel: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                grain?: string;
+                dimKey?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultFunnelResponse"];
+                };
+            };
+        };
+    };
+    ad: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                grain?: string;
+                dimKey?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultAdMetricsResponse"];
+                };
+            };
+        };
+    };
+    page_16: {
         parameters: {
             query?: {
                 accountType?: string;
@@ -6435,7 +8699,7 @@ export interface operations {
             };
         };
     };
-    page_15: {
+    page_17: {
         parameters: {
             query?: {
                 username?: string;
@@ -6466,7 +8730,7 @@ export interface operations {
             };
         };
     };
-    detail: {
+    detail_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -6488,7 +8752,7 @@ export interface operations {
             };
         };
     };
-    delete_11: {
+    delete_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -6590,6 +8854,187 @@ export interface operations {
             };
         };
     };
+    getPosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultAdPositionView"];
+                };
+            };
+        };
+    };
+    deletePosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    getMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultAdMaterialView"];
+                };
+            };
+        };
+    };
+    deleteMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    participations: {
+        parameters: {
+            query?: {
+                activityId?: number;
+                userId?: number;
+                result?: string;
+                periodKey?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultPageDataParticipationView"];
+                };
+            };
+        };
+    };
+    get_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultActivityView"];
+                };
+            };
+        };
+    };
+    delete_13: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    stats_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultParticipationStatsView"];
+                };
+            };
+        };
+    };
     remove: {
         parameters: {
             query?: never;
@@ -6604,6 +9049,29 @@ export interface operations {
                 "application/json": components["schemas"]["RiskListItemRemoveCommand"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResultOkResponse"];
+                };
+            };
+        };
+    };
+    unbind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                materialId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
