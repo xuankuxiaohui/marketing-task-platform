@@ -26,6 +26,8 @@ import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedba
 import { toPermissionTreeData } from "@/utils/permission-tree";
 import { remainingRoleIdsAfterRevoke, toCheckedPermissionIds } from "@/utils/role-assign";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "RolePermissionPage" });
 
@@ -47,18 +49,24 @@ const roleCatalog = ref<RoleView[]>([]);
 const confirm = ref<{ message: string; run: () => Promise<void> } | null>(null);
 const treeData = ref(toPermissionTreeData([]));
 
+const beginLoad = useLatestRequest(() => page.value);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pageRoles({ page: page.value, pageSize });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pageRoles({ page: page.value, pageSize });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
+  });
 }
 
 function isBuiltIn(row: RoleView): boolean {
