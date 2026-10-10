@@ -17,6 +17,7 @@ import com.mkt.tracking.application.TrackBatchService;
 import com.mkt.tracking.domain.MetadataStatus;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackSettings;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.mkt.tracking.testsupport.MemoryEventLogStore;
 import com.mkt.tracking.testsupport.MemoryEventMetadataStore;
 import java.time.Instant;
@@ -44,7 +45,7 @@ class TrackBatchControllerTest {
                 new MemoryEventMetadataStore().put("page.view", MetadataStatus.ENABLED),
                 new SlidingWindowRateLimiter(new MemoryKeyValueStore(), clock),
                 new TrackSettings(),
-                new TrackDropCounters(),
+                new TrackDropCounters(new SimpleMeterRegistry()),
                 clock);
         mvc = MockMvcBuilders.standaloneSetup(new TrackBatchController(service), new BusinessProbeController())
                 .setControllerAdvice(new GlobalExceptionHandler())

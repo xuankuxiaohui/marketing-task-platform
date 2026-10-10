@@ -32,7 +32,7 @@
 | F12 | 原仅 [check-openapi-types.sh](../ci/check-openapi-types.sh)（JSON→TS） | 已由 [check-openapi-backend.sh](../ci/check-openapi-backend.sh) 补全非 prod 后端 live 导出 → 已提交 JSON → TS；prod springdoc 保持关闭（#99） |
 | F13 | [server/pom.xml](../server/pom.xml) 关键覆盖率曾指向不存在的 `com.mkt.reward.grant` / `com.mkt.risk.engine`；现以 CLASS 门禁覆盖 `GrantAppService`、`RuleDecisionEngine`、`ListDecisionEngine`，PACKAGE 仍覆盖 kernel / task.engine / task.expression / reward.points；架构规则只覆盖部分访问形式 | 覆盖率百分比不等于关键链路覆盖；关键包/类范围已与实现对齐，架构检查盲区仍待逐项核对 |
 | F14 | [perf](../perf/README.md) 中 callback 复用有限单步实例，业务 checks / 接收吞吐 / dropped iterations 门槛不足 | callback 场景逐渐主要覆盖完成后的重复回调路径，仍可能写库，但不代表新的业务推进；不泛化到 progress。先修数据生命周期与断言 |
-| F15 | [TrackDropCounters](../server/domain-tracking/src/main/java/com/mkt/tracking/support/TrackDropCounters.java) 只有进程计数/日志，告警配置与业务指标注册未闭环 | 逐项证明指标实际暴露、单位与标签一致、告警可触发；不能把配置文件存在当作监控完成 |
+| F15 | [TrackDropCounters](../server/domain-tracking/src/main/java/com/mkt/tracking/support/TrackDropCounters.java) 只有进程计数/日志，告警配置与业务指标注册未闭环 | **本轮**：注册 Micrometer `mkt.track.drop`（Prometheus `mkt_track_drop_total`）+ `reason` 标签（malformed/unregistered/disabled）；AtomicLong/log 保留；见 `TrackDropCountersTest` |
 | F16 | [恢复说明](../deploy/backup/RESTORE-DRILL.md) 对应脚本未使用备份 binlog 起点；部署模板缺完整静态资源/TLS接线；[本地脚本](../scripts/README.md) 停止进程按端口处理 | 分别补恢复正确性、完整部署及本地进程归属验证。先在隔离环境取证，不在本轮执行恢复或停进程 |
 
 ## 3. 目标实现边界

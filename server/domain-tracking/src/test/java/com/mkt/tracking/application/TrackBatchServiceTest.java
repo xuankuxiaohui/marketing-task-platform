@@ -18,6 +18,7 @@ import com.mkt.tracking.response.TrackBatchResponse;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackErrorCodes;
 import com.mkt.tracking.support.TrackSettings;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.mkt.tracking.testsupport.MemoryEventLogStore;
 import com.mkt.tracking.testsupport.MemoryEventMetadataStore;
 import java.time.Instant;
@@ -38,7 +39,7 @@ class TrackBatchServiceTest {
             .put("task.card.exposure", MetadataStatus.ENABLED)
             .put("old.event.code", MetadataStatus.DISABLED);
     private final TrackSettings settings = new TrackSettings();
-    private final TrackDropCounters drops = new TrackDropCounters();
+    private final TrackDropCounters drops = new TrackDropCounters(new SimpleMeterRegistry());
     private TrackBatchService service;
 
     @BeforeEach
