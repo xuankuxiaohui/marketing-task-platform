@@ -26,6 +26,7 @@ import com.mkt.tracking.mapper.EvtEventLogMapper;
 import com.mkt.tracking.mapper.EvtEventMetadataMapper;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackSettings;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -116,7 +117,7 @@ public final class TrackingITSupport {
         EventLogStore eventLogs = new MybatisEventLogStore(sqlSession.getMapper(EvtEventLogMapper.class));
         EventMetadataStore metadata = new MybatisEventMetadataStore(sqlSession.getMapper(EvtEventMetadataMapper.class));
         TrackSettings settings = new TrackSettings();
-        TrackDropCounters drops = new TrackDropCounters();
+        TrackDropCounters drops = new TrackDropCounters(new SimpleMeterRegistry());
         SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(kv, clock);
         TrackBatchService batch = new TrackBatchService(eventLogs, metadata, limiter, settings, drops, clock);
         TrackAuditAppender audit = new TrackAuditAppender(publisher);

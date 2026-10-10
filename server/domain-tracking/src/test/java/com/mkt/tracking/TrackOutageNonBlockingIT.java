@@ -13,6 +13,7 @@ import com.mkt.tracking.command.TrackIdentity;
 import com.mkt.tracking.it.TrackingITSupport;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackSettings;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.mkt.tracking.testsupport.ThrowingEventLogStore;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +42,7 @@ class TrackOutageNonBlockingIT {
                 env.metadata,
                 new SlidingWindowRateLimiter(new MemoryKeyValueStore(), env.clock),
                 new TrackSettings(),
-                new TrackDropCounters(),
+                new TrackDropCounters(new SimpleMeterRegistry()),
                 env.clock);
 
         assertThatThrownBy(() -> broken.ingest(

@@ -10,6 +10,7 @@ import com.mkt.tracking.domain.DisabledEventPolicy;
 import com.mkt.tracking.domain.UnregisteredPolicy;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackSettings;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,8 +55,8 @@ public class TrackingAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    TrackDropCounters trackDropCounters() {
-        return new TrackDropCounters();
+    TrackDropCounters trackDropCounters(MeterRegistry meterRegistry) {
+        return new TrackDropCounters(meterRegistry);
     }
 
     @Bean
