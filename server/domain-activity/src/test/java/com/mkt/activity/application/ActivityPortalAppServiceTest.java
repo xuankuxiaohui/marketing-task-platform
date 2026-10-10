@@ -15,6 +15,7 @@ import com.mkt.activity.support.ActivitySettings;
 import com.mkt.activity.testsupport.MemoryActivityStores;
 import com.mkt.activity.testsupport.RecordingRewardPort;
 import com.mkt.activity.testsupport.StubUserAttributePort;
+import com.mkt.contract.CrowdPort;
 import com.mkt.contract.GrantSource;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.UserContext;
@@ -28,6 +29,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ActivityPortalAppServiceTest {
+
+    private static final CrowdPort NO_CROWD = new CrowdPort() {
+        @Override
+        public boolean memberOf(long crowdId, long userId) {
+            return false;
+        }
+
+        @Override
+        public boolean memberOfCode(String crowdCode, long userId) {
+            return false;
+        }
+    };
+
 
     private MemoryActivityStores stores;
     private RecordingRewardPort rewards;
@@ -43,7 +57,7 @@ class ActivityPortalAppServiceTest {
         users = new StubUserAttributePort();
         Clock clock = Clock.fixed(Instant.parse("2026-08-20T04:00:00Z"), ZoneOffset.UTC);
         admin = new ActivityAdminAppService(stores.activities, stores.participations, rewards, new ActivitySettings(), clock);
-        portal = new ActivityPortalAppService(stores.activities, stores.participations, rewards, users, clock);
+        portal = new ActivityPortalAppService(stores.activities, stores.participations, rewards, users, NO_CROWD, clock);
     }
 
     @AfterEach

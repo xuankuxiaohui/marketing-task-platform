@@ -9,6 +9,7 @@ import com.mkt.ad.command.AdPositionSaveCommand;
 import com.mkt.ad.domain.AdForms;
 import com.mkt.ad.response.PortalAdPositionView;
 import com.mkt.ad.support.AdErrorCodes;
+import com.mkt.contract.CrowdPort;
 import com.mkt.ad.support.AdSettings;
 import com.mkt.ad.testsupport.MemoryAdStores;
 import com.mkt.infra.cache.TwoLevelPlatformCache;
@@ -25,6 +26,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class AdPortalAppServiceTest {
+
+    private static final CrowdPort NO_CROWD = new CrowdPort() {
+        @Override
+        public boolean memberOf(long crowdId, long userId) {
+            return false;
+        }
+
+        @Override
+        public boolean memberOfCode(String crowdCode, long userId) {
+            return false;
+        }
+    };
 
     private MemoryAdStores stores;
     private MemoryKeyValueStore kv;
@@ -49,6 +62,7 @@ class AdPortalAppServiceTest {
                 cache,
                 new AdFreqStore(kv),
                 settings,
+                NO_CROWD,
                 clock);
     }
 

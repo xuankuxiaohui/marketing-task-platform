@@ -16,6 +16,7 @@ import com.mkt.activity.response.PortalActivityDetailView;
 import com.mkt.activity.response.PortalActivityView;
 import com.mkt.activity.response.SubmoduleView;
 import com.mkt.activity.support.ActivityErrorCodes;
+import com.mkt.contract.CrowdPort;
 import com.mkt.contract.GrantContext;
 import com.mkt.contract.GrantResult;
 import com.mkt.contract.GrantSource;
@@ -39,6 +40,7 @@ public class ActivityPortalAppService {
     private final ActivityParticipationStore participations;
     private final RewardPort rewards;
     private final UserAttributePort users;
+    private final CrowdPort crowds;
     private final Clock clock;
 
     public ActivityPortalAppService(
@@ -46,11 +48,13 @@ public class ActivityPortalAppService {
             ActivityParticipationStore participations,
             RewardPort rewards,
             UserAttributePort users,
+            CrowdPort crowds,
             Clock clock) {
         this.activities = activities;
         this.participations = participations;
         this.rewards = rewards;
         this.users = users;
+        this.crowds = crowds;
         this.clock = clock;
     }
 
@@ -127,7 +131,8 @@ public class ActivityPortalAppService {
                     ActivityFieldCodec.strings(locked.getRegions()),
                     userId,
                     attrs,
-                    now);
+                    now,
+                    code -> crowds.memberOfCode(code, userId));
         }
         if (hit != null) {
             long id = insertRow(locked.getId(), userId, periodKey, HitRules.REJECT, hit, now);

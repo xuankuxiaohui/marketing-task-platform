@@ -1,5 +1,6 @@
 package com.mkt.activity.controller.portal;
 
+import com.mkt.contract.CrowdPort;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -38,6 +39,19 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class ActivityPortalControllerTest {
 
+    private static final CrowdPort NO_CROWD = new CrowdPort() {
+        @Override
+        public boolean memberOf(long crowdId, long userId) {
+            return false;
+        }
+
+        @Override
+        public boolean memberOfCode(String crowdCode, long userId) {
+            return false;
+        }
+    };
+
+
     private MockMvc mvc;
     private long activityId;
     private String contentHash;
@@ -52,7 +66,7 @@ class ActivityPortalControllerTest {
         ActivityAdminAppService admin = new ActivityAdminAppService(
                 stores.activities, stores.participations, rewards, settings, clock);
         ActivityPortalAppService portal = new ActivityPortalAppService(
-                stores.activities, stores.participations, rewards, new StubUserAttributePort(), clock);
+                stores.activities, stores.participations, rewards, new StubUserAttributePort(), NO_CROWD, clock);
         activityId = admin.save(new ActivitySaveCommand(
                         null,
                         "summer",

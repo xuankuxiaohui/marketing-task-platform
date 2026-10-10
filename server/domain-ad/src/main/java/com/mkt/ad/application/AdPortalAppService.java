@@ -24,6 +24,7 @@ import com.mkt.ad.support.AdErrorCodes;
 import com.mkt.ad.support.AdSettings;
 import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
+import com.mkt.contract.CrowdPort;
 import com.mkt.kernel.BusinessException;
 import java.time.Clock;
 import java.time.Duration;
@@ -43,6 +44,7 @@ public class AdPortalAppService {
     private final PlatformCache cache;
     private final AdFreqStore freq;
     private final AdSettings settings;
+    private final CrowdPort crowds;
     private final Clock clock;
 
     public AdPortalAppService(
@@ -52,6 +54,7 @@ public class AdPortalAppService {
             PlatformCache cache,
             AdFreqStore freq,
             AdSettings settings,
+            CrowdPort crowds,
             Clock clock) {
         this.positions = positions;
         this.materials = materials;
@@ -59,6 +62,7 @@ public class AdPortalAppService {
         this.cache = cache;
         this.freq = freq;
         this.settings = settings;
+        this.crowds = crowds;
         this.clock = clock;
     }
 
@@ -158,8 +162,10 @@ public class AdPortalAppService {
         if (!AdGrayBuckets.hit(placement.grayType(), placement.grayRatio(), userId, position.id())) {
             return false;
         }
-        // crowd_id is stored; anonymous already returned. Logged-in crowd is R11 reuse without
-        // visiting task_ tables (no CrowdPort). Unset crowd = no filter.
+        Long crowdId = placement.crowdId();
+        if (crowdId != null && !crowds.memberOf(crowdId, userId)) {
+            return false;
+        }
         return true;
     }
 

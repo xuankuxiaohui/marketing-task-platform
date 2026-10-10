@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.mkt.ad.application.AdAdminAppService;
 import com.mkt.ad.application.AdFreqStore;
 import com.mkt.ad.application.AdPortalAppService;
+import com.mkt.contract.CrowdPort;
 import com.mkt.ad.application.MybatisAdMaterialStore;
 import com.mkt.ad.application.MybatisAdPlacementStore;
 import com.mkt.ad.application.MybatisAdPositionStore;
@@ -42,6 +43,18 @@ import org.testcontainers.containers.MySQLContainer;
 
 final class AdITSupport implements AutoCloseable {
 
+    private static final CrowdPort NO_CROWD = new CrowdPort() {
+        @Override
+        public boolean memberOf(long crowdId, long userId) {
+            return false;
+        }
+
+        @Override
+        public boolean memberOfCode(String crowdCode, long userId) {
+            return false;
+        }
+    };
+
     final HikariDataSource dataSource;
     final JdbcTemplate jdbc;
     final TransactionTemplate tx;
@@ -76,7 +89,7 @@ final class AdITSupport implements AutoCloseable {
         settings = new AdSettings();
         admin = new AdAdminAppService(positions, materials, placements, cache);
         portal = new AdPortalAppService(
-                positions, materials, placements, cache, new AdFreqStore(kv), settings, clock);
+                positions, materials, placements, cache, new AdFreqStore(kv), settings, NO_CROWD, clock);
         DataSourceTransactionManager txm = new DataSourceTransactionManager(dataSource);
         tx = new TransactionTemplate(txm);
     }
