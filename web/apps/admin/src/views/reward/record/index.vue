@@ -14,6 +14,8 @@ import { BYPASS_RULES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "RewardRecordPage" });
 
@@ -29,22 +31,33 @@ const grantForm = reactive({
   bypass: [] as string[],
 });
 
+const beginLoad = useLatestRequest(() => [
+  filters.categoryCode,
+  filters.prizeId,
+  filters.from,
+  filters.to,
+]);
+
 async function loadSpend(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await fetchSpend({
-    categoryCode: filters.categoryCode,
-    prizeId: filters.prizeId ? Number(filters.prizeId) : undefined,
-    from: filters.from || undefined,
-    to: filters.to || undefined,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await fetchSpend({
+      categoryCode: filters.categoryCode,
+      prizeId: filters.prizeId ? Number(filters.prizeId) : undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    spendRows.value = parsed.data?.rows ?? [];
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  spendRows.value = parsed.data?.rows ?? [];
 }
 
 function toggleBypass(rule: string, checked: boolean): void {
