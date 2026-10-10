@@ -9,7 +9,7 @@
 | 项目是什么、怎么启动 | [根 README](../README.md)、[本机脚本](../scripts/README.md) | 项目介绍与操作入口 |
 | 当前有哪些功能 | [功能清单](current-features.md) | 入口盘点，不代表全部验收通过 |
 | 真实环境验证过什么 | [2026-10-07 报告](full-flow-verification-2026-10-07.md) | 当时的环境、结果、失败与覆盖边界 |
-| 后续重构的依据与候选批次 | [重构方案](refactoring-blueprint.md) | 历史诊断与计划，实施前核实问题是否仍存在 |
+| 后续重构的依据与候选批次 | [重构方案](refactoring-blueprint.md) | 历史诊断与计划（R0–R6）；已合 PR 常用 P1–P4 相位，二者对照见蓝图 §4 实况注记；实施前核实问题是否仍存在 |
 | 已确认或仍待定的行为 | [决策记录](decisions.md) | 保留明确决定；未决项不因旧规格删除而自动获批 |
 | 开发命令与工程边界 | [server](../server/README.md) / [web](../web/README.md)、[AGENTS](../AGENTS.md) | 构建、测试、契约生成和仓库约束 |
 | 界面与交互工作 | [DESIGN](../DESIGN.md) | 体验约束和视觉验收方式 |
