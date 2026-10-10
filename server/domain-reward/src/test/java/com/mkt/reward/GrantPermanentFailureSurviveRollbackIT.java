@@ -28,12 +28,20 @@ class GrantPermanentFailureSurviveRollbackIT {
     void permanentFailureRemainsAfterParentRollback() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-08-20T04:00:00Z"), ZoneOffset.UTC);
         try (RewardITSupport env = new RewardITSupport(MYSQL, clock)) {
+            long prizeId = env.enablePoints("dec004-perm", 10, 5);
             GrantRecordEntity draft = new GrantRecordEntity();
             draft.setUserId(9L);
-            draft.setPrizeId(1L);
+            draft.setPrizeId(prizeId);
+            draft.setPrizeCode("dec004-perm");
+            draft.setCategoryCode("POINTS");
             draft.setGrantSource("TASK_STEP");
             draft.setSourceId("dec004-perm-1");
             draft.setFailReason(FailReasons.SYSTEM_ERROR);
+            draft.setCostFen(0);
+            draft.setReconStatus(GrantRecordStatuses.RECON_NONE);
+            draft.setFulfillmentStatus(GrantRecordStatuses.FULFILL_NONE);
+            draft.setRetryCount(0);
+            draft.setSimulated(0);
             draft.setCreatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
 
             env.tx.execute(status -> {

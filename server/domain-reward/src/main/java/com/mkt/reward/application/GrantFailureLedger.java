@@ -91,15 +91,7 @@ public class GrantFailureLedger {
         }
         row.setFailReason(draft.getFailReason());
         row.setUpdatedAt(now);
-        if (row.getFulfillmentStatus() == null) {
-            row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_NONE);
-        }
-        if (row.getReconStatus() == null) {
-            row.setReconStatus(GrantRecordStatuses.RECON_NONE);
-        }
-        if (row.getCostFen() == null) {
-            row.setCostFen(0);
-        }
+        fillNotNullDefaults(row);
         if (row.getCreatedAt() == null) {
             row.setCreatedAt(now);
         }
@@ -141,8 +133,25 @@ public class GrantFailureLedger {
         row.setStatus(GrantRecordStatuses.PERMANENT_FAILED);
         row.setFailReason(draft.getFailReason());
         row.setUpdatedAt(now);
-        if (row.getRetryCount() == null) {
-            row.setRetryCount(0);
+        fillNotNullDefaults(row);
+        if (row.getCreatedAt() == null) {
+            row.setCreatedAt(now);
+        }
+        if (existing == null) {
+            grants.insert(row);
+        } else {
+            grants.update(row);
+        }
+        appendFailed(row);
+    }
+
+
+    private static void fillNotNullDefaults(GrantRecordEntity row) {
+        if (row.getPrizeCode() == null || row.getPrizeCode().isBlank()) {
+            row.setPrizeCode("missing");
+        }
+        if (row.getCategoryCode() == null || row.getCategoryCode().isBlank()) {
+            row.setCategoryCode("MISSING");
         }
         if (row.getFulfillmentStatus() == null) {
             row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_NONE);
@@ -153,15 +162,12 @@ public class GrantFailureLedger {
         if (row.getCostFen() == null) {
             row.setCostFen(0);
         }
-        if (row.getCreatedAt() == null) {
-            row.setCreatedAt(now);
+        if (row.getRetryCount() == null) {
+            row.setRetryCount(0);
         }
-        if (existing == null) {
-            grants.insert(row);
-        } else {
-            grants.update(row);
+        if (row.getSimulated() == null) {
+            row.setSimulated(0);
         }
-        appendFailed(row);
     }
 
     private void appendFailed(GrantRecordEntity row) {
