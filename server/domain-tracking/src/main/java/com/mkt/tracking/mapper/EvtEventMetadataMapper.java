@@ -2,6 +2,7 @@ package com.mkt.tracking.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.mkt.tracking.entity.EvtEventMetadataEntity;
+import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -13,6 +14,8 @@ public interface EvtEventMetadataMapper extends BaseMapper<EvtEventMetadataEntit
     @Select("SELECT id, event_code, name, prop_schema, status, owner, remark, created_at, updated_at"
             + " FROM evt_event_metadata WHERE event_code = #{eventCode}")
     EvtEventMetadataEntity selectByEventCode(@Param("eventCode") String eventCode);
+
+    List<EvtEventMetadataEntity> selectByEventCodes(@Param("codes") Collection<String> codes);
 
     long selectCountByQuery(@Param("eventCode") String eventCode, @Param("status") String status);
 

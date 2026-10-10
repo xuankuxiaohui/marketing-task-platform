@@ -13,6 +13,7 @@ import com.mkt.tracking.command.TrackIdentity;
 import com.mkt.tracking.domain.DisabledEventPolicy;
 import com.mkt.tracking.domain.MetadataStatus;
 import com.mkt.tracking.domain.UnregisteredPolicy;
+import com.mkt.tracking.entity.EvtEventMetadataEntity;
 import com.mkt.tracking.response.TrackBatchResponse;
 import com.mkt.tracking.support.TrackDropCounters;
 import com.mkt.tracking.support.TrackErrorCodes;
@@ -21,8 +22,10 @@ import com.mkt.tracking.testsupport.MemoryEventLogStore;
 import com.mkt.tracking.testsupport.MemoryEventMetadataStore;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -152,5 +155,110 @@ class TrackBatchServiceTest {
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo(TrackErrorCodes.BATCH_RATE_LIMITED);
         assertThat(logs.rows()).isEmpty();
+    }
+
+    @Test
+    void duplicateCodesResolveMetadataOncePerDistinctCode() {
+        CountingEventMetadataStore counting = new CountingEventMetadataStore(metadata);
+        TrackBatchService batch = new TrackBatchService(
+                logs,
+                counting,
+                new SlidingWindowRateLimiter(new MemoryKeyValueStore(), clock),
+                settings,
+                drops,
+                clock);
+
+        TrackBatchResponse result = batch.ingest(
+                new TrackBatchCommand(
+                        List.of(
+                                new TrackEventCommand("page.view", Map.of("n", 1), "t1"),
+                                new TrackEventCommand("page.view", Map.of("n", 2), "t2"),
+                                new TrackEventCommand("page.view", Map.of("n", 3), "t3"),
+                                new TrackEventCommand("task.card.exposure", Map.of("taskId", 1), "t4")),
+                        "WEB",
+                        "1.0.0"),
+                new TrackIdentity(11L, "dev-1", "203.0.113.9"));
+
+        assertThat(result.accepted()).isEqualTo(4);
+        assertThat(result.dropped()).isZero();
+        assertThat(counting.statusesOfCalls()).isEqualTo(1);
+        assertThat(counting.lastStatusesOfCodes()).containsExactlyInAnyOrder("page.view", "task.card.exposure");
+        assertThat(counting.statusOfCalls()).isZero();
+        assertThat(logs.rows()).hasSize(1);
+        assertThat(logs.rows().get(0).getBatchSize()).isEqualTo(4);
+        assertThat(logs.rows().get(0).getRegistered()).isEqualTo(1);
+    }
+
+    /** Test double that counts store lookups while delegating to a real memory store. */
+    private static final class CountingEventMetadataStore implements EventMetadataStore {
+
+        private final EventMetadataStore delegate;
+        private final AtomicInteger statusOfCalls = new AtomicInteger();
+        private final AtomicInteger statusesOfCalls = new AtomicInteger();
+        private Collection<String> lastStatusesOfCodes = List.of();
+
+        private CountingEventMetadataStore(EventMetadataStore delegate) {
+            this.delegate = delegate;
+        }
+
+        int statusOfCalls() {
+            return statusOfCalls.get();
+        }
+
+        int statusesOfCalls() {
+            return statusesOfCalls.get();
+        }
+
+        Collection<String> lastStatusesOfCodes() {
+            return lastStatusesOfCodes;
+        }
+
+        @Override
+        public MetadataStatus statusOf(String eventCode) {
+            statusOfCalls.incrementAndGet();
+            return delegate.statusOf(eventCode);
+        }
+
+        @Override
+        public Map<String, MetadataStatus> statusesOf(Collection<String> eventCodes) {
+            statusesOfCalls.incrementAndGet();
+            lastStatusesOfCodes = eventCodes == null ? List.of() : List.copyOf(eventCodes);
+            return delegate.statusesOf(eventCodes);
+        }
+
+        @Override
+        public EvtEventMetadataEntity getById(long id) {
+            return delegate.getById(id);
+        }
+
+        @Override
+        public EvtEventMetadataEntity getByEventCode(String eventCode) {
+            return delegate.getByEventCode(eventCode);
+        }
+
+        @Override
+        public int insert(EvtEventMetadataEntity entity) {
+            return delegate.insert(entity);
+        }
+
+        @Override
+        public int update(EvtEventMetadataEntity entity) {
+            return delegate.update(entity);
+        }
+
+        @Override
+        public int deleteById(long id) {
+            return delegate.deleteById(id);
+        }
+
+        @Override
+        public long countByQuery(String eventCode, String status) {
+            return delegate.countByQuery(eventCode, status);
+        }
+
+        @Override
+        public List<EvtEventMetadataEntity> listByQuery(String eventCode, String status, long offset, int limit) {
+            return delegate.listByQuery(eventCode, status, offset, limit);
+        }
     }
 }

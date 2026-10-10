@@ -18,6 +18,15 @@
         </where>
     </sql>
 
+    <select id="selectByEventCodes" resultType="com.mkt.tracking.entity.EvtEventMetadataEntity">
+        SELECT <include refid="cols"/>
+        FROM evt_event_metadata
+        WHERE event_code IN
+        <foreach collection="codes" item="code" open="(" separator="," close=")">
+            #{code}
+        </foreach>
+    </select>
+
     <select id="selectCountByQuery" resultType="long">
         SELECT COUNT(*)
         FROM evt_event_metadata
