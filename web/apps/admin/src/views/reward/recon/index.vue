@@ -20,6 +20,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { adminStatusLabel } from "@/utils/status-label";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "RewardReconPage" });
 
@@ -43,24 +45,35 @@ const actionItem = ref<ReconItemView | null>(null);
 const actionForm = reactive({ action: "ABSORB", reason: "", userId: "", prizeId: "" });
 const reviewForm = reactive({ decision: "CONFIRM", remark: "" });
 
+const beginLoad = useLatestRequest(() => [
+  page.value,
+  filters.categoryCode,
+  filters.billDate,
+  filters.status,
+]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pageReconBatches({
-    categoryCode: filters.categoryCode,
-    billDate: filters.billDate || undefined,
-    status: filters.status,
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pageReconBatches({
+      categoryCode: filters.categoryCode,
+      billDate: filters.billDate || undefined,
+      status: filters.status,
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    batches.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  batches.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 async function loadItems(row: ReconBatchResponse): Promise<void> {
