@@ -20,7 +20,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * REQUIRES_NEW leave-trace for retryable grant failures (design §5.6.2). Unique exception to RL-05.
+ * Leave-trace for grant failures (DEC-004 / design §5.6.2). Unique exception to RL-05.
+ * Retryable and permanent marks both use {@code REQUIRES_NEW} so a parent rollback cannot
+ * erase the ledger row (reconciliation wins over cascading undo).
  */
 @Service
 public class GrantFailureLedger {
@@ -89,15 +91,7 @@ public class GrantFailureLedger {
         }
         row.setFailReason(draft.getFailReason());
         row.setUpdatedAt(now);
-        if (row.getFulfillmentStatus() == null) {
-            row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_NONE);
-        }
-        if (row.getReconStatus() == null) {
-            row.setReconStatus(GrantRecordStatuses.RECON_NONE);
-        }
-        if (row.getCostFen() == null) {
-            row.setCostFen(0);
-        }
+        fillNotNullDefaults(row);
         if (row.getCreatedAt() == null) {
             row.setCreatedAt(now);
         }
@@ -119,6 +113,7 @@ public class GrantFailureLedger {
         return row;
     }
 
+    /** Permanent failure must survive parent rollback (DEC-004). */
     public void markPermanent(GrantRecordEntity draft) {
         if (requiresNew != null && TransactionSynchronizationManager.isActualTransactionActive()) {
             requiresNew.execute(status -> {
@@ -138,8 +133,25 @@ public class GrantFailureLedger {
         row.setStatus(GrantRecordStatuses.PERMANENT_FAILED);
         row.setFailReason(draft.getFailReason());
         row.setUpdatedAt(now);
-        if (row.getRetryCount() == null) {
-            row.setRetryCount(0);
+        fillNotNullDefaults(row);
+        if (row.getCreatedAt() == null) {
+            row.setCreatedAt(now);
+        }
+        if (existing == null) {
+            grants.insert(row);
+        } else {
+            grants.update(row);
+        }
+        appendFailed(row);
+    }
+
+
+    private static void fillNotNullDefaults(GrantRecordEntity row) {
+        if (row.getPrizeCode() == null || row.getPrizeCode().isBlank()) {
+            row.setPrizeCode("missing");
+        }
+        if (row.getCategoryCode() == null || row.getCategoryCode().isBlank()) {
+            row.setCategoryCode("MISSING");
         }
         if (row.getFulfillmentStatus() == null) {
             row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_NONE);
@@ -150,15 +162,12 @@ public class GrantFailureLedger {
         if (row.getCostFen() == null) {
             row.setCostFen(0);
         }
-        if (row.getCreatedAt() == null) {
-            row.setCreatedAt(now);
+        if (row.getRetryCount() == null) {
+            row.setRetryCount(0);
         }
-        if (existing == null) {
-            grants.insert(row);
-        } else {
-            grants.update(row);
+        if (row.getSimulated() == null) {
+            row.setSimulated(0);
         }
-        appendFailed(row);
     }
 
     private void appendFailed(GrantRecordEntity row) {

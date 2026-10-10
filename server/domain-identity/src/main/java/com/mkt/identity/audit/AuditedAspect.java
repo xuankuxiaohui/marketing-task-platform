@@ -16,8 +16,12 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
- * Around {@link Audited}: one Outbox {@code audit.log} per write (design §6.5). Skips if a
- * service appender already marked {@link AuditOnce}.
+ * Around {@link Audited}: one Outbox {@code audit.log} per write (design §6.5 / DEC-004).
+ * Skips if a service appender already marked {@link AuditOnce}. When no outer transaction is
+ * active (typical after a service {@code @Transactional} commit), SUCCESS/FAILURE appends open a
+ * short transaction. A business rollback must not leave a SUCCESS row: service-level SUCCESS
+ * appends join the rolling-back transaction, and this aspect only records SUCCESS after
+ * {@code proceed} returns.
  */
 @Aspect
 public class AuditedAspect {

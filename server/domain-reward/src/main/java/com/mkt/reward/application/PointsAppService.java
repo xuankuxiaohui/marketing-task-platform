@@ -135,6 +135,10 @@ public class PointsAppService {
         return account == null || account.getBalance() == null ? 0L : account.getBalance();
     }
 
+    /**
+     * Scheduler path: one REQUIRES_NEW transaction per earn row (DEC-004).
+     * Not the earn/grant path — does not change grant atomicity.
+     */
     public int expireDue() {
         LocalDateTime now = RewardTime.toUtc(clock.instant());
         int total = 0;
