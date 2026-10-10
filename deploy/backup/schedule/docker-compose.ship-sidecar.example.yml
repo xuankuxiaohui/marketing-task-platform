@@ -1,0 +1,49 @@
+# Example sidecar that periodically runs ship-binlog.sh against an *isolated* stack.
+# NOT wired into deploy/docker-compose.yml by default — copy and adjust.
+#
+# Prefer host cron ([cron.example](cron.example)): this sidecar needs docker CLI
+# + compose plugin + bash on the image, and docker.sock access to exec mysql.
+#
+# Usage (example from repo root):
+#   ISOLATED=YES ENV_FILE=deploy/.env.isolated \
+#     docker compose -f deploy/docker-compose.yml \
+#     -f deploy/backup/schedule/docker-compose.ship-sidecar.example.yml \
+#     --env-file deploy/.env.isolated up -d binlog-ship
+#
+# WARNING: defaults never target shared DBs. Requires ISOLATED=YES.
+
+services:
+  binlog-ship:
+    # Illustrative only — replace with an image that has bash, sha256sum, and
+    # `docker compose` matching the host engine, or run ship-binlog via host cron.
+    image: docker:27-cli
+    environment:
+      ENV_FILE: /work/deploy/.env.isolated
+      BINLOG_ARCHIVE_DIR: /archive
+      BINLOG_RETENTION_DAYS: "7"
+      BINLOG_RETENTION_COUNT: "128"
+      SHIP_INTERVAL_SEC: "300"
+      ISOLATED: ${ISOLATED:-}
+    volumes:
+      # repo root (this file lives in deploy/backup/schedule/)
+      - ../../..:/work:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - mkt-binlog-archive:/archive
+    working_dir: /work
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        echo "binlog-ship sidecar; interval=$${SHIP_INTERVAL_SEC:-300}s archive=$$BINLOG_ARCHIVE_DIR"
+        if [ "$${ISOLATED:-}" != "YES" ]; then
+          echo "set ISOLATED=YES after confirming ENV_FILE targets an isolated MySQL" >&2
+          exit 2
+        fi
+        while true; do
+          /work/deploy/backup/ship-binlog.sh || echo "ship-binlog failed at $$(date -u +%Y-%m-%dT%H:%M:%SZ)" >&2
+          sleep "$${SHIP_INTERVAL_SEC:-300}"
+        done
+    restart: unless-stopped
+
+volumes:
+  mkt-binlog-archive:

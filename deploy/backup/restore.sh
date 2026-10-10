@@ -5,6 +5,11 @@
 # Usage:
 #   RESTORE_I_ACCEPT_DATA_LOSS=YES STOP_DATETIME='2026-08-20 12:00:00' \
 #     ./restore.sh deploy/backups/<stamp>
+#   BINLOG_ARCHIVE_DIR=deploy/binlog-archive RESTORE_I_ACCEPT_DATA_LOSS=YES \
+#     ./restore.sh deploy/backups/<stamp>
+#
+# Continuous shipping: see ship-binlog.sh + README.md. Full dump still provides
+# BINLOG_START; rotated binlogs come from the archive (preferred) and/or backup dir.
 #
 # Safety: refuses to run unless RESTORE_I_ACCEPT_DATA_LOSS=YES (isolated target only).
 # Does not invent a start point: coordinates come from mysqldump --master-data=2
@@ -67,7 +72,31 @@ parse_binlog_start() {
 
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$ROOT/deploy/docker-compose.yml")
 
-mapfile -t ALL_BINS < <(ls "$SRC"/mysql-bin.* "$SRC"/binlog.* 2>/dev/null | sort || true)
+# Binlog sources: backup dir companion copies, plus optional continuous archive
+# (BINLOG_ARCHIVE_DIR from ship-binlog.sh). Archive wins on name collision
+# (rotated files there are size/sha verified; backup companion may be a snapshot).
+BINLOG_ARCHIVE_DIR="${BINLOG_ARCHIVE_DIR:-}"
+declare -A BIN_BY_NAME=()
+shopt -s nullglob
+for b in "$SRC"/mysql-bin.* "$SRC"/binlog.*; do
+  [ -f "$b" ] || continue
+  case "$(basename "$b")" in *.index|*.sha256|*.partial.*) continue ;; esac
+  BIN_BY_NAME["$(basename "$b")"]="$b"
+done
+if [ -n "$BINLOG_ARCHIVE_DIR" ]; then
+  for b in "$BINLOG_ARCHIVE_DIR"/mysql-bin.* "$BINLOG_ARCHIVE_DIR"/binlog.*; do
+    [ -f "$b" ] || continue
+    case "$(basename "$b")" in *.index|*.sha256|*.partial.*) continue ;; esac
+    BIN_BY_NAME["$(basename "$b")"]="$b"
+  done
+  echo "using BINLOG_ARCHIVE_DIR=$BINLOG_ARCHIVE_DIR"
+fi
+ALL_BINS=()
+if [ "${#BIN_BY_NAME[@]}" -gt 0 ]; then
+  while IFS= read -r name; do
+    ALL_BINS+=("${BIN_BY_NAME[$name]}")
+  done < <(printf '%s\n' "${!BIN_BY_NAME[@]}" | sort)
+fi
 HAVE_BINS=0
 if [ "${#ALL_BINS[@]}" -gt 0 ] && [ -n "${ALL_BINS[0]:-}" ]; then
   HAVE_BINS=1

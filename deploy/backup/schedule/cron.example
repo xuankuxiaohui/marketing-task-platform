@@ -1,0 +1,12 @@
+# Example crontab for F16 continuous binlog shipping + daily full backup.
+# Copy lines you need after replacing paths and ENV_FILE.
+# DEFAULT: points at placeholders — do NOT enable against shared/team DBs.
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# Continuous ship every 5 minutes (rotated binlogs only).
+*/5 * * * *  cd /opt/marketing-task-platform && ENV_FILE=deploy/.env.isolated BINLOG_ARCHIVE_DIR=/var/backups/mkt/binlog-archive BINLOG_RETENTION_DAYS=7 BINLOG_RETENTION_COUNT=128 ./deploy/backup/ship-binlog.sh >>/var/log/mkt-ship-binlog.log 2>&1
+
+# Daily full dump (companion binlog copy only; shipping stays separate).
+15 2 * * *  cd /opt/marketing-task-platform && ENV_FILE=deploy/.env.isolated BACKUP_DIR=/var/backups/mkt/full ./deploy/backup/backup.sh >>/var/log/mkt-backup.log 2>&1
