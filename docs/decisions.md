@@ -16,7 +16,7 @@
 
 ## DEC-002：Outbox 消费容量（已关闭）
 
-**状态**：已关闭（2026-10-10）。架构推荐默认已写入；实现见后续 F08 PR。容量数字门禁仍属 [DEC-006](#dec-006性能目标及证据口径)，本决定只钉机制与起步参数。
+**状态**：已关闭（2026-10-10）。架构推荐默认已写入；**F08 已落地**（合入 **#120**，对照 tip `15af760`）：持锁多批、单次持锁预算约 2s、空队列退出、调度 `fixedDelay` 5s、无 MQ。容量数字门禁仍属 [DEC-006](#dec-006性能目标及证据口径)，本决定只钉机制与起步参数。
 
 **依据**：历史 design-architecture §6.4 写每 5 秒取最多 100 条；关闭前 [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每 tick 只处理一批，[InfraAutoConfiguration](../server/platform-infra/src/main/java/com/mkt/infra/InfraAutoConfiguration.java) 使用 5000 ms fixedDelay。旧性能条款的推进/回调 300 QPS 只保留为背景；业务成功仍需可靠投递事件。
 
@@ -34,7 +34,7 @@
 | 多节点 | 继续按 producer 隔离 + 分布式锁；公平性依赖短持锁与让出，不另加集群协调器 |
 | 重试 / 停机 | 沿用现有 backoff / DEAD；停机后未删行由下一 tick 继续 claim |
 
-**关闭条件（机制可观测，数字门禁另属 DEC-006）**：稳态积压、最老事件延迟、重投与恢复排空可测量；F08 实现与回归覆盖多批 / 预算让出 / 空队列。不先添加 MQ，不擅自更改事件全集。
+**关闭条件（机制可观测，数字门禁另属 DEC-006）**：稳态积压、最老事件延迟、重投与恢复排空可测量；F08（#120）实现与回归已覆盖多批 / 预算让出 / 空队列。不先添加 MQ，不擅自更改事件全集。
 
 ## DEC-003：跨域只读契约与人群能力
 

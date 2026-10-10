@@ -1,6 +1,6 @@
 # 当前功能清单
 
-盘点日期：2026-10-10。对照 tip `967d6943c70b798fe1593032240af2d751ecf0a9`（Merge #118）。依据当前工作区的 Controller、应用服务、前端路由与页面。**这是当前实现清单，不表示全部需求已经完成，也不表示每项已通过真实环境验收。** 历史旅程核验以 [2026-10-07 报告](full-flow-verification-2026-10-07.md) 为准；本盘点纠偏 CrowdPort（#102）、DEC-004（#111）、F03（#105）等已合事实，测试数量不替代当轮执行结果。
+盘点日期：2026-10-10。对照 tip `15af760fbd742a89598ae1312b743d8b92dcd3ce`（Merge #120；含 #119）。依据当前工作区的 Controller、应用服务、前端路由与页面。**这是当前实现清单，不表示全部需求已经完成，也不表示每项已通过真实环境验收。** 历史旅程核验以 [2026-10-07 报告](full-flow-verification-2026-10-07.md) 为准；本盘点纠偏 CrowdPort（#102）、DEC-004（#111）、F03（#105）、F08（#120）等已合事实，测试数量不替代当轮执行结果。
 
 标记口径：**已存在**表示有对应实现入口；**部分实现**表示已发现明确缺口；**基础实现**表示已有运行代码或脚本，仍需部署、故障、容量或恢复验证。未列出的需求不能据此视为已实现。
 
@@ -56,7 +56,7 @@
 | internal 接口 | 任务回调、任务进度上报、奖励履约回调；HMAC、时间戳、nonce、防重放与限流 | 已存在；[任务接口](../server/domain-task/src/main/java/com/mkt/task/controller/internal/TaskInternalController.java)、[奖励接口](../server/domain-reward/src/main/java/com/mkt/reward/controller/internal/RewardInternalController.java)、[签名验证](../server/domain-identity/src/main/java/com/mkt/identity/application/InternalHmacVerifier.java)。`/internal/**` 仅内网 |
 | 应用与数据 | 管理/门户双应用；MySQL、集中 Flyway 迁移；门户装配 task + reward，步骤与发奖同事务 | 基础实现；空库迁移、升级、装配及真实回滚需实测；[后端入口](../server/README.md) |
 | Redis 与缓存 | DB 2 会话、锁、限流、风控计数与广告频控；L1/L2 缓存、失效消息、故障降级 | 基础实现；[infra](../server/platform-infra/src/main/java/com/mkt/infra/)。F03（#105）已合 merge-load + stale-fill 防护；跨节点失效与故障降级的演练证据仍待 |
-| 事务事件 | 业务同事务 Outbox、投递、重试退避、幂等消费者、服务端事件记录 | 基础实现；[OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java)。[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭（持锁多批/2s 预算/无 MQ）；**F08 实现待后续 PR**；容量数字门禁仍属 DEC-006 |
+| 事务事件 | 业务同事务 Outbox、投递、重试退避、幂等消费者、服务端事件记录 | 基础实现；[OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java)。[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭；**F08 已落地 #120**（持锁多批/2s 预算/fixedDelay 5s/无 MQ）；容量数字门禁仍属 DEC-006 |
 | 后台调度 | 任务/签到/活动定时发布、任务到期、发奖重试恢复、领取超时、奖品过期、履约重试/超时、积分过期、审计/进度/埋点清理与统计聚合 | 基础实现；一次旅程成功不证明所有时间边界、故障和多节点调度通过 |
 | 运维入口 | 健康探针、Prometheus 接口与告警配置；Docker Compose、开发启动脚本、备份/恢复脚本 | 基础实现；[部署目录](../deploy/)、[开发脚本](../scripts/README.md)。网关静态/TLS **模板**已接线（F16）；告警触发、真实 dist/TLS 浏览器验证与隔离恢复演练仍需独立取证 |
 | 工程验证 | 单元/属性/架构测试、真实 MySQL/Redis IT、前端组件和浏览器测试、OpenAPI 类型生成、性能脚本 | 验证入口已存在；[验证映射](verification-matrix.md)、[性能说明](../perf/README.md)。执行范围和结果按当轮报告；后端→OpenAPI JSON→TS 导出门禁已由 F12 链补齐（见 PR 栈 #100） |
