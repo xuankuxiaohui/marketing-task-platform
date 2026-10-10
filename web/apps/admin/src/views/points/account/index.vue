@@ -8,6 +8,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "PointsAccountPage" });
 
@@ -22,22 +24,28 @@ const formOpen = ref(false);
 const saving = ref(false);
 const form = reactive({ userId: "", amount: "", reason: "" });
 
+const beginLoad = useLatestRequest(() => [page.value, userId.value]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pagePointsAccounts({
-    userId: userId.value ? Number(userId.value) : undefined,
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pagePointsAccounts({
+      userId: userId.value ? Number(userId.value) : undefined,
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 function openAdjust(row?: PointsAccountView): void {

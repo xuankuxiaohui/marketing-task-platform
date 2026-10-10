@@ -8,6 +8,8 @@ import { hasAuth } from "@/directives/auth";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "RiskRulePage" });
 
@@ -26,17 +28,23 @@ const form = reactive({
   action: "REJECT" as (typeof ACTIONS)[number],
 });
 
+const beginLoad = useLatestRequest(() => null);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await listRules();
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data ?? [];
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await listRules();
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data ?? [];
+  });
 }
 
 function openEdit(row: RiskRuleResponse): void {

@@ -17,6 +17,8 @@ import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "SimulateTaskPage" });
 
@@ -66,10 +68,31 @@ async function run<T>(
   lastResult.value = describe(parsed.data);
 }
 
+const beginListLoad = useLatestRequest(() => [form.userId, form.category]);
+
 async function loadList(): Promise<void> {
-  await run(async () => okOrFeedback(await simulateList({ userId: userId(), category: form.category || undefined, page: 1, pageSize: ADMIN_PAGE_SIZE })), (data) => {
-    records.value = data.records ?? [];
-    return `${zhCN.simulate.list}: ${data.total ?? 0}`;
+  const isCurrent = beginListLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await simulateList({
+      userId: userId(),
+      category: form.category || undefined,
+      page: 1,
+      pageSize: ADMIN_PAGE_SIZE,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    if (parsed.data == null) {
+      return;
+    }
+    records.value = parsed.data.records ?? [];
+    lastResult.value = `${zhCN.simulate.list}: ${parsed.data.total ?? 0}`;
   });
 }
 

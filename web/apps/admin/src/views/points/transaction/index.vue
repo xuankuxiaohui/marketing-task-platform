@@ -7,6 +7,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "PointsTransactionPage" });
 
@@ -18,25 +20,31 @@ const loading = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ userId: "", type: "", from: "", to: "" });
 
+const beginLoad = useLatestRequest(() => [page.value, filters.userId, filters.type, filters.from, filters.to]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pagePointsTransactions({
-    userId: filters.userId ? Number(filters.userId) : undefined,
-    type: filters.type,
-    from: filters.from || undefined,
-    to: filters.to || undefined,
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pagePointsTransactions({
+      userId: filters.userId ? Number(filters.userId) : undefined,
+      type: filters.type,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 

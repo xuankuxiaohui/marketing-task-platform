@@ -16,6 +16,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import MetricsChart from "./MetricsChart.vue";
 import { adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "MetricsDashboardPage" });
 
@@ -50,41 +52,52 @@ function query() {
   };
 }
 
+const beginLoad = useLatestRequest(() => [
+  filters.grain,
+  filters.dimKey,
+  filters.from,
+  filters.to,
+]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const params = query();
-  const [funnelResult, spendResult, riskResult, adResult] = await Promise.all([
-    fetchFunnel(params),
-    fetchSpendMetrics(params),
-    fetchRiskMetrics(params),
-    fetchAdMetrics(params),
-  ]);
-  loading.value = false;
-  const funnelParsed = okOrFeedback(funnelResult);
-  const spendParsed = okOrFeedback(spendResult);
-  const riskParsed = okOrFeedback(riskResult);
-  const adParsed = okOrFeedback(adResult);
-  if (!funnelParsed.ok) {
-    feedback.value = funnelParsed.feedback;
-    return;
-  }
-  if (!spendParsed.ok) {
-    feedback.value = spendParsed.feedback;
-    return;
-  }
-  if (!riskParsed.ok) {
-    feedback.value = riskParsed.feedback;
-    return;
-  }
-  if (!adParsed.ok) {
-    feedback.value = adParsed.feedback;
-    return;
-  }
-  funnel.value = funnelParsed.data?.records ?? [];
-  spend.value = spendParsed.data?.records ?? [];
-  risk.value = riskParsed.data?.records ?? [];
-  ads.value = adParsed.data?.records ?? [];
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const params = query();
+    const [funnelResult, spendResult, riskResult, adResult] = await Promise.all([
+      fetchFunnel(params),
+      fetchSpendMetrics(params),
+      fetchRiskMetrics(params),
+      fetchAdMetrics(params),
+    ]);
+    if (!isCurrent()) {
+      return;
+    }
+    const funnelParsed = okOrFeedback(funnelResult);
+    const spendParsed = okOrFeedback(spendResult);
+    const riskParsed = okOrFeedback(riskResult);
+    const adParsed = okOrFeedback(adResult);
+    if (!funnelParsed.ok) {
+      feedback.value = funnelParsed.feedback;
+      return;
+    }
+    if (!spendParsed.ok) {
+      feedback.value = spendParsed.feedback;
+      return;
+    }
+    if (!riskParsed.ok) {
+      feedback.value = riskParsed.feedback;
+      return;
+    }
+    if (!adParsed.ok) {
+      feedback.value = adParsed.feedback;
+      return;
+    }
+    funnel.value = funnelParsed.data?.records ?? [];
+    spend.value = spendParsed.data?.records ?? [];
+    risk.value = riskParsed.data?.records ?? [];
+    ads.value = adParsed.data?.records ?? [];
+  });
 }
 
 function funnelOption(): Record<string, unknown> {

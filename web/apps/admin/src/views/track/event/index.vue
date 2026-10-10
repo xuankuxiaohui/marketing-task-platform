@@ -8,6 +8,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "TrackEventPage" });
 
@@ -26,27 +28,33 @@ const filters = reactive({
   to: "",
 });
 
+const beginLoad = useLatestRequest(() => [page.value, filters.eventCode, filters.userId, filters.source, filters.deviceId, filters.from, filters.to]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await debugEvents({
-    eventCode: filters.eventCode,
-    userId: filters.userId ? Number(filters.userId) : undefined,
-    source: filters.source,
-    deviceId: filters.deviceId,
-    from: toIsoInstant(filters.from),
-    to: toIsoInstant(filters.to),
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await debugEvents({
+      eventCode: filters.eventCode,
+      userId: filters.userId ? Number(filters.userId) : undefined,
+      source: filters.source,
+      deviceId: filters.deviceId,
+      from: toIsoInstant(filters.from),
+      to: toIsoInstant(filters.to),
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 function eventsText(row: TrackDebugEventResponse): string {
