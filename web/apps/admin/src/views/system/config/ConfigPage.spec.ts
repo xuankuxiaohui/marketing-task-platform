@@ -87,8 +87,9 @@ describe("ConfigManagePage", () => {
   });
 
   it("ignores stale list results when a newer load wins", async () => {
-    let resolveFirst!: (value: ReturnType<typeof ok>) => void;
-    const first = new Promise<ReturnType<typeof ok>>((resolve) => {
+    type PageConfigsResult = Awaited<ReturnType<typeof pageConfigs>>;
+    let resolveFirst!: (value: PageConfigsResult) => void;
+    const first = new Promise<PageConfigsResult>((resolve) => {
       resolveFirst = resolve;
     });
     pageConfigsMock
