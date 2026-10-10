@@ -4,6 +4,8 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { isFail, isOk } from "@mkt/shared";
 import { changePassword } from "@/api/auth";
+import { runWithLoading } from "@/composables/runWithLoading";
+import { useLatestRequest } from "@/composables/useLatestRequest";
 import { zhCN } from "@/locales/zh-CN";
 import { DASHBOARD_ROUTE } from "@/router/dynamic";
 import { ensureDynamicRoutes } from "@/router/session";
@@ -18,26 +20,32 @@ const newPassword = ref("");
 const errorMessage = ref("");
 const loading = ref(false);
 
+const beginSubmit = useLatestRequest(() => null);
+
 async function submit(): Promise<void> {
   errorMessage.value = "";
-  loading.value = true;
-  try {
+  const isCurrent = beginSubmit();
+  await runWithLoading(loading, isCurrent, async () => {
     const result = await changePassword({
       oldPassword: oldPassword.value,
       newPassword: newPassword.value,
     });
+    if (!isCurrent()) {
+      return;
+    }
     if (isOk(result)) {
       useSessionStore().setMustChangePassword(false);
       await ensureDynamicRoutes(router);
+      if (!isCurrent()) {
+        return;
+      }
       await router.replace(DASHBOARD_ROUTE);
       return;
     }
     if (isFail(result)) {
       errorMessage.value = result.message;
     }
-  } finally {
-    loading.value = false;
-  }
+  });
 }
 </script>
 
