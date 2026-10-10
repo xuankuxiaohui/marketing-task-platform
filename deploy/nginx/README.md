@@ -11,7 +11,7 @@
 | Certs dir | [certs/](certs/) | Place `fullchain.pem` + `privkey.pem` (not committed) |
 | Placeholders | [html-placeholders/](html-placeholders/) | Minimal index HTML so compose can start before a real frontend build |
 
-Hosts: `portal.local` (default `_`) serves the client SPA at `/` and `/api/`; `admin.local` serves the admin SPA at `/console/` and `/admin/`. Point real DNS / `/etc/hosts` at the published nginx port.
+Hosts: `portal.local` (default `_`) serves the client SPA at `/`, proxies `/api/` and also `/admin/` (so Host-less CI / same-origin `127.0.0.1` still reach admin APIs); `admin.local` serves the admin SPA at `/console/` and `/admin/`. Point real DNS / `/etc/hosts` at the published nginx port.
 
 ## Static assets
 
