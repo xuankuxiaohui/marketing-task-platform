@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
@@ -86,5 +86,84 @@ describe("TaskDefinitionEditPage canvas", () => {
     const body = saveMock.mock.calls[0]?.[0];
     expect(body?.steps?.map((step) => step.code)).toEqual(["go", "reward", "done"]);
     expect(body?.transitions?.[0]?.fromStepCode).toBe("go");
+  });
+});
+
+
+describe("TaskDefinitionEditPage request lifecycle", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  beforeEach(() => {
+    getMock.mockReset();
+    mutexMock.mockReset();
+    saveMock.mockReset();
+    mutexMock.mockResolvedValue(ok({ total: 0, records: [] }));
+  });
+
+  it("ignores stale load results when a newer route id wins", async () => {
+    type GetDefinitionResult = Awaited<ReturnType<typeof getDefinition>>;
+    let resolveFirst!: (value: GetDefinitionResult) => void;
+    const first = new Promise<GetDefinitionResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    getMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok({
+          id: 9,
+          code: "newer",
+          name: "新任务",
+          cycleType: "NONE",
+          status: "DRAFT",
+          version: 0,
+          pendingRevision: false,
+          steps: [{ code: "n1", name: "新", seq: 1, type: "CLICK" }],
+          transitions: [],
+        }),
+      );
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().$patch({ userId: 1, permissions: Object.values(PERMS) });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/task/definitions/edit/:id?", component: TaskDefinitionEditPage }],
+    });
+    await router.push("/task/definitions/edit/8");
+    await router.isReady();
+    const wrapper = mount(TaskDefinitionEditPage, {
+      global: {
+        plugins: [pinia, router],
+        directives: { auth },
+        stubs: { TaskCanvasPanel: { template: "<div data-testid=\"task-canvas-stub\" />" } },
+      },
+      attachTo: document.body,
+    });
+
+    // First mount load is in flight; navigate to a newer id before it resolves.
+    await router.push("/task/definitions/edit/9");
+    await flushPromises();
+
+    resolveFirst(
+      ok({
+        id: 8,
+        code: "stale",
+        name: "旧任务",
+        cycleType: "NONE",
+        status: "DRAFT",
+        version: 0,
+        pendingRevision: false,
+        steps: [{ code: "s1", name: "旧", seq: 1, type: "CLICK" }],
+        transitions: [],
+      }),
+    );
+    await flushPromises();
+
+    const codeInput = wrapper.get('[data-testid="task-code"]').element as HTMLInputElement;
+    expect(codeInput.value).toBe("newer");
+    expect(wrapper.get('[data-testid="task-canvas-steps"]').text()).toContain("n1");
+    expect(wrapper.get('[data-testid="task-canvas-steps"]').text()).not.toContain("s1");
   });
 });
