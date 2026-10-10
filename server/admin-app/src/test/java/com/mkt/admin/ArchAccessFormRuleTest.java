@@ -34,7 +34,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class ArchAccessFormRuleTest {
 
     private static final String ILLEGAL = "..fixture.accessforms.illegal..";
-    private static final String TARGET = "..fixture.accessforms.target..";
+    private static final String TARGET = "..fixture.accessforms.forbidden..";
     private static final String LEGAL = "..fixture.accessforms.legal..";
 
     private static JavaClasses ACCESS_FORM_CLASSES;
@@ -48,7 +48,7 @@ class ArchAccessFormRuleTest {
                 .importClasses(
                         com.mkt.admin.arch.fixture.accessforms.illegal.DependsViaOutsideBridge.class,
                         com.mkt.admin.arch.fixture.accessforms.outside.ShadyBridge.class,
-                        com.mkt.admin.arch.fixture.accessforms.target.ForbiddenType.class);
+                        com.mkt.admin.arch.fixture.accessforms.forbidden.ForbiddenType.class);
     }
 
     static Stream<String> illegalSimpleNames() {

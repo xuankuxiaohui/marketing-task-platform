@@ -1,6 +1,6 @@
 package com.mkt.admin.arch.fixture.accessforms.illegal;
 
-import com.mkt.admin.arch.fixture.accessforms.target.ForbiddenType;
+import com.mkt.admin.arch.fixture.accessforms.forbidden.ForbiddenType;
 import java.util.List;
 
 /** Deliberate violation via generic field type argument. */

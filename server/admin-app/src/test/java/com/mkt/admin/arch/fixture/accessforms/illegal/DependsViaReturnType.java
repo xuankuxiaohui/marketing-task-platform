@@ -1,6 +1,6 @@
 package com.mkt.admin.arch.fixture.accessforms.illegal;
 
-import com.mkt.admin.arch.fixture.accessforms.target.ForbiddenType;
+import com.mkt.admin.arch.fixture.accessforms.forbidden.ForbiddenType;
 
 /** Deliberate violation via declared return type (no body access). */
 public final class DependsViaReturnType {

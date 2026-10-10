@@ -1,6 +1,6 @@
 package com.mkt.admin.arch.fixture.accessforms.outside;
 
-import com.mkt.admin.arch.fixture.accessforms.target.ForbiddenType;
+import com.mkt.admin.arch.fixture.accessforms.forbidden.ForbiddenType;
 
 /**
  * Non-layer package depending on an App-shaped target. Used to demonstrate
