@@ -1,6 +1,7 @@
 package com.mkt.task.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.mkt.task.application.TaskCycleKey;
 import com.mkt.task.entity.TaskInstanceEntity;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +15,9 @@ public interface TaskInstanceMapper extends BaseMapper<TaskInstanceEntity> {
 
     TaskInstanceEntity selectByUserTaskCycle(
             @Param("userId") long userId, @Param("taskId") long taskId, @Param("cycleKey") String cycleKey);
+
+    List<TaskInstanceEntity> selectByUserTaskCycles(
+            @Param("userId") long userId, @Param("keys") List<TaskCycleKey> keys);
 
     List<TaskInstanceEntity> selectByUser(@Param("userId") long userId);
 

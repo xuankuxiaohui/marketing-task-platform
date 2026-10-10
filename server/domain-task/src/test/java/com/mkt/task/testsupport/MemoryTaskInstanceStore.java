@@ -1,6 +1,7 @@
 package com.mkt.task.testsupport;
 
 import com.mkt.kernel.json.JsonUtil;
+import com.mkt.task.application.TaskCycleKey;
 import com.mkt.task.application.TaskInstanceStore;
 import com.mkt.task.application.TaskVersionSnapshotStore;
 import com.mkt.task.convert.SnapshotContent;
@@ -62,6 +63,21 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
     public TaskInstanceEntity getByUserTaskCycle(long userId, long taskId, String cycleKey) {
         Long id = unique.get(uniqueKey(userId, taskId, cycleKey));
         return id == null ? null : rows.get(id);
+    }
+
+    @Override
+    public List<TaskInstanceEntity> listByUserTaskCycles(long userId, List<TaskCycleKey> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return List.of();
+        }
+        List<TaskInstanceEntity> out = new ArrayList<>();
+        for (TaskCycleKey key : keys) {
+            TaskInstanceEntity row = getByUserTaskCycle(userId, key.taskId(), key.cycleKey());
+            if (row != null) {
+                out.add(row);
+            }
+        }
+        return out;
     }
 
     @Override

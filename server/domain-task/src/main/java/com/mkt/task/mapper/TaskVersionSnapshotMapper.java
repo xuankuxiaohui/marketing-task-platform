@@ -1,5 +1,6 @@
 package com.mkt.task.mapper;
 
+import com.mkt.task.application.TaskVersionKey;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -18,4 +19,6 @@ public interface TaskVersionSnapshotMapper {
     TaskVersionSnapshotEntity selectByTaskAndVersion(@Param("taskId") long taskId, @Param("version") int version);
 
     List<TaskVersionSnapshotEntity> selectByTaskId(@Param("taskId") long taskId);
+
+    List<TaskVersionSnapshotEntity> selectByTaskAndVersions(@Param("keys") List<TaskVersionKey> keys);
 }

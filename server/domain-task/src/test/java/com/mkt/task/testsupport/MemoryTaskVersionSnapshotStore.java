@@ -1,5 +1,6 @@
 package com.mkt.task.testsupport;
 
+import com.mkt.task.application.TaskVersionKey;
 import com.mkt.task.application.TaskVersionSnapshotStore;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import java.util.Comparator;
@@ -46,6 +47,17 @@ public final class MemoryTaskVersionSnapshotStore implements TaskVersionSnapshot
                 .filter(row -> row.getTaskId() == taskId && row.getVersion() == version)
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Override
+    public List<TaskVersionSnapshotEntity> listByTaskAndVersions(List<TaskVersionKey> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return List.of();
+        }
+        return keys.stream()
+                .map(key -> getByTaskAndVersion(key.taskId(), key.version()))
+                .filter(row -> row != null)
+                .toList();
     }
 
     @Override
