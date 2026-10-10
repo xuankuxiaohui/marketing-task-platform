@@ -148,6 +148,53 @@ class AdPortalAppServiceTest {
                 .isEqualTo(AdErrorCodes.POSITION_NOT_FOUND);
     }
 
+
+    @Test
+    void loggedInCrowdFilterUsesMemberOfAnonymousSkipsCrowd() {
+        java.util.concurrent.atomic.AtomicInteger memberCalls = new java.util.concurrent.atomic.AtomicInteger();
+        CrowdPort selective = new CrowdPort() {
+            @Override
+            public boolean memberOf(long crowdId, long userId) {
+                memberCalls.incrementAndGet();
+                return crowdId == 7L && userId == 9L;
+            }
+
+            @Override
+            public boolean memberOfCode(String crowdCode, long userId) {
+                return false;
+            }
+        };
+        portal = new AdPortalAppService(
+                stores.positions,
+                stores.materials,
+                stores.placements,
+                new TwoLevelPlatformCache(kv),
+                new AdFreqStore(kv),
+                settings,
+                selective,
+                clock);
+        long positionId = position("home_crowd", AdForms.IMAGE);
+        long materialId = material("crowd-mat", 5);
+        admin.bind(
+                positionId,
+                new AdPlacementSaveCommand(
+                        materialId,
+                        5,
+                        Instant.parse("2026-08-01T00:00:00Z"),
+                        Instant.parse("2026-08-31T00:00:00Z"),
+                        List.of(),
+                        "NONE",
+                        null,
+                        7L,
+                        "ENABLED"));
+        assertThat(portal.pull("home_crowd", 9L, null, "WEB").materials()).hasSize(1);
+        assertThat(portal.pull("home_crowd", 8L, null, "WEB").materials()).isEmpty();
+        int afterLogin = memberCalls.get();
+        assertThat(afterLogin).isGreaterThan(0);
+        assertThat(portal.pull("home_crowd", null, "dev-anon", "WEB").materials()).hasSize(1);
+        assertThat(memberCalls.get()).isEqualTo(afterLogin);
+    }
+
     private long position(String code, String form) {
         return admin.savePosition(new AdPositionSaveCommand(null, code, code, form, List.of("WEB"), "ENABLED"))
                 .id();

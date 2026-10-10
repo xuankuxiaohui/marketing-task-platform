@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.mkt.contract.AccountStatus;
 import com.mkt.contract.UserAttributes;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
@@ -48,16 +49,19 @@ class ParticipationRulesTest {
     }
 
     @Test
-    void crowdOnlyAllowlistPassesWhenMember() {
+    void crowdOnlyAllowlistPassesWhenMemberOfAny() {
         UserAttributes fresh = attrs("110000", Instant.parse("2026-08-18T00:00:00Z"));
-        Predicate<String> vip = code -> "vip".equals(code);
+        Predicate<Collection<String>> vipAny = codes -> codes != null && codes.contains("vip");
         assertThat(ParticipationRules.firstReject(
-                        List.of(), List.of("vip"), false, 7, null, null, null, 0, 0, 0, List.of(), 9L, fresh, NOW, vip))
+                        List.of(), List.of("vip", "gold"), false, 7, null, null, null, 0, 0, 0, List.of(), 9L, fresh, NOW, vipAny))
                 .isNull();
+        assertThat(ParticipationRules.firstReject(
+                        List.of(), List.of("gold"), false, 7, null, null, null, 0, 0, 0, List.of(), 9L, fresh, NOW, vipAny))
+                .isEqualTo(HitRules.ALLOWLIST);
     }
 
-    private static Predicate<String> none() {
-        return code -> false;
+    private static Predicate<Collection<String>> none() {
+        return codes -> false;
     }
 
     private static UserAttributes attrs(String province, Instant registeredAt) {

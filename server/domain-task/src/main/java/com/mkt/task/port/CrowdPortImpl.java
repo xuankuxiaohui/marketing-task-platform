@@ -10,7 +10,7 @@ import com.mkt.task.entity.TaskCrowdEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** DEC-003 CrowdPort backed by task_crowd tables. */
+/** DEC-003 CrowdPort backed by task_crowd tables (combo via interface defaults). */
 public class CrowdPortImpl implements CrowdPort {
 
     private static final Logger log = LoggerFactory.getLogger(CrowdPortImpl.class);
