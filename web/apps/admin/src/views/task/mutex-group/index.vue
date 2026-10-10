@@ -15,6 +15,8 @@ import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "TaskMutexGroupPage" });
 
@@ -30,18 +32,24 @@ const editing = ref<MutexGroupResponse | null>(null);
 const form = reactive({ code: "", name: "", crossCycle: false });
 const confirm = ref<{ message: string; run: () => Promise<void> } | null>(null);
 
+const beginLoad = useLatestRequest(() => [page.value]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pageMutexGroups({ page: page.value, pageSize });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pageMutexGroups({ page: page.value, pageSize });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
+  });
 }
 
 function openCreate(): void {
