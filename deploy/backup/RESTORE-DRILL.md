@@ -50,3 +50,7 @@
 |---|---|---|---|---|---|---|
 | 15af760 + backup.sh stdin/index fix (this drill PR) | bot box throwaway Docker MySQL `mkt_platform_f16_drill` (down -v after) | 20261010T125738Z / `mysql-bin.000005:157` | 2026-10-10 12:57:54 UTC | A present, B absent, ledger=150 (**PITR_OK**); fixture PASSED; refuse gate exit 2 | ~5s restore; loss window = events after T | Grok Bot / 2026-10-10 CST; evidence: [drills/2026-10-10-f16-isolated-restore.md](drills/2026-10-10-f16-isolated-restore.md) |
 | 84fc506 + ship-binlog.sh (this PR) | bot box throwaway Docker MySQL `mkt_platform_f16_ship` (down -v after) | 20261010T151223Z / `mysql-bin.000007:157` | 2026-10-10 15:12:43 UTC | A present, B absent, ledger=150 (**PITR_OK** via `BINLOG_ARCHIVE_DIR`); idempotent ship; fail-loud size mismatch; retention count=3; fixture PASSED; refuse exit 2 | ~15s wall for A/B/ship/restore | Grok Bot / 2026-10-10 CST; evidence: [drills/2026-10-10-f16-continuous-binlog-ship.md](drills/2026-10-10-f16-continuous-binlog-ship.md) |
+
+## Related F16 evidence (TLS / static)
+
+Backup/PITR drills do not cover the gateway. TLS enable-path + static Host verification (self-signed, isolated nginx) lives under [../nginx/drills/2026-10-11-f16-tls-static-browser.md](../nginx/drills/2026-10-11-f16-tls-static-browser.md).
