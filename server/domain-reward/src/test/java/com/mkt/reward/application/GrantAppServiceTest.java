@@ -53,6 +53,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import org.springframework.beans.factory.ObjectProvider;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.ArrayList;
+import java.time.LocalDateTime;
+import com.mkt.reward.response.GrantRetryResponse;
+import com.mkt.kernel.CommonErrorCodes;
 
 class GrantAppServiceTest {
 
@@ -314,6 +322,275 @@ class GrantAppServiceTest {
                 .isInstanceOf(RetryableGrantException.class);
         assertThat(outbox.claimBatch("portal", NOW, 10))
                 .anyMatch(r -> EventCodes.REWARD_GRANT_FAILED.equals(r.eventCode()));
+    }
+
+    @Test
+    void retryNotFound() {
+        assertThatThrownBy(() -> grant.retry(999L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.NOT_FOUND);
+    }
+
+    @Test
+    void retryPendingSucceedsAndResumes() {
+        AtomicReference<String> resumed = new AtomicReference<>();
+        GrantStepResumer resumer = (source, sourceId) -> resumed.set(source.name() + ":" + sourceId);
+        EventPublisher events = new EventPublisher(outbox, OutboxProducer.PORTAL);
+        RewardGrantSettings settings = new RewardGrantSettings();
+        GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, null);
+        FulfillmentService fulfillment = new FulfillmentService(points, grants, events, clock);
+        grant = new GrantAppService(
+                prizes, categories, grants, logs, users, risk, events, ledger, fulfillment, resumer, clock);
+
+        long prizeId = enableAlipay("red_retry_ok", 1);
+        prizes.getById(prizeId).setRemainingStock(0);
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-rok", GrantContext.defaults()))
+                .isInstanceOf(RetryableGrantException.class);
+        GrantRecordEntity pending = grants.getByIdempotent("TASK_STEP", "s-rok", prizeId);
+        prizes.getById(prizeId).setRemainingStock(1);
+
+        GrantRetryResponse response = grant.retry(pending.getId());
+        assertThat(response.status()).isEqualTo(GrantStatus.GRANTED.name());
+        assertThat(resumed.get()).isEqualTo("TASK_STEP:s-rok");
+    }
+
+    @Test
+    void retryPermanentFailedWhenPrizeDisabled() {
+        long prizeId = enableAlipay("red_retry_perm", 1);
+        prizes.getById(prizeId).setRemainingStock(0);
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-rp2", GrantContext.defaults()))
+                .isInstanceOf(RetryableGrantException.class);
+        GrantRecordEntity pending = grants.getByIdempotent("TASK_STEP", "s-rp2", prizeId);
+        prizes.getById(prizeId).setStatus(com.mkt.reward.domain.PrizeStatuses.DISABLED);
+
+        GrantRetryResponse response = grant.retry(pending.getId());
+        assertThat(response.status()).isEqualTo(GrantRecordStatuses.PERMANENT_FAILED);
+    }
+
+    @Test
+    void retryDueAndListDueRetry() {
+        long prizeId = enableAlipay("red_due", 2);
+        prizes.getById(prizeId).setRemainingStock(0);
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-due", GrantContext.defaults()))
+                .isInstanceOf(RetryableGrantException.class);
+        GrantRecordEntity pending = grants.getByIdempotent("TASK_STEP", "s-due", prizeId);
+        pending.setNextRetryAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC).minusSeconds(1));
+        prizes.getById(prizeId).setRemainingStock(2);
+
+        assertThat(grant.listDueRetry()).extracting(GrantRecordEntity::getId).contains(pending.getId());
+        int ran = grant.retryDue();
+        assertThat(ran).isEqualTo(1);
+        assertThat(grants.getById(pending.getId()).getStatus()).isEqualTo(GrantRecordStatuses.GRANTED);
+    }
+
+    @Test
+    void retryDueCountsFailures() {
+        long prizeId = enableAlipay("red_due_fail", 1);
+        prizes.getById(prizeId).setRemainingStock(0);
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-df", GrantContext.defaults()))
+                .isInstanceOf(RetryableGrantException.class);
+        GrantRecordEntity pending = grants.getByIdempotent("TASK_STEP", "s-df", prizeId);
+        pending.setNextRetryAt(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC).minusSeconds(1));
+        // stock still 0 → grant path throws; retryDue still increments
+        assertThat(grant.retryDue()).isEqualTo(1);
+    }
+
+    @Test
+    void reconManualGrantSuccessAndValidation() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        assertThatThrownBy(() -> grant.reconManualGrant(9L, 1L, " ", "src"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.PARAM_INVALID);
+
+        long prizeId = enableAlipay("red_recon", 2);
+        var response = grant.reconManualGrant(9L, prizeId, "对账补发", "recon-1");
+        assertThat(response.status()).isEqualTo(GrantStatus.GRANTED.name());
+    }
+
+    @Test
+    void manualGrantMapsPermanentAndParamErrors() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        assertThatThrownBy(() -> grant.manualGrant(new ManualGrantCommand(null, 1L, "补发", List.of())))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.PARAM_INVALID);
+        assertThatThrownBy(() -> grant.manualGrant(new ManualGrantCommand(9L, 1L, "  ", List.of())))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.PARAM_INVALID);
+
+        long prizeId = enableAlipay("red_mg_dis", 1);
+        prizes.getById(prizeId).setStatus(com.mkt.reward.domain.PrizeStatuses.DISABLED);
+        assertThatThrownBy(() -> grant.manualGrant(new ManualGrantCommand(9L, prizeId, "补发", List.of())))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(RewardErrorCodes.PRIZE_DISABLED);
+    }
+
+    @Test
+    void grantRejectsBlankSourceId() {
+        assertThatThrownBy(() -> grant.grant(1L, 9L, GrantSource.TASK_STEP, " ", GrantContext.defaults()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.PARAM_INVALID);
+    }
+
+    @Test
+    void manualGrantMapsDeletedPrizeAndInvalidUser() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        long deletedId = enableAlipay("red_del", 1);
+        prizes.getById(deletedId).setDeleted(1);
+        assertThatThrownBy(() -> grant.manualGrant(new ManualGrantCommand(9L, deletedId, "补发", List.of())))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.NOT_FOUND);
+
+        long prizeId = enableAlipay("red_inv_user", 1);
+        users.status = AccountStatus.DISABLED;
+        assertThatThrownBy(() -> grant.manualGrant(new ManualGrantCommand(9L, prizeId, "补发", List.of())))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(RewardErrorCodes.GRANT_COMBO_INVALID);
+        users.status = AccountStatus.ACTIVE;
+    }
+
+    @Test
+    void manualGrantIgnoresUnknownBypassTokens() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        long prizeId = enableAlipay("red_bypass", 1);
+        var response = grant.manualGrant(
+                new ManualGrantCommand(9L, prizeId, "补发", java.util.Arrays.asList(null, "NOPE", "REGION")));
+        assertThat(response.status()).isEqualTo(GrantStatus.GRANTED.name());
+    }
+
+    @Test
+    void reconManualGrantMapsPermanentFailures() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        long prizeId = enableAlipay("red_recon_dis", 1);
+        prizes.getById(prizeId).setStatus(com.mkt.reward.domain.PrizeStatuses.DISABLED);
+        assertThatThrownBy(() -> grant.reconManualGrant(9L, prizeId, "对账", "recon-dis"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(RewardErrorCodes.PRIZE_DISABLED);
+    }
+
+    @Test
+    void dailyClaimLimitExceeded() {
+        long prizeId = enableAlipayLimited("red_daily", 5, 1, 0, null, null, null);
+        grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-daily-1", GrantContext.defaults());
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-daily-2", GrantContext.defaults()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(RewardErrorCodes.CLAIM_LIMIT_EXCEEDED);
+        assertThat(prizes.getById(prizeId).getRemainingStock()).isEqualTo(4);
+    }
+
+    @Test
+    void totalClaimLimitExceeded() {
+        long prizeId = enableAlipayLimited("red_total", 5, 0, 1, null, null, null);
+        grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-total-1", GrantContext.defaults());
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-total-2", GrantContext.defaults()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(RewardErrorCodes.CLAIM_LIMIT_EXCEEDED);
+        assertThat(prizes.getById(prizeId).getRemainingStock()).isEqualTo(4);
+    }
+
+    @Test
+    void manualGrantRiskBlockedUsesAccountCode() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        risk.reject = true;
+        long prizeId = enableAlipay("red_mg_risk", 2);
+        assertThatThrownBy(() -> grant.manualGrant(new ManualGrantCommand(9L, prizeId, "补发", List.of())))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(RewardErrorCodes.RISK_BLOCKED_ACCOUNT);
+        assertThat(grants.all()).isEmpty();
+        assertThat(prizes.getById(prizeId).getRemainingStock()).isEqualTo(2);
+    }
+
+
+
+    @Test
+    void grantWorksWhenRiskAndEventsMissing() {
+        RewardGrantSettings settings = new RewardGrantSettings();
+        GrantFailureLedger ledger =
+                new GrantFailureLedger(grants, (EventPublisher) null, clock, settings, null);
+        FulfillmentService fulfillment = new FulfillmentService(points, grants, null, clock);
+        grant = new GrantAppService(
+                prizes, categories, grants, logs, users, null, null, ledger, fulfillment, null, clock);
+
+        long prizeId = enablePoints("pts_null_deps", 2, 5);
+        GrantResult result = grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-null", GrantContext.defaults());
+        assertThat(result.status()).isEqualTo(GrantStatus.GRANTED);
+        assertThat(result.fulfillmentStatus()).isEqualTo(FulfillmentStatus.ARRIVED);
+    }
+
+    @Test
+    void reconManualGrantMapsRetryableStockViaSystemPath() {
+        UserContext.set(new UserPrincipal(7L, "admin", "op"));
+        long prizeId = enableAlipay("red_recon_stk", 1);
+        prizes.getById(prizeId).setRemainingStock(0);
+        // MANUAL stock insufficient is BusinessException (not Retryable); cover mapRetryable via
+        // recon when a SYSTEM_ERROR Retryable is raised after a fulfillment failure.
+        EventPublisher events = new EventPublisher(outbox, OutboxProducer.PORTAL);
+        RewardGrantSettings settings = new RewardGrantSettings();
+        GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, null);
+        FulfillmentService boom =
+                new FulfillmentService(points, grants, events, clock) {
+                    @Override
+                    public void start(
+                            GrantRecordEntity record,
+                            com.mkt.reward.entity.PrizeEntity prize,
+                            com.mkt.reward.entity.PrizeCategoryEntity category) {
+                        throw new IllegalStateException("boom");
+                    }
+                };
+        grant = new GrantAppService(
+                prizes, categories, grants, logs, users, risk, events, ledger, boom, null, clock);
+        prizes.getById(prizeId).setRemainingStock(1);
+        assertThatThrownBy(() -> grant.reconManualGrant(9L, prizeId, "对账", "recon-boom"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).errorCode())
+                .isEqualTo(CommonErrorCodes.SERVER_ERROR);
+    }
+
+    @Test
+    void springObjectProviderConstructorWiresOptionalDeps() {
+        EventPublisher events = new EventPublisher(outbox, OutboxProducer.PORTAL);
+        RewardGrantSettings settings = new RewardGrantSettings();
+        GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, null);
+        FulfillmentService fulfillment = new FulfillmentService(points, grants, events, clock);
+        AtomicReference<String> resumed = new AtomicReference<>();
+        GrantStepResumer resumer = (source, sourceId) -> resumed.set(sourceId);
+
+        @SuppressWarnings("unchecked")
+        ObjectProvider<UserAttributePort> usersOp = mock(ObjectProvider.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<RiskCheckPort> riskOp = mock(ObjectProvider.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<EventPublisher> eventsOp = mock(ObjectProvider.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<GrantStepResumer> resumerOp = mock(ObjectProvider.class);
+        when(usersOp.getIfAvailable()).thenReturn(users);
+        when(riskOp.getIfAvailable()).thenReturn(risk);
+        when(eventsOp.getIfAvailable()).thenReturn(events);
+        when(resumerOp.getIfAvailable()).thenReturn(resumer);
+
+        grant = new GrantAppService(
+                prizes, categories, grants, logs, usersOp, riskOp, eventsOp, ledger, fulfillment, resumerOp, clock);
+
+        long prizeId = enableAlipay("red_op", 1);
+        prizes.getById(prizeId).setRemainingStock(0);
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-op", GrantContext.defaults()))
+                .isInstanceOf(RetryableGrantException.class);
+        GrantRecordEntity pending = grants.getByIdempotent("TASK_STEP", "s-op", prizeId);
+        prizes.getById(prizeId).setRemainingStock(1);
+        GrantRetryResponse response = grant.retry(pending.getId());
+        assertThat(response.status()).isEqualTo(GrantStatus.GRANTED.name());
+        assertThat(resumed.get()).isEqualTo("s-op");
     }
 
     private long enableAlipay(String code, int stockQty) {

@@ -30,7 +30,7 @@
 | F10 | [我的列表页面](../web/apps/client/src/views/mine/) 原实现把 Vant `v-model:loading` 与请求入口的 loading 拦截混用，缺少请求代次隔离 | 已在 R5-01 通过统一分页、错误恢复和会话隔离修复；组件与浏览器回归入口见验证映射，历史结果不代替本次执行 |
 | F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | 失败后加载状态可能不恢复。先统一请求生命周期，再按页面迁移；不以文件长短单独判定质量 |
 | F12 | 原仅 [check-openapi-types.sh](../ci/check-openapi-types.sh)（JSON→TS） | 已由 [check-openapi-backend.sh](../ci/check-openapi-backend.sh) 补全非 prod 后端 live 导出 → 已提交 JSON → TS；prod springdoc 保持关闭（#99） |
-| F13 | [server/pom.xml](../server/pom.xml) 的关键覆盖率范围包含 `com.mkt.reward.grant`，主体 `GrantAppService` 却在 `reward.application`；架构规则只覆盖部分访问形式 | 覆盖率百分比不等于关键链路覆盖；核对实际包范围和架构检查盲区 |
+| F13 | [server/pom.xml](../server/pom.xml) 关键覆盖率曾指向不存在的 `com.mkt.reward.grant` / `com.mkt.risk.engine`；现以 CLASS 门禁覆盖 `GrantAppService`、`RuleDecisionEngine`、`ListDecisionEngine`，PACKAGE 仍覆盖 kernel / task.engine / task.expression / reward.points；架构规则只覆盖部分访问形式 | 覆盖率百分比不等于关键链路覆盖；关键包/类范围已与实现对齐，架构检查盲区仍待逐项核对 |
 | F14 | [perf](../perf/README.md) 中 callback 复用有限单步实例，业务 checks / 接收吞吐 / dropped iterations 门槛不足 | callback 场景逐渐主要覆盖完成后的重复回调路径，仍可能写库，但不代表新的业务推进；不泛化到 progress。先修数据生命周期与断言 |
 | F15 | [TrackDropCounters](../server/domain-tracking/src/main/java/com/mkt/tracking/support/TrackDropCounters.java) 只有进程计数/日志，告警配置与业务指标注册未闭环 | 逐项证明指标实际暴露、单位与标签一致、告警可触发；不能把配置文件存在当作监控完成 |
 | F16 | [恢复说明](../deploy/backup/RESTORE-DRILL.md) 对应脚本未使用备份 binlog 起点；部署模板缺完整静态资源/TLS接线；[本地脚本](../scripts/README.md) 停止进程按端口处理 | 分别补恢复正确性、完整部署及本地进程归属验证。先在隔离环境取证，不在本轮执行恢复或停进程 |

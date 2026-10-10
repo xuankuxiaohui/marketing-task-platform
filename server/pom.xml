@@ -249,9 +249,23 @@
                                     <include>com.mkt.kernel</include>
                                     <include>com.mkt.task.engine</include>
                                     <include>com.mkt.task.expression</include>
-                                    <include>com.mkt.reward.grant</include>
                                     <include>com.mkt.reward.points</include>
-                                    <include>com.mkt.risk.engine</include>
+                                </includes>
+                                <limits>
+                                    <limit>
+                                        <counter>LINE</counter>
+                                        <value>COVEREDRATIO</value>
+                                        <minimum>${jacoco.line.critical.minimum}</minimum>
+                                    </limit>
+                                </limits>
+                            </rule>
+                            <!-- F13: dead packages reward.grant / risk.engine removed; gate real critical classes -->
+                            <rule>
+                                <element>CLASS</element>
+                                <includes>
+                                    <include>com.mkt.reward.application.GrantAppService</include>
+                                    <include>com.mkt.risk.domain.RuleDecisionEngine</include>
+                                    <include>com.mkt.risk.domain.ListDecisionEngine</include>
                                 </includes>
                                 <limits>
                                     <limit>
