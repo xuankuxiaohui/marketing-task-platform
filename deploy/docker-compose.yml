@@ -165,8 +165,19 @@ services:
     image: nginx:1.27-alpine
     ports:
       - "127.0.0.1:${NGINX_HTTP_PORT:-18080}:80"
+      - "127.0.0.1:${NGINX_HTTPS_PORT:-18443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/redirect-https.inc:/etc/nginx/redirect-https.inc:ro
+      - ./nginx/tls-servers.inc:/etc/nginx/tls-servers.inc:ro
+      - ./nginx/tls.conf.example:/etc/nginx/tls.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      # Placeholders so the gateway starts before a frontend build; for release swap to:
+      #   ../web/apps/client/dist → /usr/share/nginx/html/client
+      #   ../web/apps/admin/dist  → /usr/share/nginx/html/admin/console  (build with VITE_BASE=/console/)
+      # See nginx/README.md.
+      - ./nginx/html-placeholders/client:/usr/share/nginx/html/client:ro
+      - ./nginx/html-placeholders/admin:/usr/share/nginx/html/admin:ro
     depends_on:
       admin-app:
         condition: service_healthy

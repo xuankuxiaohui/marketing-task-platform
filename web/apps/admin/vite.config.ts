@@ -5,7 +5,10 @@ import { defineConfig, loadEnv } from "vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const proxyTarget = process.env.ADMIN_PROXY_TARGET || env.ADMIN_PROXY_TARGET || "http://127.0.0.1:8080";
+  // Gateway mounts admin under /console/ (see deploy/nginx/README.md). Local dev keeps "/".
+  const base = process.env.VITE_BASE || env.VITE_BASE || "/";
   return {
+    base,
     plugins: [vue()],
     resolve: {
       alias: {

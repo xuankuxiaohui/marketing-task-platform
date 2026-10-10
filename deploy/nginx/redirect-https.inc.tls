@@ -1,0 +1,4 @@
+# Drop-in HTTP→HTTPS redirect (NFR 安全 1). Copy over redirect-https.inc after TLS is live.
+if ($scheme = http) {
+    return 301 https://$host$request_uri;
+}

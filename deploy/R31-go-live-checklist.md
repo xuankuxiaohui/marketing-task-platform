@@ -7,10 +7,10 @@
 | 范围 | 仓库事实 | 尚需证明 |
 |---|---|---|
 | 测试拓扑 | [docker-compose.yml](docker-compose.yml) 声明 admin ×1、portal ×2、MySQL、Redis、Nginx、Prometheus | 成功启动、运行资源、服务就绪和真实业务链路 |
-| 网关与静态资源 | [nginx.conf](nginx/nginx.conf) 为 HTTP API 反代；Compose 没有挂载两端前端构建产物 | 正式域名、HTTPS、两端静态资源部署、路由及缓存策略 |
-| TLS | [tls.conf.example](nginx/tls.conf.example) 是示例，当前网关没有 include 它 | 证书、TLS 1.2+、跳转及安全 Cookie 的真实浏览器验证 |
+| 网关与静态资源 | [nginx.conf](nginx/nginx.conf) 已声明 portal/admin 静态根、SPA `try_files`、资产缓存；Compose 挂载 placeholders（发布时换 `web/*/dist`，见 [nginx/README.md](nginx/README.md)） | 正式域名、真实 dist 挂载、浏览器路由与缓存策略验证 |
+| TLS | 模板已接线：`tls.conf.example` → `tls.conf`、`tls-servers.inc.example`、`redirect-https.inc.tls`、certs 卷与 `NGINX_HTTPS_PORT`（默认 stub 为空，HTTP-only 可启动） | 证书就位后启用 include，并做 TLS 1.2+、跳转及安全 Cookie 的真实浏览器验证 |
 | 监控 | [alerts.yml](prometheus/alerts.yml) 已定义告警表达式 | 指标实际注册、名称/标签/单位匹配，告警可触发并恢复 |
-| 备份恢复 | 存在备份/恢复脚本 | 修正恢复起点等缺口后，完成[隔离演练](backup/RESTORE-DRILL.md) |
+| 备份恢复 | [backup.sh](backup/backup.sh) / [restore.sh](backup/restore.sh) 已按备份 binlog 起点对齐，并要求显式确认隔离目标 | 在隔离环境完成[演练](backup/RESTORE-DRILL.md)并填写结果表 |
 | 容量 | 存在 k6 与容量种子 | 先修正[测量缺口](../perf/README.md)，再形成可复现容量报告 |
 
 ## 安全与配置
