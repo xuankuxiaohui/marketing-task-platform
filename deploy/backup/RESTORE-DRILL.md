@@ -1,6 +1,6 @@
 # 备份恢复演练
 
-依据 R31.3，最终需要全量备份、连续 binlog 归档和指定时间点恢复。项目未上线；**脚本正确性已按静态审阅对齐，本轮未对共享库执行备份或恢复**。真实隔离演练仍须按下列步骤取证后才能勾选上线清单。
+依据 R31.3，最终需要全量备份、连续 binlog 归档和指定时间点恢复。项目未上线；**脚本正确性已按静态审阅对齐，本轮未对共享库执行备份或恢复**。真实隔离演练须按下列步骤取证后才能勾选上线清单；**2026-10-10 已在 bot box 对 throwaway Docker MySQL 完成一次隔离取证**（见 [drills/2026-10-10-f16-isolated-restore.md](drills/2026-10-10-f16-isolated-restore.md)）。共享/团队库仍禁止。
 
 ## 脚本行为（F16 对齐后）
 
@@ -22,14 +22,14 @@
 
 全量备份若晚于 T，之后再设置 binlog 停止时间不能撤销全量里已有的数据。原流程“在目标时间之后再备份并恢复到目标时间”不再作为演练方法。
 
-## 本轮静态取证（未执行恢复）
+## 静态取证（脚本行为；另见隔离演练表）
 
 | 检查 | 结果 |
 |---|---|
 | `restore.sh` 是否读取 `BINLOG_START` / dump 内 CHANGE MASTER\|SOURCE | 是 |
 | 无起点时是否拒绝重放 | 是（exit 1） |
 | 无 `RESTORE_I_ACCEPT_DATA_LOSS=YES` 时是否拒绝执行 | 是（exit 2） |
-| 是否对本仓库共享/开发库执行 restore/backup | **否** |
+| 是否对本仓库共享/开发库执行 restore/backup | **否**（仅 throwaway Docker MySQL） |
 
 解析自检（fixture，不连库）见同目录 [parse-binlog-start_test.sh](parse-binlog-start_test.sh)。
 
@@ -39,4 +39,4 @@
 
 | 提交 | 环境 / 隔离目标 | 全量时间与坐标 | 目标 T | 校验与业务结果 | 恢复耗时 / 数据窗口 | 执行人 / 日期 |
 |---|---|---|---|---|---|---|
-| 待执行 | | | | | | |
+| 15af760 + backup.sh stdin/index fix (this drill PR) | bot box throwaway Docker MySQL `mkt_platform_f16_drill` (down -v after) | 20261010T125738Z / `mysql-bin.000005:157` | 2026-10-10 12:57:54 UTC | A present, B absent, ledger=150 (**PITR_OK**); fixture PASSED; refuse gate exit 2 | ~5s restore; loss window = events after T | Grok Bot / 2026-10-10 CST; evidence: [drills/2026-10-10-f16-isolated-restore.md](drills/2026-10-10-f16-isolated-restore.md) |
