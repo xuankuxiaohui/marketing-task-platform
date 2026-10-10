@@ -41,7 +41,8 @@
 - 前端只在 `web/node_modules` 不存在时自动安装依赖；修改依赖后应自行执行 `pnpm install --frozen-lockfile`。
 - 当前 `start -Target frontend` 也会检查本地配置、中间件和 JDK；仅需运行前端时可使用 [web/README.md](../web/README.md) 的命令。
 - 日志和 PID 位于 `.run/`，`logs -Follow` 只能指定单个目标。
-- **停止归属（F16）**：`stop` / `restart` 优先终止 `.run/<name>.pid` 保存的进程树；若端口仍被占用，仅当能验证该监听进程归属本项目时才清理——判定顺序为 (1) 与保存 PID 相同 (2) 保存 PID 的子进程树 (3) 命令行匹配本项目 jar（`admin-app-*.jar` / `portal-app-*-exec.jar`）或对应 Vite/pnpm filter。无法验证归属时**跳过端口强杀**并告警；确认是误占且可丢弃时显式加 `-Force`。本轮未在共享环境执行 stop。
+- **停止归属（F16，Windows host-owned）**：`stop` / `restart` 优先终止 `.run/<name>.pid` 保存的进程树（短暂等待后再查端口）；若端口仍被占用，仅当能验证该监听进程归属本项目时才清理——判定顺序为 (1) 与保存 PID 相同 (2) 保存 PID 的祖先进程树（深度上限 32）(3) 命令行同时**包含本仓库根路径**且匹配本项目 jar（`admin-app-*.jar` / `portal-app-*-exec.jar`）或 `pnpm --filter <name>` + vite/pnpm。无法验证归属时**跳过端口强杀**并告警；确认是误占且可丢弃时显式加 `-Force`。
+- **取证**：脚本仅能在 Windows 主机执行。Bot Linux box **不能**跑 PowerShell 运行时证据 → 见静态核对清单与 N/A 说明 [drills/2026-10-11-f16-dev-ps1-stop-ownership.md](drills/2026-10-11-f16-dev-ps1-stop-ownership.md)；复跑 `bash scripts/drills/static-review-dev-ps1-stop.sh`。勿把 Linux 静态结果写成 Windows 运行时通过。
 
 调试命令：
 

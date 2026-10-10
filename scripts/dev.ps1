@@ -95,6 +95,7 @@ function Show-Help {
   .\scripts\dev.ps1 restart -Target backend
   .\scripts\dev.ps1 start -Target backend -DebugJvm
   .\scripts\dev.ps1 stop
+  .\scripts\dev.ps1 stop -Force
   .\scripts\dev.ps1 logs -Target admin -Follow
 
 入口: 管理端 http://127.0.0.1:5173   C 端 http://127.0.0.1:5174
@@ -126,6 +127,15 @@ function Get-ListeningPid([int]$Port) {
 }
 
 
+function Test-PathBoundToRepo([string]$CommandLine) {
+    if (-not $CommandLine) { return $false }
+    # Normalize so D:\repo and D:/repo both match the saved Root.
+    $normCmd = ($CommandLine -replace '/', '\').ToLowerInvariant()
+    $normRoot = ($Root -replace '/', '\').TrimEnd('\').ToLowerInvariant()
+    if ($normCmd.Contains($normRoot)) { return $true }
+    return $false
+}
+
 function Test-OwnedByProject([string]$Name, [int]$ProcessId) {
     if ($ProcessId -le 0) { return $false }
     $saved = Read-SavedPid $Name
@@ -134,7 +144,9 @@ function Test-OwnedByProject([string]$Name, [int]$ProcessId) {
     if ($saved) {
         try {
             $cur = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
-            while ($null -ne $cur) {
+            $depth = 0
+            while ($null -ne $cur -and $depth -lt 32) {
+                $depth++
                 if ([int]$cur.ProcessId -eq $saved) { return $true }
                 if (-not $cur.ParentProcessId -or [int]$cur.ParentProcessId -le 0) { break }
                 if ([int]$cur.ParentProcessId -eq $saved) { return $true }
@@ -143,16 +155,20 @@ function Test-OwnedByProject([string]$Name, [int]$ProcessId) {
         } catch { }
     }
     # Command-line fingerprint for our jars / vite filters when pid file is stale.
+    # Requires the process command line to reference this repo root (path-bound).
     try {
         $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
         $cmd = [string]$proc.CommandLine
         if (-not $cmd) { return $false }
+        if (-not (Test-PathBoundToRepo $cmd)) { return $false }
         $svc = $Services[$Name]
         if ($svc.Kind -eq 'java') {
             if ($Name -eq 'admin' -and $cmd -match 'admin-app-.*\.jar') { return $true }
             if ($Name -eq 'portal' -and $cmd -match 'portal-app-.*-exec\.jar') { return $true }
         } elseif ($svc.Kind -eq 'node') {
-            if ($cmd -match [regex]::Escape($svc.Filter) -and $cmd -match 'vite|pnpm') { return $true }
+            # Prefer explicit --filter <name>; still require vite|pnpm + repo path.
+            $filterToken = '--filter\s+' + [regex]::Escape($svc.Filter) + '(\s|$)'
+            if ($cmd -match $filterToken -and $cmd -match 'vite|pnpm') { return $true }
         }
     } catch { }
     return $false
@@ -382,6 +398,8 @@ function Stop-Service([string]$Name) {
     if ($saved) {
         Stop-PidTree $saved
         $killed = $true
+        # Let the tree release LISTENING before ownership/port decisions.
+        Start-Sleep -Milliseconds 400
     }
     $portPid = Get-ListeningPid $svc.Port
     if ($portPid) {
@@ -395,7 +413,7 @@ function Stop-Service([string]$Name) {
             Stop-PidTree $portPid
             $killed = $true
         } else {
-            Write-WarnMsg "$Name 端口 $($svc.Port) 被 PID $portPid 占用，且未能验证归属本项目（.run pid / 进程树 / 命令行）。跳过端口强杀；确认后可加 -Force"
+            Write-WarnMsg "$Name 端口 $($svc.Port) 被 PID $portPid 占用，且未能验证归属本项目（.run pid / 进程树 / 命令行+仓库路径）。跳过端口强杀；确认后可加 -Force"
         }
     }
     $pidPath = Get-PidPath $Name
