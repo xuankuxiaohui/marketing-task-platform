@@ -1,7 +1,7 @@
 import { message } from "ant-design-vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
@@ -108,5 +108,83 @@ describe("ActivityManagePage", () => {
     await flushPromises();
     expect(wrapper.find(".ant-picker").exists()).toBe(true);
     expect(wrapper.find('input[type="datetime-local"]').exists()).toBe(false);
+  });
+});
+
+
+describe("ActivityManagePage list request lifecycle", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  beforeEach(() => {
+    pageMock.mockReset();
+  });
+
+  it("ignores stale list results when a newer load wins", async () => {
+    type PageActivitiesResult = Awaited<ReturnType<typeof pageActivities>>;
+    let resolveFirst!: (value: PageActivitiesResult) => void;
+    const first = new Promise<PageActivitiesResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    pageMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok({
+          total: 1,
+          records: [
+            {
+              id: 9,
+              code: "newer",
+              name: "新活动",
+              startTime: "2026-08-01T00:00:00Z",
+              endTime: "2026-08-31T16:00:00Z",
+              status: "DRAFT",
+              version: 0,
+              pendingRevision: false,
+              richText: "<p>ok</p>",
+              newUserOnly: false,
+              newUserDays: 7,
+            },
+          ],
+        }),
+      );
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().$patch({ userId: 1, permissions: Object.values(PERMS) });
+    const wrapper = mount(ActivityManagePage, {
+      global: { plugins: [pinia], directives: { auth } },
+      attachTo: document.body,
+    });
+
+    // First mount load is in flight; trigger a second query before it resolves.
+    await wrapper.get('[data-testid="activity-query"]').trigger("click");
+    await flushPromises();
+
+    resolveFirst(
+      ok({
+        total: 1,
+        records: [
+          {
+            id: 8,
+            code: "stale",
+            name: "旧活动",
+            startTime: "2026-08-01T00:00:00Z",
+            endTime: "2026-08-31T16:00:00Z",
+            status: "DRAFT",
+            version: 0,
+            pendingRevision: false,
+            richText: "<p>ok</p>",
+            newUserOnly: false,
+            newUserDays: 7,
+          },
+        ],
+      }),
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="activity-table"]').text()).toContain("newer");
+    expect(wrapper.get('[data-testid="activity-table"]').text()).not.toContain("stale");
   });
 });

@@ -6,6 +6,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "ActivityParticipationPage" });
 
@@ -18,32 +20,46 @@ const feedback = ref<PageFeedback | null>(null);
 const stats = ref<ParticipationStatsView | null>(null);
 const filters = reactive({ activityId: "", userId: "", result: "" });
 
+const beginLoad = useLatestRequest(() => [
+  page.value,
+  filters.activityId,
+  filters.userId,
+  filters.result,
+]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const activityId = filters.activityId ? Number(filters.activityId) : undefined;
-  const result = await pageParticipations({
-    activityId,
-    userId: filters.userId ? Number(filters.userId) : undefined,
-    result: filters.result || undefined,
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const activityId = filters.activityId ? Number(filters.activityId) : undefined;
+    const result = await pageParticipations({
+      activityId,
+      userId: filters.userId ? Number(filters.userId) : undefined,
+      result: filters.result || undefined,
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
+    if (activityId) {
+      const statsResult = await activityStats(activityId);
+      if (!isCurrent()) {
+        return;
+      }
+      const statsParsed = okOrFeedback(statsResult);
+      stats.value = statsParsed.ok ? (statsParsed.data ?? null) : null;
+    } else {
+      stats.value = null;
+    }
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
-  if (activityId) {
-    const statsResult = await activityStats(activityId);
-    const statsParsed = okOrFeedback(statsResult);
-    stats.value = statsParsed.ok ? (statsParsed.data ?? null) : null;
-  } else {
-    stats.value = null;
-  }
 }
 
 
