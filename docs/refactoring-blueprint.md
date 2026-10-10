@@ -1,8 +1,10 @@
 # 项目诊断与重构方案
 
-审计日期：2026-10-07。范围：当时本地工作区的重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据；当日运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
+审计日期：2026-10-10（对照 tip `967d694` / Merge #118）。范围：重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据并叠加 2026-10-07～10-10 已合 PR 实况；历史旅程运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
 
 2026-10-09 文档清理说明：旧 Kiro 规格已退役。下文设计章节、需求编号和“设计允许”等描述是初次审计背景，不再构成实施授权；执行任何批次前核实现状，以用户本次要求和 [已确认决定](decisions.md) 确定行为及验收。
+
+**相位命名**：蓝图批次用 **R0–R6**；已合 PR 分支/标题常用 **P1–P4**（约对应 R1 门禁 → R2 业务正确性片段 → R3 读路径/缓存 → R4/R5 基建与 Admin 切片）。二者不是同一套完成证明；下列 §4 表含 2026-10-10 实况注记。
 
 ## 1. 总体判断
 
@@ -18,17 +20,17 @@
 
 | 编号 | 静态证据 | 影响与后续处理 |
 |---|---|---|
-| F01 | [TaskPortalAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPortalAppService.java) 的 `list`/`mine` 曾逐项取快照与周期实例 | **本轮**：`listByTaskAndVersions` + `listByUserTaskCycles` 批读；可见性过滤后分页语义不变；缓存统一入口仍待 F03/后续 |
+| F01 | [TaskPortalAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPortalAppService.java) 的 `list`/`mine` 曾逐项取快照与周期实例 | **已落地**（#104）：`listByTaskAndVersions` + `listByUserTaskCycles` 批读；可见性过滤后分页语义不变；缓存统一入口已由 F03（#105）覆盖 |
 | F02 | [TaskPublishAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPublishAppService.java) 的 `freezeToPublished` 曾在事务提交前写共享快照缓存，索引则在提交后失效 | **已修复**：快照改为 `putAfterCommit`（与索引 `evictAfterCommit` 对齐）；回滚不再提前暴露快照；见 `TaskPublishAppServiceTest` / `TwoLevelPlatformCacheTest` |
 | F03 | [TwoLevelPlatformCache](../server/platform-infra/src/main/java/com/mkt/infra/cache/TwoLevelPlatformCache.java) 为查缓存 → loader → put；evict 不约束正在进行的 loader | **本轮**：同 key `CompletableFuture` 合并加载 + 按 key/namespace generation 防 stale put；evict/广播后旧 loader 不回填；见 `TwoLevelPlatformCacheTest` |
 | F04 | 原领取互斥只扫 PUBLISHED，原下线操作未更新在途期限 | 已在 R2-01 修复为绑定快照互斥、下线有界重算及并发保护；规则由 DEC-007 明确，后续真实 MySQL 结果见 2026-10-07 核验报告 |
 | F05 | [AdPortalAppService.visible](../server/domain-ad/src/main/java/com/mkt/ad/application/AdPortalAppService.java) / [ParticipationRules.firstReject](../server/domain-activity/src/main/java/com/mkt/activity/domain/ParticipationRules.java) 人群求值缺口 | **本轮**：`CrowdPort` + 活动人群码/广告 `crowdId` 已接；组合条件与 admin 跨域 SQL 仍见 DEC-003 |
 | F06 | [MetricsAggregateService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsAggregateService.java)、[MetricsQueryService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsQueryService.java)、[JdbcSimulateGrantLookup](../server/admin-app/src/main/java/com/mkt/admin/simulate/JdbcSimulateGrantLookup.java) 直接查询其他域表 | 应用层跨域 SQL 的归属与范围需明确；设计允许聚合扫描，不能一概判为违规。一般读模型与聚合例外分别约束，见 DEC-003 |
 | F07 | [GrantFailureLedger](../server/domain-reward/src/main/java/com/mkt/reward/application/GrantFailureLedger.java) / 审计事务边界 | **本轮（DEC-004 已定）**：永久失败独立留痕；积分过期按笔独立；回滚不写 SUCCESS；补 IT |
-| F08 | [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每轮单批 100，调度间隔 5 秒 | 需明确持续事件吞吐与恢复预算；这不是可通过清理代码风格解决的问题，见 DEC-002 |
+| F08 | [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每轮单批 100，调度间隔 5 秒 | **[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭**（持锁多批、2s 预算、空退出、无 MQ；起步 100/5s/2s）；**实现待 F08 PR**；容量数字门禁仍属 DEC-006 |
 | F09 | [TrackBatchService](../server/domain-tracking/src/main/java/com/mkt/tracking/application/TrackBatchService.java) 在 accepted event 路径重复读取元数据状态 | **本轮**：`statusesOf` 批次去重批读（decide + toAccepted 共用 map）；跨请求缓存另按命名空间设计处理；见 `TrackBatchServiceTest` |
 | F10 | [我的列表页面](../web/apps/client/src/views/mine/) 原实现把 Vant `v-model:loading` 与请求入口的 loading 拦截混用，缺少请求代次隔离 | 已在 R5-01 通过统一分页、错误恢复和会话隔离修复；组件与浏览器回归入口见验证映射，历史结果不代替本次执行 |
-| F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | **本轮**：`useLatestRequest` + `runWithLoading` 统一 loading finally/代次隔离；已迁移 user/role/dashboard/audit、system 批二（dict/config/portal-user/internal-app/cache/session）、task 批三（definition/instance/crowd/mutex-group 列表）、reward 批四（category/prize/recon/record 列表）、activity/ad/signin 批五（activity/participation、ad material/position、signin activity/record 列表）、risk/points/track/metrics/simulate 批六（case/rule/list-item、account/transaction、event/metadata、metrics、simulate list）、login 批七（login/change-password submit + captcha 代次隔离）；**F11 admin migration 已全部收口**；见 `runWithLoading.spec.ts` |
+| F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | **列表/系统加载路径已收口**（#108/#110/#112–#116）：`useLatestRequest` + `runWithLoading`；已迁 user/role/dashboard/audit、system、task/reward/activity/ad/signin 列表、risk/points/track/metrics/simulate、login/change-password。**未强迁**：`task/definition/edit.vue`、`version.vue` 及部分画布/非列表页仍手写 loading；见 `runWithLoading.spec.ts` |
 | F12 | 原仅 [check-openapi-types.sh](../ci/check-openapi-types.sh)（JSON→TS） | 已由 [check-openapi-backend.sh](../ci/check-openapi-backend.sh) 补全非 prod 后端 live 导出 → 已提交 JSON → TS；prod springdoc 保持关闭（#99） |
 | F13 | [server/pom.xml](../server/pom.xml) 关键覆盖率曾指向不存在的 `com.mkt.reward.grant` / `com.mkt.risk.engine`；现以 CLASS 门禁覆盖 `GrantAppService`、`RuleDecisionEngine`、`ListDecisionEngine`，PACKAGE 仍覆盖 kernel / task.engine / task.expression / reward.points；架构规则曾只覆盖部分访问形式 | **本轮已核对/收口（访问形式）**：(1) RL-01 改为 `consideringOnlyDependenciesInAnyPackage("com.mkt..")`，关闭 in-layers-only 对非层包中转路径的盲区；(2) 保留 RL-02/RL-03 的 `dependOnClassesThat`（非 `accessClassesThat`），fixture 逐项证明 field type / ctor param / method call / extends / implements / generics / annotation / return type 均会失败，并对照证明 field/implements/return/annotation 对 `accessClassesThat` 不可见（extends 因隐式 `super()` 仍可见）；(3) AT-C01 补齐 `LocalDate`/`ZonedDateTime`/`OffsetDateTime` 无参与 `now(ZoneId)`；`Clock.systemUTC()`（装配入口）与 `System.nanoTime()`（审计耗时）仍为有意例外；见 `ArchLayerRuleTest`、`ArchAccessFormRuleTest`、`ArchClockRuleTest`、`ClockDirectCallArchTest`。JaCoCo 关键包/类此前已对齐。跨域字符串 SQL（DEC-003）与 RL-12 继承面不在本轮强关 |
 | F14 | [perf](../perf/README.md) 中 callback 复用有限单步实例，业务 checks / 接收吞吐 / dropped iterations 门槛不足 | **本轮**：advance 分区消费单步 callback + progress 持续写入断言；complete 线性消费并在耗尽失败；track 业务 check/`track_accepted` 结构性下限 + CAR `dropped_iterations`；见 `perf/README.md` |
@@ -66,15 +68,17 @@ R2-01：用户明确 DEC-007 后实施任务生命周期，覆盖旧快照互斥
 
 每批都交付必要规格修订、回归、实现、旧路径清理及实际检查记录。批次表示技术依赖；已具备条件的独立前端批次可以先行。可以进一步拆为可独立验收的 PR，不自动实施全部剩余批次。
 
-| 批次 | 工作 | 进入条件 | 验收出口 |
-|---|---|---|---|
-| R0 文档治理（本轮） | 入口收口、删除重复、纠正失实状态、记录方案分歧 | 仅文档授权 | 链接与引用有效、原代码不变、事实与目标分开 |
-| R1 功能与验收基线 | 确认实施版本；盘点用户旅程/契约/数据；核验测试入口、覆盖率范围、OpenAPI 导出与性能脚本 | DEC-001 明确，环境可用 | 可复现测试报告；失败按产品/环境分类；保留能力清单；真实契约导出 |
-| R2 业务正确性 | 下线/互斥/过期、人群、事务失败与审计；按缺陷独立交付 | 涉及的 DEC-003/004 已明确 | 回归先能暴露原问题，修改后通过；资金与并发路径真实数据库验证 |
-| R3 门户读路径与缓存 | 统一快照读取、批量状态、查询分页边界、提交后缓存处理、竞争与降级 | 关键行为基线稳定 | 查询计数随候选集合有界；回滚、旧 loader 回填、跨节点失效与缓存故障可验证 |
-| R4 领域与基础设施整理 | 按第 5 节逐用例整理；跨域 SQL、Outbox、埋点、调度、指标与恢复机制 | 对应契约/容量决定明确 | 无未登记跨域直读；事件不丢不重复副作用；积压恢复与可观测证据 |
-| R5 两端前端迁移 | 先分页/异常/会话正确性，再布局、主题与按域页面结构 | 对应 API 稳定；可与后端无关批次并行 | 真实组件顺序、乱序、失败、会话切换、权限与端到端旅程通过；真实浏览器验收 |
-| R6 首次发布候选验收 | 空库迁移、全量旅程、双实例故障、容量、恢复与部署 | 计划范围完成；DEC-005/006 已明确 | 实测报告满足现行规格；无废弃双实现；达到发布检查单，另行决定是否上线 |
+**2026-10-10 实况（P1–P4 vs R）**：P1≈R1 门禁（#99–#101）已合；P2 落地 CrowdPort 最小集（#102）与 DEC-004（#111），**不能**把 R2 整批标关闭（DEC-003 余量仍开）；P3≈R3 的 F01–F03（#103–#105）代码已合；P4 覆盖 R4/R5 片段（F09/F11/F13/F14/F15/F16 等 #106–#118），**非**完整 R4/R5/R6——F08（Outbox）与 F06（跨域 SQL）仍开；R6/P5 依赖 DEC-005/006 与真实演练证据。
+
+| 批次 | 工作 | 进入条件 | 验收出口 | 2026-10-10 实况 |
+|---|---|---|---|---|
+| R0 文档治理（本轮） | 入口收口、删除重复、纠正失实状态、记录方案分歧 | 仅文档授权 | 链接与引用有效、原代码不变、事实与目标分开 | 持续纠偏（本盘点） |
+| R1 功能与验收基线 | 确认实施版本；盘点用户旅程/契约/数据；核验测试入口、覆盖率范围、OpenAPI 导出与性能脚本 | DEC-001 明确，环境可用 | 可复现测试报告；失败按产品/环境分类；保留能力清单；真实契约导出 | P1 门禁已合（#99–#101） |
+| R2 业务正确性 | 下线/互斥/过期、人群、事务失败与审计；按缺陷独立交付 | 涉及的 DEC-003/004 已明确 | 回归先能暴露原问题，修改后通过；资金与并发路径真实数据库验证 | DEC-004 已关；CrowdPort 部分；DEC-003 余量仍开 |
+| R3 门户读路径与缓存 | 统一快照读取、批量状态、查询分页边界、提交后缓存处理、竞争与降级 | 关键行为基线稳定 | 查询计数随候选集合有界；回滚、旧 loader 回填、跨节点失效与缓存故障可验证 | F01–F03 已合（#103–#105） |
+| R4 领域与基础设施整理 | 按第 5 节逐用例整理；跨域 SQL、Outbox、埋点、调度、指标与恢复机制 | 对应契约/容量决定明确 | 无未登记跨域直读；事件不丢不重复副作用；积压恢复与可观测证据 | F09/F13/F14/F15/F16 片段已合；**F08/F06 仍开**；DEC-002 已关待实现 |
+| R5 两端前端迁移 | 先分页/异常/会话正确性，再布局、主题与按域页面结构 | 对应 API 稳定；可与后端无关批次并行 | 真实组件顺序、乱序、失败、会话切换、权限与端到端旅程通过；真实浏览器验收 | R5-01 门户已完成；Admin F11 列表/系统已收口，edit/version 未强迁 |
+| R6 首次发布候选验收 | 空库迁移、全量旅程、双实例故障、容量、恢复与部署 | 计划范围完成；DEC-005/006 已明确 | 实测报告满足现行规格；无废弃双实现；达到发布检查单，另行决定是否上线 | 未开始 |
 
 ## 5. 全面覆盖清单
 
