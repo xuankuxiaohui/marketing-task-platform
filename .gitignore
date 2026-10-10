@@ -41,6 +41,8 @@ replay_pid*
 .env.local
 .env.vm
 deploy/.env
+deploy/nginx/tls.conf
+deploy/nginx/certs/*.pem
 deploy/backups/
 .run/
 .tmp_*.py

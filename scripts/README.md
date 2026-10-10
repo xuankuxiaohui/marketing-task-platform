@@ -40,7 +40,8 @@
 - 打包命令跳过测试和 JaCoCo，仅用于开发启动，不能作为测试通过的证据。
 - 前端只在 `web/node_modules` 不存在时自动安装依赖；修改依赖后应自行执行 `pnpm install --frozen-lockfile`。
 - 当前 `start -Target frontend` 也会检查本地配置、中间件和 JDK；仅需运行前端时可使用 [web/README.md](../web/README.md) 的命令。
-- 日志和 PID 位于 `.run/`，`logs -Follow` 只能指定单个目标。`stop` / `restart` 会终止保存的进程树及目标端口的占用进程，当前脚本不核验端口进程是否属于本项目；操作前确认端口归属。
+- 日志和 PID 位于 `.run/`，`logs -Follow` 只能指定单个目标。
+- **停止归属（F16）**：`stop` / `restart` 优先终止 `.run/<name>.pid` 保存的进程树；若端口仍被占用，仅当能验证该监听进程归属本项目时才清理——判定顺序为 (1) 与保存 PID 相同 (2) 保存 PID 的子进程树 (3) 命令行匹配本项目 jar（`admin-app-*.jar` / `portal-app-*-exec.jar`）或对应 Vite/pnpm filter。无法验证归属时**跳过端口强杀**并告警；确认是误占且可丢弃时显式加 `-Force`。本轮未在共享环境执行 stop。
 
 调试命令：
 

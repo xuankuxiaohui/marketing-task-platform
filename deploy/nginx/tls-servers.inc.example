@@ -1,0 +1,96 @@
+# HTTPS server blocks. After certs exist:
+#   1. cp tls.conf.example tls.conf   (or mount example as tls.conf)
+#   2. place fullchain.pem + privkey.pem under deploy/nginx/certs/
+#   3. cp this file over tls-servers.inc
+#   4. cp redirect-https.inc.tls over redirect-https.inc
+#   5. publish NGINX_HTTPS_PORT in compose / .env
+#
+# Keep proxy header / deny locations in sync with the HTTP servers in nginx.conf.
+
+server {
+    listen 443 ssl;
+    server_name portal.local;
+
+    include /etc/nginx/tls.conf;
+
+    root /usr/share/nginx/html/client;
+    index index.html;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Trace-Id $request_id;
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header Cookie $http_cookie;
+    proxy_set_header X-CSRF-Token $http_x_csrf_token;
+    proxy_set_header X-Client-Platform $http_x_client_platform;
+    proxy_set_header X-Device-Id $http_x_device_id;
+    proxy_set_header X-App-Id $http_x_app_id;
+    proxy_set_header X-Timestamp $http_x_timestamp;
+    proxy_set_header X-Nonce $http_x_nonce;
+    proxy_set_header X-Sign $http_x_sign;
+    proxy_hide_header X-Powered-By;
+
+    location = /healthz {
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+
+    location /api/ {
+        proxy_pass http://portal_app;
+    }
+
+    location /internal { return 404; }
+    location /actuator { return 404; }
+    location ~* /v3/api-docs { return 404; }
+    location ~* /swagger-ui { return 404; }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name admin.local;
+
+    include /etc/nginx/tls.conf;
+
+    root /usr/share/nginx/html/admin;
+    index index.html;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Trace-Id $request_id;
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header Cookie $http_cookie;
+    proxy_set_header X-CSRF-Token $http_x_csrf_token;
+    proxy_hide_header X-Powered-By;
+
+    location = /healthz {
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+
+    location /admin/ {
+        proxy_pass http://admin_app;
+    }
+
+    location /internal { return 404; }
+    location /actuator { return 404; }
+    location ~* /v3/api-docs { return 404; }
+    location ~* /swagger-ui { return 404; }
+
+    location /console/ {
+        try_files $uri $uri/ /console/index.html;
+    }
+
+    location = / {
+        return 302 /console/;
+    }
+}

@@ -1,0 +1,2 @@
+# Place fullchain.pem and privkey.pem here for TLS (not committed).
+# See ../README.md — enable steps copy tls.conf.example and tls-servers.inc.example.

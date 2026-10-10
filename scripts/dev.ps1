@@ -23,7 +23,9 @@ param(
 
     [switch]$Rebuild,
     [switch]$DebugJvm,
-    [switch]$Follow
+    [switch]$Follow,
+    # stop/restart: allow killing a port listener that is NOT owned by this project's .run pid
+    [switch]$Force
 )
 
 Set-StrictMode -Version Latest
@@ -81,7 +83,7 @@ function Show-Help {
 命令:
   init      生成仓库根 .env.local（从 scripts/env.example），与 deploy/.env 无关
   start     启动（缺 jar 会 mvn package）
-  stop      停止
+  stop      停止（先 .run pid，再仅当端口进程归属本项目时清理；外源占用需 -Force）
   restart   停止再启动
   status    端口 / pid / 健康检查
   logs      看 .run/*.log ；加 -Follow 且指定单个 Target 可跟踪
@@ -121,6 +123,39 @@ function Get-ListeningPid([int]$Port) {
         }
     }
     return $null
+}
+
+
+function Test-OwnedByProject([string]$Name, [int]$ProcessId) {
+    if ($ProcessId -le 0) { return $false }
+    $saved = Read-SavedPid $Name
+    if ($saved -and $saved -eq $ProcessId) { return $true }
+    # Walk parents: port may be held by a child of the saved wrapper pid.
+    if ($saved) {
+        try {
+            $cur = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
+            while ($null -ne $cur) {
+                if ([int]$cur.ProcessId -eq $saved) { return $true }
+                if (-not $cur.ParentProcessId -or [int]$cur.ParentProcessId -le 0) { break }
+                if ([int]$cur.ParentProcessId -eq $saved) { return $true }
+                $cur = Get-CimInstance Win32_Process -Filter "ProcessId=$($cur.ParentProcessId)" -ErrorAction SilentlyContinue
+            }
+        } catch { }
+    }
+    # Command-line fingerprint for our jars / vite filters when pid file is stale.
+    try {
+        $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
+        $cmd = [string]$proc.CommandLine
+        if (-not $cmd) { return $false }
+        $svc = $Services[$Name]
+        if ($svc.Kind -eq 'java') {
+            if ($Name -eq 'admin' -and $cmd -match 'admin-app-.*\.jar') { return $true }
+            if ($Name -eq 'portal' -and $cmd -match 'portal-app-.*-exec\.jar') { return $true }
+        } elseif ($svc.Kind -eq 'node') {
+            if ($cmd -match [regex]::Escape($svc.Filter) -and $cmd -match 'vite|pnpm') { return $true }
+        }
+    } catch { }
+    return $false
 }
 
 function Test-ListeningPort([int]$Port) {
@@ -343,19 +378,25 @@ function Wait-Health([string]$Name, [int]$TimeoutSec) {
 function Stop-Service([string]$Name) {
     $svc = $Services[$Name]
     $saved = Read-SavedPid $Name
-    $portPid = Get-ListeningPid $svc.Port
     $killed = $false
     if ($saved) {
         Stop-PidTree $saved
         $killed = $true
     }
-    $portPid2 = Get-ListeningPid $svc.Port
-    if ($portPid2) {
-        Stop-PidTree $portPid2
-        $killed = $true
-    } elseif ($portPid -and $portPid -ne $saved) {
-        Stop-PidTree $portPid
-        $killed = $true
+    $portPid = Get-ListeningPid $svc.Port
+    if ($portPid) {
+        if (Test-OwnedByProject $Name $portPid) {
+            if (-not $saved -or $portPid -ne $saved) {
+                Stop-PidTree $portPid
+            }
+            $killed = $true
+        } elseif ($Force) {
+            Write-WarnMsg "$Name 端口 $($svc.Port) 被 PID $portPid 占用，且未能验证归属本项目；-Force 将终止该进程"
+            Stop-PidTree $portPid
+            $killed = $true
+        } else {
+            Write-WarnMsg "$Name 端口 $($svc.Port) 被 PID $portPid 占用，且未能验证归属本项目（.run pid / 进程树 / 命令行）。跳过端口强杀；确认后可加 -Force"
+        }
     }
     $pidPath = Get-PidPath $Name
     if (Test-Path -LiteralPath $pidPath) { Remove-Item -LiteralPath $pidPath -Force }
