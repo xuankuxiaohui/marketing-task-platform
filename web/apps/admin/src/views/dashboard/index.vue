@@ -6,6 +6,8 @@ import FeedbackBanner from "@/components/FeedbackBanner.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "DashboardPage" });
 
@@ -30,41 +32,47 @@ const inbox = computed(() => {
   return items;
 });
 
+const beginLoad = useLatestRequest(() => null);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const [funnelResult, spendResult, riskResult, adResult] = await Promise.all([
-    fetchFunnel({ grain: "DAY" }),
-    fetchSpendMetrics({ grain: "DAY" }),
-    fetchRiskMetrics({ grain: "DAY" }),
-    fetchAdMetrics({ grain: "DAY" }),
-  ]);
-  loading.value = false;
-  const funnelParsed = okOrFeedback(funnelResult);
-  const spendParsed = okOrFeedback(spendResult);
-  const riskParsed = okOrFeedback(riskResult);
-  const adParsed = okOrFeedback(adResult);
-  if (!funnelParsed.ok) {
-    feedback.value = funnelParsed.feedback;
-    return;
-  }
-  if (!spendParsed.ok) {
-    feedback.value = spendParsed.feedback;
-    return;
-  }
-  if (!riskParsed.ok) {
-    feedback.value = riskParsed.feedback;
-    return;
-  }
-  if (!adParsed.ok) {
-    feedback.value = adParsed.feedback;
-    return;
-  }
-  exposure.value = (funnelParsed.data?.records ?? []).reduce((sum, row) => sum + row.exposureCount, 0);
-  arrivedCostFen.value = (spendParsed.data?.records ?? []).reduce((sum, row) => sum + row.arrivedCostFen, 0);
-  remainingStock.value = (spendParsed.data?.records ?? []).reduce((sum, row) => sum + row.remainingStock, 0);
-  intercepts.value = (riskParsed.data?.records ?? []).reduce((sum, row) => sum + row.interceptCount, 0);
-  adClicks.value = (adParsed.data?.records ?? []).reduce((sum, row) => sum + row.clickCount, 0);
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const [funnelResult, spendResult, riskResult, adResult] = await Promise.all([
+      fetchFunnel({ grain: "DAY" }),
+      fetchSpendMetrics({ grain: "DAY" }),
+      fetchRiskMetrics({ grain: "DAY" }),
+      fetchAdMetrics({ grain: "DAY" }),
+    ]);
+    if (!isCurrent()) {
+      return;
+    }
+    const funnelParsed = okOrFeedback(funnelResult);
+    const spendParsed = okOrFeedback(spendResult);
+    const riskParsed = okOrFeedback(riskResult);
+    const adParsed = okOrFeedback(adResult);
+    if (!funnelParsed.ok) {
+      feedback.value = funnelParsed.feedback;
+      return;
+    }
+    if (!spendParsed.ok) {
+      feedback.value = spendParsed.feedback;
+      return;
+    }
+    if (!riskParsed.ok) {
+      feedback.value = riskParsed.feedback;
+      return;
+    }
+    if (!adParsed.ok) {
+      feedback.value = adParsed.feedback;
+      return;
+    }
+    exposure.value = (funnelParsed.data?.records ?? []).reduce((sum, row) => sum + row.exposureCount, 0);
+    arrivedCostFen.value = (spendParsed.data?.records ?? []).reduce((sum, row) => sum + row.arrivedCostFen, 0);
+    remainingStock.value = (spendParsed.data?.records ?? []).reduce((sum, row) => sum + row.remainingStock, 0);
+    intercepts.value = (riskParsed.data?.records ?? []).reduce((sum, row) => sum + row.interceptCount, 0);
+    adClicks.value = (adParsed.data?.records ?? []).reduce((sum, row) => sum + row.clickCount, 0);
+  });
 }
 
 onMounted(() => {

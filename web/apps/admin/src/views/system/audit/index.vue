@@ -7,6 +7,8 @@ import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import EllipsisCell from "@/components/EllipsisCell.vue";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "AuditLogPage" });
 
@@ -25,34 +27,48 @@ const filters = reactive({
   to: "",
 });
 
+const beginLoad = useLatestRequest(() => [
+  page.value,
+  filters.operatorId,
+  filters.module,
+  filters.action,
+  filters.result,
+  filters.from,
+  filters.to,
+]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const toIso = (value: string): string | undefined => {
-    if (!value) {
-      return undefined;
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const toIso = (value: string): string | undefined => {
+      if (!value) {
+        return undefined;
+      }
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? value : date.toISOString();
+    };
+    const result = await pageAudits({
+      operatorId: filters.operatorId ? Number(filters.operatorId) : undefined,
+      module: filters.module,
+      action: filters.action,
+      result: filters.result,
+      from: toIso(filters.from),
+      to: toIso(filters.to),
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
     }
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toISOString();
-  };
-  const result = await pageAudits({
-    operatorId: filters.operatorId ? Number(filters.operatorId) : undefined,
-    module: filters.module,
-    action: filters.action,
-    result: filters.result,
-    from: toIso(filters.from),
-    to: toIso(filters.to),
-    page: page.value,
-    pageSize,
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 
