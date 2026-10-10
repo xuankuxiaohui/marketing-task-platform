@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, reactive, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   getDefinition,
@@ -28,6 +28,8 @@ import {
   type CanvasStepNode,
   type CanvasTransitionEdge,
 } from "@/utils/task-canvas";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "TaskDefinitionEditPage" });
 
@@ -158,52 +160,58 @@ async function loadMutex(): Promise<void> {
   }
 }
 
+const beginLoad = useLatestRequest(() => route.params.id);
+
 async function load(): Promise<void> {
   const id = routeId();
   if (id == null) {
     return;
   }
-  loading.value = true;
-  feedback.value = null;
-  const result = await getDefinition(id);
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  const data = parsed.data;
-  if (!data) {
-    return;
-  }
-  form.id = data.id;
-  form.code = data.code ?? "";
-  form.name = data.name ?? "";
-  form.description = data.description ?? "";
-  form.category = data.category ?? "";
-  form.iconUrl = data.iconUrl ?? "";
-  form.badgeText = data.badgeText ?? "";
-  form.startTime = data.startTime ?? "";
-  form.endTime = data.endTime ?? "";
-  form.sortWeight = data.sortWeight ?? 0;
-  form.status = data.status ?? "";
-  form.version = data.version ?? 0;
-  form.pendingRevision = Boolean(data.pendingRevision);
-  form.cycleType = data.cycleType ?? "NONE";
-  form.cronExpr = data.cronExpr ?? "";
-  form.specialStart = data.specialStart ?? "";
-  form.specialEnd = data.specialEnd ?? "";
-  form.mutexGroupId = data.mutexGroupId != null ? String(data.mutexGroupId) : "";
-  form.grayType = data.gray?.type ?? "NONE";
-  form.grayRatio = data.gray?.ratio ?? 100;
-  form.abGroup = data.gray?.abGroup ?? "";
-  form.grayCrowdId = data.gray?.crowdId != null ? String(data.gray.crowdId) : "";
-  form.grayExcludeCrowdId = data.gray?.excludeCrowdId != null ? String(data.gray.excludeCrowdId) : "";
-  form.filterExpr = data.filter?.expr ?? "";
-  form.allowCrowdIds = (data.filter?.allowCrowdIds ?? []).join(",");
-  form.excludeCrowdIds = (data.filter?.excludeCrowdIds ?? []).join(",");
-  nodes.value = stepsToNodes(data.steps);
-  edges.value = transitionsToEdges(data.transitions);
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await getDefinition(id);
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    const data = parsed.data;
+    if (!data) {
+      return;
+    }
+    form.id = data.id;
+    form.code = data.code ?? "";
+    form.name = data.name ?? "";
+    form.description = data.description ?? "";
+    form.category = data.category ?? "";
+    form.iconUrl = data.iconUrl ?? "";
+    form.badgeText = data.badgeText ?? "";
+    form.startTime = data.startTime ?? "";
+    form.endTime = data.endTime ?? "";
+    form.sortWeight = data.sortWeight ?? 0;
+    form.status = data.status ?? "";
+    form.version = data.version ?? 0;
+    form.pendingRevision = Boolean(data.pendingRevision);
+    form.cycleType = data.cycleType ?? "NONE";
+    form.cronExpr = data.cronExpr ?? "";
+    form.specialStart = data.specialStart ?? "";
+    form.specialEnd = data.specialEnd ?? "";
+    form.mutexGroupId = data.mutexGroupId != null ? String(data.mutexGroupId) : "";
+    form.grayType = data.gray?.type ?? "NONE";
+    form.grayRatio = data.gray?.ratio ?? 100;
+    form.abGroup = data.gray?.abGroup ?? "";
+    form.grayCrowdId = data.gray?.crowdId != null ? String(data.gray.crowdId) : "";
+    form.grayExcludeCrowdId = data.gray?.excludeCrowdId != null ? String(data.gray.excludeCrowdId) : "";
+    form.filterExpr = data.filter?.expr ?? "";
+    form.allowCrowdIds = (data.filter?.allowCrowdIds ?? []).join(",");
+    form.excludeCrowdIds = (data.filter?.excludeCrowdIds ?? []).join(",");
+    nodes.value = stepsToNodes(data.steps);
+    edges.value = transitionsToEdges(data.transitions);
+  });
 }
 
 function addStep(): void {
@@ -323,6 +331,13 @@ async function onConfirm(): Promise<void> {
   confirm.value = null;
   await current?.run();
 }
+
+watch(
+  () => route.params.id,
+  () => {
+    void load();
+  },
+);
 
 onMounted(async () => {
   await loadMutex();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { diffVersions, listVersions, type TaskVersionView, type VersionDiffResponse } from "@/api/task";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
@@ -7,6 +7,8 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "TaskDefinitionVersionPage" });
 
@@ -14,6 +16,7 @@ const route = useRoute();
 const versions = ref<TaskVersionView[]>([]);
 const diff = ref<VersionDiffResponse | null>(null);
 const feedback = ref<PageFeedback | null>(null);
+const loading = ref(false);
 const left = ref("");
 const right = ref("");
 
@@ -24,19 +27,28 @@ function taskId(): number | undefined {
   return Number.isFinite(id) ? id : undefined;
 }
 
+const beginLoad = useLatestRequest(() => route.params.id);
+const beginDiff = useLatestRequest(() => [left.value, right.value]);
+
 async function load(): Promise<void> {
   const id = taskId();
   if (id == null) {
     return;
   }
-  feedback.value = null;
-  const result = await listVersions(id);
-  const parsed = okOrFeedback(result);
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  versions.value = parsed.data ?? [];
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await listVersions(id);
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    versions.value = parsed.data ?? [];
+  });
 }
 
 async function loadDiff(): Promise<void> {
@@ -44,7 +56,11 @@ async function loadDiff(): Promise<void> {
   if (id == null || !left.value || !right.value) {
     return;
   }
+  const isCurrent = beginDiff();
   const result = await diffVersions(id, Number(left.value), Number(right.value));
+  if (!isCurrent()) {
+    return;
+  }
   const parsed = okOrFeedback(result);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
@@ -52,6 +68,13 @@ async function loadDiff(): Promise<void> {
   }
   diff.value = parsed.data ?? null;
 }
+
+watch(
+  () => route.params.id,
+  () => {
+    void load();
+  },
+);
 
 onMounted(() => {
   void load();
@@ -64,6 +87,7 @@ onMounted(() => {
       <h2>{{ zhCN.task.versionTitle }}</h2>
     </div>
     <FeedbackBanner :feedback="feedback" />
+    <a-spin :spinning="loading">
     <a-table size="small" :data-source="versions" class="data-table" data-testid="version-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
         <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
@@ -82,5 +106,6 @@ onMounted(() => {
       <a-button data-testid="diff-run" @click="loadDiff">对比</a-button>
     </a-form>
     <pre v-if="diff" data-testid="diff-result">{{ JSON.stringify(diff, null, 2) }}</pre>
+    </a-spin>
   </section>
 </template>
