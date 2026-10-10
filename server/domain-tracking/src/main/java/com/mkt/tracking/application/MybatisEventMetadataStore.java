@@ -4,7 +4,12 @@ import com.mkt.tracking.domain.MetadataStatus;
 import com.mkt.tracking.domain.MetadataStatuses;
 import com.mkt.tracking.entity.EvtEventMetadataEntity;
 import com.mkt.tracking.mapper.EvtEventMetadataMapper;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -18,11 +23,43 @@ public class MybatisEventMetadataStore implements EventMetadataStore {
 
     @Override
     public MetadataStatus statusOf(String eventCode) {
-        EvtEventMetadataEntity row = mapper.selectByEventCode(eventCode);
-        if (row == null) {
+        if (eventCode == null) {
             return MetadataStatus.MISSING;
         }
-        return MetadataStatuses.of(row.getStatus());
+        return statusesOf(List.of(eventCode)).getOrDefault(eventCode, MetadataStatus.MISSING);
+    }
+
+    @Override
+    public Map<String, MetadataStatus> statusesOf(Collection<String> eventCodes) {
+        if (eventCodes == null || eventCodes.isEmpty()) {
+            return Map.of();
+        }
+        List<String> codes = new ArrayList<>();
+        for (String code : eventCodes) {
+            if (code != null) {
+                codes.add(code);
+            }
+        }
+        if (codes.isEmpty()) {
+            return Map.of();
+        }
+        List<EvtEventMetadataEntity> rows = mapper.selectByEventCodes(codes);
+        Map<String, MetadataStatus> found = new HashMap<>();
+        if (rows != null) {
+            for (EvtEventMetadataEntity row : rows) {
+                if (row != null && row.getEventCode() != null) {
+                    found.put(row.getEventCode(), MetadataStatuses.of(row.getStatus()));
+                }
+            }
+        }
+        Map<String, MetadataStatus> result = new LinkedHashMap<>();
+        for (String code : eventCodes) {
+            if (code == null) {
+                continue;
+            }
+            result.put(code, found.getOrDefault(code, MetadataStatus.MISSING));
+        }
+        return result;
     }
 
     @Override

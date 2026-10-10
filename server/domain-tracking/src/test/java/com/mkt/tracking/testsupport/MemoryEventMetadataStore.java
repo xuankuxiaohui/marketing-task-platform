@@ -5,8 +5,11 @@ import com.mkt.tracking.domain.MetadataStatus;
 import com.mkt.tracking.domain.MetadataStatuses;
 import com.mkt.tracking.entity.EvtEventMetadataEntity;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class MemoryEventMetadataStore implements EventMetadataStore {
@@ -31,6 +34,21 @@ public final class MemoryEventMetadataStore implements EventMetadataStore {
             return MetadataStatus.MISSING;
         }
         return MetadataStatuses.of(row.getStatus());
+    }
+
+    @Override
+    public Map<String, MetadataStatus> statusesOf(Collection<String> eventCodes) {
+        if (eventCodes == null || eventCodes.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, MetadataStatus> result = new LinkedHashMap<>();
+        for (String code : eventCodes) {
+            if (code == null) {
+                continue;
+            }
+            result.put(code, statusOf(code));
+        }
+        return result;
     }
 
     @Override

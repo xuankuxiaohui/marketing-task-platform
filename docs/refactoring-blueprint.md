@@ -26,7 +26,7 @@
 | F06 | [MetricsAggregateService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsAggregateService.java)、[MetricsQueryService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsQueryService.java)、[JdbcSimulateGrantLookup](../server/admin-app/src/main/java/com/mkt/admin/simulate/JdbcSimulateGrantLookup.java) 直接查询其他域表 | 应用层跨域 SQL 的归属与范围需明确；设计允许聚合扫描，不能一概判为违规。一般读模型与聚合例外分别约束，见 DEC-003 |
 | F07 | [GrantFailureLedger](../server/domain-reward/src/main/java/com/mkt/reward/application/GrantFailureLedger.java) 永久失败独立事务与设计例外不一致；任务保存的控制器审计晚于业务提交，存在分开提交窗口 | 资金与留痕语义先决策、再改实现，见 DEC-004 |
 | F08 | [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每轮单批 100，调度间隔 5 秒 | 需明确持续事件吞吐与恢复预算；这不是可通过清理代码风格解决的问题，见 DEC-002 |
-| F09 | [TrackBatchService](../server/domain-tracking/src/main/java/com/mkt/tracking/application/TrackBatchService.java) 在 accepted event 路径重复读取元数据状态 | 批次按事件码去重和批读；跨请求缓存另按命名空间设计处理 |
+| F09 | [TrackBatchService](../server/domain-tracking/src/main/java/com/mkt/tracking/application/TrackBatchService.java) 在 accepted event 路径重复读取元数据状态 | **本轮**：`statusesOf` 批次去重批读（decide + toAccepted 共用 map）；跨请求缓存另按命名空间设计处理；见 `TrackBatchServiceTest` |
 | F10 | [我的列表页面](../web/apps/client/src/views/mine/) 原实现把 Vant `v-model:loading` 与请求入口的 loading 拦截混用，缺少请求代次隔离 | 已在 R5-01 通过统一分页、错误恢复和会话隔离修复；组件与浏览器回归入口见验证映射，历史结果不代替本次执行 |
 | F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | 失败后加载状态可能不恢复。先统一请求生命周期，再按页面迁移；不以文件长短单独判定质量 |
 | F12 | 原仅 [check-openapi-types.sh](../ci/check-openapi-types.sh)（JSON→TS） | 已由 [check-openapi-backend.sh](../ci/check-openapi-backend.sh) 补全非 prod 后端 live 导出 → 已提交 JSON → TS；prod springdoc 保持关闭（#99） |

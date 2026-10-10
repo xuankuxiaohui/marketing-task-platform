@@ -22,8 +22,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Client batch ingest: one {@code evt_event_log} row per request (R28.9). */
 public class TrackBatchService {
@@ -63,6 +65,14 @@ public class TrackBatchService {
             throw new BusinessException(TrackErrorCodes.BATCH_RATE_LIMITED);
         }
 
+        Set<String> distinctCodes = new LinkedHashSet<>();
+        for (TrackEventCommand event : command.events()) {
+            if (event != null && event.code() != null) {
+                distinctCodes.add(event.code());
+            }
+        }
+        Map<String, MetadataStatus> statuses = metadataStore.statusesOf(distinctCodes);
+
         List<AcceptedEvent> accepted = new ArrayList<>();
         int malformed = 0;
         int unregistered = 0;
@@ -72,18 +82,19 @@ public class TrackBatchService {
                 malformed++;
                 continue;
             }
+            MetadataStatus status = statuses.getOrDefault(event.code(), MetadataStatus.MISSING);
             EventFilterDecision decision = TrackPolicies.decide(
                     event.code(),
                     event.props(),
                     settings.eventMaxPayloadBytes(),
-                    metadataStore.statusOf(event.code()),
+                    status,
                     settings.unregisteredPolicy(),
                     settings.disabledEventPolicy());
             switch (decision) {
                 case DROP_MALFORMED -> malformed++;
                 case DROP_UNREGISTERED -> unregistered++;
                 case DROP_DISABLED -> disabled++;
-                case ACCEPT -> accepted.add(toAccepted(event));
+                case ACCEPT -> accepted.add(toAccepted(event, status));
             }
         }
         drops.addMalformed(malformed);
@@ -96,8 +107,7 @@ public class TrackBatchService {
         return new TrackBatchResponse(accepted.size(), dropped);
     }
 
-    private AcceptedEvent toAccepted(TrackEventCommand event) {
-        MetadataStatus status = metadataStore.statusOf(event.code());
+    private AcceptedEvent toAccepted(TrackEventCommand event, MetadataStatus status) {
         boolean registered = status != MetadataStatus.MISSING;
         return new AcceptedEvent(
                 event.code(), TrackPolicies.normalizeProps(event.props()), event.clientTime(), registered);
