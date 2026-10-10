@@ -36,6 +36,9 @@ mkt:
     webhook-url: ${MKT_ALERT_WEBHOOK_URL:}
   outbox:
     producer: admin
+    # DEC-002 starters (tunable via load test; not DEC-006 capacity gate)
+    batch-size: 100
+    lock-hold-budget-ms: 2000
   track:
     retention-event-days: 90
     query-sample-ratio-percent: 1

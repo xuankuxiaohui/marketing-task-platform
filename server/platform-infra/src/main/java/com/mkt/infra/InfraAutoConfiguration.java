@@ -26,6 +26,7 @@ import com.mkt.infra.session.KickReasonListener;
 import com.mkt.infra.session.KickReasonStore;
 import com.mkt.infra.session.SaTokenDaoKeyValue;
 import java.time.Clock;
+import java.time.Duration;
 import javax.sql.DataSource;
 import java.util.List;
 import org.redisson.api.RedissonClient;
@@ -188,8 +189,17 @@ public class InfraAutoConfiguration {
             EventPublisher eventPublisher,
             PlatformLock platformLock,
             Clock clock,
-            List<EventConsumer> consumers) {
-        return new OutboxRelay(outboxStore, eventPublisher.producer(), platformLock, clock, consumers);
+            List<EventConsumer> consumers,
+            @Value("${mkt.outbox.batch-size:100}") int batchSize,
+            @Value("${mkt.outbox.lock-hold-budget-ms:2000}") long lockHoldBudgetMs) {
+        return new OutboxRelay(
+                outboxStore,
+                eventPublisher.producer(),
+                platformLock,
+                clock,
+                consumers,
+                batchSize,
+                Duration.ofMillis(lockHoldBudgetMs));
     }
 
     @Bean
@@ -206,6 +216,7 @@ public class InfraAutoConfiguration {
             this.relay = relay;
         }
 
+        /** DEC-002 starter schedule interval (5s); keep fixedDelay. */
         @Scheduled(fixedDelay = 5000)
         public void tick() {
             relay.tick();
