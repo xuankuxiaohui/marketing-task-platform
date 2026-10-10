@@ -132,7 +132,7 @@ public class ActivityPortalAppService {
                     userId,
                     attrs,
                     now,
-                    code -> crowds.memberOfCode(code, userId));
+                    codes -> crowds.memberOfAny(codes, userId));
         }
         if (hit != null) {
             long id = insertRow(locked.getId(), userId, periodKey, HitRules.REJECT, hit, now);

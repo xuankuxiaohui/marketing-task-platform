@@ -55,7 +55,12 @@ class PortSignatureTest {
     void crowdPortIsReadOnlyMembership() {
         assertSignature(CrowdPort.class, "memberOf", boolean.class, long.class, long.class);
         assertSignature(CrowdPort.class, "memberOfCode", boolean.class, String.class, long.class);
-        assertThat(declaredMethods(CrowdPort.class)).containsExactlyInAnyOrder("memberOf", "memberOfCode");
+        assertSignature(
+                CrowdPort.class, "memberOfAll", boolean.class, java.util.Collection.class, long.class);
+        assertSignature(
+                CrowdPort.class, "memberOfAny", boolean.class, java.util.Collection.class, long.class);
+        assertThat(declaredMethods(CrowdPort.class))
+                .containsExactlyInAnyOrder("memberOf", "memberOfCode", "memberOfAll", "memberOfAny");
         assertThat(declaredMethods(CrowdPort.class))
                 .noneMatch(name -> name.matches(".*(grant|save|update|delete|lock|write).*"));
     }
@@ -80,6 +85,9 @@ class PortSignatureTest {
     }
 
     private static List<String> declaredMethods(Class<?> type) {
-        return Arrays.stream(type.getDeclaredMethods()).map(Method::getName).toList();
+        return Arrays.stream(type.getDeclaredMethods())
+                .filter(method -> Modifier.isPublic(method.getModifiers()))
+                .map(Method::getName)
+                .toList();
     }
 }

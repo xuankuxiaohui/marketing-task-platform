@@ -32,6 +32,33 @@ class CrowdPortImplTest {
         assertThat(port.memberOfCode("missing", 9L)).isFalse();
     }
 
+
+    @Test
+    void memberOfAnyAndAllRespectBoundsAndMembership() {
+        MemoryTaskCrowdStore store = new MemoryTaskCrowdStore();
+        for (String code : List.of("a", "b", "c")) {
+            TaskCrowdEntity pack = new TaskCrowdEntity();
+            pack.setCode(code);
+            pack.setName(code);
+            pack.setStatus(CrowdStatuses.ENABLED);
+            store.insert(pack);
+            store.insertMemberIgnore(pack.getId(), 9L);
+        }
+        CrowdPortImpl port = new CrowdPortImpl(store, user(9L, AccountStatus.ACTIVE));
+        assertThat(port.memberOfAny(List.of("a", "missing"), 9L)).isTrue();
+        assertThat(port.memberOfAny(List.of("missing", "gone"), 9L)).isFalse();
+        assertThat(port.memberOfAll(List.of("a", "b"), 9L)).isTrue();
+        assertThat(port.memberOfAll(List.of("a", "missing"), 9L)).isFalse();
+        assertThat(port.memberOfAny(List.of(), 9L)).isFalse();
+        assertThat(port.memberOfAll(List.of(), 9L)).isFalse();
+        List<String> oversized = new java.util.ArrayList<>();
+        for (int i = 0; i < com.mkt.contract.CrowdPort.MAX_COMBO_CODES + 1; i++) {
+            oversized.add("a");
+        }
+        assertThat(port.memberOfAny(oversized, 9L)).isFalse();
+        assertThat(port.memberOfAll(oversized, 9L)).isFalse();
+    }
+
     private static UserAttributePort user(long id, AccountStatus status) {
         return new UserAttributePort() {
             @Override

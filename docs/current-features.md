@@ -18,8 +18,8 @@
 | 我的奖品 | 状态筛选、分页、手动领取、详情、领取后重新加载；任务、活动或签到来源导航 | 已存在；[奖品 API](../server/domain-reward/src/main/java/com/mkt/reward/controller/portal/PrizePortalController.java)、[详情页](../web/apps/client/src/views/mine/PrizeDetailPage.vue)。第三方实际到账见第 4 节 |
 | 我的积分 | 余额、按类型筛选的流水、分页、刷新与失败重试 | 已存在；[积分 API](../server/domain-reward/src/main/java/com/mkt/reward/controller/portal/PointsPortalController.java) |
 | 签到 | 进行中的签到活动、月历、今日签到、补签扣积分、连续天数与梯度奖励、重复签到幂等 | 已存在；[签到 API](../server/domain-signin/src/main/java/com/mkt/signin/controller/portal/SigninPortalController.java)。扣分、记录与奖励的事务正确性需真实数据库验证 |
-| 活动 | 富文本详情、子模块导航、参与状态、参与奖励；直接用户名单、新用户、用户每日/总次数、全局每日次数、地区限制、人群码（CrowdPort） | 部分实现；[活动 API](../server/domain-activity/src/main/java/com/mkt/activity/controller/portal/ActivityPortalController.java)。[DEC-003](decisions.md#dec-003跨域只读契约与人群能力已关闭) 已关闭；CrowdPort 最小集已接线（#102）；`memberOfAll`/`memberOfAny` 与 F06 门禁见实现 PR |
-| 广告 | 轮播、单图、开屏、弹窗、浮标；素材跳转、时间窗、平台与登录灰度、每日频控、弹窗冷却、浮标关闭；登录用户 `crowdId` 筛选 | 部分实现；[投放服务](../server/domain-ad/src/main/java/com/mkt/ad/application/AdPortalAppService.java)。匿名使用设备标识且不筛人群（DEC-003 维持）；登录人群最小集已用（#102）；组合/F06 见实现 PR |
+| 活动 | 富文本详情、子模块导航、参与状态、参与奖励；直接用户名单、新用户、用户每日/总次数、全局每日次数、地区限制、人群码（CrowdPort） | 部分实现；[活动 API](../server/domain-activity/src/main/java/com/mkt/activity/controller/portal/ActivityPortalController.java)。[DEC-003](decisions.md#dec-003跨域只读契约与人群能力已关闭) 已关闭；CrowdPort 含 `memberOfAll`/`memberOfAny`（有界 code 列表）；活动允许名单经 `memberOfAny`；匿名广告仍不筛人群 |
+| 广告 | 轮播、单图、开屏、弹窗、浮标；素材跳转、时间窗、平台与登录灰度、每日频控、弹窗冷却、浮标关闭；登录用户 `crowdId` 筛选 | 部分实现；[投放服务](../server/domain-ad/src/main/java/com/mkt/ad/application/AdPortalAppService.java)。匿名使用设备标识且不筛人群（DEC-003 维持）；登录用户 `crowdId` 经 `memberOf`；F06 聚合例外已登记门禁 |
 | 客户端埋点 | 页面和操作事件、广告曝光/点击等批量上报，携带设备与平台信息 | 已存在；[批量 API](../server/domain-tracking/src/main/java/com/mkt/tracking/controller/portal/TrackBatchController.java)。接收事件数与落库批次数分别计量 |
 
 ## 2. 管理后台
@@ -43,8 +43,8 @@
 | 对账与补偿 | 批次创建、账单导入、匹配、差异明细、审核、执行补偿动作 | 已存在；[对账 API](../server/domain-reward/src/main/java/com/mkt/reward/controller/admin/ReconAdminController.java)。导入账单和状态操作不代表真实渠道接通 |
 | 风控 | 用户/IP/设备黑白名单、导入/移除、有效期；R-a～R-f 六条内置规则配置；命中查询、加黑、解黑/转白、误判标记 | 已存在；[风控 API](../server/domain-risk/src/main/java/com/mkt/risk/controller/admin/)。Redis 计数、名单优先级与故障降级须动态验证 |
 | 签到运营 | 活动及梯度奖配置、发布、定时发布、下线、签到记录查询 | 已存在；[签到 API](../server/domain-signin/src/main/java/com/mkt/signin/controller/admin/SigninAdminController.java) |
-| 活动运营 | 富文本与子模块配置、参与奖励及限制、发布、定时发布、下线、参与记录与统计 | 部分实现；[活动 API](../server/domain-activity/src/main/java/com/mkt/activity/controller/admin/ActivityAdminController.java)。人群配置可保存；门户侧 CrowdPort 最小集已求值（#102）；组合条件见 DEC-003 决定与实现 PR |
-| 广告运营 | 广告位与素材管理、绑定/解绑、时间窗、平台、灰度、人群配置 | 部分实现；[广告 API](../server/domain-ad/src/main/java/com/mkt/ad/controller/admin/AdAdminController.java)。人群配置可保存；登录投放已用 `crowdId`（#102）；组合/F06 见 DEC-003 决定与实现 PR |
+| 活动运营 | 富文本与子模块配置、参与奖励及限制、发布、定时发布、下线、参与记录与统计 | 部分实现；[活动 API](../server/domain-activity/src/main/java/com/mkt/activity/controller/admin/ActivityAdminController.java)。人群配置可保存；门户侧经 CrowdPort `memberOfAny` 求值允许人群码 |
+| 广告运营 | 广告位与素材管理、绑定/解绑、时间窗、平台、灰度、人群配置 | 部分实现；[广告 API](../server/domain-ad/src/main/java/com/mkt/ad/controller/admin/AdAdminController.java)。人群配置可保存；登录投放已用 `crowdId`；F06 门禁已登记 |
 | 埋点治理与调试 | 元数据增改删/启停、属性描述、所有者、客户端事件查询及接收策略 | 已存在；[埋点 API](../server/domain-tracking/src/main/java/com/mkt/tracking/controller/admin/)。属性描述存在不代表全部属性约束已强制执行 |
 | 统计看板 | 任务漏斗、奖励成本、风控与广告统计，定时聚合 | 已存在；[指标 API](../server/admin-app/src/main/java/com/mkt/admin/controller/admin/MetricsAdminController.java)。聚合延迟、数值口径及容量需验证 |
 | 任务模拟 | 按指定用户查任务、领取、点击、回调、进度、整流程与冲正 | 已存在；[模拟 API](../server/admin-app/src/main/java/com/mkt/admin/controller/admin/SimulateAdminController.java)。模拟带 `simulated` 标识，不能替代真实用户旅程和渠道验证 |
@@ -68,7 +68,7 @@
 | 缺口 | 代码依据与影响 |
 |---|---|
 | 第三方真实发奖未接通 | [FulfillmentService](../server/domain-reward/src/main/java/com/mkt/reward/application/FulfillmentService.java) 仅生成 `adapter:stub-{recordId}`；支付宝红包、微信红包、话费等类别可配置，尚不能证明真实发送或到账。平台积分可独立验收 |
-| 活动/广告人群组合与跨域 SQL（F06）待实现 PR | [DEC-003](decisions.md#dec-003跨域只读契约与人群能力已关闭) **已关闭**（通则 / F06 例外登记 / `memberOfAll`·`memberOfAny` / 匿名维持）。CrowdPort 最小集已接线（#102）。**实现**（白名单门禁 + 组合接线）见后续 F06 PR，合入前本行保持「待实现」 |
+| （已收口）活动/广告人群组合与 admin 跨域 SQL | [DEC-003](decisions.md#dec-003跨域只读契约与人群能力已关闭) 已关闭并落地：`CrowdPort.memberOfAll`/`memberOfAny`；活动 `memberOfAny`；广告登录 `memberOf`、匿名不筛；F06 清单 [AdminAggregateSqlInventory](../server/admin-app/src/main/java/com/mkt/admin/arch/AdminAggregateSqlInventory.java) + [ArchAdminAggregateSqlTest](../server/admin-app/src/test/java/com/mkt/admin/ArchAdminAggregateSqlTest.java) |
 | 后台缺逐笔发放查询 | [发放记录页](../web/apps/admin/src/views/reward/record/index.vue) 明确提示列表端点未装配；展示成本汇总，操作要求输入记录 ID。不能描述为完整发放记录查询管理 |
 | 权限节点缺独立编辑页 | [PermissionAdminController](../server/domain-identity/src/main/java/com/mkt/identity/controller/admin/PermissionAdminController.java) 提供节点管理 API；当前后台只有角色授权等页面，没有独立权限节点编辑页面 |
 

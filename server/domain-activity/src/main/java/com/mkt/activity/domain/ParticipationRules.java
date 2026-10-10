@@ -31,9 +31,9 @@ public final class ParticipationRules {
             long userId,
             UserAttributes attrs,
             Instant now,
-            Predicate<String> crowdMember) {
+            Predicate<? super Collection<String>> crowdAnyMember) {
         if (allowlistConfigured(allowUserIds, allowCrowdCodes)
-                && !allowlistHit(allowUserIds, allowCrowdCodes, userId, crowdMember)) {
+                && !allowlistHit(allowUserIds, allowCrowdCodes, userId, crowdAnyMember)) {
             return HitRules.ALLOWLIST;
         }
         if (newUserOnly && !isNewUser(attrs, now, newUserDays)) {
@@ -62,19 +62,14 @@ public final class ParticipationRules {
             Collection<Long> allowUserIds,
             Collection<String> allowCrowdCodes,
             long userId,
-            Predicate<String> crowdMember) {
+            Predicate<? super Collection<String>> crowdAnyMember) {
         if (containsUser(allowUserIds, userId)) {
             return true;
         }
-        if (!notEmpty(allowCrowdCodes) || crowdMember == null) {
+        if (!notEmpty(allowCrowdCodes) || crowdAnyMember == null) {
             return false;
         }
-        for (String code : allowCrowdCodes) {
-            if (code != null && crowdMember.test(code)) {
-                return true;
-            }
-        }
-        return false;
+        return crowdAnyMember.test(allowCrowdCodes);
     }
 
     public static boolean isNewUser(UserAttributes attrs, Instant now, int newUserDays) {
