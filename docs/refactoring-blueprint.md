@@ -18,7 +18,7 @@
 
 | 编号 | 静态证据 | 影响与后续处理 |
 |---|---|---|
-| F01 | [TaskPortalAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPortalAppService.java) 的 `list` 遍历发布任务，逐项取快照及用户周期实例，再内存分页；`mine` 还扫描用户历史 | 查询量随目录/历史增长。建立统一快照入口与有界状态批读，保留可见性过滤后的分页语义 |
+| F01 | [TaskPortalAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPortalAppService.java) 的 `list`/`mine` 曾逐项取快照与周期实例 | **本轮**：`listByTaskAndVersions` + `listByUserTaskCycles` 批读；可见性过滤后分页语义不变；缓存统一入口仍待 F03/后续 |
 | F02 | [TaskPublishAppService](../server/domain-task/src/main/java/com/mkt/task/application/TaskPublishAppService.java) 的 `freezeToPublished` 曾在事务提交前写共享快照缓存，索引则在提交后失效 | **已修复**：快照改为 `putAfterCommit`（与索引 `evictAfterCommit` 对齐）；回滚不再提前暴露快照；见 `TaskPublishAppServiceTest` / `TwoLevelPlatformCacheTest` |
 | F03 | [TwoLevelPlatformCache](../server/platform-infra/src/main/java/com/mkt/infra/cache/TwoLevelPlatformCache.java) 为查缓存 → loader → put；evict 不约束正在进行的 loader | 静态竞争风险：并发加载放大、失效后旧值回填。验证同 key 合并加载、跨节点失效与故障回源 |
 | F04 | 原领取互斥只扫 PUBLISHED，原下线操作未更新在途期限 | 已在 R2-01 修复为绑定快照互斥、下线有界重算及并发保护；规则由 DEC-007 明确，后续真实 MySQL 结果见 2026-10-07 核验报告 |

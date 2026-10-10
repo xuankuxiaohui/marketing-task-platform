@@ -13,5 +13,8 @@ public interface TaskVersionSnapshotStore {
 
     TaskVersionSnapshotEntity getByTaskAndVersion(long taskId, int version);
 
+    /** Bounded batch read for portal catalog (F01). Empty keys → empty list. */
+    List<TaskVersionSnapshotEntity> listByTaskAndVersions(List<TaskVersionKey> keys);
+
     List<TaskVersionSnapshotEntity> listByTaskId(long taskId);
 }

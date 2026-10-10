@@ -39,4 +39,13 @@
         WHERE task_id = #{taskId}
         ORDER BY version DESC
     </select>
+
+    <select id="selectByTaskAndVersions" resultType="com.mkt.task.entity.TaskVersionSnapshotEntity">
+        SELECT <include refid="cols"/>
+        FROM task_version_snapshot
+        WHERE (task_id, version) IN
+        <foreach collection="keys" item="key" open="(" separator="," close=")">
+            (#{key.taskId}, #{key.version})
+        </foreach>
+    </select>
 </mapper>

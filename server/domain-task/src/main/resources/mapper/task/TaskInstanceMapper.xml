@@ -21,6 +21,16 @@
         WHERE user_id = #{userId} AND task_id = #{taskId} AND cycle_key = #{cycleKey}
     </select>
 
+    <select id="selectByUserTaskCycles" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE user_id = #{userId}
+          AND (task_id, cycle_key) IN
+        <foreach collection="keys" item="key" open="(" separator="," close=")">
+            (#{key.taskId}, #{key.cycleKey})
+        </foreach>
+    </select>
+
     <select id="selectByUser" resultType="com.mkt.task.entity.TaskInstanceEntity">
         SELECT <include refid="cols"/>
         FROM task_instance

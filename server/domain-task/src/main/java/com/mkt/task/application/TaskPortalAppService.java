@@ -37,6 +37,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -117,9 +119,29 @@ public class TaskPortalAppService {
         UserAttributes attrs = userId == null ? null : users.attributes(userId);
         Instant now = clock.instant();
         List<TaskDefinitionEntity> published = definitions.listPublished();
+        Map<Long, SnapshotContent> snapshotByTask = loadPublishedSnapshots(published);
+        List<TaskCycleKey> cycleKeys = new ArrayList<>();
+        if (userId != null) {
+            for (TaskDefinitionEntity definition : published) {
+                SnapshotContent snapshot = snapshotByTask.get(definition.getId());
+                if (snapshot == null) {
+                    continue;
+                }
+                cycleKeys.add(new TaskCycleKey(
+                        definition.getId(),
+                        CycleKeyResolver.resolve(
+                                snapshot.cycleType(),
+                                snapshot.cronExpr(),
+                                snapshot.specialStart(),
+                                snapshot.specialEnd(),
+                                now)));
+            }
+        }
+        Map<Long, TaskInstanceEntity> currentByTask = indexByTaskId(
+                userId == null ? List.of() : instances.listByUserTaskCycles(userId, cycleKeys));
         List<TaskCardView> cards = new ArrayList<>();
         for (TaskDefinitionEntity definition : published) {
-            SnapshotContent snapshot = snapshotOf(definition);
+            SnapshotContent snapshot = snapshotByTask.get(definition.getId());
             if (snapshot == null) {
                 continue;
             }
@@ -139,13 +161,7 @@ public class TaskPortalAppService {
                 cards.add(toCard(definition, snapshot, InstanceStatuses.NOT_STARTED));
                 continue;
             }
-            String cycleKey = CycleKeyResolver.resolve(
-                    snapshot.cycleType(),
-                    snapshot.cronExpr(),
-                    snapshot.specialStart(),
-                    snapshot.specialEnd(),
-                    now);
-            TaskInstanceEntity current = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey);
+            TaskInstanceEntity current = currentByTask.get(definition.getId());
             boolean inProgressThisCycle =
                     current != null && InstanceStatuses.IN_PROGRESS.equals(current.getStatus());
             VisibilityResult visibility = visibility(definition, snapshot, userId, attrs, now);
@@ -215,21 +231,28 @@ public class TaskPortalAppService {
         String categoryFilter = allCategoryToNull(category);
         if (categoryFilter != null) {
             categoryTaskIds = new ArrayList<>();
-            for (TaskDefinitionEntity definition : definitions.listPublished()) {
-                SnapshotContent snapshot = snapshotOf(definition);
+            List<TaskDefinitionEntity> published = definitions.listPublished();
+            Map<Long, SnapshotContent> publishedSnaps = loadPublishedSnapshots(published);
+            for (TaskDefinitionEntity definition : published) {
+                SnapshotContent snapshot = publishedSnaps.get(definition.getId());
                 if (snapshot != null && categoryFilter.equals(snapshot.category())) {
                     categoryTaskIds.add(definition.getId());
                 }
             }
-            for (TaskInstanceEntity row : instances.listByUser(userId)) {
-                if (categoryTaskIds.contains(row.getTaskId())) {
+            List<TaskInstanceEntity> history = instances.listByUser(userId);
+            List<Long> snapIds = new ArrayList<>();
+            for (TaskInstanceEntity row : history) {
+                if (categoryTaskIds.contains(row.getTaskId()) || row.getSnapshotId() == null) {
                     continue;
                 }
-                TaskVersionSnapshotEntity snap = snapshots.getById(row.getSnapshotId());
-                if (snap == null) {
+                snapIds.add(row.getSnapshotId());
+            }
+            Map<Long, SnapshotContent> historySnaps = loadSnapshotsByIds(snapIds);
+            for (TaskInstanceEntity row : history) {
+                if (categoryTaskIds.contains(row.getTaskId()) || row.getSnapshotId() == null) {
                     continue;
                 }
-                SnapshotContent content = JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+                SnapshotContent content = historySnaps.get(row.getSnapshotId());
                 if (content != null && categoryFilter.equals(content.category())) {
                     categoryTaskIds.add(row.getTaskId());
                 }
@@ -342,6 +365,54 @@ public class TaskPortalAppService {
             return null;
         }
         return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+    }
+
+    private Map<Long, SnapshotContent> loadPublishedSnapshots(List<TaskDefinitionEntity> published) {
+        List<TaskVersionKey> keys = new ArrayList<>();
+        for (TaskDefinitionEntity definition : published) {
+            if (definition.getVersion() == null || definition.getVersion() < 1) {
+                continue;
+            }
+            keys.add(new TaskVersionKey(definition.getId(), definition.getVersion()));
+        }
+        Map<Long, SnapshotContent> out = new HashMap<>();
+        for (TaskVersionSnapshotEntity snap : snapshots.listByTaskAndVersions(keys)) {
+            if (snap == null || snap.getTaskId() == null || snap.getContent() == null) {
+                continue;
+            }
+            SnapshotContent content = JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+            if (content != null) {
+                out.put(snap.getTaskId(), content);
+            }
+        }
+        return out;
+    }
+
+    private Map<Long, SnapshotContent> loadSnapshotsByIds(List<Long> ids) {
+        Map<Long, SnapshotContent> out = new HashMap<>();
+        if (ids == null || ids.isEmpty()) {
+            return out;
+        }
+        for (TaskVersionSnapshotEntity snap : snapshots.listByIds(ids)) {
+            if (snap == null || snap.getId() == null || snap.getContent() == null) {
+                continue;
+            }
+            SnapshotContent content = JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+            if (content != null) {
+                out.put(snap.getId(), content);
+            }
+        }
+        return out;
+    }
+
+    private static Map<Long, TaskInstanceEntity> indexByTaskId(List<TaskInstanceEntity> rows) {
+        Map<Long, TaskInstanceEntity> out = new HashMap<>();
+        for (TaskInstanceEntity row : rows) {
+            if (row != null && row.getTaskId() != null) {
+                out.put(row.getTaskId(), row);
+            }
+        }
+        return out;
     }
 
     private boolean blacklisted(long userId) {
