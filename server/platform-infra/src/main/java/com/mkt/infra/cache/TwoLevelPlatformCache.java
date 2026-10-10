@@ -8,6 +8,9 @@ import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.json.JsonUtil;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -26,6 +29,12 @@ public final class TwoLevelPlatformCache implements PlatformCache {
     private final Map<CacheNamespace, Cache<String, Object>> l1 = new EnumMap<>(CacheNamespace.class);
     private final Map<CacheNamespace, AtomicLong> hits = new EnumMap<>(CacheNamespace.class);
     private final Map<CacheNamespace, AtomicLong> misses = new EnumMap<>(CacheNamespace.class);
+    /** Per-key generation bumped on KEY/PREFIX evict (local + broadcast). */
+    private final ConcurrentHashMap<String, AtomicLong> keyGenerations = new ConcurrentHashMap<>();
+    /** Namespace generation bumped on NAMESPACE evict (local + broadcast). */
+    private final Map<CacheNamespace, AtomicLong> namespaceGenerations = new EnumMap<>(CacheNamespace.class);
+    /** In-flight same-key loaders (single-flight). */
+    private final ConcurrentHashMap<String, CompletableFuture<?>> inflight = new ConcurrentHashMap<>();
 
     public TwoLevelPlatformCache(KeyValueStore store) {
         this(store, Ticker.systemTicker());
@@ -36,6 +45,7 @@ public final class TwoLevelPlatformCache implements PlatformCache {
         for (CacheNamespace ns : CacheNamespace.values()) {
             hits.put(ns, new AtomicLong());
             misses.put(ns, new AtomicLong());
+            namespaceGenerations.put(ns, new AtomicLong());
             if (ns.kind() == CacheNamespaceKind.MANAGED) {
                 l1.put(
                         ns,
@@ -73,11 +83,7 @@ public final class TwoLevelPlatformCache implements PlatformCache {
             log.warn("L2 unreachable, falling back to loader, ns={}", namespace.id(), ex);
         }
         misses.get(namespace).incrementAndGet();
-        T loaded = loader.get();
-        if (loaded != null) {
-            putQuiet(namespace, bizKey, loaded);
-        }
-        return loaded;
+        return loadMerged(namespace, bizKey, loader);
     }
 
     @Override
@@ -109,6 +115,7 @@ public final class TwoLevelPlatformCache implements PlatformCache {
         if (namespace.kind() == CacheNamespaceKind.PLACEHOLDER) {
             return;
         }
+        bumpKeyGeneration(namespace, bizKey);
         unlinkQuiet(namespace.redisKey(bizKey));
         Cache<String, Object> local = l1.get(namespace);
         if (local != null) {
@@ -123,6 +130,7 @@ public final class TwoLevelPlatformCache implements PlatformCache {
         if (namespace.kind() == CacheNamespaceKind.PLACEHOLDER) {
             return;
         }
+        bumpPrefixGeneration(namespace, prefix);
         unlinkPatternQuiet(namespace.redisKey(prefix) + "*");
         Cache<String, Object> local = l1.get(namespace);
         if (local != null) {
@@ -137,6 +145,7 @@ public final class TwoLevelPlatformCache implements PlatformCache {
         if (namespace.kind() == CacheNamespaceKind.PLACEHOLDER) {
             return;
         }
+        namespaceGenerations.get(namespace).incrementAndGet();
         unlinkPatternQuiet(namespace.id() + ":*");
         Cache<String, Object> local = l1.get(namespace);
         if (local != null) {
@@ -183,11 +192,95 @@ public final class TwoLevelPlatformCache implements PlatformCache {
                 return;
             }
             switch (message.mode()) {
-                case KEY -> local.invalidate(message.key());
-                case PREFIX -> local.asMap().keySet().removeIf(k -> k.startsWith(message.key()));
-                case NAMESPACE -> local.invalidateAll();
+                case KEY -> {
+                    bumpKeyGeneration(ns, message.key());
+                    local.invalidate(message.key());
+                }
+                case PREFIX -> {
+                    bumpPrefixGeneration(ns, message.key());
+                    local.asMap().keySet().removeIf(k -> k.startsWith(message.key()));
+                }
+                case NAMESPACE -> {
+                    namespaceGenerations.get(ns).incrementAndGet();
+                    local.invalidateAll();
+                }
             }
         });
+    }
+
+    private <T> T loadMerged(CacheNamespace namespace, String bizKey, Supplier<T> loader) {
+        String flightKey = flightKey(namespace, bizKey);
+        long keyGen = keyGeneration(namespace, bizKey);
+        long nsGen = namespaceGenerations.get(namespace).get();
+
+        CompletableFuture<T> created = new CompletableFuture<>();
+        @SuppressWarnings("unchecked")
+        CompletableFuture<T> existing = (CompletableFuture<T>) inflight.putIfAbsent(flightKey, created);
+        if (existing != null) {
+            return joinFlight(existing);
+        }
+        try {
+            T loaded = loader.get();
+            if (loaded != null && stillValid(namespace, bizKey, keyGen, nsGen)) {
+                putQuiet(namespace, bizKey, loaded);
+            }
+            created.complete(loaded);
+            return loaded;
+        } catch (RuntimeException ex) {
+            created.completeExceptionally(ex);
+            throw ex;
+        } catch (Exception ex) {
+            created.completeExceptionally(ex);
+            throw new CompletionException(ex);
+        } finally {
+            inflight.remove(flightKey, created);
+        }
+    }
+
+    private static <T> T joinFlight(CompletableFuture<T> future) {
+        try {
+            return future.join();
+        } catch (CompletionException ex) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (cause instanceof Error error) {
+                throw error;
+            }
+            throw ex;
+        }
+    }
+
+    private boolean stillValid(CacheNamespace namespace, String bizKey, long keyGen, long nsGen) {
+        return keyGeneration(namespace, bizKey) == keyGen
+                && namespaceGenerations.get(namespace).get() == nsGen;
+    }
+
+    private long keyGeneration(CacheNamespace namespace, String bizKey) {
+        return keyGenerations.computeIfAbsent(flightKey(namespace, bizKey), k -> new AtomicLong()).get();
+    }
+
+    private void bumpKeyGeneration(CacheNamespace namespace, String bizKey) {
+        keyGenerations.computeIfAbsent(flightKey(namespace, bizKey), k -> new AtomicLong()).incrementAndGet();
+    }
+
+    private void bumpPrefixGeneration(CacheNamespace namespace, String prefix) {
+        String nsPrefix = namespace.id() + '\0';
+        for (Map.Entry<String, AtomicLong> entry : keyGenerations.entrySet()) {
+            String flight = entry.getKey();
+            if (!flight.startsWith(nsPrefix)) {
+                continue;
+            }
+            String key = flight.substring(nsPrefix.length());
+            if (key.startsWith(prefix)) {
+                entry.getValue().incrementAndGet();
+            }
+        }
+    }
+
+    private static String flightKey(CacheNamespace namespace, String bizKey) {
+        return namespace.id() + '\0' + bizKey;
     }
 
     private void putQuiet(CacheNamespace namespace, String bizKey, Object value) {

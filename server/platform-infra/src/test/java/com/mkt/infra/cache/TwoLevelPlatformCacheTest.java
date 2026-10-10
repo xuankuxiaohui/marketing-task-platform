@@ -7,6 +7,13 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.kernel.BusinessException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
@@ -172,5 +179,111 @@ class TwoLevelPlatformCacheTest {
         store.setAvailable(false);
         String value = cache.get(CacheNamespace.DICT, "fresh", String.class, () -> "db");
         assertThat(value).isEqualTo("db");
+    }
+
+    @Test
+    void concurrentSameKeyGetCoalescesToSingleLoader() throws Exception {
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        AtomicInteger loads = new AtomicInteger();
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        try {
+            List<Future<String>> futures = new ArrayList<>();
+            for (int i = 0; i < 8; i++) {
+                futures.add(pool.submit(() -> cache.get(CacheNamespace.DICT, "herd", String.class, () -> {
+                    int n = loads.incrementAndGet();
+                    if (n == 1) {
+                        loaderEntered.countDown();
+                        awaitLatch(releaseLoader);
+                    }
+                    return "coalesced";
+                })));
+            }
+            assertThat(loaderEntered.await(5, TimeUnit.SECONDS)).isTrue();
+            // Let waiters attach to the in-flight future before completing the loader.
+            Thread.sleep(150);
+            releaseLoader.countDown();
+            for (Future<String> future : futures) {
+                assertThat(future.get(5, TimeUnit.SECONDS)).isEqualTo("coalesced");
+            }
+            assertThat(loads.get()).isEqualTo(1);
+            assertThat(store.get("dict:herd")).contains("coalesced");
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void evictDuringSlowLoaderDoesNotRefillStaleValue() throws Exception {
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        AtomicInteger loads = new AtomicInteger();
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<String> slow = pool.submit(() -> cache.get(CacheNamespace.DICT, "stale", String.class, () -> {
+                loads.incrementAndGet();
+                loaderEntered.countDown();
+                awaitLatch(releaseLoader);
+                return "stale-old";
+            }));
+            assertThat(loaderEntered.await(5, TimeUnit.SECONDS)).isTrue();
+            cache.evict(CacheNamespace.DICT, "stale");
+            releaseLoader.countDown();
+            assertThat(slow.get(5, TimeUnit.SECONDS)).isEqualTo("stale-old");
+            assertThat(store.get("dict:stale")).isNull();
+
+            String fresh = cache.get(CacheNamespace.DICT, "stale", String.class, () -> {
+                loads.incrementAndGet();
+                return "fresh";
+            });
+            assertThat(fresh).isEqualTo("fresh");
+            assertThat(loads.get()).isEqualTo(2);
+            assertThat(store.get("dict:stale")).contains("fresh");
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void peerBroadcastInvalidateBlocksStaleLoaderFill() throws Exception {
+        TwoLevelPlatformCache peer = new TwoLevelPlatformCache(store);
+        CountDownLatch loaderEntered = new CountDownLatch(1);
+        CountDownLatch releaseLoader = new CountDownLatch(1);
+        AtomicInteger loads = new AtomicInteger();
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<String> slow = pool.submit(() -> peer.get(CacheNamespace.CONFIG, "peer-k", String.class, () -> {
+                loads.incrementAndGet();
+                loaderEntered.countDown();
+                awaitLatch(releaseLoader);
+                return "peer-stale";
+            }));
+            assertThat(loaderEntered.await(5, TimeUnit.SECONDS)).isTrue();
+            cache.evict(CacheNamespace.CONFIG, "peer-k");
+            releaseLoader.countDown();
+            assertThat(slow.get(5, TimeUnit.SECONDS)).isEqualTo("peer-stale");
+            assertThat(store.get("config:peer-k")).isNull();
+
+            String fresh = peer.get(CacheNamespace.CONFIG, "peer-k", String.class, () -> {
+                loads.incrementAndGet();
+                return "peer-fresh";
+            });
+            assertThat(fresh).isEqualTo("peer-fresh");
+            assertThat(loads.get()).isEqualTo(2);
+            assertThat(store.get("config:peer-k")).contains("peer-fresh");
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private static void awaitLatch(CountDownLatch latch) {
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("latch timed out");
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while awaiting latch", ex);
+        }
     }
 }
