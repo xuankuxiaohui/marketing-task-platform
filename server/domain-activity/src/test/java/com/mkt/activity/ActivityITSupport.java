@@ -1,5 +1,6 @@
 package com.mkt.activity;
 
+import com.mkt.contract.CrowdPort;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -38,6 +39,19 @@ import org.testcontainers.containers.MySQLContainer;
 
 final class ActivityITSupport implements AutoCloseable {
 
+    private static final CrowdPort NO_CROWD = new CrowdPort() {
+        @Override
+        public boolean memberOf(long crowdId, long userId) {
+            return false;
+        }
+
+        @Override
+        public boolean memberOfCode(String crowdCode, long userId) {
+            return false;
+        }
+    };
+
+
     final HikariDataSource dataSource;
     final JdbcTemplate jdbc;
     final TransactionTemplate tx;
@@ -70,7 +84,7 @@ final class ActivityITSupport implements AutoCloseable {
         rewards = new RecordingRewardPort();
         users = new StubUserAttributePort();
         admin = new ActivityAdminAppService(activities, participations, rewards, new ActivitySettings(), clock);
-        portal = new ActivityPortalAppService(activities, participations, rewards, users, clock);
+        portal = new ActivityPortalAppService(activities, participations, rewards, users, NO_CROWD, clock);
         DataSourceTransactionManager txm = new DataSourceTransactionManager(dataSource);
         tx = new TransactionTemplate(txm);
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);

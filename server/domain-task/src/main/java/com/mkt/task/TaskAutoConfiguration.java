@@ -1,16 +1,21 @@
 package com.mkt.task;
 
+import com.mkt.contract.CrowdPort;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.TaskReadPort;
+import com.mkt.contract.UserAttributePort;
 import com.mkt.task.application.PrizeEnabledLookup;
+import com.mkt.task.application.TaskCrowdStore;
 import com.mkt.task.application.TaskInstanceStore;
 import com.mkt.task.application.TaskReadPortImpl;
+import com.mkt.task.port.CrowdPortImpl;
 import com.mkt.task.support.TaskSettings;
 import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
@@ -39,5 +44,11 @@ public class TaskAutoConfiguration {
     @Bean
     TaskReadPort taskReadPort(TaskInstanceStore instances) {
         return new TaskReadPortImpl(instances);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(CrowdPort.class)
+    CrowdPort crowdPort(TaskCrowdStore crowds, ObjectProvider<UserAttributePort> users) {
+        return new CrowdPortImpl(crowds, users.getIfAvailable());
     }
 }

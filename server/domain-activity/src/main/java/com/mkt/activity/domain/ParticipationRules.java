@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Activity participation chain (R22.3). Not task claim §5.5.
@@ -29,8 +30,10 @@ public final class ParticipationRules {
             Collection<String> regions,
             long userId,
             UserAttributes attrs,
-            Instant now) {
-        if (allowlistConfigured(allowUserIds, allowCrowdCodes) && !containsUser(allowUserIds, userId)) {
+            Instant now,
+            Predicate<String> crowdMember) {
+        if (allowlistConfigured(allowUserIds, allowCrowdCodes)
+                && !allowlistHit(allowUserIds, allowCrowdCodes, userId, crowdMember)) {
             return HitRules.ALLOWLIST;
         }
         if (newUserOnly && !isNewUser(attrs, now, newUserDays)) {
@@ -53,6 +56,25 @@ public final class ParticipationRules {
 
     public static boolean allowlistConfigured(Collection<Long> allowUserIds, Collection<String> allowCrowdCodes) {
         return notEmpty(allowUserIds) || notEmpty(allowCrowdCodes);
+    }
+
+    public static boolean allowlistHit(
+            Collection<Long> allowUserIds,
+            Collection<String> allowCrowdCodes,
+            long userId,
+            Predicate<String> crowdMember) {
+        if (containsUser(allowUserIds, userId)) {
+            return true;
+        }
+        if (!notEmpty(allowCrowdCodes) || crowdMember == null) {
+            return false;
+        }
+        for (String code : allowCrowdCodes) {
+            if (code != null && crowdMember.test(code)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isNewUser(UserAttributes attrs, Instant now, int newUserDays) {

@@ -52,6 +52,15 @@ class PortSignatureTest {
     }
 
     @Test
+    void crowdPortIsReadOnlyMembership() {
+        assertSignature(CrowdPort.class, "memberOf", boolean.class, long.class, long.class);
+        assertSignature(CrowdPort.class, "memberOfCode", boolean.class, String.class, long.class);
+        assertThat(declaredMethods(CrowdPort.class)).containsExactlyInAnyOrder("memberOf", "memberOfCode");
+        assertThat(declaredMethods(CrowdPort.class))
+                .noneMatch(name -> name.matches(".*(grant|save|update|delete|lock|write).*"));
+    }
+
+    @Test
     void taskReadPortHasOnlyInstanceCounts() {
         assertSignature(TaskReadPort.class, "instanceCounts", InstanceCounts.class, long.class);
         assertThat(declaredMethods(TaskReadPort.class)).containsExactly("instanceCounts");
