@@ -1,6 +1,6 @@
 # 项目诊断与重构方案
 
-审计日期：2026-10-10（对照 tip `967d694` / Merge #118）。范围：重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据并叠加 2026-10-07～10-10 已合 PR 实况；历史旅程运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
+审计日期：2026-10-10（对照 tip `15af760` / Merge #120；含 #119 文档纠偏与 #118 栈）。范围：重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据并叠加 2026-10-07～10-10 已合 PR 实况；历史旅程运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
 
 2026-10-09 文档清理说明：旧 Kiro 规格已退役。下文设计章节、需求编号和“设计允许”等描述是初次审计背景，不再构成实施授权；执行任何批次前核实现状，以用户本次要求和 [已确认决定](decisions.md) 确定行为及验收。
 
@@ -27,7 +27,7 @@
 | F05 | [AdPortalAppService.visible](../server/domain-ad/src/main/java/com/mkt/ad/application/AdPortalAppService.java) / [ParticipationRules.firstReject](../server/domain-activity/src/main/java/com/mkt/activity/domain/ParticipationRules.java) 人群求值缺口 | **本轮**：`CrowdPort` + 活动人群码/广告 `crowdId` 已接；组合条件与 admin 跨域 SQL 仍见 DEC-003 |
 | F06 | [MetricsAggregateService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsAggregateService.java)、[MetricsQueryService](../server/admin-app/src/main/java/com/mkt/admin/metrics/MetricsQueryService.java)、[JdbcSimulateGrantLookup](../server/admin-app/src/main/java/com/mkt/admin/simulate/JdbcSimulateGrantLookup.java) 直接查询其他域表 | 应用层跨域 SQL 的归属与范围需明确；设计允许聚合扫描，不能一概判为违规。一般读模型与聚合例外分别约束，见 DEC-003 |
 | F07 | [GrantFailureLedger](../server/domain-reward/src/main/java/com/mkt/reward/application/GrantFailureLedger.java) / 审计事务边界 | **本轮（DEC-004 已定）**：永久失败独立留痕；积分过期按笔独立；回滚不写 SUCCESS；补 IT |
-| F08 | [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每轮单批 100，调度间隔 5 秒 | **[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭**（持锁多批、2s 预算、空退出、无 MQ；起步 100/5s/2s）；**实现待 F08 PR**；容量数字门禁仍属 DEC-006 |
+| F08 | [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每轮单批 100，调度间隔 5 秒 | **已落地 #120**（[DEC-002](decisions.md#dec-002outbox-消费容量已关闭)）：持锁多批、2s 预算、空退出、无 MQ；起步 100/5s/2s；容量数字门禁仍属 DEC-006 |
 | F09 | [TrackBatchService](../server/domain-tracking/src/main/java/com/mkt/tracking/application/TrackBatchService.java) 在 accepted event 路径重复读取元数据状态 | **本轮**：`statusesOf` 批次去重批读（decide + toAccepted 共用 map）；跨请求缓存另按命名空间设计处理；见 `TrackBatchServiceTest` |
 | F10 | [我的列表页面](../web/apps/client/src/views/mine/) 原实现把 Vant `v-model:loading` 与请求入口的 loading 拦截混用，缺少请求代次隔离 | 已在 R5-01 通过统一分页、错误恢复和会话隔离修复；组件与浏览器回归入口见验证映射，历史结果不代替本次执行 |
 | F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | **列表/系统加载路径已收口**（#108/#110/#112–#116）：`useLatestRequest` + `runWithLoading`；已迁 user/role/dashboard/audit、system、task/reward/activity/ad/signin 列表、risk/points/track/metrics/simulate、login/change-password。**未强迁**：`task/definition/edit.vue`、`version.vue` 及部分画布/非列表页仍手写 loading；见 `runWithLoading.spec.ts` |
@@ -68,7 +68,7 @@ R2-01：用户明确 DEC-007 后实施任务生命周期，覆盖旧快照互斥
 
 每批都交付必要规格修订、回归、实现、旧路径清理及实际检查记录。批次表示技术依赖；已具备条件的独立前端批次可以先行。可以进一步拆为可独立验收的 PR，不自动实施全部剩余批次。
 
-**2026-10-10 实况（P1–P4 vs R）**：P1≈R1 门禁（#99–#101）已合；P2 落地 CrowdPort 最小集（#102）与 DEC-004（#111），**不能**把 R2 整批标关闭（DEC-003 余量仍开）；P3≈R3 的 F01–F03（#103–#105）代码已合；P4 覆盖 R4/R5 片段（F09/F11/F13/F14/F15/F16 等 #106–#118），**非**完整 R4/R5/R6——F08（Outbox）与 F06（跨域 SQL）仍开；R6/P5 依赖 DEC-005/006 与真实演练证据（F16 隔离恢复演练证据已见 `deploy/backup/drills/2026-10-10-f16-isolated-restore.md`；TLS/浏览器等仍开）。
+**2026-10-10 实况（P1–P4 vs R）**：P1≈R1 门禁（#99–#101）已合；P2 落地 CrowdPort 最小集（#102）与 DEC-004（#111），**不能**把 R2 整批标关闭（DEC-003 余量仍开）；P3≈R3 的 F01–F03（#103–#105）代码已合；P4 覆盖 R4/R5 片段（F08/F09/F11/F13/F14/F15/F16 等 #106–#120），**非**完整 R4/R5/R6——**F08（Outbox）已关**（#120）；**F06（跨域 SQL）仍开**；F16 隔离恢复演练证据见 `deploy/backup/drills/2026-10-10-f16-isolated-restore.md`（TLS/浏览器等仍开）；R6/P5 仍依赖 DEC-005/006。
 
 | 批次 | 工作 | 进入条件 | 验收出口 | 2026-10-10 实况 |
 |---|---|---|---|---|
@@ -76,7 +76,7 @@ R2-01：用户明确 DEC-007 后实施任务生命周期，覆盖旧快照互斥
 | R1 功能与验收基线 | 确认实施版本；盘点用户旅程/契约/数据；核验测试入口、覆盖率范围、OpenAPI 导出与性能脚本 | DEC-001 明确，环境可用 | 可复现测试报告；失败按产品/环境分类；保留能力清单；真实契约导出 | P1 门禁已合（#99–#101） |
 | R2 业务正确性 | 下线/互斥/过期、人群、事务失败与审计；按缺陷独立交付 | 涉及的 DEC-003/004 已明确 | 回归先能暴露原问题，修改后通过；资金与并发路径真实数据库验证 | DEC-004 已关；CrowdPort 部分；DEC-003 余量仍开 |
 | R3 门户读路径与缓存 | 统一快照读取、批量状态、查询分页边界、提交后缓存处理、竞争与降级 | 关键行为基线稳定 | 查询计数随候选集合有界；回滚、旧 loader 回填、跨节点失效与缓存故障可验证 | F01–F03 已合（#103–#105） |
-| R4 领域与基础设施整理 | 按第 5 节逐用例整理；跨域 SQL、Outbox、埋点、调度、指标与恢复机制 | 对应契约/容量决定明确 | 无未登记跨域直读；事件不丢不重复副作用；积压恢复与可观测证据 | F09/F13/F14/F15/F16 片段已合；**F08/F06 仍开**；DEC-002 已关待实现 |
+| R4 领域与基础设施整理 | 按第 5 节逐用例整理；跨域 SQL、Outbox、埋点、调度、指标与恢复机制 | 对应契约/容量决定明确 | 无未登记跨域直读；事件不丢不重复副作用；积压恢复与可观测证据 | F08（#120）/F09/F13/F14/F15/F16 片段已合；**F06 仍开**；DEC-002 已关且 F08 已落地 |
 | R5 两端前端迁移 | 先分页/异常/会话正确性，再布局、主题与按域页面结构 | 对应 API 稳定；可与后端无关批次并行 | 真实组件顺序、乱序、失败、会话切换、权限与端到端旅程通过；真实浏览器验收 | R5-01 门户已完成；Admin F11 列表/系统已收口，edit/version 未强迁 |
 | R6 首次发布候选验收 | 空库迁移、全量旅程、双实例故障、容量、恢复与部署 | 计划范围完成；DEC-005/006 已明确 | 实测报告满足现行规格；无废弃双实现；达到发布检查单，另行决定是否上线 | 未开始 |
 
