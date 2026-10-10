@@ -5,10 +5,16 @@ import { BASE, DURATION, jsonHeaders } from "./lib.js";
 
 /**
  * NFR 性能 5: 50 条满批（含 8KB 单条）集群吞吐 ≥ 6000 events/s, P95 ≤ 100 ms, 丢弃率 < 0.1%.
+ *
+ * F14: business checks feed thresholds; track_accepted has a structural floor (catch
+ * zero-success). dropped_iterations fails high scheduler drop. Numeric 6000 eps remains
+ * a DEC-006 candidate, not an automatic gate here.
  */
+
 const dropped = new Counter("track_dropped");
 const accepted = new Counter("track_accepted");
 const dropRate = new Rate("track_drop_rate");
+const trackBusinessOk = new Rate("track_business_ok");
 
 const EVENTS_PER_BATCH = 50;
 const TARGET_EVENTS_PER_SEC = Number(__ENV.TRACK_EPS || 6000);
@@ -55,6 +61,12 @@ export const options = {
     http_req_failed: ["rate==0"],
     "http_req_duration{name:track}": ["p(95)<=100"],
     track_drop_rate: ["rate<0.001"],
+    checks: ["rate>0.99"],
+    track_business_ok: ["rate>0.99"],
+    // Structural floor: some events must be accepted (zero-success / silent fail catch).
+    // Full events/s capacity remains DEC-006; do not gate 6000 eps here.
+    track_accepted: ["count>0", "rate>0"],
+    dropped_iterations: ["rate<0.05"],
   },
 };
 
@@ -86,8 +98,14 @@ export default function () {
       dropRate.add(i < drop);
     }
   }
+  const httpOk = res.status === 200;
+  const codeOk = payload.code === 0;
+  const acceptedOk = acc > 0;
+  const businessOk = httpOk && codeOk && acceptedOk;
   check(res, {
-    "track http 200": (r) => r.status === 200,
-    "track code 0": () => payload.code === 0,
+    "track http 200": () => httpOk,
+    "track code 0": () => codeOk,
+    "track accepted events > 0": () => acceptedOk,
   });
+  trackBusinessOk.add(businessOk);
 }

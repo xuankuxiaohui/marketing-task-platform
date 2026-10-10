@@ -22,13 +22,13 @@ SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh
 
 这些是运行入口，不代表现有脚本已达到验收质量。压测属于发布验收，不进例行 PR CI；`run-full.sh` 在 GitHub Actions 中默认拒绝执行，人工性能作业需要显式配置。
 
-## 在用于验收前必须修正的测量缺口
+## 测量缺口（F14 本轮已修脚本断言；容量数字仍待 DEC-006）
 
-- [advance.js](advance.js) 随机复用实例，没有业务结果断言。种子仅准备 100 个单步 callback 实例，完成后继续请求不能代表持续有效推进；progress 的大目标场景需单独统计有效进度写入。
-- [complete.js](complete.js) 对有限用户 × 任务组合循环取模，可能测到幂等重放；`check` 也没有对应的失败阈值。应区分首次真实发奖与重放，数据耗尽要使场景失败。
-- [track.js](track.js) 记录 `track_accepted`，但没有有效 events/s 门槛；业务失败的 `check` 未进入阈值。只按发起速率或 HTTP 成功不能证明事件吞吐。
-- 恒定到达率场景未设置 `dropped_iterations` 门槛，调度器未发出的请求可能让延迟看起来合格。验收需同时证明负载实际达到、业务结果正确和调度完整。
-- 监控规则存在不等于指标已接入。`TrackDropCounters` 当前为内存计数；[alerts.yml](../deploy/prometheus/alerts.yml) 的埋点比例把事件数和请求数相加，需统一计量单位并验证实际暴露数据。
+- [advance.js](advance.js) **本轮**：按 VU 分区消费单步 callback（每实例至多一次真实推进），耗尽后回退到大目标 progress 的持续写入；`check` / `advance_business_ok` / `advance_data_exhausted` / `dropped_iterations` 入门槛。随机复用已完成 callback 不再当作持续推进。
+- [complete.js](complete.js) **本轮**：对用户 × 级联任务笛卡尔积线性消费（不再取模重放）；耗尽则 `grant_data_exhausted` 失败；`grant_first_ok` / `grant_business_ok` / `checks` 入门槛，区分首次真实发奖与耗尽后的失败路径。
+- [track.js](track.js) **本轮**：业务 `check`（含 accepted>0）与 `track_business_ok` / `checks` 入门槛；`track_accepted` 设结构性下限（`count>0`/`rate>0`）避免零成功；`dropped_iterations` 入门槛。满配 events/s 数字仍按 DEC-006 确认，不在此脚本自动升格为验收目标。
+- 恒定到达率场景（advance / track / list / ad）**本轮**已加 `dropped_iterations` 结构性门槛（`rate<0.05`）。验收仍须同时证明负载实际达到、业务结果正确和调度完整。
+- 监控规则存在不等于指标已接入。`TrackDropCounters` **已**注册 Micrometer `mkt.track.drop`（Prometheus `mkt_track_drop_total`，见 F15）；[alerts.yml](../deploy/prometheus/alerts.yml) 的埋点比例仍可能把事件数和请求数相加，需统一计量单位并验证实际暴露数据。
 
 ## 数据规模与查询审查
 
