@@ -54,7 +54,7 @@
 | 能力 | 当前实现 | 验收边界 |
 |---|---|---|
 | internal 接口 | 任务回调、任务进度上报、奖励履约回调；HMAC、时间戳、nonce、防重放与限流 | 已存在；[任务接口](../server/domain-task/src/main/java/com/mkt/task/controller/internal/TaskInternalController.java)、[奖励接口](../server/domain-reward/src/main/java/com/mkt/reward/controller/internal/RewardInternalController.java)、[签名验证](../server/domain-identity/src/main/java/com/mkt/identity/application/InternalHmacVerifier.java)。`/internal/**` 仅内网 |
-| 应用与数据 | 管理/门户双应用；MySQL、集中 Flyway 迁移；门户装配 task + reward，步骤与发奖同事务 | 基础实现；空库迁移、升级、装配及真实回滚需实测；[后端入口](../server/README.md) |
+| 应用与数据 | 管理/门户双应用；MySQL、集中 Flyway 迁移；门户装配 task + reward，步骤与发奖同事务 | 基础实现；空库迁移、升级、装配及真实回滚需实测；未上线数据/契约替换默认见 [DEC-005](decisions.md#dec-005未上线阶段的数据与契约替换)（**推荐草案，仍开放**）；[后端入口](../server/README.md) |
 | Redis 与缓存 | DB 2 会话、锁、限流、风控计数与广告频控；L1/L2 缓存、失效消息、故障降级 | 基础实现；[infra](../server/platform-infra/src/main/java/com/mkt/infra/)。F03（#105）已合 merge-load + stale-fill 防护；跨节点失效与故障降级的演练证据仍待 |
 | 事务事件 | 业务同事务 Outbox、投递、重试退避、幂等消费者、服务端事件记录 | 基础实现；[OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java)。[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭；**F08 已落地 #120**（持锁多批/2s 预算/fixedDelay 5s/无 MQ）；容量数字门禁仍属 DEC-006 |
 | 后台调度 | 任务/签到/活动定时发布、任务到期、发奖重试恢复、领取超时、奖品过期、履约重试/超时、积分过期、审计/进度/埋点清理与统计聚合 | 基础实现；一次旅程成功不证明所有时间边界、故障和多节点调度通过 |
