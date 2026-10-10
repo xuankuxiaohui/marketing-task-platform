@@ -70,3 +70,7 @@ perf/state.json
 perf/reports/*
 !perf/reports/.gitkeep
 .gstack/
+
+# Local backup / binlog archive (ops media; never commit dumps)
+deploy/backups/
+deploy/binlog-archive/
