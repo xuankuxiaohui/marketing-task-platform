@@ -31,7 +31,7 @@
 | F11 | [后台页面](../web/apps/admin/src/views/) 中用户、角色、看板等抽样加载路径缺少统一 finally 收尾；布局与全局样式职责集中 | **本轮**：`useLatestRequest` + `runWithLoading` 统一 loading finally/代次隔离；已迁移 user/role/dashboard/audit 抽样页；其余 admin 视图后续按页迁移；见 `runWithLoading.spec.ts` |
 | F12 | 原仅 [check-openapi-types.sh](../ci/check-openapi-types.sh)（JSON→TS） | 已由 [check-openapi-backend.sh](../ci/check-openapi-backend.sh) 补全非 prod 后端 live 导出 → 已提交 JSON → TS；prod springdoc 保持关闭（#99） |
 | F13 | [server/pom.xml](../server/pom.xml) 关键覆盖率曾指向不存在的 `com.mkt.reward.grant` / `com.mkt.risk.engine`；现以 CLASS 门禁覆盖 `GrantAppService`、`RuleDecisionEngine`、`ListDecisionEngine`，PACKAGE 仍覆盖 kernel / task.engine / task.expression / reward.points；架构规则只覆盖部分访问形式 | 覆盖率百分比不等于关键链路覆盖；关键包/类范围已与实现对齐，架构检查盲区仍待逐项核对 |
-| F14 | [perf](../perf/README.md) 中 callback 复用有限单步实例，业务 checks / 接收吞吐 / dropped iterations 门槛不足 | callback 场景逐渐主要覆盖完成后的重复回调路径，仍可能写库，但不代表新的业务推进；不泛化到 progress。先修数据生命周期与断言 |
+| F14 | [perf](../perf/README.md) 中 callback 复用有限单步实例，业务 checks / 接收吞吐 / dropped iterations 门槛不足 | **本轮**：advance 分区消费单步 callback + progress 持续写入断言；complete 线性消费并在耗尽失败；track 业务 check/`track_accepted` 结构性下限 + CAR `dropped_iterations`；见 `perf/README.md` |
 | F15 | [TrackDropCounters](../server/domain-tracking/src/main/java/com/mkt/tracking/support/TrackDropCounters.java) 只有进程计数/日志，告警配置与业务指标注册未闭环 | **本轮**：注册 Micrometer `mkt.track.drop`（Prometheus `mkt_track_drop_total`）+ `reason` 标签（malformed/unregistered/disabled）；AtomicLong/log 保留；见 `TrackDropCountersTest` |
 | F16 | [恢复说明](../deploy/backup/RESTORE-DRILL.md) 对应脚本未使用备份 binlog 起点；部署模板缺完整静态资源/TLS接线；[本地脚本](../scripts/README.md) 停止进程按端口处理 | 分别补恢复正确性、完整部署及本地进程归属验证。先在隔离环境取证，不在本轮执行恢复或停进程 |
 
