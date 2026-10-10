@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Result } from "@mkt/shared";
 import type { AdminLoginData, CaptchaData } from "@/api/auth";
 
@@ -29,7 +29,7 @@ function fail(code: string, message: string): Result {
   return { code, message };
 }
 
-async function mountLogin(query: Record<string, string> = {}) {
+async function mountLogin(query: Record<string, string> = {}, flush = true) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -45,8 +45,11 @@ async function mountLogin(query: Record<string, string> = {}) {
     global: {
       plugins: [createPinia(), router],
     },
+    attachTo: document.body,
   });
-  await flushPromises();
+  if (flush) {
+    await flushPromises();
+  }
   return { wrapper, router };
 }
 
@@ -62,6 +65,10 @@ async function setTestidInput(wrapper: VueWrapper, testid: string, value: string
 }
 
 describe("LoginPage", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
   beforeEach(() => {
     setActivePinia(createPinia());
     fetchCaptchaMock.mockReset();
@@ -155,5 +162,95 @@ describe("LoginPage", () => {
     await flushPromises();
     expect(wrapper.get('[data-testid="login-error"]').text()).toBe("用户名或密码错误");
     expect(fetchCaptchaMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe("LoginPage request lifecycle", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchCaptchaMock.mockReset();
+    loginMock.mockReset();
+  });
+
+  it("ignores stale captcha results when a newer refresh wins", async () => {
+    type CaptchaResult = Awaited<ReturnType<typeof fetchCaptcha>>;
+    let resolveFirst!: (value: CaptchaResult) => void;
+    const first = new Promise<CaptchaResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    fetchCaptchaMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok<CaptchaData>({ captchaId: "cid-newer", imageBase64: "data:image/png;base64,newer" }),
+      );
+
+    const { wrapper } = await mountLogin({}, false);
+
+    // Mount captcha is in flight; trigger a second refresh before it resolves.
+    await wrapper.get('[data-testid="login-captcha-refresh"]').trigger("click");
+    await flushPromises();
+
+    resolveFirst(ok<CaptchaData>({ captchaId: "cid-stale", imageBase64: "data:image/png;base64,stale" }));
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="login-captcha-image"]').attributes("src")).toBe(
+      "data:image/png;base64,newer",
+    );
+    expect(wrapper.get('[data-testid="login-captcha-image"]').attributes("src")).not.toBe(
+      "data:image/png;base64,stale",
+    );
+  });
+
+  it("ignores stale login results when a newer submit wins", async () => {
+    type LoginResult = Awaited<ReturnType<typeof login>>;
+    let resolveFirst!: (value: LoginResult) => void;
+    const first = new Promise<LoginResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    fetchCaptchaMock.mockResolvedValue(
+      ok<CaptchaData>({ captchaId: "cid-1", imageBase64: "data:image/png;base64,xx" }),
+    );
+    loginMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok<AdminLoginData>({
+          userId: 2,
+          nickname: "newer",
+          roles: ["super-admin"],
+          permissions: ["identity:admin-user:query"],
+          mustChangePassword: false,
+          csrfToken: "csrf-newer",
+        }),
+      );
+
+    const { wrapper, router } = await mountLogin();
+    await setTestidInput(wrapper, "login-username", "admin");
+    await setTestidInput(wrapper, "login-password", "Admin123!x");
+    await setTestidInput(wrapper, "login-captcha", "ab12");
+
+    // First submit is in flight; trigger a second submit before it resolves.
+    await wrapper.get("form").trigger("submit.prevent");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+
+    resolveFirst(
+      ok<AdminLoginData>({
+        userId: 1,
+        nickname: "stale",
+        roles: ["super-admin"],
+        permissions: ["identity:admin-user:query"],
+        mustChangePassword: true,
+        csrfToken: "csrf-stale",
+      }),
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.path).toBe("/dashboard");
+    expect(router.currentRoute.value.path).not.toBe("/change-password");
   });
 });

@@ -4,6 +4,8 @@ import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { isFail, isOk } from "@mkt/shared";
 import { CAPTCHA_ERROR_CODES, fetchCaptcha, login } from "@/api/auth";
+import { runWithLoading } from "@/composables/runWithLoading";
+import { useLatestRequest } from "@/composables/useLatestRequest";
 import { zhCN } from "@/locales/zh-CN";
 import { DASHBOARD_ROUTE } from "@/router/dynamic";
 import { ensureDynamicRoutes } from "@/router/session";
@@ -22,8 +24,15 @@ const captchaImage = ref("");
 const errorMessage = ref("");
 const loading = ref(false);
 
+const beginCaptcha = useLatestRequest(() => null);
+const beginSubmit = useLatestRequest(() => null);
+
 async function refreshCaptcha(): Promise<void> {
+  const isCurrent = beginCaptcha();
   const result = await fetchCaptcha();
+  if (!isCurrent()) {
+    return;
+  }
   if (isOk(result) && result.data) {
     captchaId.value = result.data.captchaId ?? "";
     captchaImage.value = result.data.imageBase64 ?? "";
@@ -36,18 +45,24 @@ async function refreshCaptcha(): Promise<void> {
 
 async function submit(): Promise<void> {
   errorMessage.value = "";
-  loading.value = true;
-  try {
+  const isCurrent = beginSubmit();
+  await runWithLoading(loading, isCurrent, async () => {
     const result = await login({
       username: username.value,
       password: password.value,
       captchaId: captchaId.value,
       captchaCode: captchaCode.value,
     });
+    if (!isCurrent()) {
+      return;
+    }
     if (isOk(result) && result.data) {
       const session = useSessionStore();
       session.setLogin(result.data);
       await ensureDynamicRoutes(router);
+      if (!isCurrent()) {
+        return;
+      }
       if (session.mustChangePassword) {
         await router.replace("/change-password");
         return;
@@ -66,9 +81,7 @@ async function submit(): Promise<void> {
         await refreshCaptcha();
       }
     }
-  } finally {
-    loading.value = false;
-  }
+  });
 }
 
 onMounted(() => {
