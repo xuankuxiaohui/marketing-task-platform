@@ -42,10 +42,18 @@ class ArchLayerRuleTest {
         "com.mkt.ad.."
     };
 
+    /**
+     * F13: use {@code consideringOnlyDependenciesInAnyPackage("com.mkt..")} instead of
+     * {@code consideringOnlyDependenciesInLayers()}. The latter ignores edges whose origin or
+     * target sits outside every defined layer (e.g. KnownLayer → non-layer util → IllegalTarget),
+     * which was an access-path blind spot. Scoping to {@code com.mkt..} keeps JDK noise out while
+     * still seeing all in-repo paths. Admin-app aggregation of domain services remains allowed
+     * (App → Domain); DEC-003 cross-domain SQL is a separate concern, not closed here.
+     */
     @Test
     void rl01_layersAreUnidirectional() {
         layeredArchitecture()
-                .consideringOnlyDependenciesInLayers()
+                .consideringOnlyDependenciesInAnyPackage("com.mkt..")
                 .withOptionalLayers(true)
                 .layer("App")
                 .definedBy("com.mkt.admin..", "com.mkt.portal..")
