@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { useSessionStore } from "@/store/session";
@@ -68,5 +68,80 @@ describe("RiskCasePage", () => {
       reason: "false-hit",
       expireAt: undefined,
     });
+  });
+});
+
+
+describe("RiskCasePage list request lifecycle", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  beforeEach(() => {
+    pageMock.mockReset();
+    handleMock.mockReset();
+  });
+
+  it("ignores stale list results when a newer load wins", async () => {
+    type PageHitsResult = Awaited<ReturnType<typeof pageHits>>;
+    let resolveFirst!: (value: PageHitsResult) => void;
+    const first = new Promise<PageHitsResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    pageMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok({
+          total: 1,
+          records: [
+            {
+              id: 99,
+              hitType: "RULE",
+              ruleCode: "R-newer",
+              userId: 2,
+              dimensionValue: "2",
+              hitValue: "5",
+              threshold: "3",
+              actionResult: "REJECTED",
+              occurredAt: "2026-08-21T00:00:00Z",
+            },
+          ],
+        }),
+      );
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().$patch({ userId: 1, permissions: Object.values(PERMS) });
+    const wrapper = mount(CasePage, {
+      global: { plugins: [pinia], directives: { auth } },
+      attachTo: document.body,
+    });
+
+    // First mount load is in flight; trigger a second query before it resolves.
+    await wrapper.get('[data-testid="case-query"]').trigger("click");
+    await flushPromises();
+
+    resolveFirst(
+      ok({
+        total: 1,
+        records: [
+          {
+            id: 88,
+            hitType: "RULE",
+            ruleCode: "R-stale",
+            userId: 1,
+            dimensionValue: "1",
+            hitValue: "9",
+            threshold: "8",
+            actionResult: "REJECTED",
+            occurredAt: "2026-08-20T00:00:00Z",
+          },
+        ],
+      }),
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="hit-table"]').text()).toContain("R-newer");
+    expect(wrapper.get('[data-testid="hit-table"]').text()).not.toContain("R-stale");
   });
 });
