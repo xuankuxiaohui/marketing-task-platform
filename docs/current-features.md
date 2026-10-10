@@ -58,7 +58,7 @@
 | Redis 与缓存 | DB 2 会话、锁、限流、风控计数与广告频控；L1/L2 缓存、失效消息、故障降级 | 基础实现；[infra](../server/platform-infra/src/main/java/com/mkt/infra/)。F03（#105）已合 merge-load + stale-fill 防护；跨节点失效与故障降级的演练证据仍待 |
 | 事务事件 | 业务同事务 Outbox、投递、重试退避、幂等消费者、服务端事件记录 | 基础实现；[OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java)。[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭；**F08 已落地 #120**（持锁多批/2s 预算/fixedDelay 5s/无 MQ）；容量数字门禁仍属 DEC-006 |
 | 后台调度 | 任务/签到/活动定时发布、任务到期、发奖重试恢复、领取超时、奖品过期、履约重试/超时、积分过期、审计/进度/埋点清理与统计聚合 | 基础实现；一次旅程成功不证明所有时间边界、故障和多节点调度通过 |
-| 运维入口 | 健康探针、Prometheus 接口与告警配置；Docker Compose、开发启动脚本、备份/连续 binlog 归档/恢复脚本 | 基础实现；[部署目录](../deploy/)、[backup README](../deploy/backup/README.md)、[开发脚本](../scripts/README.md)。网关静态/TLS **模板**已接线（F16）；连续 shipping 与隔离 PITR 取证见 `deploy/backup/drills/`；告警触发、真实 dist/TLS 浏览器验证仍需独立取证 |
+| 运维入口 | 健康探针、Prometheus 接口与告警配置；Docker Compose、开发启动脚本、备份/连续 binlog 归档/恢复脚本 | 基础实现；[部署目录](../deploy/)、[backup README](../deploy/backup/README.md)、[开发脚本](../scripts/README.md)。网关静态/TLS **模板**已接线（F16）；连续 shipping 与隔离 PITR 取证见 `deploy/backup/drills/`；自签 TLS/静态 Host 浏览器取证见 `deploy/nginx/drills/`；告警触发、真实 dist + 公网证书/Secure Cookie 验证仍需独立取证 |
 | 工程验证 | 单元/属性/架构测试、真实 MySQL/Redis IT、前端组件和浏览器测试、OpenAPI 类型生成、性能脚本 | 验证入口已存在；[验证映射](verification-matrix.md)、[性能说明](../perf/README.md)。执行范围和结果按当轮报告；后端→OpenAPI JSON→TS 导出门禁已由 F12 链补齐（见 PR 栈 #100） |
 
 ## 4. 已知功能缺口

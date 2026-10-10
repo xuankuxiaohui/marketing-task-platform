@@ -33,14 +33,25 @@ Admin **must** be built with `VITE_BASE=/console/` so asset URLs match the `/con
 
 ## Enable TLS
 
-1. Put certificates in `deploy/nginx/certs/{fullchain,privkey}.pem`.
+1. Put certificates in `deploy/nginx/certs/{fullchain,privkey}.pem` (local drill: `./deploy/nginx/generate-self-signed-certs.sh`; production: real CA chain).
 2. `cp deploy/nginx/tls.conf.example deploy/nginx/tls.conf`
 3. `cp deploy/nginx/tls-servers.inc.example deploy/nginx/tls-servers.inc`
 4. `cp deploy/nginx/redirect-https.inc.tls deploy/nginx/redirect-https.inc`
 5. Set `NGINX_HTTPS_PORT` in `deploy/.env` (compose publishes `127.0.0.1:${NGINX_HTTPS_PORT}:443`).
 6. Reload nginx / recreate the container.
 
-`tls.conf` and real certs stay out of git (see repo ignore rules / local only). Browser verification of HTTPS, redirects, and Secure cookies remains on the [go-live checklist](../R31-go-live-checklist.md) — templates alone are not that evidence.
+`tls.conf` and real certs stay out of git (see repo ignore rules / local only). Isolated stub/self-signed static evidence: [drills/2026-10-11-f16-tls-static-browser.md](drills/2026-10-11-f16-tls-static-browser.md). Production CA + Secure Cookie checks remain on the [go-live checklist](../R31-go-live-checklist.md).
+
+## Isolated TLS / static drill (F16 evidence)
+
+Self-signed certs + throwaway nginx compose (no DB/apps). Reproduces HTTPS static + Host routing + HTTP→HTTPS redirect:
+
+```bash
+./deploy/nginx/generate-self-signed-certs.sh   # → certs/*.pem (gitignored)
+bash deploy/nginx/drills/verify-tls-static.sh # nginx -t, curl/OpenSSL checks, teardown
+```
+
+Evidence: [drills/2026-10-11-f16-tls-static-browser.md](drills/2026-10-11-f16-tls-static-browser.md) (curl + headless Chrome screenshots). Stub/self-signed is enough for template verification; production still needs a real chain and full-stack Secure Cookie checks on the [go-live checklist](../R31-go-live-checklist.md).
 
 ## Local check without full stack
 

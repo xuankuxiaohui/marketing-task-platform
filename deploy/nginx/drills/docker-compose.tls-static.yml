@@ -1,0 +1,45 @@
+# Isolated F16 TLS + static evidence stack (nginx only + DNS stubs for upstreams).
+# Does NOT start MySQL/Redis/apps. Does NOT touch shared DBs.
+# Usage: see verify-tls-static.sh
+name: mtp-f16-tls-static
+
+services:
+  # Name resolution only so production nginx.conf upstreams start; ports unused for static checks.
+  admin-app:
+    image: nginx:1.27-alpine
+    command: ["nginx", "-g", "daemon off;"]
+  portal-app-1:
+    image: nginx:1.27-alpine
+    command: ["nginx", "-g", "daemon off;"]
+  portal-app-2:
+    image: nginx:1.27-alpine
+    command: ["nginx", "-g", "daemon off;"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "127.0.0.1:${NGINX_HTTP_PORT:-18080}:80"
+      - "127.0.0.1:${NGINX_HTTPS_PORT:-18443}:443"
+    volumes:
+      - ../nginx.conf:/etc/nginx/nginx.conf:ro
+      # Enable TLS path: real templates from F16 (#118), not the empty committed stubs.
+      - ../redirect-https.inc.tls:/etc/nginx/redirect-https.inc:ro
+      - ../tls-servers.inc.example:/etc/nginx/tls-servers.inc:ro
+      - ../tls.conf.example:/etc/nginx/tls.conf:ro
+      - ../certs:/etc/nginx/certs:ro
+      - ../html-placeholders/client:/usr/share/nginx/html/client:ro
+      - ../html-placeholders/admin:/usr/share/nginx/html/admin:ro
+    depends_on:
+      - admin-app
+      - portal-app-1
+      - portal-app-2
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --no-check-certificate -O /dev/null https://127.0.0.1/healthz || exit 1",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s

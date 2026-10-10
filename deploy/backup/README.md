@@ -1,5 +1,7 @@
 # Backup, continuous binlog shipping, restore (F16 / R31.3)
 
+TLS/静态网关取证（F16）不在本目录：见 [../nginx/drills/2026-10-11-f16-tls-static-browser.md](../nginx/drills/2026-10-11-f16-tls-static-browser.md)。
+
 | Script | Role |
 |---|---|
 | [backup.sh](backup.sh) | Daily **full** dump (`mysqldump --master-data=2`) + companion binlog copy + `BINLOG_START` + `SHA256SUMS`. Point-in-time companion only — **not** continuous shipping. |
