@@ -85,4 +85,64 @@ describe("ConfigManagePage", () => {
     expect(wrapper.get('[data-testid="form-dialog"]').text()).toContain("trace-cfg");
     expect(wrapper.get('[data-testid="form-dialog"]').find('[data-testid="copy-trace"]').exists()).toBe(true);
   });
+
+  it("ignores stale list results when a newer load wins", async () => {
+    let resolveFirst!: (value: ReturnType<typeof ok>) => void;
+    const first = new Promise<ReturnType<typeof ok>>((resolve) => {
+      resolveFirst = resolve;
+    });
+    pageConfigsMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok({
+          total: 1,
+          records: [
+            {
+              id: 2,
+              configKey: "newer.key",
+              configGroup: "auth",
+              configValue: "fresh",
+              valueType: "STRING",
+              masked: false,
+              status: "ENABLED",
+              remark: "",
+            },
+          ],
+        }),
+      );
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().permissions = Object.values(PERMS);
+    const wrapper = mount(ConfigPage, {
+      global: { plugins: [pinia], directives: { auth } },
+      attachTo: document.body,
+    });
+
+    // First mount load is in flight; trigger a second query before it resolves.
+    await wrapper.get('[data-testid="config-query"]').trigger("click");
+    await flushPromises();
+
+    resolveFirst(
+      ok({
+        total: 1,
+        records: [
+          {
+            id: 1,
+            configKey: "stale.key",
+            configGroup: "auth",
+            configValue: "stale",
+            valueType: "STRING",
+            masked: false,
+            status: "ENABLED",
+            remark: "",
+          },
+        ],
+      }),
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="config-table"]').text()).toContain("newer.key");
+    expect(wrapper.get('[data-testid="config-table"]').text()).not.toContain("stale.key");
+  });
 });
