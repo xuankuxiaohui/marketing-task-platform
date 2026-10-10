@@ -79,6 +79,7 @@ final class RewardITSupport implements AutoCloseable {
     final ReconAppService recon;
     final RecordingPointsPort points;
     final PointsAppService pointsLedger;
+    final GrantFailureLedger failures;
     final ItRisk risk;
     final Clock clock;
     final RewardRuntimeSettings runtime;
@@ -115,7 +116,7 @@ final class RewardITSupport implements AutoCloseable {
         EventPublisher events = new EventPublisher(new MemoryOutboxStore(clock), OutboxProducer.PORTAL);
         RewardGrantSettings settings = new RewardGrantSettings();
         runtime = new RewardRuntimeSettings();
-        GrantFailureLedger ledger = new GrantFailureLedger(grants, events, clock, settings, txm);
+        failures = new GrantFailureLedger(grants, events, clock, settings, txm);
         points = new RecordingPointsPort();
         MybatisPointsStore pointsStore = new MybatisPointsStore(
                 sql.getMapper(PntAccountMapper.class), sql.getMapper(PntTransactionMapper.class));
@@ -130,7 +131,7 @@ final class RewardITSupport implements AutoCloseable {
                 new ItUsers(),
                 risk,
                 events,
-                ledger,
+                failures,
                 fulfillment,
                 null,
                 clock);

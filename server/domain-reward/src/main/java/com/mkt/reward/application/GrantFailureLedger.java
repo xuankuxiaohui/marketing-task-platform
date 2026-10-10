@@ -20,7 +20,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * REQUIRES_NEW leave-trace for retryable grant failures (design §5.6.2). Unique exception to RL-05.
+ * Leave-trace for grant failures (DEC-004 / design §5.6.2). Unique exception to RL-05.
+ * Retryable and permanent marks both use {@code REQUIRES_NEW} so a parent rollback cannot
+ * erase the ledger row (reconciliation wins over cascading undo).
  */
 @Service
 public class GrantFailureLedger {
@@ -119,6 +121,7 @@ public class GrantFailureLedger {
         return row;
     }
 
+    /** Permanent failure must survive parent rollback (DEC-004). */
     public void markPermanent(GrantRecordEntity draft) {
         if (requiresNew != null && TransactionSynchronizationManager.isActualTransactionActive()) {
             requiresNew.execute(status -> {
