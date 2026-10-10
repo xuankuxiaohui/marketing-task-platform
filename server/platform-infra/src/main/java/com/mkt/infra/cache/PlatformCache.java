@@ -12,6 +12,9 @@ public interface PlatformCache {
 
     void put(CacheNamespace namespace, String bizKey, Object value);
 
+    /** Like {@link #put}, but deferred until after a successful commit when a TX is active. */
+    void putAfterCommit(CacheNamespace namespace, String bizKey, Object value);
+
     void evict(CacheNamespace namespace, String bizKey);
 
     void evictPrefix(CacheNamespace namespace, String prefix);

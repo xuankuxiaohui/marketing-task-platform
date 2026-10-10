@@ -113,6 +113,41 @@ class TwoLevelPlatformCacheTest {
     }
 
     @Test
+    void putAfterCommitRunsWhenNoTransaction() {
+        cache.putAfterCommit(CacheNamespace.TASK_SNAPSHOT, "9:1", "{\"v\":1}");
+        assertThat(store.get("task:snapshot:9:1")).isNotNull();
+    }
+
+    @Test
+    void putAfterCommitWaitsForCommitAndSkipsOnRollback() {
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            cache.putAfterCommit(CacheNamespace.TASK_SNAPSHOT, "9:1", "{\"v\":1}");
+            assertThat(store.get("task:snapshot:9:1")).isNull();
+            TransactionSynchronizationManager.getSynchronizations().forEach(s -> s.afterCommit());
+            assertThat(store.get("task:snapshot:9:1")).isNotNull();
+        } finally {
+            TransactionSynchronizationManager.clear();
+        }
+
+        store.unlink("task:snapshot:9:1");
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            cache.putAfterCommit(CacheNamespace.TASK_SNAPSHOT, "9:1", "{\"v\":1}");
+            assertThat(store.get("task:snapshot:9:1")).isNull();
+            // rollback path: afterCommit is never invoked
+            TransactionSynchronizationManager.clear();
+            assertThat(store.get("task:snapshot:9:1")).isNull();
+        } finally {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.clear();
+            }
+        }
+    }
+
+    @Test
     void l1ExpiresAfterNamespaceTtl() {
         AtomicLong nanos = new AtomicLong();
         Ticker ticker = nanos::get;

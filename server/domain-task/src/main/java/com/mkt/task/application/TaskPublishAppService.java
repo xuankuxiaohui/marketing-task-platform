@@ -715,7 +715,7 @@ public class TaskPublishAppService {
         }
         TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(taskId, version);
         if (snap != null) {
-            platformCache.put(CacheNamespace.TASK_SNAPSHOT, taskId + ":" + version, snap.getContent());
+            platformCache.putAfterCommit(CacheNamespace.TASK_SNAPSHOT, taskId + ":" + version, snap.getContent());
         }
     }
 

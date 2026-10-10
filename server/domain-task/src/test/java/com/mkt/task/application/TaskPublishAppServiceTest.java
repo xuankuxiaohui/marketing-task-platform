@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.mkt.contract.AccountStatus;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
+import com.mkt.infra.cache.CacheNamespace;
+import com.mkt.infra.cache.TwoLevelPlatformCache;
+import com.mkt.infra.redis.MemoryKeyValueStore;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
@@ -42,6 +45,7 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class TaskPublishAppServiceTest {
 
@@ -520,6 +524,83 @@ class TaskPublishAppServiceTest {
         publishes.publish(id, new PublishCommand(null, null));
         assertThatThrownBy(() -> publishes.schedule(id, new ScheduleCommand(Instant.parse("2026-08-20T00:00:00Z"))))
                 .isInstanceOf(BusinessException.class);
+    }
+
+
+    @Test
+    void freezeToPublishedDoesNotPublishSnapshotCacheUntilCommit() {
+        MemoryKeyValueStore store = new MemoryKeyValueStore();
+        TwoLevelPlatformCache cache = new TwoLevelPlatformCache(store);
+        publishes = new TaskPublishAppService(
+                definitions,
+                new MemoryTaskMutexGroupStore(),
+                snapshots,
+                defs,
+                prizes,
+                instances,
+                settings,
+                clock,
+                cache,
+                audits,
+                new AlertWebhook(""),
+                null,
+                null);
+
+        long id = defs.saveAggregate(legal("cache_after_commit")).id();
+        String key = id + ":1";
+        String redisKey = CacheNamespace.TASK_SNAPSHOT.redisKey(key);
+
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            PublishResponse result = publishes.publish(id, new PublishCommand(null, null));
+            assertThat(result.status()).isEqualTo("PUBLISHED");
+            assertThat(result.version()).isEqualTo(1);
+            assertThat(snapshots.listByTaskId(id)).hasSize(1);
+            // F02 regression: shared snapshot must not be readable before commit
+            assertThat(store.get(redisKey)).isNull();
+            TransactionSynchronizationManager.getSynchronizations().forEach(s -> s.afterCommit());
+            assertThat(store.get(redisKey)).isNotNull();
+        } finally {
+            TransactionSynchronizationManager.clear();
+        }
+    }
+
+    @Test
+    void freezeToPublishedSkipsSnapshotCacheWhenTransactionRollsBack() {
+        MemoryKeyValueStore store = new MemoryKeyValueStore();
+        TwoLevelPlatformCache cache = new TwoLevelPlatformCache(store);
+        publishes = new TaskPublishAppService(
+                definitions,
+                new MemoryTaskMutexGroupStore(),
+                snapshots,
+                defs,
+                prizes,
+                instances,
+                settings,
+                clock,
+                cache,
+                audits,
+                new AlertWebhook(""),
+                null,
+                null);
+
+        long id = defs.saveAggregate(legal("cache_on_rollback")).id();
+        String redisKey = CacheNamespace.TASK_SNAPSHOT.redisKey(id + ":1");
+
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            publishes.publish(id, new PublishCommand(null, null));
+            assertThat(store.get(redisKey)).isNull();
+            // Simulate rollback: Spring skips afterCommit callbacks
+            TransactionSynchronizationManager.clear();
+            assertThat(store.get(redisKey)).isNull();
+        } finally {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.clear();
+            }
+        }
     }
 
     private static TaskDefinitionSaveCommand legal(String code) {

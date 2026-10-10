@@ -90,6 +90,20 @@ public final class TwoLevelPlatformCache implements PlatformCache {
     }
 
     @Override
+    public void putAfterCommit(CacheNamespace namespace, String bizKey, Object value) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            put(namespace, bizKey, value);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                put(namespace, bizKey, value);
+            }
+        });
+    }
+
+    @Override
     public void evict(CacheNamespace namespace, String bizKey) {
         rejectSession(namespace);
         if (namespace.kind() == CacheNamespaceKind.PLACEHOLDER) {
