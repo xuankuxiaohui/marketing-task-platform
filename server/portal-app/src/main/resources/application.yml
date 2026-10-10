@@ -31,6 +31,9 @@ management:
 mkt:
   outbox:
     producer: portal
+    # DEC-002 starters (tunable via load test; not DEC-006 capacity gate)
+    batch-size: 100
+    lock-hold-budget-ms: 2000
   track:
     batch-max-size: 50
     event-max-payload-kb: 8

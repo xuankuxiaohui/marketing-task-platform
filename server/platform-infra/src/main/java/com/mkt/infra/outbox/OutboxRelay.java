@@ -4,23 +4,37 @@ import com.mkt.infra.lock.LockAcquire;
 import com.mkt.infra.lock.LockKeys;
 import com.mkt.infra.lock.PlatformLock;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Dual-app relay; SELECT always filters {@code producer=:self} (D-11 / design §6.4). */
+/**
+ * Dual-app relay; SELECT always filters {@code producer=:self} (D-11 / design §6.4).
+ *
+ * <p>DEC-002: one lock hold may drain multiple batches (default 100) until the queue is empty or the
+ * lock-hold budget (default 2s) is exhausted; schedule remains fixedDelay 5s. No MQ.
+ */
 public final class OutboxRelay {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxRelay.class);
-    private static final int BATCH = 100;
+
+    /** DEC-002 starter batch size. */
+    public static final int DEFAULT_BATCH_SIZE = 100;
+
+    /** DEC-002 starter single lock-hold budget. */
+    public static final Duration DEFAULT_LOCK_HOLD_BUDGET = Duration.ofSeconds(2);
 
     private final OutboxStore store;
     private final OutboxProducer producer;
     private final PlatformLock locks;
     private final Clock clock;
     private final List<EventConsumer> consumers;
+    private final int batchSize;
+    private final Duration lockHoldBudget;
 
     public OutboxRelay(
             OutboxStore store,
@@ -28,11 +42,27 @@ public final class OutboxRelay {
             PlatformLock locks,
             Clock clock,
             List<EventConsumer> consumers) {
+        this(store, producer, locks, clock, consumers, DEFAULT_BATCH_SIZE, DEFAULT_LOCK_HOLD_BUDGET);
+    }
+
+    public OutboxRelay(
+            OutboxStore store,
+            OutboxProducer producer,
+            PlatformLock locks,
+            Clock clock,
+            List<EventConsumer> consumers,
+            int batchSize,
+            Duration lockHoldBudget) {
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("batchSize must be > 0");
+        }
         this.store = store;
         this.producer = producer;
         this.locks = locks;
         this.clock = clock;
         this.consumers = consumers == null ? List.of() : List.copyOf(consumers);
+        this.batchSize = batchSize;
+        this.lockHoldBudget = Objects.requireNonNull(lockHoldBudget, "lockHoldBudget");
     }
 
     public void tick() {
@@ -42,9 +72,20 @@ public final class OutboxRelay {
             return;
         }
         try {
-            Instant now = clock.instant();
-            for (OutboxRecord row : store.claimBatch(producer.id(), now, BATCH)) {
-                dispatch(row, now);
+            long startedNanos = System.nanoTime();
+            long budgetNanos = lockHoldBudget.toNanos();
+            while (true) {
+                Instant now = clock.instant();
+                List<OutboxRecord> batch = store.claimBatch(producer.id(), now, batchSize);
+                if (batch.isEmpty()) {
+                    return;
+                }
+                for (OutboxRecord row : batch) {
+                    dispatch(row, now);
+                }
+                if (System.nanoTime() - startedNanos >= budgetNanos) {
+                    return;
+                }
             }
         } finally {
             locks.unlock(lockKey);
