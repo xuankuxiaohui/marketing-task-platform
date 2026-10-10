@@ -42,7 +42,10 @@ fi
 while read -r bin; do
   [ -z "$bin" ] && continue
   base="$(basename "$bin")"
-  "${COMPOSE[@]}" exec -T mysql sh -c "cat '$bin'" > "$DEST/$base"
+  # skip index sidecar; not a binlog stream
+  case "$base" in *.index) continue ;; esac
+  # </dev/null: docker compose exec otherwise steals while-read stdin and only first binlog is copied
+  "${COMPOSE[@]}" exec -T mysql sh -c "cat '$bin'" < /dev/null > "$DEST/$base"
 done < <("${COMPOSE[@]}" exec -T mysql sh -c 'ls /var/lib/mysql/mysql-bin.* /var/lib/mysql/binlog.* 2>/dev/null || true')
 
 sha256sum "$DEST"/* > "$DEST/SHA256SUMS"
