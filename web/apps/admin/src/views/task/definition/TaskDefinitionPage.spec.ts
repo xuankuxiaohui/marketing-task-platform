@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
@@ -86,5 +86,69 @@ describe("TaskDefinitionPage publish two-stage confirm", () => {
     await wrapper.get('[data-testid="confirm-ok"]').trigger("click");
     await flushPromises();
     expect(publishMock).toHaveBeenNthCalledWith(2, 8, { confirm: true, early: undefined });
+  });
+});
+
+
+describe("TaskDefinitionPage list request lifecycle", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  beforeEach(() => {
+    pageMock.mockReset();
+    failMock.mockReset();
+    publishMock.mockReset();
+    failMock.mockResolvedValue(ok({ total: 0, records: [] }));
+  });
+
+  it("ignores stale list results when a newer load wins", async () => {
+    type PageDefinitionsResult = Awaited<ReturnType<typeof pageDefinitions>>;
+    let resolveFirst!: (value: PageDefinitionsResult) => void;
+    const first = new Promise<PageDefinitionsResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    pageMock
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce(
+        ok({
+          total: 1,
+          records: [{ id: 2, code: "newer", name: "新任务", status: "DRAFT", version: 1 }],
+        }),
+      );
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().$patch({ userId: 1, permissions: Object.values(PERMS) });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/", component: { template: "<div />" } },
+        { path: "/task/definitions", component: TaskDefinitionPage },
+        { path: "/task/definitions/edit/:id?", component: { template: "<div />" } },
+        { path: "/task/definitions/:id/versions", component: { template: "<div />" } },
+      ],
+    });
+    await router.push("/task/definitions");
+    await router.isReady();
+    const wrapper = mount(TaskDefinitionPage, {
+      global: { plugins: [pinia, router], directives: { auth } },
+      attachTo: document.body,
+    });
+
+    // First mount load is in flight; trigger a second query before it resolves.
+    await wrapper.get('[data-testid="task-query"]').trigger("click");
+    await flushPromises();
+
+    resolveFirst(
+      ok({
+        total: 1,
+        records: [{ id: 1, code: "stale", name: "旧任务", status: "DRAFT", version: 1 }],
+      }),
+    );
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="task-table"]').text()).toContain("newer");
+    expect(wrapper.get('[data-testid="task-table"]').text()).not.toContain("stale");
   });
 });

@@ -16,6 +16,8 @@ import { adminStatusLabel } from "@/utils/status-label";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "TaskInstancePage" });
 
@@ -31,25 +33,37 @@ const abandonOpen = ref(false);
 const abandoning = ref<AdminInstanceView | null>(null);
 const reason = ref("");
 
+const beginLoad = useLatestRequest(() => [
+  page.value,
+  filters.taskId,
+  filters.userId,
+  filters.status,
+  filters.simulated,
+]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pageInstances({
-    taskId: filters.taskId ? Number(filters.taskId) : undefined,
-    userId: filters.userId ? Number(filters.userId) : undefined,
-    status: filters.status,
-    simulated: filters.simulated === "" ? undefined : Number(filters.simulated),
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pageInstances({
+      taskId: filters.taskId ? Number(filters.taskId) : undefined,
+      userId: filters.userId ? Number(filters.userId) : undefined,
+      status: filters.status,
+      simulated: filters.simulated === "" ? undefined : Number(filters.simulated),
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 async function openDetail(row: AdminInstanceView): Promise<void> {

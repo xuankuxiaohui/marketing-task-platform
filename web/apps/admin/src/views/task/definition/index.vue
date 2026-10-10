@@ -25,6 +25,8 @@ import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { formatPublishImpact, isPublishPreview } from "@/utils/publish-confirm";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { useLatestRequest } from "@/composables/useLatestRequest";
+import { runWithLoading } from "@/composables/runWithLoading";
 
 defineOptions({ name: "TaskDefinitionPage" });
 
@@ -49,25 +51,37 @@ function isLiveStatus(status: string | undefined): boolean {
   return status === DEFINITION_STATUS.PUBLISHED || status === DEFINITION_STATUS.SCHEDULED;
 }
 
+const beginLoad = useLatestRequest(() => [
+  page.value,
+  filters.code,
+  filters.name,
+  filters.status,
+  filters.category,
+]);
+
 async function load(): Promise<void> {
-  loading.value = true;
-  feedback.value = null;
-  const result = await pageDefinitions({
-    code: filters.code,
-    name: filters.name,
-    status: filters.status,
-    category: filters.category,
-    page: page.value,
-    pageSize,
+  const isCurrent = beginLoad();
+  await runWithLoading(loading, isCurrent, async () => {
+    feedback.value = null;
+    const result = await pageDefinitions({
+      code: filters.code,
+      name: filters.name,
+      status: filters.status,
+      category: filters.category,
+      page: page.value,
+      pageSize,
+    });
+    if (!isCurrent()) {
+      return;
+    }
+    const parsed = okOrFeedback(result);
+    if (!parsed.ok) {
+      feedback.value = parsed.feedback;
+      return;
+    }
+    records.value = parsed.data?.records ?? [];
+    total.value = parsed.data?.total ?? 0;
   });
-  const parsed = okOrFeedback(result);
-  loading.value = false;
-  if (!parsed.ok) {
-    feedback.value = parsed.feedback;
-    return;
-  }
-  records.value = parsed.data?.records ?? [];
-  total.value = parsed.data?.total ?? 0;
 }
 
 async function resetFilters(): Promise<void> {
