@@ -2,6 +2,7 @@ package com.mkt.task.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -268,6 +269,7 @@ class TaskPortalAppServiceTest {
                     Supplier<CachedPublishedCatalog> loader = invocation.getArgument(3);
                     return loader.get();
                 });
+        stubTaskSnapshotFromStore(platformCache);
 
         PageData<TaskCardView> first = service.list(9L, null, 1, 20);
         assertThat(first.total()).isEqualTo(1);
@@ -275,17 +277,14 @@ class TaskPortalAppServiceTest {
         verify(defs, times(1)).listPublished();
 
         long taskId = first.records().get(0).taskId();
-        CachedPublishedCatalog catalog = new CachedPublishedCatalog(List.of(new CachedPublishedCatalog.Entry(
-                taskId,
-                "PUBLISHED",
-                1,
-                snapshots.getByTaskAndVersion(taskId, 1).getContent())));
+        CachedPublishedCatalog catalog = new CachedPublishedCatalog(List.of(new CachedPublishedCatalog.Entry(taskId, "PUBLISHED", 1)));
         when(platformCache.get(
                         eq(CacheNamespace.TASK_PUBLISHED_INDEX),
                         eq("all"),
                         eq(CachedPublishedCatalog.class),
                         any()))
                 .thenReturn(catalog);
+        stubTaskSnapshotFromStore(platformCache);
 
         PageData<TaskCardView> second = service.list(9L, null, 1, 20);
         assertThat(second.total()).isEqualTo(1);
@@ -335,22 +334,66 @@ class TaskPortalAppServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 platformCache);
         long taskId = publish("parse_once", 1);
-        CachedPublishedCatalog catalog = new CachedPublishedCatalog(List.of(new CachedPublishedCatalog.Entry(
-                taskId,
-                "PUBLISHED",
-                1,
-                snapshots.getByTaskAndVersion(taskId, 1).getContent())));
+        CachedPublishedCatalog catalog = new CachedPublishedCatalog(List.of(new CachedPublishedCatalog.Entry(taskId, "PUBLISHED", 1)));
         when(platformCache.get(
                         eq(CacheNamespace.TASK_PUBLISHED_INDEX),
                         eq("all"),
                         eq(CachedPublishedCatalog.class),
                         any()))
                 .thenReturn(catalog);
+        stubTaskSnapshotFromStore(platformCache);
 
         assertThat(service.list(9L, null, 1, 20).total()).isEqualTo(1);
         assertThat(service.list(9L, null, 1, 20).total()).isEqualTo(1);
         // Same catalog instance twice → process-local parsed reuse (no exception / stable cards).
         assertThat(service.list(9L, null, 1, 20).records().get(0).taskCode()).isEqualTo("parse_once");
+    }
+
+    @Test
+    void listMetadataOnlyCatalogDoesNotEmbedSnapshotJson() {
+        PlatformCache platformCache = mock(PlatformCache.class);
+        service = new TaskPortalAppService(
+                definitions,
+                snapshots,
+                instances,
+                new MemoryTaskCrowdStore(),
+                users,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                platformCache);
+        publish("meta_only", 1);
+        when(platformCache.get(
+                        eq(CacheNamespace.TASK_PUBLISHED_INDEX),
+                        eq("all"),
+                        eq(CachedPublishedCatalog.class),
+                        any()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Supplier<CachedPublishedCatalog> loader = invocation.getArgument(3);
+                    CachedPublishedCatalog loaded = loader.get();
+                    assertThat(loaded.entries()).isNotEmpty();
+                    // Loader must return metadata-only entries (no embedded snapshot body field).
+                    assertThat(loaded.entries().get(0).version()).isEqualTo(1);
+                    return loaded;
+                });
+        stubTaskSnapshotFromStore(platformCache);
+
+        PageData<TaskCardView> page = service.list(9L, null, 1, 20);
+        assertThat(page.total()).isEqualTo(1);
+        assertThat(page.records().get(0).taskCode()).isEqualTo("meta_only");
+    }
+
+    private void stubTaskSnapshotFromStore(PlatformCache platformCache) {
+        when(platformCache.get(
+                        eq(CacheNamespace.TASK_SNAPSHOT),
+                        anyString(),
+                        eq(String.class),
+                        any()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Supplier<String> loader = invocation.getArgument(3);
+                    return loader.get();
+                });
     }
 
 

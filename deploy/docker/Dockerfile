@@ -13,7 +13,7 @@ FROM ${JDK_IMAGE}
 ENV TZ=UTC \
     LANG=C.UTF-8 \
     HOME=/app \
-    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k"
 RUN groupadd --system --gid 10001 mkt \
     && useradd --system --uid 10001 --gid mkt --home-dir /app --no-create-home --shell /usr/sbin/nologin mkt \
     && apt-get update \
