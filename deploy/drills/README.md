@@ -5,5 +5,6 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 | Date | Topic | Report |
 |---|---|---|
 | 2026-10-11 | R6 first slice: empty-DB Flyway + dual-app assembly（已开 / 进行中；非 RC） | [2026-10-11-r6-empty-flyway-dual-app.md](2026-10-11-r6-empty-flyway-dual-app.md) |
+| 2026-10-11 | R6 journey slice: deploy-smoke 业务流（登录/领取/完成/领奖；进行中；非 RC） | [2026-10-11-r6-full-journey-deploy-smoke.md](2026-10-11-r6-full-journey-deploy-smoke.md) |
 
 Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`.
