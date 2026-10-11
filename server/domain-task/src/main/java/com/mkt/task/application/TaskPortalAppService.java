@@ -531,15 +531,17 @@ public class TaskPortalAppService {
     }
 
     /**
-     * Prefer {@code listByUser} (~tens of rows) over {@code listByUserTaskCycles} with ~1000
-     * (task_id, cycle_key) tuples — measured MySQL hot path after #142 catalog cache.
+     * Heap-dump relief (2026-10-12): near-ceiling histogram showed ~343k–500k
+     * {@link TaskInstanceEntity} + MySQL {@code ByteArrayRow}/LocalDateTime when
+     * {@code listByUser} hit seed user_id=1 (500001 rows). Prefer bounded
+     * {@code listByUserTaskCycles} for published (task_id, cycle_key) only.
      */
     private Map<Long, TaskInstanceEntity> currentInstancesForPublished(
             long userId,
             List<TaskDefinitionEntity> published,
             Map<Long, SnapshotContent> snapshotByTask,
             Instant now) {
-        Map<Long, String> cycleByTask = new HashMap<>();
+        List<TaskCycleKey> keys = new ArrayList<>(published.size());
         // DAILY/MONTHLY share one key per request — avoid N× DateTimeFormatter allocs.
         String dailyKey = null;
         String monthlyKey = null;
@@ -583,20 +585,17 @@ public class TaskPortalAppService {
                                 snapshot.specialEnd(),
                                 now));
             }
-            cycleByTask.put(definition.getId(), key);
+            keys.add(new TaskCycleKey(definition.getId(), key));
         }
-        if (cycleByTask.isEmpty()) {
+        if (keys.isEmpty()) {
             return Map.of();
         }
         Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : instances.listByUser(userId)) {
+        for (TaskInstanceEntity row : instances.listByUserTaskCycles(userId, keys)) {
             if (row == null || row.getTaskId() == null) {
                 continue;
             }
-            String want = cycleByTask.get(row.getTaskId());
-            if (want != null && want.equals(row.getCycleKey())) {
-                out.putIfAbsent(row.getTaskId(), row);
-            }
+            out.putIfAbsent(row.getTaskId(), row);
         }
         return out;
     }
