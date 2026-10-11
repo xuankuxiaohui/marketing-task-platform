@@ -116,6 +116,9 @@ services:
       SERVER_PORT: "8081"
       SPRING_FLYWAY_ENABLED: "false"
       MKT_FLYWAY_ENABLED: "false"
+      # List residual dropped: Tomcat accept queue + thread headroom (see portal application.yml).
+      SERVER_TOMCAT_ACCEPT_COUNT: "200"
+      SERVER_TOMCAT_THREADS_MAX: "300"
     depends_on:
       mysql:
         condition: service_healthy
@@ -144,6 +147,9 @@ services:
       SERVER_PORT: "8081"
       SPRING_FLYWAY_ENABLED: "false"
       MKT_FLYWAY_ENABLED: "false"
+      # List residual dropped: Tomcat accept queue + thread headroom (see portal application.yml).
+      SERVER_TOMCAT_ACCEPT_COUNT: "200"
+      SERVER_TOMCAT_THREADS_MAX: "300"
     depends_on:
       mysql:
         condition: service_healthy
