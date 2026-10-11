@@ -590,8 +590,9 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // Dump-targeted: task_id IN + cycle_key IN (few distinct keys), not unbounded
-        // listByUser (500k rows) and not 1000-pair tuple IN (MySQL latency).
+        // Dual-IN restore (#165 shape): task_id IN + cycle_key IN + Java pair filter.
+        // Pair 分批 (chunk 128) formal FAIL (P95~5.5s, dropped~362/s) — reverted.
+        // Keep V8 idx_user_cycle; forbid cycle_key-only.
         List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
         List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();

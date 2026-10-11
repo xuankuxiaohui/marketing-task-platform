@@ -301,8 +301,8 @@ class TaskPortalAppServiceTest {
 
     @Test
     void listLoadsCurrentInstancesViaTaskCycleTuplesNotUnboundedListByUser() {
-        // Heap-dump relief: listByUser can return 500k+ rows (seed user_id=1); list must
-        // bound the read to published (task_id, cycle_key) via listByUserTaskCycles.
+        // MySQL dropped cut: listByUser can return 500k+ rows; list must bound via
+        // cycle_key IN (idx_user_cycle) then Java pair filter — not ~1k task_id IN.
         TaskInstanceStore spyInstances = spy(instances);
         service = new TaskPortalAppService(
                 definitions,
@@ -322,6 +322,7 @@ class TaskPortalAppServiceTest {
         verify(spyInstances, times(1)).listByUserTaskIdsAndCycleKeys(eq(9L), any(), any());
         verify(spyInstances, never()).listByUser(anyLong());
         verify(spyInstances, never()).listByUserTaskCycles(anyLong(), any());
+        verify(spyInstances, never()).listByUserCycleKeys(anyLong(), any());
     }
 
     @Test

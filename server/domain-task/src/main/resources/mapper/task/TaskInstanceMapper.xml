@@ -45,6 +45,16 @@
             #{ck}
         </foreach>
     </select>
+
+    <select id="selectByUserCycleKeys" resultType="com.mkt.task.entity.TaskInstanceEntity">
+        SELECT <include refid="cols"/>
+        FROM task_instance
+        WHERE user_id = #{userId}
+          AND cycle_key IN
+        <foreach collection="cycleKeys" item="ck" open="(" separator="," close=")">
+            #{ck}
+        </foreach>
+    </select>
     <select id="selectByUser" resultType="com.mkt.task.entity.TaskInstanceEntity">
         SELECT <include refid="cols"/>
         FROM task_instance

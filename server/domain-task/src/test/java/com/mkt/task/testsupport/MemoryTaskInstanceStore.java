@@ -97,6 +97,19 @@ public final class MemoryTaskInstanceStore implements TaskInstanceStore {
     }
 
     @Override
+    public List<TaskInstanceEntity> listByUserCycleKeys(long userId, List<String> cycleKeys) {
+        if (cycleKeys == null || cycleKeys.isEmpty()) {
+            return List.of();
+        }
+        java.util.HashSet<String> ck = new java.util.HashSet<>(cycleKeys);
+        return rows.values().stream()
+                .filter(row -> row.getUserId() == userId)
+                .filter(row -> row.getCycleKey() != null && ck.contains(row.getCycleKey()))
+                .sorted(Comparator.comparing(TaskInstanceEntity::getId).reversed())
+                .toList();
+    }
+
+    @Override
     public List<TaskInstanceEntity> listByUser(long userId) {
         return rows.values().stream()
                 .filter(row -> row.getUserId() == userId)

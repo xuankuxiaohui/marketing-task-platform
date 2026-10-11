@@ -25,6 +25,13 @@ public interface TaskInstanceMapper extends BaseMapper<TaskInstanceEntity> {
             @Param("taskIds") List<Long> taskIds,
             @Param("cycleKeys") List<String> cycleKeys);
 
+    /**
+     * Portal list: current cycle_key set only (few keys). Requires idx_user_cycle
+     * (user_id, cycle_key). Caller post-filters published (task_id, cycle_key) pairs.
+     */
+    List<TaskInstanceEntity> selectByUserCycleKeys(
+            @Param("userId") long userId, @Param("cycleKeys") List<String> cycleKeys);
+
     List<TaskInstanceEntity> selectByUser(@Param("userId") long userId);
 
     List<TaskInstanceEntity> selectByUserAndStatus(
