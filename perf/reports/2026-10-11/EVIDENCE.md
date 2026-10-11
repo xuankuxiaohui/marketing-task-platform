@@ -1,6 +1,6 @@
 # DEC-006 capacity evidence — 2026-10-11 (bot-box `mkt`)
 
-**Verdict: evidence only — capacity gates NOT fully met; do NOT treat as capacity PASS / RC.**
+**Verdict: early-day P0 FAIL retained below; risk 性能4 re-cut after #149 is PASS (see drill). Capacity checkbox still empty; do NOT treat as RC.**
 
 | Field | Value |
 |---|---|
@@ -53,7 +53,7 @@
 | complete | grant chain P95≤500ms; biz≈0 | 13.3 HTTP/s (4000 reqs) | tagged grant **43.7 ms** | http_fail **100%**; checks 0% (exhausted / business) | **NO** |
 | track | ≥6000 events/s; P95≤100ms; drop&lt;0.1% | accepted **6000.0/s**; HTTP 120/s | **11.43 ms** | drop 0; business_ok 100% | **YES (this run)** |
 | admin-list | P95≤800ms (spec: p1 data) | ~1039 HTTP/s | **36.4 ms** overall | http_fail 0; checks 100% | **YES on p0 data only** (not p1 scale) |
-| risk on vs off | \|ΔP95\| gate: on−off ≤20ms | — | on **56.6 ms**; off **164.0 ms**; Δ **-107.5 ms** | risk-on http_fail 100% (business); numeric Δ OK | numeric Δ OK; **on-variant business FAIL** |
+| risk on vs off | \|ΔP95\| ≤20ms + both HTTP200+code0 | — | on **381.1 ms**; off **385.1 ms**; Δ **-4.0 ms** | on/off http_fail 0; checks 100% (hygiene after #149) | **PASS** (drill `2026-10-11-r6-capacity-risk-on.md`); earlier numeric-only FAIL superseded |
 
 In-repo artifacts: `risk-on.json`, `risk-off.json`, `risk-delta.txt`, this `EVIDENCE.md`. Large `*.summary.json` remain box-local under this directory / gitignored; key metrics are inlined in the deploy drill.
 

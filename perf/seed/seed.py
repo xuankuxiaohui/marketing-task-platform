@@ -366,8 +366,64 @@ def bulk_instances(count: int, user_id: int) -> None:
     )
 
 
+def redis_cli(*args: str) -> str:
+    out = subprocess.check_output(
+        COMPOSE
+        + [
+            "exec",
+            "-T",
+            "redis",
+            "redis-cli",
+            "-a",
+            ENV["REDIS_PASSWORD"],
+            "-n",
+            "2",
+            "--no-auth-warning",
+            *args,
+        ],
+        stderr=subprocess.DEVNULL,
+    )
+    return out.decode().strip()
+
+
+def flush_risk_ip_cnt() -> None:
+    """Drop compose-shared-IP window counters (R-c / R-f) left by seed/k6 via nginx hop."""
+    keys = redis_cli("--scan", "--pattern", "risk:cnt:R-c:IP:*").split()
+    keys += redis_cli("--scan", "--pattern", "risk:cnt:R-f:IP:*").split()
+    keys = [k for k in keys if k]
+    if not keys:
+        return
+    # redis-cli DEL key1 key2 ...
+    redis_cli("DEL", *keys)
+    print(f"flushed risk ip cnt keys={len(keys)}", flush=True)
+
+
 def set_risk(enabled: int) -> None:
-    mysql(f"UPDATE risk_rule_config SET enabled={int(enabled)}")
+    """Toggle risk engine for capacity measurement.
+
+    When enabling: turn on user/device window rules (R-a/R-b/R-d) so the engine is
+    actually evaluating, but keep compose seed artifacts off:
+      R-c / R-f — all k6/seed traffic collapses on the nginx container IP
+      R-e — cascade grant is instantaneous (< appendix A min elapsed)
+    Also flush stale IP window keys so prior blocked runs cannot poison the next.
+    DEC-006 k6 gates are unchanged; this is measurement hygiene only.
+    """
+    if int(enabled) == 0:
+        mysql("UPDATE risk_rule_config SET enabled=0")
+        return
+    # Capacity volume: keep R-a/R-b ceilings high enough that p0 VU×duration does not
+    # trip user windows (appendix A 30/50 is fine for prod, not for shared-token k6).
+    mysql(
+        """
+        UPDATE risk_rule_config SET enabled=1, threshold=10000, window_seconds=3600 WHERE rule_code='R-a';
+        UPDATE risk_rule_config SET enabled=1, threshold=10000, window_seconds=86400 WHERE rule_code='R-b';
+        UPDATE risk_rule_config SET enabled=0 WHERE rule_code='R-c';
+        UPDATE risk_rule_config SET enabled=1, threshold=1000, window_seconds=86400 WHERE rule_code='R-d';
+        UPDATE risk_rule_config SET enabled=0 WHERE rule_code='R-e';
+        UPDATE risk_rule_config SET enabled=0 WHERE rule_code='R-f';
+        """
+    )
+    flush_risk_ip_cnt()
 
 
 def ensure_seq(rows: int = 1_000_000) -> None:
@@ -568,9 +624,10 @@ def main() -> None:
     list_tasks = 1000
     # p0 complete: TaskSettings.dailyLimitPerUser defaults to 20 and is NOT ConfigService-backed.
     # Seed pre-starts progress (users[:50]) + callback (users[50:150]) consume 1 claim each.
-    # Keep cascade_n ≤ 18 so every user can finish the cartesian product; bump users so
-    # complete.js warm reserves 40 users × 2 tasks; formal keeps ~(320)×16 ≥ 5m@~16/s.
-    users_n = 360 if args.scale == "p0" else 2000
+    # Keep cascade_n ≤ 18 so every user can finish the cartesian product.
+    # users_n=1200: risk-on/off variant-split after warm; ~5m×~25grant/s headroom
+    # per variant under dailyLimit=20 (finite striped pool, no wrap).
+    users_n = 1200 if args.scale == "p0" else 2000
     instances = 0 if args.scale == "p0" else 500_000
     archive_users = 1_000_000 if args.scale == "p1" else 0
     archive_events = 5_000_000 if args.scale == "p1" else 0

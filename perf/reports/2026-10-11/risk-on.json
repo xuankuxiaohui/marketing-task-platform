@@ -1,6 +1,8 @@
 {
   "variant": "on",
-  "p95": 56.589908399999885,
-  "nfr": "性能4",
+  "p95": 381.1003139,
+  "httpFailRate": 0,
+  "checksRate": 1,
+  "nfr": "\u6027\u80fd4",
   "maxDeltaMs": 20
 }
