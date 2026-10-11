@@ -442,22 +442,30 @@ public class TaskPortalAppService {
         if (local != null && local.catalog() == catalog) {
             return local.bundle();
         }
-        List<TaskDefinitionEntity> definitions = new ArrayList<>(catalog.entries().size());
-        Map<Long, SnapshotContent> snapshots = new HashMap<>(catalog.entries().size());
-        for (CachedPublishedCatalog.Entry entry : catalog.entries()) {
-            TaskDefinitionEntity definition = new TaskDefinitionEntity();
-            definition.setId(entry.id());
-            definition.setStatus(entry.status());
-            definition.setVersion(entry.version());
-            definitions.add(definition);
-            SnapshotContent content = JsonUtil.fromJson(entry.snapshotJson(), SnapshotContent.class);
-            if (content != null) {
-                snapshots.put(entry.id(), content);
+        // Single-flight parse: cold L1 fill under list QPS otherwise N threads each re-parse
+        // ~1MB snapshot JSON (portal-2 heap → ~1.4GiB in dropped-cut smoke).
+        synchronized (this) {
+            local = parsedPublishedCatalog;
+            if (local != null && local.catalog() == catalog) {
+                return local.bundle();
             }
+            List<TaskDefinitionEntity> definitions = new ArrayList<>(catalog.entries().size());
+            Map<Long, SnapshotContent> snapshots = new HashMap<>(catalog.entries().size());
+            for (CachedPublishedCatalog.Entry entry : catalog.entries()) {
+                TaskDefinitionEntity definition = new TaskDefinitionEntity();
+                definition.setId(entry.id());
+                definition.setStatus(entry.status());
+                definition.setVersion(entry.version());
+                definitions.add(definition);
+                SnapshotContent content = JsonUtil.fromJson(entry.snapshotJson(), SnapshotContent.class);
+                if (content != null) {
+                    snapshots.put(entry.id(), content);
+                }
+            }
+            PublishedBundle bundle = new PublishedBundle(definitions, snapshots);
+            parsedPublishedCatalog = new ParsedPublishedCatalog(catalog, bundle);
+            return bundle;
         }
-        PublishedBundle bundle = new PublishedBundle(definitions, snapshots);
-        parsedPublishedCatalog = new ParsedPublishedCatalog(catalog, bundle);
-        return bundle;
     }
 
     /**
