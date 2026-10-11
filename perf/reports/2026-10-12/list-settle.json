@@ -1,0 +1,61 @@
+{
+  "slice": "list-settle",
+  "date_cst": "2026-10-12",
+  "master_base": "79c2a86c2fea8084131666c9ccff7e0c202e7ba5",
+  "merged_pr": 156,
+  "architect_cut": "\u6c89\u964d\u540e list \u5355\u573a\u666f\u590d\u6d4b; \u4e0d\u53e0 bulk; PASS \u518d\u7eed run-full \u540e\u7eed",
+  "settle": {
+    "no_bulk_seed": true,
+    "reused_state": "perf/state.json scale=p1 tokenUsers=2000",
+    "capacity_live": {
+      "users": 1009363,
+      "instances": 1015362,
+      "events": 10885356
+    },
+    "pre_list_mysql_cpu_pct": 0.46,
+    "pre_list_mysql_mem_pct": 91.9,
+    "funnel_job_noted": "admin mtr_task_funnel_d agg intermittently spiked mysql; waited for quiet window",
+    "token_smoke": "list http 200 code 0 (first-hit ~5.3s cold then ready)"
+  },
+  "list": {
+    "command": "docker run --rm --network mkt_default -v perf:/scripts -e BASE_URL=http://nginx -e DURATION=5m grafana/k6:0.54.0 run --summary-export list-settle.summary.json list.js",
+    "warm": "built-in warm 200 QPS 30s then formal startTime 35s",
+    "duration": "5m",
+    "k6_exit": 99,
+    "verdict": "FAIL",
+    "http_reqs_per_s": 270.37098739652686,
+    "http_reqs_count": 98697,
+    "p95_ms": 175.86685579999818,
+    "avg_ms": 1024.6547862459142,
+    "med_ms": 0.318685,
+    "p95_gate_ms": 300,
+    "p95_ok": true,
+    "http_fail_rate": 0.6414435013319816,
+    "checks_rate": 0.3585564986680184,
+    "dropped_count": 57253,
+    "dropped_per_s": 156.83911508367382,
+    "dropped_gate": 0.05,
+    "thresholds_crossed": [
+      "checks{scenario:list} rate>0.99",
+      "dropped_iterations{scenario:list} rate<0.05",
+      "http_req_failed{scenario:list} rate==0"
+    ],
+    "thresholds_ok": [
+      "http_req_duration{name:list,scenario:list} p(95)<=300"
+    ]
+  },
+  "scenes_not_run": [
+    "advance",
+    "complete",
+    "track",
+    "admin-list",
+    "ad",
+    "risk-on",
+    "risk-off"
+  ],
+  "fail_stop": true,
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "dec006_thresholds_changed": false,
+  "logs": "/workspace/r6-capacity-logs/list-settle/"
+}
