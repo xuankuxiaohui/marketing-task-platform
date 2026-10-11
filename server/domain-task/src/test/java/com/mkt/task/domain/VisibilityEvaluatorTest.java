@@ -141,4 +141,22 @@ class VisibilityEvaluatorTest {
         return new UserAttributes(
                 province, "user", "1", 1, tags, Instant.parse("2026-01-01T00:00:00Z"), AccountStatus.ACTIVE);
     }
+
+    @Test
+    void visibleMatchesEvaluateAllowWithoutAllocatingReasons() {
+        UserAttributes attrs = attrs("GD", List.of("vip"));
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        Instant end = Instant.parse("2027-01-01T00:00:00Z");
+        TaskGrayCommand gray = new TaskGrayCommand(GrayTypes.NONE, null, null, null, null);
+        TaskFilterCommand filter = new TaskFilterCommand(null, List.of(), List.of());
+        EvalContext ctx = EvalContexts.filter(attrs, NOW, code -> false);
+        assertThat(VisibilityEvaluator.visible(
+                        DefinitionStatuses.PUBLISHED, start, end, gray, filter, 1L, 1L, NOW, NONE, ctx))
+                .isTrue();
+        assertThat(VisibilityEvaluator.visible(
+                        DefinitionStatuses.OFFLINE, start, end, gray, filter, 1L, 1L, NOW, NONE, ctx))
+                .isFalse();
+        assertThat(VisibilityResult.allow()).isSameAs(VisibilityResult.ALLOW);
+    }
+
 }

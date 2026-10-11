@@ -137,4 +137,12 @@ class ExpressionEngineTest {
                         compiled, EvalContext.missingAttributes(CLOCK.instant(), code -> false)))
                 .isFalse();
     }
+
+    @Test
+    void compileCachedReusesSameInstance() {
+        CompiledExpression a = ExpressionEngine.compileCached("province() = 'GD'");
+        CompiledExpression b = ExpressionEngine.compileCached("province() = 'GD'");
+        assertThat(a).isSameAs(b);
+    }
+
 }

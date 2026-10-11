@@ -3,6 +3,7 @@ package com.mkt.task.expression;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Expression sandbox: length / AST whitelist / 7 functions / long domain / node cap (R11.9).
@@ -10,6 +11,24 @@ import java.util.List;
 public final class ExpressionEngine {
 
     private ExpressionEngine() {}
+
+    /** Bounded cache for filter/list hot path — identical expr strings parse once per process. */
+    private static final int COMPILE_CACHE_MAX = 256;
+    private static final ConcurrentHashMap<String, CompiledExpression> COMPILE_CACHE =
+            new ConcurrentHashMap<>();
+
+    public static CompiledExpression compileCached(String source) {
+        String expr = source == null ? "" : source;
+        CompiledExpression hit = COMPILE_CACHE.get(expr);
+        if (hit != null) {
+            return hit;
+        }
+        CompiledExpression compiled = compile(expr);
+        if (COMPILE_CACHE.size() < COMPILE_CACHE_MAX) {
+            COMPILE_CACHE.putIfAbsent(expr, compiled);
+        }
+        return compiled;
+    }
 
     public static CompiledExpression compile(String source) {
         String expr = source == null ? "" : source;

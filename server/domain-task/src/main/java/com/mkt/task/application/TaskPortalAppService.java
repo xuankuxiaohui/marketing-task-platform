@@ -16,6 +16,7 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.CycleKeyResolver;
+import com.mkt.task.domain.CycleTypes;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
@@ -34,6 +35,7 @@ import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskBriefView;
 import com.mkt.task.response.TaskStepSource;
 import com.mkt.task.response.CachedPublishedCatalog;
+import com.mkt.task.response.RewardPreviewView;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
@@ -43,6 +45,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.PriorityQueue;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -151,8 +154,18 @@ public class TaskPortalAppService {
         CrowdMembership membership = userId == null ? null : new StoreCrowdMembership(crowds);
         CrowdResolver resolver = userId == null ? null : new StoreCrowdResolver(crowds, users, userId);
         EvalContext filterCtx = userId == null ? null : EvalContexts.filter(attrs, now, resolver);
-        // Defer TaskCardView (+ rewardPreview) alloc until after sort+page — only pageSize cards.
-        List<PendingCard> pending = new ArrayList<>(published.size());
+        // Top-K pending only (offset+pageSize) — avoid ~N PendingCard + full sort under ~1k catalog.
+        PageQuery query = PageQuery.of(page, pageSize);
+        long offset = query.offset();
+        int limit = query.pageSize();
+        int retain = (int) Math.min(Integer.MAX_VALUE - 8L, offset + (long) limit);
+        if (retain < 1) {
+            retain = 1;
+        }
+        Comparator<PendingCard> asc =
+                Comparator.comparingInt(PendingCard::sortWeight).thenComparingLong(PendingCard::taskId);
+        PriorityQueue<PendingCard> best = new PriorityQueue<>(Math.min(retain, 64), asc.reversed());
+        long total = 0;
         for (TaskDefinitionEntity definition : published) {
             SnapshotContent snapshot = snapshotByTask.get(definition.getId());
             if (snapshot == null) {
@@ -171,30 +184,41 @@ public class TaskPortalAppService {
                         now)) {
                     continue;
                 }
-                pending.add(new PendingCard(definition, snapshot, InstanceStatuses.NOT_STARTED));
+                total++;
+                considerPending(best, retain, definition, snapshot, InstanceStatuses.NOT_STARTED);
                 continue;
             }
             TaskInstanceEntity current = currentByTask.get(definition.getId());
             boolean inProgressThisCycle =
                     current != null && InstanceStatuses.IN_PROGRESS.equals(current.getStatus());
-            VisibilityResult visibility =
-                    visibility(definition, snapshot, userId, attrs, now, membership, filterCtx);
-            if (!visibility.visible() && !inProgressThisCycle) {
+            // Boolean visible() — no VisibilityResult / reasons ArrayList per published task.
+            boolean visible = VisibilityEvaluator.visible(
+                    definition.getStatus(),
+                    snapshot.startTime(),
+                    snapshot.endTime(),
+                    snapshot.gray(),
+                    snapshot.filter(),
+                    definition.getId(),
+                    userId,
+                    now,
+                    membership,
+                    filterCtx);
+            if (!visible && !inProgressThisCycle) {
                 continue;
             }
             String userStatus = current == null ? InstanceStatuses.NOT_STARTED : current.getStatus();
-            pending.add(new PendingCard(definition, snapshot, userStatus));
+            total++;
+            considerPending(best, retain, definition, snapshot, userStatus);
         }
-        pending.sort(
-                Comparator.comparingInt(PendingCard::sortWeight).thenComparingLong(PendingCard::taskId));
-        PageQuery query = PageQuery.of(page, pageSize);
-        long total = pending.size();
-        int from = (int) Math.min(query.offset(), total);
-        int to = (int) Math.min(from + query.pageSize(), total);
+        List<PendingCard> ranked = new ArrayList<>(best);
+        ranked.sort(asc);
+        int from = (int) Math.min(offset, ranked.size());
+        int to = (int) Math.min(from + (long) limit, ranked.size());
         List<TaskCardView> pageCards = new ArrayList<>(Math.max(0, to - from));
+        Map<Long, RewardPreviewView> rewards = publishedBundle.rewardPreviews();
         for (int i = from; i < to; i++) {
-            PendingCard row = pending.get(i);
-            pageCards.add(toCard(row.definition(), row.snapshot(), row.userStatus()));
+            PendingCard row = ranked.get(i);
+            pageCards.add(toCard(row.definition(), row.snapshot(), row.userStatus(), rewards));
         }
         return new PageData<>(total, pageCards);
     }
@@ -416,7 +440,8 @@ public class TaskPortalAppService {
     private PublishedBundle publishedBundle() {
         if (cache == null) {
             List<TaskDefinitionEntity> published = definitions.listPublished();
-            return new PublishedBundle(published, loadPublishedSnapshotsFromStore(published));
+            Map<Long, SnapshotContent> snaps = loadPublishedSnapshotsFromStore(published);
+            return new PublishedBundle(published, snaps, rewardPreviewsOf(snaps));
         }
         CachedPublishedCatalog catalog = cache.get(
                 CacheNamespace.TASK_PUBLISHED_INDEX,
@@ -461,7 +486,7 @@ public class TaskPortalAppService {
 
     private PublishedBundle fromCatalog(CachedPublishedCatalog catalog) {
         if (catalog == null || catalog.entries() == null || catalog.entries().isEmpty()) {
-            return new PublishedBundle(List.of(), Map.of());
+            return new PublishedBundle(List.of(), Map.of(), Map.of());
         }
         ParsedPublishedCatalog local = parsedPublishedCatalog;
         if (local != null && local.catalog() == catalog) {
@@ -495,7 +520,11 @@ public class TaskPortalAppService {
                     snapshots.put(snap.getTaskId(), content);
                 }
             }
-            PublishedBundle bundle = new PublishedBundle(definitions, snapshots);
+            Map<Long, RewardPreviewView> rewards = new HashMap<>(snapshots.size());
+            for (Map.Entry<Long, SnapshotContent> e : snapshots.entrySet()) {
+                rewards.put(e.getKey(), SnapshotViews.rewardPreview(e.getValue()));
+            }
+            PublishedBundle bundle = new PublishedBundle(definitions, snapshots, rewards);
             parsedPublishedCatalog = new ParsedPublishedCatalog(catalog, bundle);
             return bundle;
         }
@@ -511,19 +540,50 @@ public class TaskPortalAppService {
             Map<Long, SnapshotContent> snapshotByTask,
             Instant now) {
         Map<Long, String> cycleByTask = new HashMap<>();
+        // DAILY/MONTHLY share one key per request — avoid N× DateTimeFormatter allocs.
+        String dailyKey = null;
+        String monthlyKey = null;
+        Map<String, String> cronSpecialMemo = new HashMap<>();
         for (TaskDefinitionEntity definition : published) {
             SnapshotContent snapshot = snapshotByTask.get(definition.getId());
             if (snapshot == null || definition.getId() == null) {
                 continue;
             }
-            cycleByTask.put(
-                    definition.getId(),
-                    CycleKeyResolver.resolve(
-                            snapshot.cycleType(),
-                            snapshot.cronExpr(),
-                            snapshot.specialStart(),
-                            snapshot.specialEnd(),
-                            now));
+            String cycleType = snapshot.cycleType();
+            String key;
+            if (cycleType == null || CycleTypes.NONE.equals(cycleType)) {
+                key = CycleTypes.NONE;
+            } else if (CycleTypes.DAILY.equals(cycleType)) {
+                if (dailyKey == null) {
+                    dailyKey = CycleKeyResolver.resolve(
+                            cycleType, snapshot.cronExpr(), snapshot.specialStart(), snapshot.specialEnd(), now);
+                }
+                key = dailyKey;
+            } else if (CycleTypes.MONTHLY.equals(cycleType)) {
+                if (monthlyKey == null) {
+                    monthlyKey = CycleKeyResolver.resolve(
+                            cycleType, snapshot.cronExpr(), snapshot.specialStart(), snapshot.specialEnd(), now);
+                }
+                key = monthlyKey;
+            } else {
+                String memoKey =
+                        cycleType
+                                + '|'
+                                + nullToEmpty(snapshot.cronExpr())
+                                + '|'
+                                + instantKey(snapshot.specialStart())
+                                + '|'
+                                + instantKey(snapshot.specialEnd());
+                key = cronSpecialMemo.computeIfAbsent(
+                        memoKey,
+                        ignored -> CycleKeyResolver.resolve(
+                                cycleType,
+                                snapshot.cronExpr(),
+                                snapshot.specialStart(),
+                                snapshot.specialEnd(),
+                                now));
+            }
+            cycleByTask.put(definition.getId(), key);
         }
         if (cycleByTask.isEmpty()) {
             return Map.of();
@@ -563,7 +623,9 @@ public class TaskPortalAppService {
     }
 
     private record PublishedBundle(
-            List<TaskDefinitionEntity> definitions, Map<Long, SnapshotContent> snapshots) {}
+            List<TaskDefinitionEntity> definitions,
+            Map<Long, SnapshotContent> snapshots,
+            Map<Long, RewardPreviewView> rewardPreviews) {}
 
     private record ParsedPublishedCatalog(CachedPublishedCatalog catalog, PublishedBundle bundle) {}
 
@@ -620,8 +682,42 @@ public class TaskPortalAppService {
         return fallback;
     }
 
-    private static TaskCardView toCard(TaskDefinitionEntity definition, SnapshotContent snapshot, String userStatus) {
+
+    /**
+     * Keep only the best {@code retain} pending cards (ascending sort key). Peek is the worst of
+     * the kept set — replace when the candidate sorts strictly earlier (lower weight / taskId).
+     */
+    private static void considerPending(
+            PriorityQueue<PendingCard> best,
+            int retain,
+            TaskDefinitionEntity definition,
+            SnapshotContent snapshot,
+            String userStatus) {
+        if (best.size() < retain) {
+            best.offer(new PendingCard(definition, snapshot, userStatus));
+            return;
+        }
+        PendingCard worst = best.peek();
+        int cmp = Integer.compare(snapshot.sortWeight(), worst.sortWeight());
+        if (cmp == 0) {
+            cmp = Long.compare(definition.getId(), worst.taskId());
+        }
+        if (cmp < 0) {
+            best.poll();
+            best.offer(new PendingCard(definition, snapshot, userStatus));
+        }
+    }
+
+    private static TaskCardView toCard(
+            TaskDefinitionEntity definition,
+            SnapshotContent snapshot,
+            String userStatus,
+            Map<Long, RewardPreviewView> rewards) {
         int weight = snapshot.sortWeight();
+        RewardPreviewView reward =
+                rewards == null
+                        ? SnapshotViews.rewardPreview(snapshot)
+                        : rewards.getOrDefault(definition.getId(), SnapshotViews.rewardPreview(snapshot));
         return new TaskCardView(
                 definition.getId(),
                 snapshot.code(),
@@ -629,9 +725,20 @@ public class TaskPortalAppService {
                 snapshot.category(),
                 snapshot.iconUrl(),
                 snapshot.badgeText(),
-                SnapshotViews.rewardPreview(snapshot),
+                reward,
                 userStatus,
                 weight);
+    }
+
+    private static Map<Long, RewardPreviewView> rewardPreviewsOf(Map<Long, SnapshotContent> snapshots) {
+        if (snapshots == null || snapshots.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, RewardPreviewView> out = new HashMap<>(snapshots.size());
+        for (Map.Entry<Long, SnapshotContent> e : snapshots.entrySet()) {
+            out.put(e.getKey(), SnapshotViews.rewardPreview(e.getValue()));
+        }
+        return out;
     }
 
     private MineTaskView toMine(TaskInstanceEntity row) {
@@ -667,6 +774,14 @@ public class TaskPortalAppService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String instantKey(Instant value) {
+        return value == null ? "" : Long.toString(value.toEpochMilli());
     }
 
     private static String allCategoryToNull(String category) {

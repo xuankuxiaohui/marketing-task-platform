@@ -16,6 +16,27 @@ public final class VisibilityEvaluator {
 
     private VisibilityEvaluator() {}
 
+    /**
+     * List hot-path: boolean only, fail-fast, no ArrayList / VisibilityResult alloc per task.
+     * Same allow predicate as {@link #evaluate} without reason collection.
+     */
+    public static boolean visible(
+            String status,
+            Instant startTime,
+            Instant endTime,
+            TaskGrayCommand gray,
+            TaskFilterCommand filter,
+            long taskId,
+            long userId,
+            Instant now,
+            CrowdMembership crowds,
+            EvalContext evalContext) {
+        return DefinitionStatuses.PUBLISHED.equals(status)
+                && inWindow(startTime, endTime, now)
+                && grayHit(gray, taskId, userId, crowds)
+                && filterPass(filter, userId, crowds, evalContext);
+    }
+
     public static VisibilityResult evaluate(
             String status,
             Instant startTime,
@@ -28,21 +49,43 @@ public final class VisibilityEvaluator {
             Instant now,
             CrowdMembership crowds,
             EvalContext evalContext) {
-        List<VisibilityReason> reasons = new ArrayList<>(4);
+        // Allocate reasons only on deny — allow reuses VisibilityResult.ALLOW.
+        VisibilityReason r0 = null;
+        VisibilityReason r1 = null;
+        VisibilityReason r2 = null;
+        VisibilityReason r3 = null;
+        int n = 0;
         if (!DefinitionStatuses.PUBLISHED.equals(status)) {
-            reasons.add(VisibilityReason.OFFLINE);
+            r0 = VisibilityReason.OFFLINE;
+            n++;
         }
         if (!inWindow(startTime, endTime, now)) {
-            reasons.add(VisibilityReason.NOT_IN_WINDOW);
+            r1 = VisibilityReason.NOT_IN_WINDOW;
+            n++;
         }
         if (!grayHit(gray, taskId, userId, crowds)) {
-            reasons.add(VisibilityReason.GRAY_MISS);
+            r2 = VisibilityReason.GRAY_MISS;
+            n++;
         }
         if (!filterPass(filter, userId, crowds, evalContext)) {
-            reasons.add(VisibilityReason.FILTER_MISS);
+            r3 = VisibilityReason.FILTER_MISS;
+            n++;
         }
-        if (reasons.isEmpty()) {
+        if (n == 0) {
             return VisibilityResult.allow();
+        }
+        List<VisibilityReason> reasons = new ArrayList<>(n);
+        if (r0 != null) {
+            reasons.add(r0);
+        }
+        if (r1 != null) {
+            reasons.add(r1);
+        }
+        if (r2 != null) {
+            reasons.add(r2);
+        }
+        if (r3 != null) {
+            reasons.add(r3);
         }
         return VisibilityResult.deny(reasons);
     }
@@ -158,7 +201,7 @@ public final class VisibilityEvaluator {
 
     private static boolean evalExpr(String expr, EvalContext evalContext) {
         try {
-            CompiledExpression compiled = ExpressionEngine.compile(expr);
+            CompiledExpression compiled = ExpressionEngine.compileCached(expr);
             return ExpressionEngine.evaluate(compiled, evalContext);
         } catch (ExpressionCompileException ex) {
             return false;
