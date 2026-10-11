@@ -1,0 +1,85 @@
+{
+  "master_tip": "960e37349fba0f9417ddc05bd4a7b2459ecded8d",
+  "date": "2026-10-12",
+  "compose": "mkt",
+  "dec006": "cold_hot_columns",
+  "capacity_checkbox": "empty",
+  "rc": false,
+  "scenarios": {
+    "list": {
+      "cold": {
+        "duration": "90s",
+        "near_cold": true,
+        "warm": "1s@1qps",
+        "http_reqs_per_s": 476.768,
+        "p95_ms": 815.407,
+        "checks_rate": 1.0,
+        "http_fail_rate": 0.0,
+        "dropped_rate": 12.28,
+        "dropped_count": 1130,
+        "k6_exit": 99,
+        "verdict": "THRESHOLDS_CROSSED (expected near-cold; P95+dropped)",
+        "avg_ms": 101.082
+      },
+      "hot": {
+        "duration": "5m",
+        "warm": "30s@200qps",
+        "list_arrival_qps": 500,
+        "http_reqs_per_s_overall": 465.647,
+        "checks_rate": 1.0,
+        "http_fail_rate": 0.0,
+        "dropped_rate": 0.0,
+        "dropped_count": 0,
+        "k6_exit": 0,
+        "verdict": "PASS",
+        "p95_ms": 9.204,
+        "avg_ms": 3.57,
+        "http_reqs_per_s": 500.0,
+        "http_reqs_per_s_overall_incl_warm": 465.647
+      }
+    },
+    "ad": {
+      "cold": {
+        "duration": "90s",
+        "flush_ad_position_deleted": 0,
+        "portal_restart": true,
+        "http_reqs_per_s": 299.629,
+        "p95_ms": 3.055,
+        "checks_rate": 1.0,
+        "http_fail_rate": 0.0,
+        "dropped_rate": 0.322,
+        "dropped_count": 29,
+        "k6_exit": 99,
+        "verdict": "THRESHOLDS_CROSSED (dropped only; P95/checks/http_fail OK)",
+        "avg_ms": 2.646,
+        "note": "flush ad:position:* deleted=0 (L2 empty/TTL60s); portal restart cleared L1; cold effect visible as dropped 0.322/s vs hot 0"
+      },
+      "hot": {
+        "duration": "5m",
+        "http_reqs_per_s": 299.982,
+        "p95_ms": 2.225,
+        "checks_rate": 1.0,
+        "http_fail_rate": 0.0,
+        "dropped_rate": 0.0,
+        "dropped_count": 0,
+        "k6_exit": 0,
+        "verdict": "PASS",
+        "avg_ms": 1.41
+      }
+    }
+  },
+  "scope_note": "list+ad cold/hot only; prior advance/complete/admin-list formal 5m were warm/hot-only (cite prior drills)",
+  "non_claims": [
+    "capacity checkbox tick",
+    "DEC-006 threshold value change",
+    "run-full.sh",
+    "RC"
+  ],
+  "hotspot_note": "ad.js/list.js use uniform pick (5 adCodes / shared list page); DEC-006 ~20/80 hotspot is architectural expectation under production skew — not a weighted sampler in this package",
+  "procedure": {
+    "list_cold": "flush task:published-index:* + task:snapshot:* + task:crowd:*; restart portal-app-1/2; k6 list.js DURATION=90s LIST_WARM_DURATION=1s LIST_WARM_QPS=1 LIST_GATE_START=2s",
+    "list_hot": "no flush; k6 list.js DURATION=5m (default warm 30s@200 then formal 500qps)",
+    "ad_cold": "flush ad:position:*; restart portals; k6 ad.js DURATION=90s",
+    "ad_hot": "no flush; k6 ad.js DURATION=5m"
+  }
+}
