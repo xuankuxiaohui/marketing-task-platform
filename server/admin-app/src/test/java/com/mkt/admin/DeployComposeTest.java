@@ -34,7 +34,7 @@ class DeployComposeTest {
         assertThat(compose).contains("JAVA_TOOL_OPTIONS");
         assertThat(compose).contains("MaxRAMPercentage");
         assertThat(compose).contains("Xss512k");
-        assertThat(compose).contains("SERVER_TOMCAT_THREADS_MAX: \"120\"");
+        assertThat(compose).contains("SERVER_TOMCAT_THREADS_MAX: \"160\"");
         assertThat(compose).contains("memory: 1536M");
         assertThat(compose).contains("MKT_DATASOURCE_URL: ${MKT_DATASOURCE_URL}");
         assertThat(compose).contains("MKT_INIT_ADMIN_PASSWORD: ${MKT_INIT_ADMIN_PASSWORD}");
@@ -127,7 +127,7 @@ class DeployComposeTest {
         assertThat(adminYml).contains("characterEncoding=UTF-8");
         assertThat(adminYml).doesNotContain("characterEncoding=utf8mb4");
         assertThat(portalYml).contains("enabled: ${MKT_FLYWAY_ENABLED:false}");
-        assertThat(portalYml).contains("SERVER_TOMCAT_THREADS_MAX:120");
+        assertThat(portalYml).contains("SERVER_TOMCAT_THREADS_MAX:160");
         assertThat(portalYml).contains("include: health,prometheus");
         assertThat(portalYml).contains("characterEncoding=UTF-8");
         assertThat(portalYml).doesNotContain("characterEncoding=utf8mb4");

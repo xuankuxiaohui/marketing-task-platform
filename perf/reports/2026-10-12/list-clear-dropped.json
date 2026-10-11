@@ -1,0 +1,72 @@
+{
+  "slice": "clear-dropped",
+  "date_cst": "2026-10-12",
+  "master_base": "f6ff7e3f5bc92af22ab20cac669c5be0c51f79a1",
+  "merged_pr": 159,
+  "architect_cut": "合入+清 dropped；可小幅 Tomcat 120→160；禁 200–250；不抬 1536M；不降门禁",
+  "changes": {
+    "SERVER_TOMCAT_THREADS_MAX": "120→160",
+    "SERVER_TOMCAT_MIN_SPARE": "25→30",
+    "SERVER_TOMCAT_ACCEPT_COUNT": "200→400",
+    "nginx_portal_keepalive": "64→128",
+    "list_js": "LIST_PRE_VUS 250→350; LIST_MAX_VUS 400→500; WARM 30s→45s; GATE_START 35s→50s",
+    "kept": [
+      "-Xss512k",
+      "UseG1GC",
+      "lean CachedPublishedCatalog",
+      "memory 1536M"
+    ],
+    "banned_not_done": "Tomcat 200–250"
+  },
+  "list": {
+    "k6_exit": 99,
+    "verdict": "FAIL",
+    "http_reqs_per_s": 286.7230761701547,
+    "p95_ms": 3098.088300649999,
+    "http_fail_rate": 0.07049431625888396,
+    "checks_rate": 0.9295056837411161,
+    "dropped_count": 49532,
+    "dropped_per_s": 130.3387181665177,
+    "vs_c0f4795_near_pass": {
+      "prior_dropped_per_s": 0.304,
+      "prior_p95_ms": 88.9,
+      "prior_http_fail": 0,
+      "prior_checks": 1.0,
+      "note": "this hygiene package regressed vs c0f4795 near-PASS; fail-stop"
+    },
+    "oom": false,
+    "portal_restarts": {
+      "portal-app-1": 2,
+      "portal-app-2": 1
+    },
+    "peak_mem": {
+      "mkt-portal-app-1-1": {
+        "peak": "1.488GiB",
+        "limit": "1.5GiB",
+        "cpu_peak_pct": 208.7
+      },
+      "mkt-portal-app-2-1": {
+        "peak": "1.497GiB",
+        "limit": "1.5GiB",
+        "cpu_peak_pct": 213.65
+      }
+    },
+    "note_peak": "Peaks ≈1.49/1.5 GiB — still near ceiling; Restarts without OOMKilled (readiness). Tomcat 160 did not clear drops and coincided with full-gate regression."
+  },
+  "scenes_not_run": [
+    "advance",
+    "complete",
+    "track",
+    "admin-list",
+    "ad",
+    "risk-on",
+    "risk-off"
+  ],
+  "fail_stop": true,
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "dec006_thresholds_changed": false,
+  "memory_limit_raised": false,
+  "tomcat_200_250": false,
+  "logs": "/workspace/r6-capacity-logs/clear-dropped/"
+}
