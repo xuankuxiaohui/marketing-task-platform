@@ -30,7 +30,7 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 | 2026-10-12 | R6 capacity **clear residual dropped** 实验 after #159（Tomcat160 卫生包 **FAIL**；#160 **证据-only**；产品仍 120；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-clear-dropped.md](2026-10-12-r6-capacity-clear-dropped.md) |
 | 2026-10-12 | R6 capacity **threads=120 revert retest** after #160 strip（近PASS **未**恢复；CPU 刀未开；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-threads120-retest.md](2026-10-12-r6-capacity-threads120-retest.md) |
 | 2026-10-12 | R6 capacity **Redis/session stabilize** 实验（Redisson 加码 **heap OOM**；#162 **证据-only**；产品回退；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-redis-session.md](2026-10-12-r6-capacity-redis-session.md) |
-| 2026-10-12 | R6 capacity **list heap baseline** after #162（client 32/1s/1·Tomcat120·1536M；skip-renew OFF；formal list **FAIL** heap OOM；**证据-only**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-heap-baseline.md](2026-10-12-r6-capacity-list-heap-baseline.md) |
+| 2026-10-12 | R6 capacity **list 堆压减负** skip-renew alone A/B（**FAIL**；heap≈1.48GiB Redis idle；**证据-only**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-heap-relief.md](2026-10-12-r6-capacity-list-heap-relief.md) |
 | 2026-10-11 | R6 browser/static SPA：真实 dist + Playwright 登录/刷新/领取/完成/领奖 **PASS**（进行中；非 RC；容量仍 FAIL） | [2026-10-11-r6-browser-static-spa.md](2026-10-11-r6-browser-static-spa.md) |
 
 - [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) — post-#142 MySQL/GC list hot-path (非 RC)

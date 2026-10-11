@@ -12,3 +12,4 @@ peak_portal2=1.477GiB
 redis_mem=~12MiB/256MiB
 oom=False
 restarts=0
+skip_renew=ON

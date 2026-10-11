@@ -1,0 +1,4 @@
+Formal list2 = skip-renew ON (images from rebuild-skip-renew.log ~04:51).
+Container recreate ~05:08 did not rebuild jars.
+rebuild-master-renew.log ~05:19 is AFTER formal (mkt cleanup).
+Do not cite list2 as skip-renew OFF baseline.

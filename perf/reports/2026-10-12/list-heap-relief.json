@@ -1,0 +1,44 @@
+{
+  "slice": "list-heap-relief-skip-renew-alone",
+  "date_cst": "2026-10-12",
+  "master_base": "0ca40148ea25decf5bea04e4ea1dbf5440945f56",
+  "verdict": "FAIL",
+  "attribution": "list2 formal ran on skip-renew ON images built ~04:51; master renew rebuild was 05:19 post-formal. Concurrent baseline re-label was incorrect.",
+  "mkt_locked": {
+    "Redisson": "32/1000ms/1",
+    "Tomcat": 120,
+    "portal_memory": "1536M",
+    "redis": "0.5CPU/256M"
+  },
+  "cut_under_test": {
+    "SessionAuthFilter": "optional-auth skip renew+lastActive (runtime only; NOT landed)"
+  },
+  "run1_aborted": {
+    "k6_exit": 137,
+    "wall_s": 57
+  },
+  "list2_formal_5m": {
+    "qps": 242.76,
+    "p95_ms_list": 548.4,
+    "p95_ms_overall": 680.13,
+    "http_fail_list": 0.2751,
+    "checks_list": 0.7248,
+    "dropped_per_s_list": 177.21,
+    "dropped_count_list": 64689,
+    "http_reqs": 88616,
+    "k6_exit": 99,
+    "peak_portal1": "1.484GiB",
+    "peak_portal2": "1.477GiB",
+    "redis_mem": "~12MiB/256MiB",
+    "oom": false,
+    "restarts": 0,
+    "skip_renew": true,
+    "verdict": "FAIL"
+  },
+  "cpu_hot_path_started": false,
+  "fail_stop_reason": "list did not clear heap/session story; no CPU-blind cut",
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "product_landed": false,
+  "logs": "/workspace/r6-capacity-logs/heap-relief/"
+}
