@@ -1,13 +1,13 @@
-# R6 capacity — list-under-p1 内存补强 — list 5m **FAIL** (OOM cleared) — 2026-10-12
+# R6 capacity — list-under-p1 内存/热路径补强 — list 5m **FAIL** (dropped only; OOM cleared) — 2026-10-12
 
 | Field | Value |
 |---|---|
 | Repo tip (master base) | `f96102d` (Merge #158; rebuild-list FAIL + portal 1.5GiB memcg OOM addendum) |
 | Branch | `feat/list-under-p1-mem-2026-10-12` |
 | Executor | Grok Bot on **bot box** (no CloudAgent) |
-| Date (Asia/Shanghai) | 2026-10-12 ~03:11–03:19 CST |
-| Prior | [#158](https://github.com/xuankuxiaohui/marketing-task-platform/pull/158) / architect: **list-under-p1 内存补强**（卡在 DEC-006 **1536M** 内，**不抬限额、不降门禁**）；修完再 list 5m；容量勾仍空；非 RC |
-| Isolation | Compose project `mkt` (throwaway; **reused** p1 MySQL volume from #158 rebuild; portal images rebuilt) |
+| Date (Asia/Shanghai) | 2026-10-12 ~03:01–03:27 CST |
+| Prior | [#158](https://github.com/xuankuxiaohui/marketing-task-platform/pull/158) / architect: **list-under-p1 内存/热路径补强**（卡在 DEC-006 **1536M** 内，**不抬限额、不降门禁**）；修完再 list 5m；容量勾仍空；非 RC |
+| Isolation | Compose project `mkt` (throwaway; **reused** p1 MySQL volume from #158 rebuild; portal apps rebuilt only) |
 | Shared/prod DB touched | **No** |
 | DEC-006 thresholds | **unchanged**; DEC **not** reopened |
 | Memory limit | **1536M unchanged** (memcg `memory.max=1610612736`) |
@@ -17,9 +17,9 @@
 ## Goal
 
 1. Merge #158 when CI green (tip `9a3b78a` OOM addendum).
-2. Fix/reduce portal memory pressure for list under p1 **without** raising 1536M.
-3. Redeploy portals on throwaway `mkt`; reuse p1 seed; formal list 5m.
-4. Fail-stop; evidence PR; **capacity勾仍空**; **非 RC**.
+2. Pressure L1 (SNAPSHOT / ParsedPublishedCatalog) + heap/GC **without** raising 1536M.
+3. Redeploy portals on throwaway `mkt`; reuse p1 seed; formal list 5m (may include cache-prime).
+4. Fail-stop on FAIL; evidence PR; **capacity勾仍空**; **非 RC**.
 
 ## Step A — merge #158
 
@@ -27,77 +27,68 @@
 |---|---|
 | Head | `9a3b78a9bca8d7c91976e981965cceda4e596f35` |
 | CI | web / openapi-backend / e2e / deploy-smoke / server — all **SUCCESS** |
+| Merge | merge commit (repo habit) |
 | Master tip | **`f96102d4029b39254016aaaf938cdc641aa51767`** (Merge pull request #158) |
 
-## Memory reinforcement (within 1536M)
+## Memory / hot-path reinforcement (within 1536M)
 
 | Change | Why |
 |---|---|
-| `JAVA_TOOL_OPTIONS`: add **`-Xss512k`** (compose + Dockerfile) | Cap native thread stacks; 300× default stacks + 75% heap exceeded memcg under p1 |
-| Portal Tomcat **max threads 300→120**, min-spare **50→25** (compose env + `application.yml` defaults) | Enough for ~250 QPS/instance when latency healthy; 300 spun stacks → OOM |
-| `CachedPublishedCatalog.Entry` **metadata-only** `(id,status,version)` — drop embedded `snapshotJson` | Avoid duplicating ~1MB snapshot bodies inside published-index L1/L2 alongside `TASK_SNAPSHOT` |
-| `fromCatalog` resolves snapshot via `TASK_SNAPSHOT` | Same parse reuse path; single catalog source of truth for bodies |
-| `TaskPortalAppService.list`: hoist `CrowdMembership` / `CrowdResolver` / `EvalContext` **once per request** | Was N× (~1000) allocs per list |
-| `list`: `PendingCard` then `toCard` **only for page window** | Avoid ~1000 `TaskCardView` + `rewardPreview` allocs per request before pageSize=20 |
+| `JAVA_TOOL_OPTIONS`: **`-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k`** (compose + Dockerfile) | Cap native stacks; G1 under container RAM; **do not** raise 1536M |
+| Portal Tomcat **max threads 300→120**, min-spare **50→25** | 300× stacks + 75% heap → memcg OOM under p1; 120 fits with Xss512k |
+| `CachedPublishedCatalog.Entry` **metadata-only** `(id,status,version)` | Stop embedding ~1MB snapshot JSON in published-index L1/L2 |
+| Catalog load **does not** `put` TASK_SNAPSHOT; `fromCatalog` bulk-reads DB once into `ParsedPublishedCatalog` | Avoid dual residency of ~1k JSON strings + parsed objects in L1 |
+| `list`: hoist `CrowdMembership` / `EvalContext` **once per request** | Was N× (~1000) allocs |
+| `list`: `PendingCard` then `toCard` **only for page window** | Avoid ~1000 card/rewardPreview allocs before pageSize=20 |
 
-**Not done:** raising compose `memory: 1536M`; changing DEC-006 k6 gates; fake tokens; DEC-002 reopen.
+**Not done:** raising compose `memory: 1536M`; changing DEC-006 k6 gates; fake tokens; DEC-002/006 reopen; wipe/reseed (p1 volume kept).
 
 ## Environment
 
 | Item | Detail |
 |---|---|
-| Compose | `mkt` UP; portal×2 rebuilt `--no-cache`; MySQL/Redis volumes retained (p1) |
-| Verified env | `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -Xss512k`; `SERVER_TOMCAT_THREADS_MAX=120`; cgroup max **1610612736** |
+| Compose | `mkt` UP; portal×2 rebuilt; MySQL/Redis volumes retained (p1) |
+| Verified env | `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k`; `SERVER_TOMCAT_THREADS_MAX=120`; cgroup max **1610612736** |
 | Data | tokenUsers=**2000**; users=1,002,000 / instances=500,150 / events=5,002,150 |
-| Smoke | list HTTP 200 / code 0 |
-| k6 | `DURATION=5m` `list.js` warm→formal |
+| Smoke | list HTTP 200 / code 0 (total≈966) |
+| k6 | `DURATION=5m` `list.js` warm→formal; report `perf/reports/2026-10-12/list-mem.summary.json` |
 
 ## Per-scene table
 
 | Scene | Result | Notes |
 |---|---|---|
-| mem code + portal rebuild | **done** | 1536M unchanged |
-| **list** | **FAIL** | formal 5m; see metrics; **fail-stop** |
+| mem code + portal rebuild | **done** | 1536M unchanged; p1 DB kept |
+| **list** | **FAIL** | formal 5m; **only dropped** gate fails; **fail-stop** |
 | advance…risk | **not run** | fail-stop |
 
-### list formal 5m (FAIL) — OOM cleared
+### list formal 5m (FAIL) — OOM cleared; 3/4 gates PASS
 
 | Gate (DEC-006 / list.js) | Observed | Verdict |
 |---|---|---|
-| arrival ~500/s | ≈**297.6**/s overall http_reqs | under |
-| P95 ≤300 ms | **≈1780.7 ms** | **FAIL** |
-| http_fail rate == 0 | **≈29.27%** (30061 / 102692 formal) | **FAIL** |
-| dropped_iterations rate <0.05 | **≈129.6/s** (47308) | **FAIL** |
-| checks rate >0.99 | ≈**0.707** | **FAIL** |
+| arrival ~500/s | formal completed ≈**149898**/300s ≈**499.7**/s (overall http_reqs ≈460.7/s incl. warm) | near target |
+| P95 ≤300 ms | **≈88.89 ms** | **PASS** |
+| http_fail rate == 0 | **0%** (0 / 149898 formal) | **PASS** |
+| checks rate >0.99 | **100%** (299796/299796) | **PASS** |
+| dropped_iterations rate <0.05 | **≈0.304/s** (103 drops) | **FAIL** |
 
-k6 exit **99**. Thresholds crossed: checks / dropped / P95 / http_fail (all four formal gates).
+k6 exit **99**. Threshold crossed: `dropped_iterations{scenario:list}` only.
 
-### Memory / OOM observation (this run)
+Compare to #158 rebuild-list FAIL: P95≈1580 / http_fail≈1.64% / checks≈0.984 / dropped≈83/s + portal memcg OOM (Restarts 6/5).
+
+### Memory / OOM observation (formal window)
 
 | Item | Value |
 |---|---|
-| portal-app-1 Restarts / OOMKilled | **0** / **false** |
+| portal-app-1 Restarts / OOMKilled | **0** / **false** (28/28 monitor samples) |
 | portal-app-2 Restarts / OOMKilled | **0** / **false** |
-| Peak mem during list | portal-1 ≈**540 MiB**; portal-2 ≈**799 MiB** / **1.5 GiB** |
-| vs #158 rebuild formal | portals hit **1.5 GiB** memcg → repeated java OOM kills (restarts 6/5) |
+| Peak RSS during list | portal-1 ≈**1.462 GiB** / 1.5 GiB; portal-2 ≈**1.455 GiB** / 1.5 GiB |
+| Post-list | both ≈1.456 GiB; MySQL CPU spike samples ~98% then calm |
+| dmesg memcg OOM in window | **none** (prior OOMs are pre-fix PIDs) |
 
-**Memcg OOM under list-at-p1 on 1536M is mitigated** by this cut. List DEC-006 gates remain **FAIL** (latency/errors/drops) — next architect cut as needed; **do not** lower gates on this evidence.
+## Overall verdict
 
-## Artifacts
+**FAIL** on residual **dropped_iterations ≈0.304/s** (gate `<0.05`). Latency/error/check gates **PASS**. Portal **1.5 GiB memcg OOM eliminated** under this list formal (no restarts). **Capacity勾仍空**; **非 RC**; **no** threshold edits.
 
-| Artifact | Location |
-|---|---|
-| In-repo aggregate | [perf/reports/2026-10-12/list-under-p1-mem.json](../../perf/reports/2026-10-12/list-under-p1-mem.json) |
-| Host logs | `/workspace/r6-capacity-logs/list-under-p1-mem/` |
+## Ask
 
-## Explicit non-claims
-
-1. **Not** capacity checklist tick.
-2. **Not** RC.
-3. **Not** DEC-006 / DEC-002 reopen; **no** k6 threshold edits.
-4. **Not** raising 1536M memory limit.
-5. Subsequent `run-full` scenes **not** run (fail-stop).
-
-## Checklist pointer
-
-See [R31-go-live-checklist.md](../R31-go-live-checklist.md) §数据与运行保障 —「性能报告…满足 DEC-006」: evidence linked; **checkbox remains unchecked**.
+@架构师 please review: list-under-p1 mem cut inside 1536M → OOM cleared; list formal near-PASS (dropped only). Decide next cut — do **not** lower gates on this alone. Capacity勾仍空; 非 RC.

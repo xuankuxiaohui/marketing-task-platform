@@ -452,7 +452,7 @@ public class TaskPortalAppService {
             if (!jsonByTask.containsKey(definition.getId())) {
                 continue;
             }
-            // Metadata only — JSON already in TASK_SNAPSHOT above (no second ~1MB copy in index).
+            // Metadata only — snapshot bodies parsed into ParsedPublishedCatalog (not L1 JSON copy).
             entries.add(new CachedPublishedCatalog.Entry(
                     definition.getId(), definition.getStatus(), definition.getVersion()));
         }
