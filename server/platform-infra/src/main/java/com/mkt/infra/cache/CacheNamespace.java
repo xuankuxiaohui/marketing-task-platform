@@ -10,7 +10,7 @@ public enum CacheNamespace {
     CONFIG("config", Duration.ofMinutes(5), 10_000, CacheNamespaceKind.MANAGED),
     RBAC_PERMISSION("rbac:permission", Duration.ofMinutes(5), 10_000, CacheNamespaceKind.MANAGED),
     TASK_SNAPSHOT("task:snapshot", Duration.ofHours(24), 2_000, CacheNamespaceKind.MANAGED),
-    TASK_PUBLISHED_INDEX("task:published-index", Duration.ofMinutes(5), 1_000, CacheNamespaceKind.MANAGED),
+    TASK_PUBLISHED_INDEX("task:published-index", Duration.ofMinutes(30), 1_000, CacheNamespaceKind.MANAGED),
     TASK_CROWD("task:crowd", Duration.ofMinutes(10), 10_000, CacheNamespaceKind.MANAGED),
     RISK_RULE("risk:rule", Duration.ofMinutes(5), 10_000, CacheNamespaceKind.MANAGED),
     IDENTITY_USER_ATTR("identity:user-attr", Duration.ofMinutes(5), 1_000, CacheNamespaceKind.MANAGED),

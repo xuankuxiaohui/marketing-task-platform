@@ -14,6 +14,7 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 | 2026-10-11 | R6 capacity list hot-path（#144；onUserList / listByUser / parse reuse；勾仍空；非 RC） | [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) |
 | 2026-10-11 | R6 capacity list formal 5m after #144（~499/s P95~4ms http_fail0；**dropped~0.58/s FAIL**；勾未勾；非 RC；未进 advance） | [2026-10-11-r6-capacity-list-post144.md](2026-10-11-r6-capacity-list-post144.md) |
 | 2026-10-11 | R6 capacity list 5m after #144（**FAIL** dropped≈0.58/s；P95≈4ms / ~499/s / http_fail 0%；fail-stop；勾未勾；非 RC） | [2026-10-11-r6-capacity-list-5m-after-144.md](2026-10-11-r6-capacity-list-5m-after-144.md) |
+| 2026-10-11 | R6 capacity list residual dropped（warmup + preAllocatedVUs 250 + Tomcat accept/nginx keepalive；勾仍空；非 RC；未进 advance） | [2026-10-11-r6-capacity-list-dropped-residual.md](2026-10-11-r6-capacity-list-dropped-residual.md) |
 | 2026-10-11 | R6 browser/static SPA：真实 dist + Playwright 登录/刷新/领取/完成/领奖 **PASS**（进行中；非 RC；容量仍 FAIL） | [2026-10-11-r6-browser-static-spa.md](2026-10-11-r6-browser-static-spa.md) |
 
 - [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) — post-#142 MySQL/GC list hot-path (非 RC)

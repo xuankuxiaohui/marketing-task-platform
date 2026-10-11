@@ -15,6 +15,15 @@ spring:
 
 server:
   port: ${SERVER_PORT:8081}
+  # Dual portal under list 500 QPS (R6 dropped residual): headroom for brief catalog-refresh
+  # spikes + larger accept queue so nginx is not failed while Tomcat catches up.
+  # Env-tunable on Compose mkt; not a DEC-006 threshold change.
+  tomcat:
+    threads:
+      max: ${SERVER_TOMCAT_THREADS_MAX:300}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE:50}
+    accept-count: ${SERVER_TOMCAT_ACCEPT_COUNT:200}
+    max-connections: ${SERVER_TOMCAT_MAX_CONNECTIONS:8192}
 
 management:
   endpoint:
