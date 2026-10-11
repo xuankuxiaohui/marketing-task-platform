@@ -5,7 +5,7 @@
 | Repo tip (master base) | `e9b90cab3f50cb10fbd051a794a533374d60a006` (merge #136; R6 journey deploy-smoke) |
 | Branch | `docs/evidence-r6-dual-instance-fault-continuity` |
 | Executor | Grok Bot on bot box (no CloudAgent; user forced box-local clone/edit/push) |
-| Date (Asia/Shanghai) | 2026-10-11 ~14:07–14:09 CST |
+| Date (Asia/Shanghai) | 2026-10-11 ~14:07–14:10 CST |
 | Isolation | Compose project `mkt`; existing throwaway volume from prior R6 slices (not prod) |
 | Shared/prod DB touched | **No** |
 | R6 overall | **已开 / 进行中** — this file is **dual-instance fault Continuity** evidence only; **not** RC pass |
@@ -16,7 +16,7 @@ Architect next slice after #136: **双实例故障 Continuity** bound to [R31-go
 
 1. Confirm portal×2 readiness UP and nginx `/healthz` ok.
 2. Stop **one** portal instance (`portal-app-1`).
-3. While the other remains UP, show Continuity: nginx entry still serves portal traffic (`/healthz` + real portal API via nginx).
+3. Through **nginx**, critical portal paths must still **read and write** successfully while the remaining instance serves traffic.
 4. Keep R6 **进行中**; do **not** claim RC pass.
 
 **Out of scope this PR** (later R6 slices): 容量(DEC-006)、恢复/部署取证、真实浏览器静态/SPA。Do **not** claim RC pass.
@@ -51,9 +51,12 @@ curl -fsS "$BASE/healthz"   # → ok
 "${COMPOSE[@]}" stop portal-app-1
 # portal-app-1 Exited (143); portal-app-2 still healthy UP
 
-# Continuity (fail-stop curls + scripted portal API ×5)
+# Continuity (fail-stop): nginx healthz + critical R/W via remaining portal
 for i in 1..5; do curl -fsS "$BASE/healthz"; done   # all HTTP 200 ok
-# Portal login + points/balance via nginx ×5 → failures=0/5
+# WRITE: portal login smoke_p0 (captcha + /api/common/auth/login)
+# READ:  /api/common/points/balance → 10
+# WRITE: /api/common/task/1/start → instanceId=1 (idempotent)
+# ×5 login+balance → failures=0/5; reconfirm R/W (login+balance+task start) PASS
 
 # Optional recover
 "${COMPOSE[@]}" start portal-app-1   # both portals UP again
@@ -67,9 +70,11 @@ for i in 1..5; do curl -fsS "$BASE/healthz"; done   # all HTTP 200 ok
 | Baseline portal API via nginx | login `smoke_p0` + `/api/common/points/balance` → balance **10** |
 | Fault inject | `docker compose … stop portal-app-1` → status **Exited (143)**; portal-app-2 remains **UP** |
 | Continuity `/healthz` | 5/5 HTTP **200** `ok` while portal-app-1 down |
-| Continuity portal API | 5/5 login + points/balance **PASS** (failures=**0**/5) via nginx while only portal-app-2 up |
+| Continuity WRITE via nginx | portal login `smoke_p0` **PASS**; `POST /api/common/task/1/start` → `instanceId=1` **PASS** |
+| Continuity READ via nginx | `/api/common/points/balance` → **10** **PASS** (5/5 login+balance failures=**0**/5) |
+| Remaining instance | portal-app-2 readiness **UP** throughout fault window |
 | Optional recover | `start portal-app-1` → both readiness **UP** again |
-| Slice verdict | **PASS** (Continuity only) |
+| Slice verdict | **PASS** (dual-instance fault Continuity only) |
 | RC / full R6 | **not claimed** |
 
 ### Continuity log excerpt
@@ -82,6 +87,10 @@ try1..5 PASS avail=False balance=10
 CONTINUITY_PORTAL_API failures=0/5
 CONTINUITY_PORTAL_API: PASS
 # OPTIONAL RECOVER 14:08:48 CST — portal-app-1 UP again; both healthy
+# RECONFIRM 14:09:02–14:09:52 CST — stop portal-app-1 again; nginx R/W:
+#   WRITE login token present; WRITE task/1/start instanceId=1;
+#   READ points balance=10; AFTER_STOP_PORTAL_1 CRITICAL R/W PASS
+#   DRILL_VERDICT PASS (exit 0)
 ```
 
 ## Gaps / explicit non-claims

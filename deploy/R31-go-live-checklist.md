@@ -32,7 +32,7 @@
   - **说明**：本勾证明迁移归属与就绪，**不**等于全量业务旅程或双实例故障通过。
 - [ ] 首次发布失败的恢复步骤与数据保留策略明确。将来采用滚动发布时，再验证新旧版本共存与回退兼容；不能把未上线理解成可以随意改已应用迁移。
 - [x] portal 双实例及就绪检查有效，单节点退出时服务可继续使用。
-  - **R6 双实例故障 Continuity（2026-10-11）**：bot box Compose `mkt`；baseline portal×2 readiness UP + nginx `/healthz` ok；`docker compose stop portal-app-1` → Exited (143)，portal-app-2 仍 UP；Continuity：`/healthz` 5/5 ok；nginx 门户 API（login `smoke_p0` + points/balance）5/5 PASS（failures=0）；可选恢复后双节点再 UP。证据：[drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md)。
+  - **R6 双实例故障 Continuity（2026-10-11）**：bot box Compose `mkt`；baseline portal×2 readiness UP + nginx `/healthz` ok；`docker compose stop portal-app-1` → Exited (143)，portal-app-2 仍 UP；Continuity：`/healthz` 5/5 ok；经 nginx **写**（login `smoke_p0`、task start）+ **读**（points/balance=10）PASS（login+balance 5/5 failures=0）；可选恢复后双节点再 UP。证据：[drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md)。
   - **说明**：本勾覆盖单节点退出时 nginx 入口仍可服务门户流量；**不**等于容量(DEC-006)、恢复取证、真实浏览器或 RC 通过。
 - [x] [deploy-smoke.sh](../ci/deploy-smoke.sh) 的重复启动与业务幂等验证有运行结果；不能仅凭脚本存在认定通过。
   - **R6 旅程片（2026-10-11）**：bot box 运行 `bash ci/deploy-smoke.sh` → exit 0 / `deploy-smoke ok`；compose up×2 就绪；Flyway `1…7`；admin 登录 + prize/task；portal `smoke_p0` 注册/登录 → 任务 start → instance **COMPLETED**、grant **GRANTED**、balance **10**；flow1==flow2 幂等；SQL users/instances/grants=1。证据：[drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md)。
