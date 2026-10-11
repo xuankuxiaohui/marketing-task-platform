@@ -1,0 +1,78 @@
+{
+  "slice": "redis-session-stabilize",
+  "date_cst": "2026-10-12",
+  "master_before": "caa36ba9398e79fde8f9baa456e6ccb47c0ebf21",
+  "changes": {
+    "redis_compose": {
+      "cpus": "0.5→2.0",
+      "memory": "256M→512M",
+      "io_threads": 4,
+      "io_threads_do_reads": true,
+      "save": "disabled",
+      "appendonly": "no",
+      "maxmemory": "400mb",
+      "maxmemory_policy": "allkeys-lru"
+    },
+    "redisson": {
+      "COMMAND_TIMEOUT_MS": "1000→2000",
+      "RETRY_ATTEMPTS": "1→2",
+      "NETTY_THREADS": "32→48",
+      "CONNECTION_POOL_SIZE": 128
+    },
+    "session_auth_filter": "skip renew+updateLastActive on portal optional-auth (list/detail/ad/track) to cut session write stampede",
+    "kept": [
+      "Tomcat 120",
+      "portal 1536M",
+      "list.js PRE_VUS 250",
+      "-Xss512k"
+    ]
+  },
+  "list_formal": {
+    "k6_exit": 99,
+    "verdict": "FAIL",
+    "qps": 238.71,
+    "p95_ms": 1265.4,
+    "http_fail_list": 0.3091,
+    "checks_list": 0.6909,
+    "dropped_per_s": 188.0,
+    "dropped_count": 68624,
+    "peak_mem": {
+      "portal1": "1.482GiB",
+      "portal2": "1.496GiB",
+      "redis": "11.49MiB"
+    },
+    "oom_killed": false,
+    "restarts": {
+      "portal1": 0,
+      "portal2": 2
+    },
+    "dominant_failure": "Java heap space OutOfMemoryError on portals (not RedisResponseTimeout primary); nginx upstream errors followed heap death"
+  },
+  "vs_c0f4795": {
+    "qps": 499.7,
+    "p95_ms": 88.9,
+    "http_fail": 0,
+    "dropped_per_s": 0.304
+  },
+  "vs_161_miss": {
+    "list2_dropped_per_s": 80.4,
+    "list2_qps": 342.8,
+    "note": "this cut worse than #161 miss"
+  },
+  "cpu_hot_path_started": false,
+  "fail_stop": true,
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "logs": "/workspace/r6-capacity-logs/redis-session/",
+  "product_landed": false,
+  "pr_disposition": "evidence-only; Redis/Redisson/skip-renew product levers stripped from #162",
+  "master_redisson": {
+    "netty": 32,
+    "timeout_ms": 1000,
+    "retry": 1
+  },
+  "master_redis_compose": {
+    "cpus": "0.5",
+    "memory": "256M"
+  }
+}

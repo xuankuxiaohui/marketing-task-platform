@@ -1,0 +1,8 @@
+{
+  "http_reqs_rate": 238.7071365716125,
+  "p95_ms": 1265.395633399999,
+  "http_fail_list": 0.30909582708338457,
+  "checks_list": 0.6909041729166154,
+  "dropped_list_rate": 187.99608125426448,
+  "dropped_list_count": 68624
+}
