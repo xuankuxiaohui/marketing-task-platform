@@ -9,7 +9,7 @@
 | 项目是什么、怎么启动 | [根 README](../README.md)、[本机脚本](../scripts/README.md) | 项目介绍与操作入口 |
 | 当前有哪些功能 | [功能清单](current-features.md) | 入口盘点，不代表全部验收通过 |
 | 真实环境验证过什么 | [2026-10-07 报告](full-flow-verification-2026-10-07.md) | 当时的环境、结果、失败与覆盖边界 |
-| 后续重构的依据与候选批次 | [重构方案](refactoring-blueprint.md) | 历史诊断与计划（R0–R6）；已合 PR 常用 P1–P4 相位，二者对照见蓝图 §4 实况注记；实施前核实问题是否仍存在 |
+| 后续重构的依据与候选批次 | [重构方案](refactoring-blueprint.md) | 历史诊断与计划（R0–R6）；已合 PR 常用 P1–P4 相位，二者对照见蓝图 §4；**R6 已开 / 进行中**（首片证据见 deploy/drills）；实施前核实问题是否仍存在 |
 | 已确认或仍待定的行为 | [决策记录](decisions.md) | 保留明确决定；未决项不因旧规格删除而自动获批 |
 | 开发命令与工程边界 | [server](../server/README.md) / [web](../web/README.md)、[AGENTS](../AGENTS.md) | 构建、测试、契约生成和仓库约束 |
 | 界面与交互工作 | [DESIGN](../DESIGN.md) | 体验约束和视觉验收方式 |
@@ -37,6 +37,6 @@
 git show 53bf1c2a20d4aa8d944cbcd0b76f0f25576b5c73:.kiro/specs/platform-v2/requirements.md
 ```
 
-历史报告、决策背景、测试注释和构建描述中的 Rxx、RL、C-*、设计章节及旧路径仅保留追溯意义。删除旧规格不自动批准行为变更，也不取消已确认的账号隔离、事务、数据与安全边界。DEC-007 的明确决定继续有效；[DEC-006](decisions.md#dec-006性能目标及证据口径已关闭) / [DEC-008](decisions.md#dec-008门户交互与规格的待对齐项已关闭) 已按推荐关闭（草案 #131 / #132）；**不**因关闭自动启动 R6。
+历史报告、决策背景、测试注释和构建描述中的 Rxx、RL、C-*、设计章节及旧路径仅保留追溯意义。删除旧规格不自动批准行为变更，也不取消已确认的账号隔离、事务、数据与安全边界。DEC-007 的明确决定继续有效；[DEC-006](decisions.md#dec-006性能目标及证据口径已关闭) / [DEC-008](decisions.md#dec-008门户交互与规格的待对齐项已关闭) 已按推荐关闭（草案 #131 / #132）；关闭本身**不**自动启动 R6。**2026-10-11** huihuang 显式开启 R6（**已开 / 进行中**，**未通过**）；首片空库 Flyway + 双应用装配证据见 [deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md](../deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md)，检查单绑定见 [R31-go-live-checklist](../deploy/R31-go-live-checklist.md)。
 
 本次 AGENTS 结构参考 OpenAI 官方 [AGENTS.md 指南](https://learn.chatgpt.com/docs/agent-configuration/agents-md) 与 [精简指令建议](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)：保留项目特有信息、可执行命令和关键约束，按任务读取资料；当前一个根入口足够，不新增重复规则文件。
