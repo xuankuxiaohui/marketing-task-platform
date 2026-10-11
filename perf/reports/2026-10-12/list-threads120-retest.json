@@ -1,0 +1,68 @@
+{
+  "slice": "threads120-retest-after-160-strip",
+  "date_cst": "2026-10-12",
+  "master_base": "f6ff7e3f5bc92af22ab20cac669c5be0c51f79a1",
+  "mkt_config": {
+    "SERVER_TOMCAT_THREADS_MAX": 120,
+    "SERVER_TOMCAT_ACCEPT_COUNT": 200,
+    "SERVER_TOMCAT_MIN_SPARE": 25,
+    "JAVA_TOOL_OPTIONS": "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k",
+    "memory": "1536M",
+    "nginx_keepalive": 64,
+    "list_js_defaults": "PRE_VUS 250 / MAX 400 / warm 30s / gate 35s"
+  },
+  "c0f4795_near_pass": {
+    "qps": 499.7,
+    "p95_ms": 88.9,
+    "http_fail": 0,
+    "checks": 1.0,
+    "dropped_per_s": 0.304,
+    "peak_gib": 1.46,
+    "restarts": 0
+  },
+  "list1_cold_after_recreate": {
+    "k6_exit": 99,
+    "qps": 423.86,
+    "p95_ms": 107.0,
+    "http_fail_list": 0.000415,
+    "checks_list": 0.999585,
+    "dropped_per_s": 36.89,
+    "dropped_count": 12490,
+    "peak_mem": {
+      "portal1": "1.478GiB",
+      "portal2": "1.493GiB"
+    },
+    "oom": false,
+    "restarts": 0,
+    "notes": "RedisResponseTimeout + nginx upstream closed/timeout mid-run; not near-PASS"
+  },
+  "settle": {
+    "duration": "60s",
+    "list_qps": 200,
+    "k6_exit": 0
+  },
+  "list2_after_settle": {
+    "k6_exit": 99,
+    "qps": 342.77,
+    "p95_ms": 154.87,
+    "http_fail_list": 0.000381,
+    "checks_list": 0.999619,
+    "dropped_per_s": 80.41,
+    "dropped_count_list": 29278,
+    "peak_mem": {
+      "portal1": "1.463GiB",
+      "portal2": "1.492GiB"
+    },
+    "oom": false,
+    "restarts": 0,
+    "verdict": "FAIL — worse than list1; baseline near-PASS NOT restored"
+  },
+  "cpu_hot_path_started": false,
+  "fail_stop_reason": "near-PASS / c0f4795 baseline not restored; architect gate requires restore before CPU cut",
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "dec006_thresholds_changed": false,
+  "threads_raised": false,
+  "memory_raised": false,
+  "logs": "/workspace/r6-capacity-logs/cpu-hot-path/"
+}
