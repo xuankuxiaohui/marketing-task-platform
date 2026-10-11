@@ -1,6 +1,6 @@
 # 项目诊断与重构方案
 
-审计日期：2026-10-11（对照 tip `a10bf31` / Merge #137；DEC-005 / DEC-006 / DEC-008 均**已关闭**；huihuang **已显式开启** R6 发布候选验收 — 状态 **已开 / 进行中**，**尚未通过**；首片见 [空库 Flyway + 双应用装配](../deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md)；旅程片见 [deploy-smoke 业务流](../deploy/drills/2026-10-11-r6-full-journey-deploy-smoke.md)；双实例故障 Continuity 见 [portal 单节点退出](../deploy/drills/2026-10-11-r6-dual-instance-fault-continuity.md)；容量 P0 可复现报告已取证（**整体 FAIL**；track/admin-list PASS；见 [capacity DEC-006](../deploy/drills/2026-10-11-r6-capacity-dec006.md)）；**非** RC）。范围：重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据并叠加 2026-10-07～10-11 已合 PR 实况；历史旅程运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
+审计日期：2026-10-11（对照 tip `e795167` / Merge #138；DEC-005 / DEC-006 / DEC-008 均**已关闭**；huihuang **已显式开启** R6 发布候选验收 — 状态 **已开 / 进行中**，**尚未通过**；首片见 [空库 Flyway + 双应用装配](../deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md)；旅程片见 [deploy-smoke 业务流](../deploy/drills/2026-10-11-r6-full-journey-deploy-smoke.md)；双实例故障 Continuity 见 [portal 单节点退出](../deploy/drills/2026-10-11-r6-dual-instance-fault-continuity.md)；容量 P0 可复现报告已取证（**整体 FAIL**；track/admin-list PASS；见 [capacity DEC-006](../deploy/drills/2026-10-11-r6-capacity-dec006.md)）；**非** RC）。范围：重点后端链路、两端前端、契约、测试、性能与部署入口。下表保留初次静态审计依据并叠加 2026-10-07～10-11 已合 PR 实况；历史旅程运行结果见 [核验报告](full-flow-verification-2026-10-07.md)。门户个人中心 R5-01 与任务生命周期 R2-01 已推进，不能据此声称全仓重构或全部业务验收完成。
 
 2026-10-09 文档清理说明：旧 Kiro 规格已退役。下文设计章节、需求编号和“设计允许”等描述是初次审计背景，不再构成实施授权；执行任何批次前核实现状，以用户本次要求和 [已确认决定](decisions.md) 确定行为及验收。
 
