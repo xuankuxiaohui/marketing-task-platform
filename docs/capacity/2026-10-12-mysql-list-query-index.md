@@ -47,3 +47,18 @@ Digest after formal3 (not clean — concurrent write noise observed): `task_inst
 
 ## Artifacts
 `/workspace/r6-capacity-logs/mysql-dropped/` — list-formal3-5m.log, digests, stats, flyway-v8.txt
+
+## run-full residual (after list PASS; no re-seed)
+
+Fail-stop intended at first non-list FAIL. Suite notes (pipeline tee masked k6 exit once; corrected stop):
+
+| scene | result | notes |
+|---|---|---|
+| list | **PASS** | this slice; see table above |
+| advance | **FAIL** | dropped≈6.52/s; callback P95≈926ms; progress P95≈1.13s (gate P95≤200ms / dropped&lt;0.05) |
+| complete | **FAIL** (ran after masked exit) | grant P95≈612ms &gt;500ms |
+| track | near metrics | accepted≈5999.7/s; dropped0; checks100% (log mid-run marks only) |
+| admin-list | **FAIL** | admin-instances P95≈4.68s &gt;800ms |
+| ad / risk / capacity_check | **not completed** | stopped after discovering advance FAIL |
+
+**Capacity勾仍空; 非 RC.** Next cut for advance residual is **out of scope of this MySQL list index PR** — await architect.

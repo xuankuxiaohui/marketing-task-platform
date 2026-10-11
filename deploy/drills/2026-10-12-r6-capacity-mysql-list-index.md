@@ -20,3 +20,7 @@
 | Restarts/OOM | 0/false | ✓ |
 
 **FAIL.** Mid-run abort metrics must not be used as PASS. run-full not continued.
+
+## run-full residual
+
+list **PASS** → advance **FAIL** (dropped≈6.52/s, callback/progress P95 ≫200ms). Subsequent scenes not authoritative (suite continued briefly due to `tee` masking k6 exit; then stopped). 勾仍空; 非 RC.
