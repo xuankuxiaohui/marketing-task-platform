@@ -14,7 +14,7 @@
 | 开发命令与工程边界 | [server](../server/README.md) / [web](../web/README.md)、[AGENTS](../AGENTS.md) | 构建、测试、契约生成和仓库约束 |
 | 界面与交互工作 | [DESIGN](../DESIGN.md) | 体验约束和视觉验收方式 |
 | 历史需求对应哪些测试 | [验证映射](verification-matrix.md) | 历史检索索引，不是当前规格或执行报告 |
-| 发布及性能如何取证 | [部署](../deploy/R31-go-live-checklist.md)、[性能](../perf/README.md) | 检查入口与证据要求，性能目标需重新确认 |
+| 发布及性能如何取证 | [部署](../deploy/R31-go-live-checklist.md)、[性能](../perf/README.md) | 检查入口与证据要求；性能目标见 [DEC-006](decisions.md#dec-006性能目标及证据口径) 推荐草案（仍开放/待拍板） |
 
 ## 维护约定
 
@@ -37,6 +37,6 @@
 git show 53bf1c2a20d4aa8d944cbcd0b76f0f25576b5c73:.kiro/specs/platform-v2/requirements.md
 ```
 
-历史报告、决策背景、测试注释和构建描述中的 Rxx、RL、C-*、设计章节及旧路径仅保留追溯意义。删除旧规格不自动批准行为变更，也不取消已确认的账号隔离、事务、数据与安全边界。DEC-007 的明确决定继续有效；DEC-008 的门户体验和 DEC-006 的性能目标仍需在相关任务中确认。
+历史报告、决策背景、测试注释和构建描述中的 Rxx、RL、C-*、设计章节及旧路径仅保留追溯意义。删除旧规格不自动批准行为变更，也不取消已确认的账号隔离、事务、数据与安全边界。DEC-007 的明确决定继续有效；DEC-006 / DEC-008 推荐草案已合入 master（#131 / #132），状态仍为开放/待拍板——**不**因草案自动关闭，也**不**自动启动 R6。
 
 本次 AGENTS 结构参考 OpenAI 官方 [AGENTS.md 指南](https://learn.chatgpt.com/docs/agent-configuration/agents-md) 与 [精简指令建议](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)：保留项目特有信息、可执行命令和关键约束，按任务读取资料；当前一个根入口足够，不新增重复规则文件。
