@@ -1,0 +1,12 @@
+{
+  "nfr": "\u6027\u80fd6",
+  "qps": 300,
+  "p95_ms": 1.84,
+  "httpFailRate": 0,
+  "checksRate": 1,
+  "dropped": 0,
+  "http_reqs_per_s": 299.984088,
+  "verdict": "PASS",
+  "duration": "5m",
+  "master_tip": "72710c7"
+}

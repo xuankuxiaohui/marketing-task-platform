@@ -53,10 +53,11 @@
 | complete | grant chain P95≤500ms; biz≈0 | 13.3 HTTP/s (4000 reqs) | tagged grant **43.7 ms** | http_fail **100%**; checks 0% (exhausted / business) | **NO** |
 | track | ≥6000 events/s; P95≤100ms; drop&lt;0.1% | accepted **6000.0/s**; HTTP 120/s | **11.43 ms** | drop 0; business_ok 100% | **YES (this run)** |
 | admin-list | P95≤800ms (spec: p1 data) | ~1039 HTTP/s | **36.4 ms** overall | http_fail 0; checks 100% | **YES on p0 data only** (not p1 scale) |
+| ad | 300 QPS; P95≤100ms; drop&lt;0.05; biz≈0 | **≈299.98 HTTP/s** | **≈1.84 ms** | drop 0; checks 100%; http_fail 0 | **PASS** (drill after #150) |
 | risk on vs off | \|ΔP95\| ≤20ms + both HTTP200+code0 | — | on **381.1 ms**; off **385.1 ms**; Δ **-4.0 ms** | on/off http_fail 0; checks 100% (hygiene after #149) | **PASS** (drill `2026-10-11-r6-capacity-risk-on.md`); earlier numeric-only FAIL superseded |
 
 In-repo artifacts: `risk-on.json`, `risk-off.json`, `risk-delta.txt`, this `EVIDENCE.md`. Large `*.summary.json` remain box-local under this directory / gitignored; key metrics are inlined in the deploy drill.
 
 ## What was not run
 
-- `SEED_SCALE=p1` / `perf/run-full.sh` / `ad.js` / `capacity_check.py` / `explain_hot.py` — skipped: portals already at memory limit under p0; escalating would not be a fair DEC-006 topology run on this box.
+- Early-day note above skipped `ad.js`; **re-cut after #150**: formal 5m ad **PASS** (see drill `2026-10-11-r6-capacity-ad.md` / `ad.json`). Still **not** p1/`run-full.sh` / admin-list p1 / Outbox recovery.
