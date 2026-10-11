@@ -50,7 +50,11 @@ run_k6() {
 
 run_k6 list.js list
 run_k6 advance.js advance
+# Seed ends with risk ON (IP-claim rules). complete grant chain needs risk off;
+# risk-on delta restores ON immediately after.
+python3 "$ROOT/perf/seed/seed.py" --risk off
 run_k6 complete.js complete
+python3 "$ROOT/perf/seed/seed.py" --risk on
 run_k6 track.js track
 run_k6 admin-list.js admin-list
 

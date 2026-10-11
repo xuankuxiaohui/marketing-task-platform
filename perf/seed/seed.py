@@ -566,11 +566,15 @@ def main() -> None:
         return
 
     list_tasks = 1000
-    users_n = 200 if args.scale == "p0" else 2000
+    # p0 complete: TaskSettings.dailyLimitPerUser defaults to 20 and is NOT ConfigService-backed.
+    # Seed pre-starts progress (users[:50]) + callback (users[50:150]) consume 1 claim each.
+    # Keep cascade_n ≤ 18 so every user can finish the cartesian product; bump users so
+    # complete.js warm reserves 40 users × 2 tasks; formal keeps ~(320)×16 ≥ 5m@~16/s.
+    users_n = 360 if args.scale == "p0" else 2000
     instances = 0 if args.scale == "p0" else 500_000
     archive_users = 1_000_000 if args.scale == "p1" else 0
     archive_events = 5_000_000 if args.scale == "p1" else 0
-    cascade_n = 20
+    cascade_n = 18 if args.scale == "p0" else 20
     password = "Perfuser1"
 
     admin = admin_login()
@@ -678,9 +682,12 @@ def main() -> None:
         },
     )
 
+    # Unique usernames per seed run: TaskSettings daily claim limit is in-process (default 20)
+    # and countToday accumulates across same-day re-seeds if logins reuse perf_u{i}.
+    seed_tag = datetime.now(timezone.utc).strftime("%m%d%H%M%S")
     users = []
     for i in range(users_n):
-        users.append(register_user(f"perf_u{i}", password))
+        users.append(register_user(f"perf_u{i}_{seed_tag}", password))
         if i % 20 == 0:
             print(f"users {i}/{users_n}", flush=True)
 
