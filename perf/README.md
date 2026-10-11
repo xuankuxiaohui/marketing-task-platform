@@ -1,6 +1,6 @@
 # 性能验证
 
-这里存放 k6 场景、容量种子与报告生成入口。旧规格中的性能数字已退役。[DEC-006](../docs/decisions.md#dec-006性能目标及证据口径已关闭) **已关闭**：证据口径与场景数值已升格为**正式门禁**。本批（R6 容量前半）已将 `perf/*.js` 注释/门槛说明与 DEC-006 对齐；**数值默认值本就匹配门禁表，未改阈值**。**可复现容量报告（P0）已于 2026-10-11 在 bot box Compose 跑出**：见 [deploy/drills/2026-10-11-r6-capacity-dec006.md](../deploy/drills/2026-10-11-r6-capacity-dec006.md)。**整体 FAIL**（list/advance/complete/risk-on）；**track PASS**；admin-list PASS（p0 数据）。本文**不**提供容量通过结论，**不**宣称 RC；p1/`run-full.sh` 未跑。
+这里存放 k6 场景、容量种子与报告生成入口。旧规格中的性能数字已退役。[DEC-006](../docs/decisions.md#dec-006性能目标及证据口径已关闭) **已关闭**：证据口径与场景数值已升格为**正式门禁**。本批（R6 容量前半）已将 `perf/*.js` 注释/门槛说明与 DEC-006 对齐；**数值默认值本就匹配门禁表，未改阈值**。**可复现容量报告（P0）已于 2026-10-11 在 bot box Compose 跑出**：见 [deploy/drills/2026-10-11-r6-capacity-dec006.md](../deploy/drills/2026-10-11-r6-capacity-dec006.md) 与 [reports/2026-10-11/EVIDENCE.md](reports/2026-10-11/EVIDENCE.md)。**整体 FAIL**（list/advance/complete/risk-on）；**track PASS**；admin-list PASS（p0 数据）。本文**不**提供容量通过结论，**不**宣称 RC；p1/`run-full.sh` 未跑。
 
 ## DEC-006 正式门禁（脚本默认已对齐）
 
