@@ -541,7 +541,7 @@ public class TaskPortalAppService {
             List<TaskDefinitionEntity> published,
             Map<Long, SnapshotContent> snapshotByTask,
             Instant now) {
-        List<TaskCycleKey> keys = new ArrayList<>(published.size());
+        Map<Long, String> cycleByTask = new HashMap<>();
         // DAILY/MONTHLY share one key per request — avoid N× DateTimeFormatter allocs.
         String dailyKey = null;
         String monthlyKey = null;
@@ -585,17 +585,24 @@ public class TaskPortalAppService {
                                 snapshot.specialEnd(),
                                 now));
             }
-            keys.add(new TaskCycleKey(definition.getId(), key));
+            cycleByTask.put(definition.getId(), key);
         }
-        if (keys.isEmpty()) {
+        if (cycleByTask.isEmpty()) {
             return Map.of();
         }
+        // Dump-targeted: task_id IN + cycle_key IN (few distinct keys), not unbounded
+        // listByUser (500k rows) and not 1000-pair tuple IN (MySQL latency).
+        List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
+        List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : instances.listByUserTaskCycles(userId, keys)) {
+        for (TaskInstanceEntity row : instances.listByUserTaskIdsAndCycleKeys(userId, taskIds, cycleKeys)) {
             if (row == null || row.getTaskId() == null) {
                 continue;
             }
-            out.putIfAbsent(row.getTaskId(), row);
+            String want = cycleByTask.get(row.getTaskId());
+            if (want != null && want.equals(row.getCycleKey())) {
+                out.putIfAbsent(row.getTaskId(), row);
+            }
         }
         return out;
     }

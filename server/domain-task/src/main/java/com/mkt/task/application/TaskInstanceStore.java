@@ -19,6 +19,9 @@ public interface TaskInstanceStore {
     /** Bounded batch for portal list (F01). Empty keys → empty list. */
     List<TaskInstanceEntity> listByUserTaskCycles(long userId, List<TaskCycleKey> keys);
 
+    List<TaskInstanceEntity> listByUserTaskIdsAndCycleKeys(
+            long userId, List<Long> taskIds, List<String> cycleKeys);
+
     List<TaskInstanceEntity> listByUser(long userId);
 
     List<TaskInstanceEntity> listInProgressByUser(long userId);

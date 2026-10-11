@@ -319,8 +319,9 @@ class TaskPortalAppServiceTest {
         PageData<TaskCardView> page = service.list(9L, null, 1, 20);
         assertThat(page.records()).hasSize(1);
         assertThat(page.records().get(0).userStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
-        verify(spyInstances, times(1)).listByUserTaskCycles(eq(9L), any());
+        verify(spyInstances, times(1)).listByUserTaskIdsAndCycleKeys(eq(9L), any(), any());
         verify(spyInstances, never()).listByUser(anyLong());
+        verify(spyInstances, never()).listByUserTaskCycles(anyLong(), any());
     }
 
     @Test

@@ -48,6 +48,15 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
     }
 
     @Override
+    public List<TaskInstanceEntity> listByUserTaskIdsAndCycleKeys(
+            long userId, List<Long> taskIds, List<String> cycleKeys) {
+        if (taskIds == null || taskIds.isEmpty() || cycleKeys == null || cycleKeys.isEmpty()) {
+            return List.of();
+        }
+        return instances.selectByUserTaskIdsAndCycleKeys(userId, taskIds, cycleKeys);
+    }
+
+    @Override
     public List<TaskInstanceEntity> listByUser(long userId) {
         return instances.selectByUser(userId);
     }
