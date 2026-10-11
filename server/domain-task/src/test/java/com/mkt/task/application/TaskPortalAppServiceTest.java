@@ -300,7 +300,9 @@ class TaskPortalAppServiceTest {
     }
 
     @Test
-    void listLoadsCurrentInstancesViaListByUserNotTupleIn() {
+    void listLoadsCurrentInstancesViaTaskCycleTuplesNotUnboundedListByUser() {
+        // Heap-dump relief: listByUser can return 500k+ rows (seed user_id=1); list must
+        // bound the read to published (task_id, cycle_key) via listByUserTaskCycles.
         TaskInstanceStore spyInstances = spy(instances);
         service = new TaskPortalAppService(
                 definitions,
@@ -310,14 +312,15 @@ class TaskPortalAppServiceTest {
                 users,
                 risk,
                 Clock.fixed(NOW, ZoneOffset.UTC));
-        long taskId = publish("via_user", 1);
+        long taskId = publish("via_cycles", 1);
         TaskInstanceEntity row = inProgress(taskId, snapshots.listByTaskId(taskId).get(0).getId());
         spyInstances.insert(row);
 
         PageData<TaskCardView> page = service.list(9L, null, 1, 20);
         assertThat(page.records()).hasSize(1);
         assertThat(page.records().get(0).userStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
-        verify(spyInstances, times(1)).listByUser(9L);
+        verify(spyInstances, times(1)).listByUserTaskIdsAndCycleKeys(eq(9L), any(), any());
+        verify(spyInstances, never()).listByUser(anyLong());
         verify(spyInstances, never()).listByUserTaskCycles(anyLong(), any());
     }
 

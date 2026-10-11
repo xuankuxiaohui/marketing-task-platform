@@ -531,8 +531,10 @@ public class TaskPortalAppService {
     }
 
     /**
-     * Prefer {@code listByUser} (~tens of rows) over {@code listByUserTaskCycles} with ~1000
-     * (task_id, cycle_key) tuples — measured MySQL hot path after #142 catalog cache.
+     * Heap-dump relief (2026-10-12): near-ceiling histogram showed ~343k–500k
+     * {@link TaskInstanceEntity} + MySQL {@code ByteArrayRow}/LocalDateTime when
+     * {@code listByUser} hit seed user_id=1 (500001 rows). Prefer bounded
+     * {@code listByUserTaskCycles} for published (task_id, cycle_key) only.
      */
     private Map<Long, TaskInstanceEntity> currentInstancesForPublished(
             long userId,
@@ -588,8 +590,12 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
+        // Dump-targeted: task_id IN + cycle_key IN (few distinct keys), not unbounded
+        // listByUser (500k rows) and not 1000-pair tuple IN (MySQL latency).
+        List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
+        List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : instances.listByUser(userId)) {
+        for (TaskInstanceEntity row : instances.listByUserTaskIdsAndCycleKeys(userId, taskIds, cycleKeys)) {
             if (row == null || row.getTaskId() == null) {
                 continue;
             }
