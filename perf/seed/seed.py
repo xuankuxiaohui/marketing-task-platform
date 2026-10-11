@@ -523,7 +523,7 @@ def bulk_events(count: int) -> None:
                    CONCAT('cap-dev-', {offset} + s.n),
                    'WEB',
                    '0.1.0',
-                   CAST('[{"code":"page.view","props":{"route":"/home"}}]' AS JSON),
+                   CAST('[{{"code":"page.view","props":{{"route":"/home"}}}}]' AS JSON),
                    1, 1, 0, UTC_TIMESTAMP(3)
             FROM perf_seq s
             WHERE s.n <= {int(take)}

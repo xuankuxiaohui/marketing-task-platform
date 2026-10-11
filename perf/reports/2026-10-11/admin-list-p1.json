@@ -1,0 +1,23 @@
+{
+  "nfr": "性能7",
+  "scale": "p1",
+  "vus": 10,
+  "duration": "5m",
+  "p95_ms": {
+    "admin-instances": 699.82,
+    "admin-definitions": 99.64,
+    "admin-grants": 200.82
+  },
+  "httpFailRate": 0,
+  "checksRate": 1,
+  "http_reqs_per_s": 44.4,
+  "capacity": {
+    "users": 1005960,
+    "instances": 515212,
+    "events": 5788862
+  },
+  "verdict": "PASS",
+  "master_tip": "6313377",
+  "thresholds_unchanged": true,
+  "capacity_checkbox": "empty"
+}
