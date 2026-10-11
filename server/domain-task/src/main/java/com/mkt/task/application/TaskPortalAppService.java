@@ -4,7 +4,6 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
-import com.mkt.contract.UserRiskSummary;
 import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
@@ -57,6 +56,8 @@ public class TaskPortalAppService {
     private final RiskCheckPort risk;
     private final Clock clock;
     private final PlatformCache cache;
+    /** Process-local reuse of parsed snapshots while L1 returns the same catalog instance. */
+    private volatile ParsedPublishedCatalog parsedPublishedCatalog;
 
     @Autowired
     public TaskPortalAppService(
@@ -140,25 +141,10 @@ public class TaskPortalAppService {
         PublishedBundle publishedBundle = publishedBundle();
         List<TaskDefinitionEntity> published = publishedBundle.definitions();
         Map<Long, SnapshotContent> snapshotByTask = publishedBundle.snapshots();
-        List<TaskCycleKey> cycleKeys = new ArrayList<>();
-        if (userId != null) {
-            for (TaskDefinitionEntity definition : published) {
-                SnapshotContent snapshot = snapshotByTask.get(definition.getId());
-                if (snapshot == null) {
-                    continue;
-                }
-                cycleKeys.add(new TaskCycleKey(
-                        definition.getId(),
-                        CycleKeyResolver.resolve(
-                                snapshot.cycleType(),
-                                snapshot.cronExpr(),
-                                snapshot.specialStart(),
-                                snapshot.specialEnd(),
-                                now)));
-            }
-        }
-        Map<Long, TaskInstanceEntity> currentByTask = indexByTaskId(
-                userId == null ? List.of() : instances.listByUserTaskCycles(userId, cycleKeys));
+        Map<Long, TaskInstanceEntity> currentByTask =
+                userId == null
+                        ? Map.of()
+                        : currentInstancesForPublished(userId, published, snapshotByTask, now);
         List<TaskCardView> cards = new ArrayList<>();
         for (TaskDefinitionEntity definition : published) {
             SnapshotContent snapshot = snapshotByTask.get(definition.getId());
@@ -448,9 +434,13 @@ public class TaskPortalAppService {
         return new CachedPublishedCatalog(entries);
     }
 
-    private static PublishedBundle fromCatalog(CachedPublishedCatalog catalog) {
+    private PublishedBundle fromCatalog(CachedPublishedCatalog catalog) {
         if (catalog == null || catalog.entries() == null || catalog.entries().isEmpty()) {
             return new PublishedBundle(List.of(), Map.of());
+        }
+        ParsedPublishedCatalog local = parsedPublishedCatalog;
+        if (local != null && local.catalog() == catalog) {
+            return local.bundle();
         }
         List<TaskDefinitionEntity> definitions = new ArrayList<>(catalog.entries().size());
         Map<Long, SnapshotContent> snapshots = new HashMap<>(catalog.entries().size());
@@ -465,7 +455,49 @@ public class TaskPortalAppService {
                 snapshots.put(entry.id(), content);
             }
         }
-        return new PublishedBundle(definitions, snapshots);
+        PublishedBundle bundle = new PublishedBundle(definitions, snapshots);
+        parsedPublishedCatalog = new ParsedPublishedCatalog(catalog, bundle);
+        return bundle;
+    }
+
+    /**
+     * Prefer {@code listByUser} (~tens of rows) over {@code listByUserTaskCycles} with ~1000
+     * (task_id, cycle_key) tuples — measured MySQL hot path after #142 catalog cache.
+     */
+    private Map<Long, TaskInstanceEntity> currentInstancesForPublished(
+            long userId,
+            List<TaskDefinitionEntity> published,
+            Map<Long, SnapshotContent> snapshotByTask,
+            Instant now) {
+        Map<Long, String> cycleByTask = new HashMap<>();
+        for (TaskDefinitionEntity definition : published) {
+            SnapshotContent snapshot = snapshotByTask.get(definition.getId());
+            if (snapshot == null || definition.getId() == null) {
+                continue;
+            }
+            cycleByTask.put(
+                    definition.getId(),
+                    CycleKeyResolver.resolve(
+                            snapshot.cycleType(),
+                            snapshot.cronExpr(),
+                            snapshot.specialStart(),
+                            snapshot.specialEnd(),
+                            now));
+        }
+        if (cycleByTask.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, TaskInstanceEntity> out = new HashMap<>();
+        for (TaskInstanceEntity row : instances.listByUser(userId)) {
+            if (row == null || row.getTaskId() == null) {
+                continue;
+            }
+            String want = cycleByTask.get(row.getTaskId());
+            if (want != null && want.equals(row.getCycleKey())) {
+                out.putIfAbsent(row.getTaskId(), row);
+            }
+        }
+        return out;
     }
 
     private Map<Long, SnapshotContent> loadPublishedSnapshotsFromStore(List<TaskDefinitionEntity> published) {
@@ -492,6 +524,8 @@ public class TaskPortalAppService {
     private record PublishedBundle(
             List<TaskDefinitionEntity> definitions, Map<Long, SnapshotContent> snapshots) {}
 
+    private record ParsedPublishedCatalog(CachedPublishedCatalog catalog, PublishedBundle bundle) {}
+
     private Map<Long, SnapshotContent> loadSnapshotsByIds(List<Long> ids) {
         Map<Long, SnapshotContent> out = new HashMap<>();
         if (ids == null || ids.isEmpty()) {
@@ -509,22 +543,12 @@ public class TaskPortalAppService {
         return out;
     }
 
-    private static Map<Long, TaskInstanceEntity> indexByTaskId(List<TaskInstanceEntity> rows) {
-        Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : rows) {
-            if (row != null && row.getTaskId() != null) {
-                out.put(row.getTaskId(), row);
-            }
-        }
-        return out;
-    }
 
     private boolean blacklisted(long userId) {
         if (risk == null) {
             return false;
         }
-        UserRiskSummary summary = risk.userSummary(userId);
-        return summary != null && summary.listStatus().contains(RiskListType.BLACK);
+        return risk.onUserList(userId, RiskListType.BLACK);
     }
 
     private TaskInstanceEntity pickInProgress(long taskId, long userId, String cycleKey) {

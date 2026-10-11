@@ -190,6 +190,14 @@ class RiskCheckPortImplTest {
         assertThat(port.userSummary(9L).listStatus()).isEmpty();
     }
 
+    @Test
+    void onUserListChecksMembershipWithoutHitCount() {
+        addUserBlack(5L);
+        assertThat(port.onUserList(5L, RiskListType.BLACK)).isTrue();
+        assertThat(port.onUserList(5L, RiskListType.WHITE)).isFalse();
+        assertThat(port.onUserList(9L, RiskListType.BLACK)).isFalse();
+    }
+
     private OutboxRecord authRow(long userId, String ip, String deviceId) {
         return new OutboxRecord(
                 userId,

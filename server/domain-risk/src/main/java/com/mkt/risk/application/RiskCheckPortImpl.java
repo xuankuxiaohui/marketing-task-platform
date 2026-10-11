@@ -93,6 +93,11 @@ public class RiskCheckPortImpl implements RiskCheckPort {
         return new UserRiskSummary(hitCount, status);
     }
 
+    @Override
+    public boolean onUserList(long userId, RiskListType type) {
+        return liveUserList(userId, type, clock.instant());
+    }
+
     private RiskVerdict doCheck(RiskScene scene, RiskSubject subject) {
         ListSegmentOutcome list = listLookup.evaluate(scene, subject);
         if (list.decision() == ListDecision.REJECT) {
