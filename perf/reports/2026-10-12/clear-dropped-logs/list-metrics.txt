@@ -1,0 +1,8 @@
+http_reqs {'count': 108962, 'rate': 286.7230761701547}
+checks {'passes': 186760, 'fails': 14164, 'thresholds': {'rate>0.99': True}, 'value': 0.9295056837411161}
+dropped {'count': 49532, 'rate': 130.3387181665177, 'thresholds': {'rate<0.05': True}}
+http_fail {'passes': 7082, 'fails': 93380, 'thresholds': {'rate==0': True}, 'value': 0.07049431625888396}
+p95 3098.088300649999 avg 934.3825937753795 med 55.862360499999994
+VERDICT FAIL
+time="2026-10-11T19:57:43Z" level=error msg="thresholds on metrics 'checks{scenario:list}, dropped_iterations{scenario:list}, http_req_duration{name:list,scenario:list}, http_req_failed{scenario:list}' have been crossed"
+peaks {'mkt-portal-app-1-1': (208.7, '925.8MiB'), 'mkt-portal-app-2-1': (213.65, '1.361GiB')}
