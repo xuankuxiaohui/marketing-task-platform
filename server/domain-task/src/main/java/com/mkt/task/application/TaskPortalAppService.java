@@ -20,11 +20,13 @@ import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
+import com.mkt.task.domain.CrowdMembership;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.CrowdResolver;
+import com.mkt.task.expression.EvalContext;
 import com.mkt.task.expression.EvalContexts;
 import com.mkt.task.response.CurrentStepView;
 import com.mkt.task.response.InstanceStepView;
@@ -145,7 +147,12 @@ public class TaskPortalAppService {
                 userId == null
                         ? Map.of()
                         : currentInstancesForPublished(userId, published, snapshotByTask, now);
-        List<TaskCardView> cards = new ArrayList<>();
+        // One membership/resolver/evalContext per list request (was N× per published task).
+        CrowdMembership membership = userId == null ? null : new StoreCrowdMembership(crowds);
+        CrowdResolver resolver = userId == null ? null : new StoreCrowdResolver(crowds, users, userId);
+        EvalContext filterCtx = userId == null ? null : EvalContexts.filter(attrs, now, resolver);
+        // Defer TaskCardView (+ rewardPreview) alloc until after sort+page — only pageSize cards.
+        List<PendingCard> pending = new ArrayList<>(published.size());
         for (TaskDefinitionEntity definition : published) {
             SnapshotContent snapshot = snapshotByTask.get(definition.getId());
             if (snapshot == null) {
@@ -164,25 +171,32 @@ public class TaskPortalAppService {
                         now)) {
                     continue;
                 }
-                cards.add(toCard(definition, snapshot, InstanceStatuses.NOT_STARTED));
+                pending.add(new PendingCard(definition, snapshot, InstanceStatuses.NOT_STARTED));
                 continue;
             }
             TaskInstanceEntity current = currentByTask.get(definition.getId());
             boolean inProgressThisCycle =
                     current != null && InstanceStatuses.IN_PROGRESS.equals(current.getStatus());
-            VisibilityResult visibility = visibility(definition, snapshot, userId, attrs, now);
+            VisibilityResult visibility =
+                    visibility(definition, snapshot, userId, attrs, now, membership, filterCtx);
             if (!visibility.visible() && !inProgressThisCycle) {
                 continue;
             }
             String userStatus = current == null ? InstanceStatuses.NOT_STARTED : current.getStatus();
-            cards.add(toCard(definition, snapshot, userStatus));
+            pending.add(new PendingCard(definition, snapshot, userStatus));
         }
-        cards.sort(Comparator.comparingInt(TaskCardView::sortWeight).thenComparingLong(TaskCardView::taskId));
+        pending.sort(
+                Comparator.comparingInt(PendingCard::sortWeight).thenComparingLong(PendingCard::taskId));
         PageQuery query = PageQuery.of(page, pageSize);
-        long total = cards.size();
+        long total = pending.size();
         int from = (int) Math.min(query.offset(), total);
         int to = (int) Math.min(from + query.pageSize(), total);
-        return new PageData<>(total, cards.subList(from, to));
+        List<TaskCardView> pageCards = new ArrayList<>(Math.max(0, to - from));
+        for (int i = from; i < to; i++) {
+            PendingCard row = pending.get(i);
+            pageCards.add(toCard(row.definition(), row.snapshot(), row.userStatus()));
+        }
+        return new PageData<>(total, pageCards);
     }
 
     public TaskDetailResponse detail(long taskId, Long userId, String platform) {
@@ -349,6 +363,18 @@ public class TaskPortalAppService {
             Instant now) {
         StoreCrowdMembership membership = new StoreCrowdMembership(crowds);
         CrowdResolver resolver = new StoreCrowdResolver(crowds, users, userId);
+        return visibility(
+                definition, snapshot, userId, attrs, now, membership, EvalContexts.filter(attrs, now, resolver));
+    }
+
+    private VisibilityResult visibility(
+            TaskDefinitionEntity definition,
+            SnapshotContent snapshot,
+            long userId,
+            UserAttributes attrs,
+            Instant now,
+            CrowdMembership membership,
+            EvalContext filterCtx) {
         return VisibilityEvaluator.evaluate(
                 definition.getStatus(),
                 snapshot.startTime(),
@@ -360,7 +386,7 @@ public class TaskPortalAppService {
                 attrs,
                 now,
                 membership,
-                EvalContexts.filter(attrs, now, resolver));
+                filterCtx);
     }
 
     private SnapshotContent snapshotOf(TaskDefinitionEntity definition) {
@@ -415,21 +441,20 @@ public class TaskPortalAppService {
                 continue;
             }
             jsonByTask.put(snap.getTaskId(), snap.getContent());
-            if (cache != null && snap.getVersion() != null) {
-                cache.put(CacheNamespace.TASK_SNAPSHOT, snap.getTaskId() + ":" + snap.getVersion(), snap.getContent());
-            }
+            // Do not put TASK_SNAPSHOT here: list keeps parsed bodies in ParsedPublishedCatalog;
+            // duplicating ~1k JSON strings into L1 under 1536M memcg caused heap/memcg pressure.
         }
         List<CachedPublishedCatalog.Entry> entries = new ArrayList<>(published.size());
         for (TaskDefinitionEntity definition : published) {
             if (definition.getId() == null || definition.getVersion() == null || definition.getVersion() < 1) {
                 continue;
             }
-            String json = jsonByTask.get(definition.getId());
-            if (json == null) {
+            if (!jsonByTask.containsKey(definition.getId())) {
                 continue;
             }
+            // Metadata only — JSON already in TASK_SNAPSHOT above (no second ~1MB copy in index).
             entries.add(new CachedPublishedCatalog.Entry(
-                    definition.getId(), definition.getStatus(), definition.getVersion(), json));
+                    definition.getId(), definition.getStatus(), definition.getVersion()));
         }
         return new CachedPublishedCatalog(entries);
     }
@@ -451,15 +476,23 @@ public class TaskPortalAppService {
             }
             List<TaskDefinitionEntity> definitions = new ArrayList<>(catalog.entries().size());
             Map<Long, SnapshotContent> snapshots = new HashMap<>(catalog.entries().size());
+            List<TaskVersionKey> keys = new ArrayList<>(catalog.entries().size());
             for (CachedPublishedCatalog.Entry entry : catalog.entries()) {
                 TaskDefinitionEntity definition = new TaskDefinitionEntity();
                 definition.setId(entry.id());
                 definition.setStatus(entry.status());
                 definition.setVersion(entry.version());
                 definitions.add(definition);
-                SnapshotContent content = JsonUtil.fromJson(entry.snapshotJson(), SnapshotContent.class);
+                keys.add(new TaskVersionKey(entry.id(), entry.version()));
+            }
+            // Bulk DB read once; do not fan out into TASK_SNAPSHOT L1 (list-under-p1 mem).
+            for (TaskVersionSnapshotEntity snap : this.snapshots.listByTaskAndVersions(keys)) {
+                if (snap == null || snap.getTaskId() == null || snap.getContent() == null) {
+                    continue;
+                }
+                SnapshotContent content = JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
                 if (content != null) {
-                    snapshots.put(entry.id(), content);
+                    snapshots.put(snap.getTaskId(), content);
                 }
             }
             PublishedBundle bundle = new PublishedBundle(definitions, snapshots);
@@ -533,6 +566,18 @@ public class TaskPortalAppService {
             List<TaskDefinitionEntity> definitions, Map<Long, SnapshotContent> snapshots) {}
 
     private record ParsedPublishedCatalog(CachedPublishedCatalog catalog, PublishedBundle bundle) {}
+
+    /** Sort key only — avoids building TaskCardView/rewardPreview for every published task. */
+    private record PendingCard(
+            TaskDefinitionEntity definition, SnapshotContent snapshot, String userStatus) {
+        int sortWeight() {
+            return snapshot.sortWeight();
+        }
+
+        long taskId() {
+            return definition.getId();
+        }
+    }
 
     private Map<Long, SnapshotContent> loadSnapshotsByIds(List<Long> ids) {
         Map<Long, SnapshotContent> out = new HashMap<>();

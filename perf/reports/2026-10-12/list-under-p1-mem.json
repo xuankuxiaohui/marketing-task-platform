@@ -1,0 +1,73 @@
+{
+  "slice": "list-under-p1-mem",
+  "date_cst": "2026-10-12",
+  "master_base": "f96102d4029b39254016aaaf938cdc641aa51767",
+  "merged_pr": 158,
+  "architect_cut": "list-under-p1 内存补强（卡在 DEC-006 1536M 内，不抬限额、不降门禁）；修完再 list 5m",
+  "memory_changes": {
+    "compose_memory_limit": "1536M unchanged",
+    "JAVA_TOOL_OPTIONS": "-XX:MaxRAMPercentage=75.0 -Xss512k",
+    "SERVER_TOMCAT_THREADS_MAX": "300→120",
+    "SERVER_TOMCAT_MIN_SPARE": "50→25",
+    "CachedPublishedCatalog": "metadata-only Entry(id,status,version); snapshot body via TASK_SNAPSHOT only (no ~1MB embed duplicate)",
+    "TaskPortalAppService.list": "hoist CrowdMembership/Resolver/EvalContext once per request; PendingCard defer TaskCardView/rewardPreview until after sort+page"
+  },
+  "rebuild": {
+    "project": "mkt",
+    "action": "portal-app-1/2 --no-cache rebuild + force-recreate; reused p1 MySQL volume",
+    "flushed": "task:published-index:* (0 keys; fresh after portal recreate)"
+  },
+  "capacity_live": {
+    "users": 1002000,
+    "instances": 500150,
+    "events": 5002150,
+    "tokenUsers": 2000
+  },
+  "list": {
+    "command": "docker run … grafana/k6:0.54.0 run list.js DURATION=5m",
+    "k6_exit": 99,
+    "verdict": "FAIL",
+    "http_reqs_per_s": 297.6437924499141,
+    "http_reqs_count": 108649,
+    "formal_http_count": 102692,
+    "p95_ms": 1780.686991949999,
+    "avg_ms": 712.2142588293227,
+    "med_ms": 6.658926,
+    "http_fail_rate": 0.29272971604409304,
+    "http_fail_count": 30061,
+    "checks_rate": 0.707270283955907,
+    "dropped_count": 47308,
+    "dropped_per_s": 129.6002037130626,
+    "thresholds_crossed": [
+      "checks{scenario:list} rate>0.99",
+      "dropped_iterations{scenario:list} rate<0.05",
+      "http_req_duration{name:list,scenario:list} p(95)<=300",
+      "http_req_failed{scenario:list} rate==0"
+    ],
+    "oom": false,
+    "portal_restarts": {
+      "portal-app-1": 0,
+      "portal-app-2": 0
+    },
+    "peak_mem_during": {
+      "portal-app-1": "539.8MiB",
+      "portal-app-2": "799.4MiB",
+      "limit": "1.5GiB"
+    }
+  },
+  "scenes_not_run": [
+    "advance",
+    "complete",
+    "track",
+    "admin-list",
+    "ad",
+    "risk-on",
+    "risk-off"
+  ],
+  "fail_stop": true,
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "dec006_thresholds_changed": false,
+  "memory_limit_raised": false,
+  "logs": "/workspace/r6-capacity-logs/list-under-p1-mem/"
+}
