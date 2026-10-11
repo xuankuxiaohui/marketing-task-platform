@@ -7,8 +7,11 @@ export const INTERNAL = __ENV.INTERNAL_URL || "http://portal-app-1:8081";
 export const DURATION = __ENV.DURATION || "5m";
 export const STATE_FILE = __ENV.STATE_FILE || "./state.json";
 
+// k6 open() is init-stage only; parse once here and clone in loadState/setup.
+const STATE_RAW = open(STATE_FILE);
+
 export function loadState() {
-  return JSON.parse(open(STATE_FILE));
+  return JSON.parse(STATE_RAW);
 }
 
 export function jsonHeaders(extra) {

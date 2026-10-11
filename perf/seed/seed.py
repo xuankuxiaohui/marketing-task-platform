@@ -586,6 +586,9 @@ def main() -> None:
     put_config(admin, "ratelimit.internal.accesskey.per-second", "5000")
     put_config(admin, "ratelimit.track.batch.per-user-per-minute", "1000000")
     put_config(admin, "ratelimit.portal-write.user.per-second", "5000")
+    # Seed registers many portal users from one compose client IP; raise login/register windows.
+    put_config(admin, "ratelimit.login.ip.per-minute", "100000")
+    put_config(admin, "ratelimit.login.account.per-minute", "100000")
     ad_codes = ensure_ads(admin)
 
     prize_auto = ensure_prize(admin, "perf_auto_pts", "AUTO")
@@ -681,8 +684,11 @@ def main() -> None:
         if i % 20 == 0:
             print(f"users {i}/{users_n}", flush=True)
 
+    # Seed many starts from one compose client IP; risk IP-claim rules block otherwise.
+    set_risk(0)
     progress_instances = start_instances(users[:50], progress_id, "pg", 50)
     callback_instances = start_instances(users[50:150], callback_id, "cb", 100)
+    set_risk(1)
 
     bulk_instances(instances, int(users[0]["userId"]))
     bulk_users(archive_users)
