@@ -76,12 +76,50 @@ def require_ok(payload, label):
     return payload.get("data")
 
 
+_REDIS_CID: str | None = None
+
+
+def redis_container() -> str:
+    """Resolve compose redis container id once; prefer docker exec over compose exec.
+
+    p1 seed issues ~2000 captchas; each prior read spawned `docker compose exec`
+    (YAML parse + API). Under sustained load that path produced empty GETs
+    (~1020/2000 miss on #152). Direct `docker exec` on a cached cid is faster
+    and avoids that flaky path; DB index stays 2 (DEC / InfraRedisProperties).
+    """
+    global _REDIS_CID
+    if _REDIS_CID:
+        return _REDIS_CID
+    out = subprocess.check_output(COMPOSE + ["ps", "-q", "redis"], stderr=subprocess.DEVNULL)
+    cid = out.decode().strip().split("\n", 1)[0].strip()
+    if not cid:
+        raise SystemExit("redis container not running (compose ps -q redis empty)")
+    _REDIS_CID = cid
+    return cid
+
+
 def redis_get(key: str) -> str:
+    cid = redis_container()
     out = subprocess.check_output(
-        COMPOSE + ["exec", "-T", "redis", "redis-cli", "-a", ENV["REDIS_PASSWORD"], "-n", "2", "--raw", "GET", key],
+        [
+            "docker",
+            "exec",
+            "-i",
+            cid,
+            "redis-cli",
+            "-a",
+            ENV["REDIS_PASSWORD"],
+            "--no-auth-warning",
+            "-n",
+            "2",
+            "--raw",
+            "GET",
+            key,
+        ],
         stderr=subprocess.DEVNULL,
     )
-    return out.decode().strip()
+    val = out.decode().strip()
+    return "" if val in ("", "(nil)") else val
 
 
 # Seed-only hash; capu* rows never log in. Token pool still uses HTTP register.
@@ -120,12 +158,39 @@ def mysql(sql: str) -> str:
     return proc.stdout
 
 
-def captcha(path: str, realm: str) -> tuple[str, str]:
-    data = require_ok(load(BASE + path), path)
-    code = redis_get(f"captcha:{realm}:{data['captchaId']}")
-    if not code:
-        raise SystemExit(f"captcha missing in redis for {realm}")
-    return data["captchaId"], code
+def captcha(path: str, realm: str, attempts: int = 6) -> tuple[str, str]:
+    """Issue captcha via HTTP then read plaintext code from Redis DB 2.
+
+    Honest seed path: never invent codes. Portal CaptchaService SETs
+    captcha:{realm}:{id} before returning captchaId; we still poll briefly and
+    re-issue on miss (observed #152 fail-stop at ~1020/2000 portal logins with
+    empty Redis GET via compose-exec). Fail-stop only after real retries.
+    """
+    last_id = None
+    for attempt in range(1, attempts + 1):
+        data = require_ok(load(BASE + path), path)
+        captcha_id = data["captchaId"]
+        last_id = captcha_id
+        key = f"captcha:{realm}:{captcha_id}"
+        for poll in range(10):
+            code = redis_get(key)
+            if code:
+                if attempt > 1 or poll > 0:
+                    print(
+                        f"captcha recovered realm={realm} attempt={attempt} poll={poll} id={captcha_id}",
+                        flush=True,
+                    )
+                return captcha_id, code
+            time.sleep(0.05 * (poll + 1))
+        print(
+            f"captcha miss realm={realm} attempt={attempt}/{attempts} id={captcha_id}; re-issue",
+            flush=True,
+        )
+        time.sleep(0.25 * attempt)
+    raise SystemExit(
+        f"captcha missing in redis for {realm} after {attempts} attempts (lastId={last_id}; "
+        "check Redis DB 2, portal CaptchaService SET, rate-limit, docker exec)"
+    )
 
 
 def cookie_header() -> str:
@@ -367,18 +432,19 @@ def bulk_instances(count: int, user_id: int) -> None:
 
 
 def redis_cli(*args: str) -> str:
+    cid = redis_container()
     out = subprocess.check_output(
-        COMPOSE
-        + [
+        [
+            "docker",
             "exec",
-            "-T",
-            "redis",
+            "-i",
+            cid,
             "redis-cli",
             "-a",
             ENV["REDIS_PASSWORD"],
+            "--no-auth-warning",
             "-n",
             "2",
-            "--no-auth-warning",
             *args,
         ],
         stderr=subprocess.DEVNULL,
@@ -650,6 +716,9 @@ def main() -> None:
     # Seed registers many portal users from one compose client IP; raise login/register windows.
     put_config(admin, "ratelimit.login.ip.per-minute", "100000")
     put_config(admin, "ratelimit.login.account.per-minute", "100000")
+    # Headroom for docker-exec poll after issue; default 120s is enough for one
+    # round-trip but re-issue storms under miss benefit from a longer TTL.
+    put_config(admin, "auth.captcha.ttl-seconds", "600")
     ad_codes = ensure_ads(admin)
 
     prize_auto = ensure_prize(admin, "perf_auto_pts", "AUTO")
@@ -744,7 +813,25 @@ def main() -> None:
     seed_tag = datetime.now(timezone.utc).strftime("%m%d%H%M%S")
     users = []
     for i in range(users_n):
-        users.append(register_user(f"perf_u{i}_{seed_tag}", password))
+        username = f"perf_u{i}_{seed_tag}"
+        last_err: Exception | None = None
+        for attempt in range(1, 4):
+            try:
+                users.append(register_user(username, password))
+                last_err = None
+                break
+            except SystemExit as exc:
+                last_err = exc
+                msg = str(exc)
+                if "captcha missing" not in msg and "captcha" not in msg.lower():
+                    raise
+                print(f"user {username} attempt {attempt}/3 failed: {msg}; retry", flush=True)
+                time.sleep(0.5 * attempt)
+        if last_err is not None:
+            raise SystemExit(
+                f"portal login/register failed for {username} after retries "
+                f"({len(users)}/{users_n} done): {last_err}"
+            )
         if i % 20 == 0:
             print(f"users {i}/{users_n}", flush=True)
 

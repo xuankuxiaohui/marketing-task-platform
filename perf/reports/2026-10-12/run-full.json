@@ -1,0 +1,66 @@
+{
+  "master_base": "18798ae6b667b36a6c7060712f492a4bc0ec59cb",
+  "date": "2026-10-12",
+  "compose": "mkt",
+  "script": "perf/run-full.sh",
+  "seed_scale": "p1",
+  "duration": "5m",
+  "capacity_checkbox": "empty",
+  "rc": false,
+  "dec006_thresholds": "unchanged",
+  "captcha_fix": {
+    "prior_gap": "#152 captcha missing in redis for portal at ~1020/2000",
+    "root_cause": "seed redis_get used docker compose exec per captcha (~2000\u00d7 YAML/API overhead); under sustained p1 login seed empty GETs appeared; DB index was already 2; rate limits already raised; no fake tokens",
+    "fix": "cache redis container id + docker exec --no-auth-warning -n 2; captcha() poll+re-issue up to 6 attempts; register_user loop retry on captcha miss; put_config auth.captcha.ttl-seconds=600 during seed",
+    "seed_token_users": 2000,
+    "captcha_miss_log_lines": 0,
+    "stress_precheck": "500/500 register_user OK before run-full"
+  },
+  "seed_capacity": {
+    "users": 1009363,
+    "instances": 1015362,
+    "events": 10885356
+  },
+  "seed_token_users": 2000,
+  "run_full": {
+    "verdict": "FAIL",
+    "fail_stop_scene": "list",
+    "scenes_not_run": [
+      "advance",
+      "complete",
+      "track",
+      "admin-list",
+      "ad",
+      "risk-on",
+      "risk-off",
+      "capacity_check",
+      "explain_hot"
+    ],
+    "list": {
+      "http_reqs_per_s": 418.591,
+      "p95_ms": 920.825,
+      "avg_ms": 209.764,
+      "checks_rate": 0.9976429875473446,
+      "http_fail_rate": 0.0023570124526553857,
+      "http_fail_count": 346,
+      "dropped_rate": 8.75009475940666,
+      "dropped_count": 3194,
+      "thresholds_crossed": [
+        "http_req_duration{name:list,scenario:list} p(95)<=300",
+        "http_req_failed{scenario:list} rate==0",
+        "dropped_iterations{scenario:list} rate<0.05"
+      ],
+      "checks_threshold_ok": true,
+      "k6_exit": 99,
+      "verdict": "FAIL"
+    },
+    "diagnosis": [
+      "Official bash perf/run-full.sh after honest p1 seed (tokenUsers=2000) fail-stopped at first scene list",
+      "MySQL container ~909MiB/1GiB and ~100% CPU immediately after seed bulk (instances\u22481.02M events\u224810.9M); Redis ~41MiB/256MiB",
+      "list formal 5m: ~419 req/s vs 500 target; P95\u2248921ms; dropped\u22488.75/s; http_fail\u22480.22% (346)",
+      "Prior list hot PASS (cold-hot #155) was on lighter live archive without this run-full's fresh 500k instance + 5M event bulk in the same session",
+      "No DEC-006 threshold edits; capacity boxes stay empty; not RC"
+    ]
+  },
+  "generated_at": "2026-10-12T01:32:06.951629+08:00"
+}
