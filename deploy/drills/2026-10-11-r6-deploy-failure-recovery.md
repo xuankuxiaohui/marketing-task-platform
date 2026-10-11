@@ -24,7 +24,7 @@ Checklist row: *首次发布失败的恢复步骤与数据保留策略明确*. B
 | Full dump | [deploy/backup/backup.sh](../backup/backup.sh) |
 | Continuous binlog | [deploy/backup/ship-binlog.sh](../backup/ship-binlog.sh) |
 | PITR restore | [deploy/backup/restore.sh](../backup/restore.sh) + [RESTORE-DRILL.md](../backup/RESTORE-DRILL.md) |
-| Isolated PITR (this R6 slice) | [../backup/drills/2026-10-11-r6-isolated-restore.md](../backup/drills/2026-10-11-r6-isolated-restore.md) |
+| Isolated PITR (this R6 slice) | [../backup/drills/2026-10-11-r6-isolated-restore.md](../backup/drills/2026-10-11-r6-isolated-restore.md)（full → ship → PITR via `BINLOG_ARCHIVE_DIR`；**PITR_OK**） |
 | Migrations | `server/platform-db` Flyway only; admin enables Flyway, portal disables |
 | Standing rules | [AGENTS.md](../../AGENTS.md): do **not** rewrite applied migrations; do **not** clear shared DBs |
 
