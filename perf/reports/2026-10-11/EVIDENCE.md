@@ -55,7 +55,7 @@
 | admin-list | P95≤800ms (spec: p1 data) | ~1039 HTTP/s | **36.4 ms** overall | http_fail 0; checks 100% | **YES on p0 data only** (not p1 scale) |
 | risk on vs off | \|ΔP95\| gate: on−off ≤20ms | — | on **56.6 ms**; off **164.0 ms**; Δ **-107.5 ms** | risk-on http_fail 100% (business); numeric Δ OK | numeric Δ OK; **on-variant business FAIL** |
 
-Artifacts: `*.summary.json`, `risk-on.json`, `risk-off.json`, `risk-delta.txt` in this directory.
+In-repo artifacts: `risk-on.json`, `risk-off.json`, `risk-delta.txt`, this `EVIDENCE.md`. Large `*.summary.json` remain box-local under this directory / gitignored; key metrics are inlined in the deploy drill.
 
 ## What was not run
 
