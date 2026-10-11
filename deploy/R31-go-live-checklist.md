@@ -39,8 +39,9 @@
 - [x] [deploy-smoke.sh](../ci/deploy-smoke.sh) 的重复启动与业务幂等验证有运行结果；不能仅凭脚本存在认定通过。
   - **R6 旅程片（2026-10-11）**：bot box 运行 `bash ci/deploy-smoke.sh` → exit 0 / `deploy-smoke ok`；compose up×2 就绪；Flyway `1…7`；admin 登录 + prize/task；portal `smoke_p0` 注册/登录 → 任务 start → instance **COMPLETED**、grant **GRANTED**、balance **10**；flow1==flow2 幂等；SQL users/instances/grants=1。证据：[drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md)。
   - **说明**：本勾覆盖脚本定义的重复启动与业务幂等（登录 / 领取 / 完成 / 领奖 API 旅程）；**不**等于真实浏览器静态/刷新路由，也不等于双实例故障或 RC 通过。
-- [ ] 真实浏览器验证静态资源、登录、刷新路由、领取、完成任务和领奖。
-  - **部分观察（非本勾通过）**：同一证据中 API 层已验证登录 / 领取 / 完成 / 领奖（见 [drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md)）；**真实浏览器 / 静态资源 / SPA 刷新路由未做**，本勾保持空。
+- [x] 真实浏览器验证静态资源、登录、刷新路由、领取、完成任务和领奖。
+  - **R6 真实浏览器 / 静态 SPA（2026-10-11）**：bot box Compose `mkt`；真实 `web/apps/{client,admin}/dist` 经 [`docker-compose.r6-browser-dist.yml`](docker-compose.r6-browser-dist.yml) 挂入 nginx（非 placeholders）；Playwright against `http://127.0.0.1:18080`：**静态 JS/CSS 200**、SPA `try_files`/硬刷新 `/mine/prizes`、注册/登录、领取/完成、领奖（已到账）+ 积分余额 10 **PASS**；admin Host `/console/` 静态烟测 PASS。证据：[drills/2026-10-11-r6-browser-static-spa.md](drills/2026-10-11-r6-browser-static-spa.md)。
+  - **说明**：本勾覆盖 nginx 真实 dist + 真实浏览器门户旅程；**不**等于容量 PASS / RC。API `deploy-smoke` 旅程仍为独立已勾行。
 
 ## 数据与运行保障
 
@@ -64,5 +65,6 @@
 | `e281f60`（master tip；#136 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 旅程片） | [drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md) | R6 **已开 / 进行中**；deploy-smoke 业务旅程（登录/领取/完成/领奖）**PASS**；双实例故障 / 容量 / 恢复 / 真实浏览器静态 **当时未做**；**非 RC 通过** |
 | `e9b90ca`（master tip；本 PR 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 双实例故障 Continuity） | [drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md) | R6 **已开 / 进行中**；portal 单节点退出 Continuity **PASS**；容量 / 恢复 / 真实浏览器静态 **未做**；**非 RC 通过** |
 | `e795167`（master tip；本 PR 文档/证据 + seed/k6 可跑性小修） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang/架构师授权 R6 容量 seed+load） | [drills/2026-10-11-r6-capacity-dec006.md](drills/2026-10-11-r6-capacity-dec006.md) | R6 **已开 / 进行中**；容量 P0 **整体 FAIL**（track/admin-list PASS）；p1/full / 恢复 / 真实浏览器静态 **未做**；清单容量勾 **未勾**；**非 RC 通过** |
-| `04fa5fd`（master tip；本 PR 文档/证据） | bot box Compose `mkt-r6-restore`（throwaway MySQL；`mkt` 未 down） | 2026-10-11 CST | Grok Bot（架构师指定 restore/deploy 下一片；huihuang 连续切片） | [backup/drills/2026-10-11-r6-isolated-restore.md](backup/drills/2026-10-11-r6-isolated-restore.md)；[drills/2026-10-11-r6-deploy-failure-recovery.md](drills/2026-10-11-r6-deploy-failure-recovery.md) | R6 **已开 / 进行中**；隔离 PITR **PASS**（ship→`BINLOG_ARCHIVE_DIR`）；调度勾 **未勾**；发布失败恢复 **docs-only PASS**；容量勾仍空/FAIL；真实浏览器静态 **未做**；**非 RC 通过** |
+| `04fa5fd`（master tip；#140 前 tip；restore/deploy 证据） | bot box Compose `mkt-r6-restore`（throwaway MySQL；`mkt` 未 down） | 2026-10-11 CST | Grok Bot（架构师指定 restore/deploy 下一片；huihuang 连续切片） | [backup/drills/2026-10-11-r6-isolated-restore.md](backup/drills/2026-10-11-r6-isolated-restore.md)；[drills/2026-10-11-r6-deploy-failure-recovery.md](drills/2026-10-11-r6-deploy-failure-recovery.md) | R6 **已开 / 进行中**；隔离 PITR **PASS**；发布失败恢复 **docs-only PASS**；容量勾仍空/FAIL；真实浏览器当时未做；**非 RC 通过** |
+| `cfcd77d`（master tip；本 PR 文档/证据 + nginx dist override + Playwright harness） | bot box Compose `mkt`（throwaway volume；nginx 真实 dist） | 2026-10-11 CST | Grok Bot（架构师指定真实浏览器静态/SPA 下一片；huihuang 连续切片） | [drills/2026-10-11-r6-browser-static-spa.md](drills/2026-10-11-r6-browser-static-spa.md) | R6 **已开 / 进行中**；真实浏览器静态/SPA/登录/领取/完成/领奖 **PASS**；容量勾仍空/FAIL；p1/full / 生产 CA 等仍待；**非 RC 通过** |
 | 待后续切片 | | | | | |

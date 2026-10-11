@@ -1,0 +1,21 @@
+# Optional override: mount real Vite production dist into nginx for R6 browser/SPA drills.
+# Default docker-compose.yml keeps html-placeholders so CI/smoke stay lightweight.
+#
+# Usage (from repo root; leave other mkt services UP):
+#   pnpm --filter client build
+#   VITE_BASE=/console/ pnpm --filter admin build
+#   docker compose --env-file deploy/.env -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.r6-browser-dist.yml -p mkt up -d nginx
+#
+# Revert to placeholders:
+#   docker compose --env-file deploy/.env -f deploy/docker-compose.yml -p mkt up -d nginx
+#
+# See deploy/nginx/README.md. Not wired into CI.
+
+services:
+  nginx:
+    volumes:
+      # Replace placeholder mounts (same targets → compose merge replaces).
+      - ../web/apps/client/dist:/usr/share/nginx/html/client:ro
+      # Overlay console SPA on top of placeholder admin root (distinct target).
+      - ../web/apps/admin/dist:/usr/share/nginx/html/admin/console:ro

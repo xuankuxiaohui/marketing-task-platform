@@ -29,6 +29,15 @@ Then switch the nginx volumes to:
 - ../web/apps/admin/dist:/usr/share/nginx/html/admin/console:ro
 ```
 
+**Compose override (recommended for drills):** after building dist, recreate nginx only:
+
+```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml \
+  -f deploy/docker-compose.r6-browser-dist.yml -p mkt up -d --force-recreate --no-deps nginx
+```
+
+Revert to placeholders with the base compose file alone (`up -d --force-recreate --no-deps nginx`). R6 browser evidence: [../drills/2026-10-11-r6-browser-static-spa.md](../drills/2026-10-11-r6-browser-static-spa.md).
+
 Admin **must** be built with `VITE_BASE=/console/` so asset URLs match the `/console/` location. Local Vite dev (`pnpm --filter admin dev`) keeps default base `/` and does not need this.
 
 ## Enable TLS
