@@ -30,7 +30,9 @@
 - [x] admin 执行迁移，portal 关闭 Flyway；迁移校验成功后再接入流量。
   - **R6 首片（2026-10-11）**：compose/env 中 admin `SPRING_FLYWAY_ENABLED=true`，portal×2 `SPRING_FLYWAY_ENABLED=false` / `MKT_FLYWAY_ENABLED=false`（进程环境已核对）；admin 日志 `<< Empty Schema >>` → `Successfully applied 9 migrations … v7`；portal 日志 **0** 条 Flyway；两端 readiness UP 后再由 nginx 挂载。证据同上 [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md)。
   - **说明**：本勾证明迁移归属与就绪，**不**等于全量业务旅程或双实例故障通过。
-- [ ] 首次发布失败的恢复步骤与数据保留策略明确。将来采用滚动发布时，再验证新旧版本共存与回退兼容；不能把未上线理解成可以随意改已应用迁移。
+- [x] 首次发布失败的恢复步骤与数据保留策略明确。将来采用滚动发布时，再验证新旧版本共存与回退兼容；不能把未上线理解成可以随意改已应用迁移。
+  - **R6 restore/deploy 片（2026-10-11）**：路径绑定的首次发布失败恢复步骤 + 数据保留策略（volumes / `down -v` / backup+ship+restore / 禁止改写已应用迁移）见 [drills/2026-10-11-r6-deploy-failure-recovery.md](drills/2026-10-11-r6-deploy-failure-recovery.md)。**证据类型：docs-only**（本片未实演一次真实失败发布）；步骤具体完整，达本清单既往 R6 文档勾选口径。
+  - **说明**：本勾不覆盖滚动多版本共存；**不**等于容量 PASS / RC。
 - [x] portal 双实例及就绪检查有效，单节点退出时服务可继续使用。
   - **R6 双实例故障 Continuity（2026-10-11）**：bot box Compose `mkt`；baseline portal×2 readiness UP + nginx `/healthz` ok；`docker compose stop portal-app-1` → Exited (143)，portal-app-2 仍 UP；Continuity：`/healthz` 5/5 ok；经 nginx **写**（login `smoke_p0`、task start）+ **读**（points/balance=10）PASS（login+balance 5/5 failures=0）；可选恢复后双节点再 UP。证据：[drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md)。
   - **说明**：本勾覆盖单节点退出时 nginx 入口仍可服务门户流量；**不**等于容量(DEC-006)、恢复取证、真实浏览器或 RC 通过。
@@ -43,7 +45,9 @@
 ## 数据与运行保障
 
 - [ ] 全量备份与连续 binlog 归档已调度，备份校验与独立存储可用。
-- [ ] 在隔离环境完成指定时间点恢复，验证目标时点前后数据、资金余额和引用关系。
+- [x] 在隔离环境完成指定时间点恢复，验证目标时点前后数据、资金余额和引用关系。
+  - **R6 restore/deploy 片（2026-10-11）**：bot box throwaway Compose 项目 `mkt-r6-restore`（MySQL only；与仍 UP 的 `mkt` 隔离）；backup → refuse gate exit 2 → `STOP_DATETIME` PITR；A 在 / B 不在 / ledger=150 → **PITR_OK**；fixture PASSED。证据：[backup/drills/2026-10-11-r6-isolated-restore.md](backup/drills/2026-10-11-r6-isolated-restore.md)。
+  - **说明**：本勾覆盖隔离 PITR 标记/账本核对；**不**等于容量 PASS、真实浏览器或 RC。
 - [ ] Prometheus 可查询实际业务指标；告警通过受控故障验证，埋点比例使用一致的事件单位。
 - [ ] 性能报告记录有效业务吞吐、P95、错误/丢弃、积压恢复及资源条件，满足 DEC-006 确认的验收目标。
   - **已取证 / 整体 FAIL（勾保持空，待架构师审阅）**：bot box Compose `mkt` 跑 p0 seed + k6 P0（`DURATION=5m`）；**list / advance / complete / risk-on FAIL**；**track PASS**（≈6000 eps、P95≈11ms）；**admin-list PASS**（p0 数据量）；risk delta 数值≤20 但 risk-on 自身 HTTP/业务失败 → 不作干净 性能4 PASS。证据：[drills/2026-10-11-r6-capacity-dec006.md](drills/2026-10-11-r6-capacity-dec006.md)。**未**跑 p1/`run-full.sh`。**不**等于容量 PASS / RC；勾是否勾选待架构师审阅本报告。
@@ -59,4 +63,5 @@
 | `e281f60`（master tip；#136 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 旅程片） | [drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md) | R6 **已开 / 进行中**；deploy-smoke 业务旅程（登录/领取/完成/领奖）**PASS**；双实例故障 / 容量 / 恢复 / 真实浏览器静态 **当时未做**；**非 RC 通过** |
 | `e9b90ca`（master tip；本 PR 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 双实例故障 Continuity） | [drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md) | R6 **已开 / 进行中**；portal 单节点退出 Continuity **PASS**；容量 / 恢复 / 真实浏览器静态 **未做**；**非 RC 通过** |
 | `e795167`（master tip；本 PR 文档/证据 + seed/k6 可跑性小修） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang/架构师授权 R6 容量 seed+load） | [drills/2026-10-11-r6-capacity-dec006.md](drills/2026-10-11-r6-capacity-dec006.md) | R6 **已开 / 进行中**；容量 P0 **整体 FAIL**（track/admin-list PASS）；p1/full / 恢复 / 真实浏览器静态 **未做**；清单容量勾 **未勾**；**非 RC 通过** |
+| `04fa5fd`（master tip；本 PR 文档/证据） | bot box Compose `mkt-r6-restore`（throwaway MySQL；`mkt` 未 down） | 2026-10-11 CST | Grok Bot（架构师指定 restore/deploy 下一片；huihuang 连续切片） | [backup/drills/2026-10-11-r6-isolated-restore.md](backup/drills/2026-10-11-r6-isolated-restore.md)；[drills/2026-10-11-r6-deploy-failure-recovery.md](drills/2026-10-11-r6-deploy-failure-recovery.md) | R6 **已开 / 进行中**；隔离 PITR **PASS**；发布失败恢复策略 **docs-only PASS**；容量勾仍空/FAIL；真实浏览器静态 **未做**；**非 RC 通过** |
 | 待后续切片 | | | | | |
