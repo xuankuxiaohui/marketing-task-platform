@@ -52,7 +52,7 @@
 | advance | 300 QPS; P95≤200ms; drop&lt;0.05 | **293.7 HTTP/s** | progress **38.6 ms**; callback **3090 ms** | drop 6.28/s; http_fail 0 | **NO** (callback P95 + drops) |
 | complete | grant chain P95≤500ms; biz≈0 | 13.3 HTTP/s (4000 reqs) | tagged grant **43.7 ms** | http_fail **100%**; checks 0% (exhausted / business) | **NO** |
 | track | ≥6000 events/s; P95≤100ms; drop&lt;0.1% | accepted **6000.0/s**; HTTP 120/s | **11.43 ms** | drop 0; business_ok 100% | **YES (this run)** |
-| admin-list | P95≤800ms (spec: p1 data) | ~1039 HTTP/s | **36.4 ms** overall | http_fail 0; checks 100% | **YES on p0 data only** (not p1 scale) |
+| admin-list | P95≤800ms (spec: p1 data) | ~44.4 HTTP/s (10 VUs) | instances **≈699.8 ms**; definitions ≈99.6; grants ≈200.8 | http_fail 0; checks 100% | **PASS at p1 scale** (drill after #151; see `admin-list-p1.json`) |
 | ad | 300 QPS; P95≤100ms; drop&lt;0.05; biz≈0 | **≈299.98 HTTP/s** | **≈1.84 ms** | drop 0; checks 100%; http_fail 0 | **PASS** (drill after #150) |
 | risk on vs off | \|ΔP95\| ≤20ms + both HTTP200+code0 | — | on **381.1 ms**; off **385.1 ms**; Δ **-4.0 ms** | on/off http_fail 0; checks 100% (hygiene after #149) | **PASS** (drill `2026-10-11-r6-capacity-risk-on.md`); earlier numeric-only FAIL superseded |
 
@@ -60,4 +60,4 @@ In-repo artifacts: `risk-on.json`, `risk-off.json`, `risk-delta.txt`, this `EVID
 
 ## What was not run
 
-- Early-day note above skipped `ad.js`; **re-cut after #150**: formal 5m ad **PASS** (see drill `2026-10-11-r6-capacity-ad.md` / `ad.json`). Still **not** p1/`run-full.sh` / admin-list p1 / Outbox recovery.
+- Early-day note above skipped `ad.js`; **re-cut after #150**: formal 5m ad **PASS**. **admin-list p1 after #151**: formal 5m **PASS** (see drill `2026-10-11-r6-capacity-admin-list-p1.md` / `admin-list-p1.json`). Still **not** `run-full.sh` / Outbox recovery; capacity checkbox **empty**.
