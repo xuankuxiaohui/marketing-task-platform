@@ -9,7 +9,7 @@ TLS/静态网关取证（F16）不在本目录：见 [../nginx/drills/2026-10-11
 | [restore.sh](restore.sh) | Import full dump, then replay from recorded `BINLOG_START` (never guesses). Optional `BINLOG_ARCHIVE_DIR` merges continuous archive (preferred on name collision). Requires `RESTORE_I_ACCEPT_DATA_LOSS=YES`. |
 | [parse-binlog-start_test.sh](parse-binlog-start_test.sh) | Fixture-only parser self-check (no DB). |
 
-Drill procedure and evidence: [RESTORE-DRILL.md](RESTORE-DRILL.md), [drills/](drills/).
+Drill procedure and evidence: [RESTORE-DRILL.md](RESTORE-DRILL.md), [drills/](drills/). **R6（2026-10-11）** 隔离 PITR bind：[drills/2026-10-11-r6-isolated-restore.md](drills/2026-10-11-r6-isolated-restore.md)（进行中 / 非 RC）。
 
 ## Continuous shipping
 

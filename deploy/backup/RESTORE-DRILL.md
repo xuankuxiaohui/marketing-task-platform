@@ -1,6 +1,6 @@
 # 备份恢复演练
 
-依据 R31.3，最终需要全量备份、连续 binlog 归档和指定时间点恢复。项目未上线；**脚本正确性已按静态审阅对齐，本轮未对共享库执行备份或恢复**。真实隔离演练须按下列步骤取证后才能勾选上线清单；**2026-10-10 已在 bot box 对 throwaway Docker MySQL 完成一次隔离取证**（见 [drills/2026-10-10-f16-isolated-restore.md](drills/2026-10-10-f16-isolated-restore.md)）；**同日另见连续 shipping 演练** [drills/2026-10-10-f16-continuous-binlog-ship.md](drills/2026-10-10-f16-continuous-binlog-ship.md)（full → ship → A/B → PITR）。共享/团队库仍禁止。
+依据 R31.3，最终需要全量备份、连续 binlog 归档和指定时间点恢复。项目未上线；**脚本正确性已按静态审阅对齐，本轮未对共享库执行备份或恢复**。真实隔离演练须按下列步骤取证后才能勾选上线清单；**2026-10-10 已在 bot box 对 throwaway Docker MySQL 完成一次隔离取证**（见 [drills/2026-10-10-f16-isolated-restore.md](drills/2026-10-10-f16-isolated-restore.md)）；**同日另见连续 shipping 演练** [drills/2026-10-10-f16-continuous-binlog-ship.md](drills/2026-10-10-f16-continuous-binlog-ship.md)（full → ship → A/B → PITR）；**2026-10-11 R6** 再跑隔离 PITR（项目 `mkt-r6-restore`，与仍 UP 的 `mkt` 并存）见 [drills/2026-10-11-r6-isolated-restore.md](drills/2026-10-11-r6-isolated-restore.md)。共享/团队库仍禁止。
 
 ## 脚本行为（F16 对齐后）
 
@@ -50,6 +50,7 @@
 |---|---|---|---|---|---|---|
 | 15af760 + backup.sh stdin/index fix (this drill PR) | bot box throwaway Docker MySQL `mkt_platform_f16_drill` (down -v after) | 20261010T125738Z / `mysql-bin.000005:157` | 2026-10-10 12:57:54 UTC | A present, B absent, ledger=150 (**PITR_OK**); fixture PASSED; refuse gate exit 2 | ~5s restore; loss window = events after T | Grok Bot / 2026-10-10 CST; evidence: [drills/2026-10-10-f16-isolated-restore.md](drills/2026-10-10-f16-isolated-restore.md) |
 | 84fc506 + ship-binlog.sh (this PR) | bot box throwaway Docker MySQL `mkt_platform_f16_ship` (down -v after) | 20261010T151223Z / `mysql-bin.000007:157` | 2026-10-10 15:12:43 UTC | A present, B absent, ledger=150 (**PITR_OK** via `BINLOG_ARCHIVE_DIR`); idempotent ship; fail-loud size mismatch; retention count=3; fixture PASSED; refuse exit 2 | ~15s wall for A/B/ship/restore | Grok Bot / 2026-10-10 CST; evidence: [drills/2026-10-10-f16-continuous-binlog-ship.md](drills/2026-10-10-f16-continuous-binlog-ship.md) |
+| `04fa5fd` + R6 restore/deploy evidence (this PR) | bot box throwaway Compose project `mkt-r6-restore`, DB `mkt_platform_r6_restore` (`mkt` left UP; down -v throwaway only) | 20261011T075608Z / `mysql-bin.000007:157` | 2026-10-11 07:56:16 UTC | A present, B absent, ledger=150 (**PITR_OK** via `BINLOG_ARCHIVE_DIR`); idempotent ship; fail-loud size mismatch; retention count=3; fixture PASSED; refuse exit 2 | ~7s restore; loss window = events after T | Grok Bot / 2026-10-11 CST; evidence: [drills/2026-10-11-r6-isolated-restore.md](drills/2026-10-11-r6-isolated-restore.md) |
 
 ## Related F16 evidence (TLS / static)
 
