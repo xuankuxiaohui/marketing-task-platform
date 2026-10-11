@@ -1,0 +1,26 @@
+{
+  "http_reqs_rate": 242.762711,
+  "p95_ms": 548.4,
+  "http_fail_list": 0.2751,
+  "checks_list": 0.7248,
+  "dropped_list_per_s": 177.214916,
+  "dropped_all_per_s": 184.18418,
+  "http_reqs": 88616,
+  "k6_exit": 99,
+  "oom_heap_space": true,
+  "oom_killed": false,
+  "restarts": {
+    "portal1": 0,
+    "portal2": 0
+  },
+  "peak_portal_gib": {
+    "portal1": 1.484,
+    "portal2": 1.484
+  },
+  "redis_mem_mib": 12.3,
+  "skip_renew": false,
+  "redisson": "32/1s/1",
+  "tomcat": 120,
+  "portal_mem": "1536M",
+  "master": "0ca4014"
+}
