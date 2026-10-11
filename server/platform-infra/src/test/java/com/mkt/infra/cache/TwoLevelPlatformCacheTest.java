@@ -163,7 +163,8 @@ class TwoLevelPlatformCacheTest {
         store.unlink("task:published-index:all");
         assertThat(cache.get(CacheNamespace.TASK_PUBLISHED_INDEX, "all", String.class, () -> "miss"))
                 .isEqualTo("v1");
-        nanos.addAndGet(Duration.ofSeconds(31).toNanos());
+        // Advance past namespace TTL (TASK_PUBLISHED_INDEX is 5m after list hot-path; was 30s).
+        nanos.addAndGet(CacheNamespace.TASK_PUBLISHED_INDEX.ttl().plusSeconds(1).toNanos());
         AtomicInteger loads = new AtomicInteger();
         String after = cache.get(CacheNamespace.TASK_PUBLISHED_INDEX, "all", String.class, () -> {
             loads.incrementAndGet();
