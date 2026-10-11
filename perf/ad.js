@@ -3,7 +3,9 @@ import { check } from "k6";
 import { BASE, DURATION, loadState, portalHeaders, pick } from "./lib.js";
 
 /**
- * NFR 性能 6 (P1): 广告位拉取 P95 ≤ 100 ms @ 300 QPS.
+ * DEC-006 formal gate (NFR 性能 6 / P1): ad position fetch 300 QPS, P95 ≤ 100 ms,
+ * business failure ≈ 0. Steady duration default 5m.
+ * constant-arrival-rate: dropped_iterations rate<0.05.
  */
 export const options = {
   scenarios: {

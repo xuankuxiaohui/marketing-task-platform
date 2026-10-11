@@ -3,10 +3,11 @@ import { Counter, Rate } from "k6/metrics";
 import { DURATION, loadState, internalPost } from "./lib.js";
 
 /**
- * NFR 性能 2: internal progress/callback 300 QPS, P95 ≤ 200 ms.
- * appId 限流由 seed 调至 5000（附录 A 上限内）。
+ * DEC-006 formal gate (NFR 性能 2): internal progress/callback 300 QPS, P95 ≤ 200 ms,
+ * business failure ≈ 0; constant-arrival-rate dropped_iterations rate<0.05.
+ * Steady duration default 5m. appId rate limit raised by seed to 5000 (within appendix A).
  *
- * F14 data lifecycle:
+ * F14 data lifecycle (structural floors alongside DEC-006):
  * - progressInstances: seed uses a huge progressTarget, so reuse is lasting progress writes.
  * - callbackInstances: seed prepares 100 single-step CALLBACK instances; each supports one
  *   real advance then becomes post-complete. This VU partitions the pool and consumes each
@@ -15,8 +16,8 @@ import { DURATION, loadState, internalPost } from "./lib.js";
  * - If both the VU callback slice and progress pool are unavailable, the iteration fails
  *   (data exhaustion) instead of silently measuring empty work.
  *
- * Thresholds below are structural (catch zero-success / high drop / check failure), not DEC-006
- * capacity targets.
+ * Thresholds: QPS/P95/dropped_iterations are DEC-006 formal gates; advance_business_ok /
+ * progress_advance_ok / advance_data_exhausted / checks are F14 structural floors.
  */
 
 const advanceBusinessOk = new Rate("advance_business_ok");

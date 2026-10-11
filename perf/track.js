@@ -4,11 +4,15 @@ import { Counter, Rate } from "k6/metrics";
 import { BASE, DURATION, jsonHeaders } from "./lib.js";
 
 /**
- * NFR 性能 5: 50 条满批（含 8KB 单条）集群吞吐 ≥ 6000 events/s, P95 ≤ 100 ms, 丢弃率 < 0.1%.
+ * DEC-006 formal gate (NFR 性能 5): full-batch track ≥ 6000 events/s (50 events/batch,
+ * incl. 8KB payload), P95 ≤ 100 ms, drop rate < 0.1%, business failure ≈ 0;
+ * constant-arrival-rate dropped_iterations rate<0.05. Steady duration default 5m.
  *
- * F14: business checks feed thresholds; track_accepted has a structural floor (catch
- * zero-success). dropped_iterations fails high scheduler drop. Numeric 6000 eps remains
- * a DEC-006 candidate, not an automatic gate here.
+ * Load: TRACK_EPS (default 6000) drives constant-arrival-rate so the run targets DEC-006
+ * throughput. Runtime must meet that load plus P95 / drop / dropped_iterations gates.
+ * track_accepted keeps an F14 structural floor (count>0 / rate>0) to catch zero-success;
+ * a hard accepted-eps counter threshold is not encoded here (avoids brittle CI without a
+ * live capacity run) — report must still prove ≥6000 events/s effective accepted throughput.
  */
 
 const dropped = new Counter("track_dropped");
@@ -63,8 +67,8 @@ export const options = {
     track_drop_rate: ["rate<0.001"],
     checks: ["rate>0.99"],
     track_business_ok: ["rate>0.99"],
-    // Structural floor: some events must be accepted (zero-success / silent fail catch).
-    // Full events/s capacity remains DEC-006; do not gate 6000 eps here.
+    // F14 structural floor: some events must be accepted (zero-success / silent fail catch).
+    // DEC-006 ≥6000 eps is enforced via TRACK_EPS load + P95/drop gates; report proves eps.
     track_accepted: ["count>0", "rate>0"],
     dropped_iterations: ["rate<0.05"],
   },

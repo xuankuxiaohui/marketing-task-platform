@@ -4,8 +4,9 @@ import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.4/index.js";
 import { BASE, DURATION, loadState, portalHeaders } from "./lib.js";
 
 /**
- * NFR 性能 4: 全部规则启用 vs 全部停用, 领取/发奖 P95 差值 ≤ 20 ms.
- * 由 ci/perf-p0.sh 跑两轮 VARIANT=on|off 后比较 reports.
+ * DEC-006 formal gate (NFR 性能 4): risk rules all-on vs all-off grant P95 delta ≤ 20 ms.
+ * Runners (run-p0.sh / run-full.sh) execute VARIANT=on|off then compare reports (maxDeltaMs: 20).
+ * Per-variant grant P95 ≤ 500 ms is the cascade grant chain ceiling; the DEC-006 gate is the delta.
  */
 export const options = {
   scenarios: {

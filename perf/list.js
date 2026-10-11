@@ -3,7 +3,10 @@ import { check } from "k6";
 import { BASE, DURATION, loadState, portalHeaders, pick } from "./lib.js";
 
 /**
- * NFR 性能 1: 门户任务列表 500 QPS, 2 实例 P95 ≤ 300 ms, 错误率 = 0.
+ * DEC-006 formal gate (NFR 性能 1): portal task list 500 QPS, dual-instance P95 ≤ 300 ms,
+ * business failure ≈ 0. Topology: portal×2 + admin×1 via nginx (do not extrapolate from
+ * single instance). Steady duration default 5m (lib.js DURATION).
+ * constant-arrival-rate: dropped_iterations rate<0.05.
  */
 export const options = {
   scenarios: {
