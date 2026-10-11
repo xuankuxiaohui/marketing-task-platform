@@ -1,0 +1,39 @@
+{
+  "scene": "list",
+  "cut": "alloc-response-hygiene",
+  "date": "2026-10-12",
+  "master_base": "35eae57",
+  "branch_head": "94c7243",
+  "verdict": "FAIL",
+  "k6_exit": 99,
+  "gates": {
+    "qps_target": 500,
+    "qps_observed_overall_http_reqs": 245.855,
+    "p95_ms": 1477.043,
+    "p95_gate_ms": 300,
+    "http_fail_rate": 0.172753,
+    "checks_rate": 0.827247,
+    "dropped_per_s": 180.861
+  },
+  "memory": {
+    "portal_peak_gib": {
+      "portal1": 1.487,
+      "portal2": 1.499
+    },
+    "portal_limit_gib": 1.5,
+    "oom_killed": false,
+    "portal2_restarts": 3,
+    "java_heap_space": true,
+    "redis_peak_mib": 14.1,
+    "redis_limit_mib": 256
+  },
+  "caps_locked": {
+    "redisson": "32/1s/1",
+    "tomcat_max": 120,
+    "portal_mem": "1536M",
+    "redis": "0.5CPU/256M",
+    "skip_renew": false
+  },
+  "capacity_checklist": "empty",
+  "rc": false
+}

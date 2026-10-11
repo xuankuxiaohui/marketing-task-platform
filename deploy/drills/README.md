@@ -36,3 +36,5 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 - [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) — post-#142 MySQL/GC list hot-path (非 RC)
 
 Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`.
+
+- [2026-10-12 list alloc/response hygiene FAIL](2026-10-12-r6-capacity-list-alloc-hygiene.md)
