@@ -1,0 +1,82 @@
+{
+  "slice": "rebuild-list",
+  "date_cst": "2026-10-12",
+  "master_base": "f460dc726a6b88872b2c9ed7e2efdc1e8487d127",
+  "merged_pr": 157,
+  "architect_cut": "重建至 DEC-006 p1 规模（仅 throwaway mkt）→ 沉降 → list 5m；PASS 再续 run-full；不降门槛；非 RC",
+  "rebuild": {
+    "project": "mkt",
+    "action": "docker compose -p mkt down -v && up -d --build",
+    "empty_db_confirmed": true,
+    "seed": {
+      "command": "python3 perf/seed/seed.py --scale p1",
+      "tokenUsers": 2000,
+      "listTasks": 1000,
+      "instancesScale": 500000,
+      "archiveUsers": 1000000,
+      "events": 5000000,
+      "capacity_live": {
+        "users": 1002000,
+        "instances": 500150,
+        "events": 5002150
+      },
+      "captcha_miss_log_lines": 0,
+      "seed_wall_s": 941
+    }
+  },
+  "settle": {
+    "pre_list_mysql_cpu_pct": 0.44,
+    "pre_list_mysql_mem": "684MiB/1GiB",
+    "calm_consecutive_polls": 3,
+    "token_smoke": "GET /api/common/task/list HTTP 200 code=0"
+  },
+  "list": {
+    "command": "docker run --rm --network mkt_default -v perf:/scripts -e BASE_URL=http://nginx -e DURATION=5m grafana/k6:0.54.0 run --summary-export list-rebuild.summary.json list.js",
+    "warm": "built-in warm 200 QPS 30s then formal startTime 35s",
+    "duration": "5m",
+    "k6_exit": 99,
+    "verdict": "FAIL",
+    "http_reqs_per_s": 343.6642039907348,
+    "http_reqs_count": 125445,
+    "formal_http_count": 119537,
+    "formal_approx_qps": 398.5,
+    "p95_ms": 1580.1732993999997,
+    "avg_ms": 490.8211109715475,
+    "med_ms": 68.722036,
+    "p95_gate_ms": 300,
+    "p95_ok": false,
+    "http_fail_rate": 0.01637150003764525,
+    "http_fail_count": 1957,
+    "checks_rate": 0.9836284999623548,
+    "dropped_count": 30458,
+    "dropped_per_s": 83.44154270915381,
+    "dropped_gate": 0.05,
+    "thresholds_crossed": [
+      "checks{scenario:list} rate>0.99",
+      "dropped_iterations{scenario:list} rate<0.05",
+      "http_req_duration{name:list,scenario:list} p(95)<=300",
+      "http_req_failed{scenario:list} rate==0"
+    ],
+    "thresholds_ok": [],
+    "peak_cpu_during": {
+      "mysql": 105.46,
+      "portal-app-1": 201.53,
+      "portal-app-2": 206.13
+    }
+  },
+  "scenes_not_run": [
+    "advance",
+    "complete",
+    "track",
+    "admin-list",
+    "ad",
+    "risk-on",
+    "risk-off"
+  ],
+  "fail_stop": true,
+  "capacity_checkboxes": "empty",
+  "rc": false,
+  "dec006_thresholds_changed": false,
+  "dec002_reopened": false,
+  "logs": "/workspace/r6-capacity-logs/rebuild-list/"
+}
