@@ -1,0 +1,8 @@
+NAME                 CPU %     MEM USAGE / LIMIT
+mkt-portal-app-2-1   0.82%     1.477GiB / 1.5GiB
+mkt-portal-app-1-1   0.60%     1.484GiB / 1.5GiB
+mkt-nginx-1          0.00%     8.594MiB / 15.64GiB
+mkt-admin-app-1      0.35%     853.6MiB / 1.5GiB
+mkt-redis-1          0.48%     11.45MiB / 256MiB
+mkt-prometheus-1     0.22%     33.32MiB / 15.64GiB
+mkt-mysql-1          0.51%     734.7MiB / 1GiB
