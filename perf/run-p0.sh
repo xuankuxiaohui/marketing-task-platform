@@ -17,6 +17,7 @@ COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$ROOT/deploy/docker-compose.y
 DATE_DIR="${REPORT_DATE:-$(date -u +%Y-%m-%d)}"
 REPORT_DIR="$ROOT/perf/reports/${DATE_DIR}"
 mkdir -p "$REPORT_DIR"
+chmod a+rwx "$REPORT_DIR" "$ROOT/perf/reports" 2>/dev/null || true
 DURATION="${DURATION:-5m}"
 SEED_SCALE="${SEED_SCALE:-p0}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:0.54.0}"

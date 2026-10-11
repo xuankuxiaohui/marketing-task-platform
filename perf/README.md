@@ -1,6 +1,6 @@
 # 性能验证
 
-这里存放 k6 场景、容量种子与报告生成入口。旧规格中的性能数字已退役。[DEC-006](../docs/decisions.md#dec-006性能目标及证据口径已关闭) **已关闭**：证据口径与场景数值已升格为**正式门禁**。本批（R6 容量前半）已将 `perf/*.js` 注释/门槛说明与 DEC-006 对齐；**数值默认值本就匹配门禁表，未改阈值**。**可复现容量报告仍待后续 R6 切片**（需显式授权 seed/压测运行或架构师确认）；本文**不**提供当前版本的容量通过结论，**不**宣称 RC。
+这里存放 k6 场景、容量种子与报告生成入口。旧规格中的性能数字已退役。[DEC-006](../docs/decisions.md#dec-006性能目标及证据口径已关闭) **已关闭**：证据口径与场景数值已升格为**正式门禁**。本批（R6 容量前半）已将 `perf/*.js` 注释/门槛说明与 DEC-006 对齐；**数值默认值本就匹配门禁表，未改阈值**。**可复现容量报告（P0）已于 2026-10-11 在 bot box Compose 跑出**：见 [deploy/drills/2026-10-11-r6-capacity-dec006.md](../deploy/drills/2026-10-11-r6-capacity-dec006.md)。**整体 FAIL**（list/advance/complete/risk-on）；**track PASS**；admin-list PASS（p0 数据）。本文**不**提供容量通过结论，**不**宣称 RC；p1/`run-full.sh` 未跑。
 
 ## DEC-006 正式门禁（脚本默认已对齐）
 
@@ -43,7 +43,7 @@ SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh
 - [advance.js](advance.js) / [complete.js](complete.js) / [track.js](track.js) / [list.js](list.js) / [ad.js](ad.js) / [admin-list.js](admin-list.js) / [risk-delta.js](risk-delta.js)：注释与门槛说明已指向 **已关闭的 DEC-006 正式门禁**；QPS/P95/`dropped_iterations` 默认与门禁表一致。
 - [track.js](track.js)：业务 `check` 与 `track_business_ok` / `checks` 入门槛；`track_accepted` 保留结构性下限（`count>0`/`rate>0`）；到达率由 `TRACK_EPS`（默认 6000）驱动。**满配 ≥6000 events/s 须在可复现报告中证明有效 accepted 吞吐**（本批不加硬 eps 计数门槛，避免无实跑时误伤）。
 - 恒定到达率场景（advance / track / list / ad）`dropped_iterations` **rate<0.05** 为 DEC-006 门禁。验收仍须同时证明负载实际达到、业务结果正确和调度完整。
-- **待办（下一 R6 容量切片）**：在授权环境下跑 seed + `run-p0.sh` / `run-full.sh`，按 DEC-006 证据口径落盘 `perf/reports/<日期>/`（拓扑 portal×2、冷热分列、资源/池、分列吞吐等）。无报告不能承诺容量。
+- **P0 已跑（2026-10-11）**：证据见 [deploy/drills/2026-10-11-r6-capacity-dec006.md](../deploy/drills/2026-10-11-r6-capacity-dec006.md)；原始 `perf/reports/2026-10-11/*.summary.json` 本机生成（gitignored）。**整体未达 DEC-006**。**待办**：p1/`run-full.sh`、冷热分列加深、池耗尽/Outbox 积压数字、架构师是否勾清单。无通过报告不能承诺容量。
 - 监控规则存在不等于指标已接入。`TrackDropCounters` **已**注册 Micrometer `mkt.track.drop`（Prometheus `mkt_track_drop_total`，见 F15）；[alerts.yml](../deploy/prometheus/alerts.yml) 的埋点比例仍可能把事件数和请求数相加，需统一计量单位并验证实际暴露数据。
 
 ## 数据规模与查询审查
