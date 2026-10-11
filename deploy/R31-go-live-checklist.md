@@ -72,6 +72,7 @@
   - **list-under-p1 内存/热路径补强（本 PR；勾仍空）**：#158 合入后 bot box Compose `mkt` **不抬 1536M**；Tomcat 300→120 + `-Xss512k` + G1 + catalog metadata-only + 不填 TASK_SNAPSHOT L1 + list PendingCard/hoist；portal rebuild（保留 p1 库）后 formal list **5m FAIL**（**仅 dropped≈0.304/s**；P95≈88.9ms PASS；http_fail 0；checks 100%；~500/s）；**OOM cleared**（peak≈1.46GiB/1.5GiB；Restarts=0）。证据：[drills/2026-10-12-r6-capacity-list-under-p1-mem.md](drills/2026-10-12-r6-capacity-list-under-p1-mem.md)。**勾仍空**；**未**改门禁数值；**非 RC**。
   - **clear residual dropped 实验（#160 证据-only；勾仍空）**：Tomcat **120→160** + 加重 list.js prealloc/warm + nginx keepalive 在 `mkt` 实测 **全面回退**（相对 c0f4795 near-PASS）；**产品配置不落地**（master 仍 threads=120）。证据：[drills/2026-10-12-r6-capacity-clear-dropped.md](drills/2026-10-12-r6-capacity-clear-dropped.md)。**勾仍空**；**未**改门禁；**非 RC**。
   - **threads=120 复测（本 PR；勾仍空）**：#160 卫生包不合后 `mkt` 回退 Tomcat **120**；formal list×2（冷启动 + settle）**均未**恢复 c0f4795 near-PASS（dropped≈37→80/s）。CPU/热路径 **未**开（架构师前提未满足）。证据：[drills/2026-10-12-r6-capacity-threads120-retest.md](drills/2026-10-12-r6-capacity-threads120-retest.md)。**勾仍空**；**未**改门禁；**非 RC**。
+  - **Redis/session 稳定化实验（#162 证据-only；勾仍空）**：Redisson netty/timeout 加码实测 **Java heap OOM**（Redis≈空闲）；**产品杠杆不落地**（master 仍 Redisson 32/1s/1、Redis 0.5CPU/256M、Tomcat120）。证据：[drills/2026-10-12-r6-capacity-redis-session.md](drills/2026-10-12-r6-capacity-redis-session.md)。**勾仍空**；**非 RC**。
 - [ ] 容量场景与正常/异常业务回归均有证据；压测不属于例行 PR CI，入口与限制见 [perf/README.md](../perf/README.md)。
 
 ## 验收记录
