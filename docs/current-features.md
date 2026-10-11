@@ -1,6 +1,6 @@
 # 当前功能清单
 
-盘点日期：2026-10-11。对照 tip `fb32308`（Merge #132；DEC-005 已关闭；DEC-006 / DEC-008 推荐草案均已合入 master（#131 / #132），状态仍开放/待拍板；**不**自动关闭、**不**启动 R6）。依据当前工作区的 Controller、应用服务、前端路由与页面。**这是当前实现清单，不表示全部需求已经完成，也不表示每项已通过真实环境验收。** 历史旅程核验以 [2026-10-07 报告](full-flow-verification-2026-10-07.md) 为准；本盘点纠偏 CrowdPort（#102）、DEC-004（#111）、F03（#105）、F08（#120）、DEC-003 关闭、DEC-005 关闭、DEC-006 / DEC-008 推荐草案等已合/草案事实，测试数量不替代当轮执行结果。
+盘点日期：2026-10-11。对照 tip `67ece6f`（Merge #133；DEC-005 / DEC-006 / DEC-008 均已关闭；**不**因关闭自动启动 R6）。依据当前工作区的 Controller、应用服务、前端路由与页面。**这是当前实现清单，不表示全部需求已经完成，也不表示每项已通过真实环境验收。** 历史旅程核验以 [2026-10-07 报告](full-flow-verification-2026-10-07.md) 为准；本盘点纠偏 CrowdPort（#102）、DEC-004（#111）、F03（#105）、F08（#120）、DEC-003/005/006/008 关闭等已合事实，测试数量不替代当轮执行结果。
 
 标记口径：**已存在**表示有对应实现入口；**部分实现**表示已发现明确缺口；**基础实现**表示已有运行代码或脚本，仍需部署、故障、容量或恢复验证。未列出的需求不能据此视为已实现。
 
@@ -10,7 +10,7 @@
 
 | 功能 | 当前实现 | 状态与边界 |
 |---|---|---|
-| 游客浏览 | 首页、公开任务列表与详情、活动列表与详情、活动中心；受保护操作唤起登录浮层 | 已存在；私有数据和写操作要求登录。公开卡仍按可见性规则过滤；体验规格见 [DEC-008](decisions.md#dec-008门户交互与规格的待对齐项)（**推荐草案，仍开放**；**不**回退游客能力） |
+| 游客浏览 | 首页、公开任务列表与详情、活动列表与详情、活动中心；受保护操作唤起登录浮层 | 已存在；私有数据和写操作要求登录。公开卡仍按可见性规则过滤；体验规格见 [DEC-008](decisions.md#dec-008门户交互与规格的待对齐项已关闭)（**已关闭**；公开浏览匿名、LoginOverlay、活动→全页任务；**不**回退游客能力） |
 | 注册与登录 | 验证码、用户名可用性、注册、登录、退出、强制改密与失效提示 | 已存在；[门户认证 API](../server/domain-identity/src/main/java/com/mkt/identity/controller/portal/PortalAuthController.java) |
 | 个人资料与会话 | 查看资料、修改昵称、修改密码；登录、退出与跨标签页切换清除旧账号数据，拦截旧请求回写 | 已存在；[会话状态](../web/apps/client/src/store/session.ts) |
 | 任务浏览与执行 | 分类列表、任务详情与步骤进度、领取、点击完成、继续任务与动作跳转、放弃 | 已存在；[任务 API](../server/domain-task/src/main/java/com/mkt/task/controller/portal/TaskPortalController.java)。回调与进度上报走 internal，门户不直接调用 |
@@ -56,10 +56,10 @@
 | internal 接口 | 任务回调、任务进度上报、奖励履约回调；HMAC、时间戳、nonce、防重放与限流 | 已存在；[任务接口](../server/domain-task/src/main/java/com/mkt/task/controller/internal/TaskInternalController.java)、[奖励接口](../server/domain-reward/src/main/java/com/mkt/reward/controller/internal/RewardInternalController.java)、[签名验证](../server/domain-identity/src/main/java/com/mkt/identity/application/InternalHmacVerifier.java)。`/internal/**` 仅内网 |
 | 应用与数据 | 管理/门户双应用；MySQL、集中 Flyway 迁移；门户装配 task + reward，步骤与发奖同事务 | 基础实现；空库迁移、升级、装配及真实回滚需实测；未上线数据/契约替换默认见 [DEC-005](decisions.md#dec-005未上线阶段的数据与契约替换已关闭)（**已关闭**；「未上线默认」决定表正式生效）；[后端入口](../server/README.md) |
 | Redis 与缓存 | DB 2 会话、锁、限流、风控计数与广告频控；L1/L2 缓存、失效消息、故障降级 | 基础实现；[infra](../server/platform-infra/src/main/java/com/mkt/infra/)。F03（#105）已合 merge-load + stale-fill 防护；跨节点失效与故障降级的演练证据仍待 |
-| 事务事件 | 业务同事务 Outbox、投递、重试退避、幂等消费者、服务端事件记录 | 基础实现；[OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java)。[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭；**F08 已落地 #120**（持锁多批/2s 预算/fixedDelay 5s/无 MQ）；容量数字门禁见 [DEC-006](decisions.md#dec-006性能目标及证据口径)（**推荐草案，仍开放**） |
+| 事务事件 | 业务同事务 Outbox、投递、重试退避、幂等消费者、服务端事件记录 | 基础实现；[OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java)。[DEC-002](decisions.md#dec-002outbox-消费容量已关闭) 已关闭；**F08 已落地 #120**（持锁多批/2s 预算/fixedDelay 5s/无 MQ）；容量数字门禁见 [DEC-006](decisions.md#dec-006性能目标及证据口径已关闭)（**已关闭**；证据口径与场景数值为门禁） |
 | 后台调度 | 任务/签到/活动定时发布、任务到期、发奖重试恢复、领取超时、奖品过期、履约重试/超时、积分过期、审计/进度/埋点清理与统计聚合 | 基础实现；一次旅程成功不证明所有时间边界、故障和多节点调度通过 |
 | 运维入口 | 健康探针、Prometheus 接口与告警配置；Docker Compose、开发启动脚本、备份/连续 binlog 归档/恢复脚本 | 基础实现；[部署目录](../deploy/)、[backup README](../deploy/backup/README.md)、[开发脚本](../scripts/README.md)。网关静态/TLS **模板**已接线（F16）；连续 shipping 与隔离 PITR 取证见 `deploy/backup/drills/`；自签 TLS/静态 Host 浏览器取证见 `deploy/nginx/drills/`；`dev.ps1 stop` 归属为 Windows host-owned（bot box 运行时 N/A，静态清单见 `scripts/drills/`）；告警触发、真实 dist + 公网证书/Secure Cookie 验证仍需独立取证 |
-| 工程验证 | 单元/属性/架构测试、真实 MySQL/Redis IT、前端组件和浏览器测试、OpenAPI 类型生成、性能脚本 | 验证入口已存在；[验证映射](verification-matrix.md)、[性能说明](../perf/README.md)；容量目标/证据口径见 [DEC-006](decisions.md#dec-006性能目标及证据口径)（**推荐草案，仍开放**）。执行范围和结果按当轮报告；后端→OpenAPI JSON→TS 导出门禁已由 F12 链补齐（见 PR 栈 #100） |
+| 工程验证 | 单元/属性/架构测试、真实 MySQL/Redis IT、前端组件和浏览器测试、OpenAPI 类型生成、性能脚本 | 验证入口已存在；[验证映射](verification-matrix.md)、[性能说明](../perf/README.md)；容量目标/证据口径见 [DEC-006](decisions.md#dec-006性能目标及证据口径已关闭)（**已关闭**；门禁已批准）。执行范围和结果按当轮报告；后端→OpenAPI JSON→TS 导出门禁已由 F12 链补齐（见 PR 栈 #100） |
 
 ## 4. 已知功能缺口
 
