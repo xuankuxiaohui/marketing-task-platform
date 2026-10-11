@@ -2,6 +2,7 @@ package com.mkt.task.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,7 +16,6 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
-import com.mkt.contract.UserRiskSummary;
 import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.PageData;
@@ -67,7 +67,7 @@ class TaskPortalAppServiceTest {
         users = mock(UserAttributePort.class);
         risk = mock(RiskCheckPort.class);
         when(users.attributes(9L)).thenReturn(active());
-        when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(0L, List.of()));
+        when(risk.onUserList(9L, RiskListType.BLACK)).thenReturn(false);
         service = new TaskPortalAppService(
                 definitions,
                 snapshots,
@@ -110,8 +110,10 @@ class TaskPortalAppServiceTest {
     @Test
     void blacklistUserGetsEmptyList() {
         publish("a_task", 1);
-        when(risk.userSummary(9L)).thenReturn(new UserRiskSummary(1L, List.of(RiskListType.BLACK)));
+        when(risk.onUserList(9L, RiskListType.BLACK)).thenReturn(true);
         assertThat(service.list(9L, null, 1, 20).records()).isEmpty();
+        verify(risk).onUserList(9L, RiskListType.BLACK);
+        verify(risk, never()).userSummary(9L);
     }
 
     @Test
@@ -296,6 +298,59 @@ class TaskPortalAppServiceTest {
         publish("direct", 1);
         PageData<TaskCardView> page = service.list(9L, null, 1, 20);
         assertThat(page.records()).extracting(TaskCardView::taskCode).containsExactly("direct");
+    }
+
+    @Test
+    void listLoadsCurrentInstancesViaListByUserNotTupleIn() {
+        TaskInstanceStore spyInstances = spy(instances);
+        service = new TaskPortalAppService(
+                definitions,
+                snapshots,
+                spyInstances,
+                new MemoryTaskCrowdStore(),
+                users,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+        long taskId = publish("via_user", 1);
+        TaskInstanceEntity row = inProgress(taskId, snapshots.listByTaskId(taskId).get(0).getId());
+        spyInstances.insert(row);
+
+        PageData<TaskCardView> page = service.list(9L, null, 1, 20);
+        assertThat(page.records()).hasSize(1);
+        assertThat(page.records().get(0).userStatus()).isEqualTo(InstanceStatuses.IN_PROGRESS);
+        verify(spyInstances, times(1)).listByUser(9L);
+        verify(spyInstances, never()).listByUserTaskCycles(anyLong(), any());
+    }
+
+    @Test
+    void listReusesParsedCatalogWhenCacheReturnsSameInstance() {
+        PlatformCache platformCache = mock(PlatformCache.class);
+        service = new TaskPortalAppService(
+                definitions,
+                snapshots,
+                instances,
+                new MemoryTaskCrowdStore(),
+                users,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                platformCache);
+        long taskId = publish("parse_once", 1);
+        CachedPublishedCatalog catalog = new CachedPublishedCatalog(List.of(new CachedPublishedCatalog.Entry(
+                taskId,
+                "PUBLISHED",
+                1,
+                snapshots.getByTaskAndVersion(taskId, 1).getContent())));
+        when(platformCache.get(
+                        eq(CacheNamespace.TASK_PUBLISHED_INDEX),
+                        eq("all"),
+                        eq(CachedPublishedCatalog.class),
+                        any()))
+                .thenReturn(catalog);
+
+        assertThat(service.list(9L, null, 1, 20).total()).isEqualTo(1);
+        assertThat(service.list(9L, null, 1, 20).total()).isEqualTo(1);
+        // Same catalog instance twice → process-local parsed reuse (no exception / stable cards).
+        assertThat(service.list(9L, null, 1, 20).records().get(0).taskCode()).isEqualTo("parse_once");
     }
 
 

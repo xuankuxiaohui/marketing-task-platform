@@ -48,7 +48,9 @@ class PortSignatureTest {
     void riskCheckPortCheckAndReadOnlySummary() {
         assertSignature(RiskCheckPort.class, "check", RiskVerdict.class, RiskScene.class, RiskSubject.class);
         assertSignature(RiskCheckPort.class, "userSummary", UserRiskSummary.class, long.class);
-        assertThat(declaredMethods(RiskCheckPort.class)).containsExactlyInAnyOrder("check", "userSummary");
+        assertSignature(RiskCheckPort.class, "onUserList", boolean.class, long.class, RiskListType.class);
+        assertThat(declaredMethods(RiskCheckPort.class))
+                .containsExactlyInAnyOrder("check", "userSummary", "onUserList");
     }
 
     @Test
