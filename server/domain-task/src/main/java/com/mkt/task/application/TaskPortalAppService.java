@@ -5,6 +5,8 @@ import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.UserRiskSummary;
+import com.mkt.infra.cache.CacheNamespace;
+import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
@@ -30,6 +32,7 @@ import com.mkt.task.response.InstanceStepView;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskBriefView;
 import com.mkt.task.response.TaskStepSource;
+import com.mkt.task.response.CachedPublishedCatalog;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
@@ -53,6 +56,7 @@ public class TaskPortalAppService {
     private final UserAttributePort users;
     private final RiskCheckPort risk;
     private final Clock clock;
+    private final PlatformCache cache;
 
     @Autowired
     public TaskPortalAppService(
@@ -62,6 +66,7 @@ public class TaskPortalAppService {
             TaskCrowdStore crowds,
             ObjectProvider<UserAttributePort> users,
             ObjectProvider<RiskCheckPort> risk,
+            ObjectProvider<PlatformCache> cache,
             Clock clock) {
         this(
                 definitions,
@@ -70,7 +75,8 @@ public class TaskPortalAppService {
                 crowds,
                 users.getIfAvailable(),
                 risk.getIfAvailable(),
-                clock);
+                clock,
+                cache.getIfAvailable());
     }
 
     public TaskPortalAppService(
@@ -81,6 +87,18 @@ public class TaskPortalAppService {
             UserAttributePort users,
             RiskCheckPort risk,
             Clock clock) {
+        this(definitions, snapshots, instances, crowds, users, risk, clock, null);
+    }
+
+    public TaskPortalAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            Clock clock,
+            PlatformCache cache) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -88,6 +106,7 @@ public class TaskPortalAppService {
         this.users = users;
         this.risk = risk;
         this.clock = clock;
+        this.cache = cache;
     }
 
     public TaskStepSource sourceForStep(long stepId) {
@@ -118,8 +137,9 @@ public class TaskPortalAppService {
         }
         UserAttributes attrs = userId == null ? null : users.attributes(userId);
         Instant now = clock.instant();
-        List<TaskDefinitionEntity> published = definitions.listPublished();
-        Map<Long, SnapshotContent> snapshotByTask = loadPublishedSnapshots(published);
+        PublishedBundle publishedBundle = publishedBundle();
+        List<TaskDefinitionEntity> published = publishedBundle.definitions();
+        Map<Long, SnapshotContent> snapshotByTask = publishedBundle.snapshots();
         List<TaskCycleKey> cycleKeys = new ArrayList<>();
         if (userId != null) {
             for (TaskDefinitionEntity definition : published) {
@@ -231,8 +251,9 @@ public class TaskPortalAppService {
         String categoryFilter = allCategoryToNull(category);
         if (categoryFilter != null) {
             categoryTaskIds = new ArrayList<>();
-            List<TaskDefinitionEntity> published = definitions.listPublished();
-            Map<Long, SnapshotContent> publishedSnaps = loadPublishedSnapshots(published);
+            PublishedBundle publishedBundle = publishedBundle();
+            List<TaskDefinitionEntity> published = publishedBundle.definitions();
+            Map<Long, SnapshotContent> publishedSnaps = publishedBundle.snapshots();
             for (TaskDefinitionEntity definition : published) {
                 SnapshotContent snapshot = publishedSnaps.get(definition.getId());
                 if (snapshot != null && categoryFilter.equals(snapshot.category())) {
@@ -360,14 +381,94 @@ public class TaskPortalAppService {
         if (definition.getVersion() == null || definition.getVersion() < 1) {
             return null;
         }
-        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(definition.getId(), definition.getVersion());
-        if (snap == null || snap.getContent() == null) {
-            return null;
-        }
-        return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
+        String json = snapshotJson(definition.getId(), definition.getVersion());
+        return json == null ? null : JsonUtil.fromJson(json, SnapshotContent.class);
     }
 
-    private Map<Long, SnapshotContent> loadPublishedSnapshots(List<TaskDefinitionEntity> published) {
+    private String snapshotJson(long taskId, int version) {
+        if (cache != null) {
+            return cache.get(
+                    CacheNamespace.TASK_SNAPSHOT,
+                    taskId + ":" + version,
+                    String.class,
+                    () -> loadSnapshotJson(taskId, version));
+        }
+        return loadSnapshotJson(taskId, version);
+    }
+
+    private String loadSnapshotJson(long taskId, int version) {
+        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(taskId, version);
+        return snap == null ? null : snap.getContent();
+    }
+
+    private PublishedBundle publishedBundle() {
+        if (cache == null) {
+            List<TaskDefinitionEntity> published = definitions.listPublished();
+            return new PublishedBundle(published, loadPublishedSnapshotsFromStore(published));
+        }
+        CachedPublishedCatalog catalog = cache.get(
+                CacheNamespace.TASK_PUBLISHED_INDEX,
+                "all",
+                CachedPublishedCatalog.class,
+                this::loadPublishedCatalog);
+        return fromCatalog(catalog);
+    }
+
+    private CachedPublishedCatalog loadPublishedCatalog() {
+        List<TaskDefinitionEntity> published = definitions.listPublished();
+        Map<Long, String> jsonByTask = new HashMap<>();
+        List<TaskVersionKey> keys = new ArrayList<>();
+        for (TaskDefinitionEntity definition : published) {
+            if (definition.getVersion() == null || definition.getVersion() < 1) {
+                continue;
+            }
+            keys.add(new TaskVersionKey(definition.getId(), definition.getVersion()));
+        }
+        for (TaskVersionSnapshotEntity snap : snapshots.listByTaskAndVersions(keys)) {
+            if (snap == null || snap.getTaskId() == null || snap.getContent() == null) {
+                continue;
+            }
+            jsonByTask.put(snap.getTaskId(), snap.getContent());
+            if (cache != null && snap.getVersion() != null) {
+                cache.put(CacheNamespace.TASK_SNAPSHOT, snap.getTaskId() + ":" + snap.getVersion(), snap.getContent());
+            }
+        }
+        List<CachedPublishedCatalog.Entry> entries = new ArrayList<>(published.size());
+        for (TaskDefinitionEntity definition : published) {
+            if (definition.getId() == null || definition.getVersion() == null || definition.getVersion() < 1) {
+                continue;
+            }
+            String json = jsonByTask.get(definition.getId());
+            if (json == null) {
+                continue;
+            }
+            entries.add(new CachedPublishedCatalog.Entry(
+                    definition.getId(), definition.getStatus(), definition.getVersion(), json));
+        }
+        return new CachedPublishedCatalog(entries);
+    }
+
+    private static PublishedBundle fromCatalog(CachedPublishedCatalog catalog) {
+        if (catalog == null || catalog.entries() == null || catalog.entries().isEmpty()) {
+            return new PublishedBundle(List.of(), Map.of());
+        }
+        List<TaskDefinitionEntity> definitions = new ArrayList<>(catalog.entries().size());
+        Map<Long, SnapshotContent> snapshots = new HashMap<>(catalog.entries().size());
+        for (CachedPublishedCatalog.Entry entry : catalog.entries()) {
+            TaskDefinitionEntity definition = new TaskDefinitionEntity();
+            definition.setId(entry.id());
+            definition.setStatus(entry.status());
+            definition.setVersion(entry.version());
+            definitions.add(definition);
+            SnapshotContent content = JsonUtil.fromJson(entry.snapshotJson(), SnapshotContent.class);
+            if (content != null) {
+                snapshots.put(entry.id(), content);
+            }
+        }
+        return new PublishedBundle(definitions, snapshots);
+    }
+
+    private Map<Long, SnapshotContent> loadPublishedSnapshotsFromStore(List<TaskDefinitionEntity> published) {
         List<TaskVersionKey> keys = new ArrayList<>();
         for (TaskDefinitionEntity definition : published) {
             if (definition.getVersion() == null || definition.getVersion() < 1) {
@@ -387,6 +488,9 @@ public class TaskPortalAppService {
         }
         return out;
     }
+
+    private record PublishedBundle(
+            List<TaskDefinitionEntity> definitions, Map<Long, SnapshotContent> snapshots) {}
 
     private Map<Long, SnapshotContent> loadSnapshotsByIds(List<Long> ids) {
         Map<Long, SnapshotContent> out = new HashMap<>();

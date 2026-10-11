@@ -1,7 +1,13 @@
 package com.mkt.task.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mkt.contract.AccountStatus;
@@ -10,8 +16,11 @@ import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.UserRiskSummary;
+import com.mkt.infra.cache.CacheNamespace;
+import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.json.JsonUtil;
+import com.mkt.task.response.CachedPublishedCatalog;
 import com.mkt.task.command.TaskFilterCommand;
 import com.mkt.task.command.TaskGrayCommand;
 import com.mkt.task.command.TaskStepCommand;
@@ -35,6 +44,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -230,6 +240,64 @@ class TaskPortalAppServiceTest {
         assertThat(service.list(9L, null, 1, 20).records()).isEmpty();
         assertThat(service.detail(taskId, 9L, "WEB").status()).isEqualTo(InstanceStatuses.OFFLINE);
     }
+
+    @Test
+    void listUsesPublishedIndexCacheLoaderAndSkipsStoreOnHit() {
+        TaskDefinitionStore defs = spy(definitions);
+        PlatformCache platformCache = mock(PlatformCache.class);
+        service = new TaskPortalAppService(
+                defs,
+                snapshots,
+                instances,
+                new MemoryTaskCrowdStore(),
+                users,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                platformCache);
+        publish("cached", 1);
+
+        when(platformCache.get(
+                        eq(CacheNamespace.TASK_PUBLISHED_INDEX),
+                        eq("all"),
+                        eq(CachedPublishedCatalog.class),
+                        any()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Supplier<CachedPublishedCatalog> loader = invocation.getArgument(3);
+                    return loader.get();
+                });
+
+        PageData<TaskCardView> first = service.list(9L, null, 1, 20);
+        assertThat(first.total()).isEqualTo(1);
+        assertThat(first.records().get(0).taskCode()).isEqualTo("cached");
+        verify(defs, times(1)).listPublished();
+
+        long taskId = first.records().get(0).taskId();
+        CachedPublishedCatalog catalog = new CachedPublishedCatalog(List.of(new CachedPublishedCatalog.Entry(
+                taskId,
+                "PUBLISHED",
+                1,
+                snapshots.getByTaskAndVersion(taskId, 1).getContent())));
+        when(platformCache.get(
+                        eq(CacheNamespace.TASK_PUBLISHED_INDEX),
+                        eq("all"),
+                        eq(CachedPublishedCatalog.class),
+                        any()))
+                .thenReturn(catalog);
+
+        PageData<TaskCardView> second = service.list(9L, null, 1, 20);
+        assertThat(second.total()).isEqualTo(1);
+        assertThat(second.records().get(0).taskCode()).isEqualTo("cached");
+        verify(defs, times(1)).listPublished();
+    }
+
+    @Test
+    void listWithoutCacheStillReadsPublishedStore() {
+        publish("direct", 1);
+        PageData<TaskCardView> page = service.list(9L, null, 1, 20);
+        assertThat(page.records()).extracting(TaskCardView::taskCode).containsExactly("direct");
+    }
+
 
     private long publish(String code, int weight) {
         return publish(code, weight, new TaskGrayCommand("NONE", null, null, null, null));

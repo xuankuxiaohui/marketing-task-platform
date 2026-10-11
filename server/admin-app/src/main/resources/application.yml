@@ -10,6 +10,10 @@ spring:
     url: ${MKT_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/mkt_platform?characterEncoding=UTF-8&connectionTimeZone=UTC}
     username: ${MKT_DATASOURCE_USERNAME:mkt}
     password: ${MKT_DATASOURCE_PASSWORD:}
+    hikari:
+      # Keep below MySQL max_connections with portal×2 pools. Not a DEC-006 threshold change.
+      maximum-pool-size: ${MKT_HIKARI_MAX_POOL:20}
+      minimum-idle: ${MKT_HIKARI_MIN_IDLE:5}
 
 server:
   port: ${SERVER_PORT:8080}
