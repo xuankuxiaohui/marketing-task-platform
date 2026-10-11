@@ -1,6 +1,6 @@
 # 首次上线验收清单
 
-项目尚未上线。本清单保留首次发布前需要取得的证据，空勾不表示已经执行。旧规格已退役，部署以当前模板、[仓库边界](../AGENTS.md) 和已确认的环境、数据与性能决定为依据；见 [DEC-005 / DEC-006](../docs/decisions.md)。实际运行结果须引用对应批次报告，不能从本清单推断 Compose、恢复演练或压测已通过。
+项目尚未上线。本清单保留首次发布前需要取得的证据，空勾不表示已经执行。旧规格已退役，部署以当前模板、[仓库边界](../AGENTS.md) 和已确认的环境、数据与性能决定为依据；见 [DEC-005 / DEC-006](../docs/decisions.md)。**R6 已开 / 进行中**（huihuang 2026-10-11 显式开启；**未通过** / 非 RC）。实际运行结果须引用对应批次报告，不能从本清单推断 Compose、恢复演练或压测已通过。
 
 ## 当前交付物与缺口
 
@@ -24,10 +24,15 @@
 ## 构建、迁移与发布
 
 - [ ] 同一提交的后端镜像与前端产物有可追溯版本，构建及必要测试通过。
-- [ ] 从空库执行完整迁移并启动；存量测试库的升级路径按保留策略另外验证。
-- [ ] admin 执行迁移，portal 关闭 Flyway；迁移校验成功后再接入流量。
+- [x] 从空库执行完整迁移并启动；存量测试库的升级路径按保留策略另外验证。
+  - **空库迁移+启动（R6 首片，2026-10-11）**：bot box Compose `down -v` → `up -d --build`；admin 对空库应用 9 条迁移至 **v7**，51 业务表；admin + portal×2 readiness UP、nginx `/healthz` ok。证据：[drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md)。
+  - **存量升级路径**：本片**未**覆盖（另验）。
+- [x] admin 执行迁移，portal 关闭 Flyway；迁移校验成功后再接入流量。
+  - **R6 首片（2026-10-11）**：compose/env 中 admin `SPRING_FLYWAY_ENABLED=true`，portal×2 `SPRING_FLYWAY_ENABLED=false` / `MKT_FLYWAY_ENABLED=false`（进程环境已核对）；admin 日志 `<< Empty Schema >>` → `Successfully applied 9 migrations … v7`；portal 日志 **0** 条 Flyway；两端 readiness UP 后再由 nginx 挂载。证据同上 [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md)。
+  - **说明**：本勾证明迁移归属与就绪，**不**等于全量业务旅程或双实例故障通过。
 - [ ] 首次发布失败的恢复步骤与数据保留策略明确。将来采用滚动发布时，再验证新旧版本共存与回退兼容；不能把未上线理解成可以随意改已应用迁移。
 - [ ] portal 双实例及就绪检查有效，单节点退出时服务可继续使用。
+  - **部分观察（非本勾通过）**：R6 首片中 `portal-app-1` / `portal-app-2` 均 readiness UP（见 [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md)）；**单节点退出故障 Continuity 未做**，本勾保持空。
 - [ ] [deploy-smoke.sh](../ci/deploy-smoke.sh) 的重复启动与业务幂等验证有运行结果；不能仅凭脚本存在认定通过。
 - [ ] 真实浏览器验证静态资源、登录、刷新路由、领取、完成任务和领奖。
 
@@ -45,4 +50,5 @@
 
 | 提交/版本 | 环境 | 日期 | 责任人 | 证据位置 | 未解决项 / 发布结论 |
 |---|---|---|---|---|---|
-| 待执行 | | | | | |
+| `7f73856`（master tip；本 PR 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 首片） | [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md) | R6 **已开 / 进行中**；首片空库 Flyway + 双应用装配 **PASS**；旅程 / 双实例故障 / 容量 / 恢复 **未做**；**非 RC 通过** |
+| 待后续切片 | | | | | |
