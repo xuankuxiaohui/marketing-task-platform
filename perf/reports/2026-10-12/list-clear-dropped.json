@@ -68,5 +68,8 @@
   "dec006_thresholds_changed": false,
   "memory_limit_raised": false,
   "tomcat_200_250": false,
-  "logs": "/workspace/r6-capacity-logs/clear-dropped/"
+  "logs": "/workspace/r6-capacity-logs/clear-dropped/",
+  "product_landed": false,
+  "pr_disposition": "evidence-only; Tomcat160/list.js/nginx hygiene stripped from #160",
+  "master_threads": 120
 }

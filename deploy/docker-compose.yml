@@ -4,8 +4,8 @@ name: mkt
 
 x-app-env: &app-env
   TZ: UTC
-  # MaxRAM 75% ≈1.15GiB heap + G1; -Xss512k + threads=160 keep native stacks inside 1536M memcg.
-  # Do NOT raise memory: 1536M (DEC-006 topology). Post-#159: 120→160 only (peak list VUs≈258 > 120×2); never 200–250.
+  # MaxRAM 75% ≈1.15GiB heap + G1; -Xss512k + threads=120 keep native stacks inside 1536M memcg.
+  # Do NOT raise memory: 1536M (DEC-006 topology). List-under-p1 mem cut: smaller Xss + fewer threads.
   JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k"
   SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
   MKT_DATASOURCE_URL: ${MKT_DATASOURCE_URL}
@@ -118,10 +118,10 @@ services:
       SERVER_PORT: "8081"
       SPRING_FLYWAY_ENABLED: "false"
       MKT_FLYWAY_ENABLED: "false"
-      # Residual dropped clear: accept queue up; threads 120→160 only (sat. evidence); keep Xss512k/1536M.
-      SERVER_TOMCAT_ACCEPT_COUNT: "400"
-      SERVER_TOMCAT_THREADS_MAX: "160"
-      SERVER_TOMCAT_MIN_SPARE: "30"
+      # List-under-p1 mem: keep accept queue; cap threads so stacks fit in 1536M (was 300 → memcg OOM).
+      SERVER_TOMCAT_ACCEPT_COUNT: "200"
+      SERVER_TOMCAT_THREADS_MAX: "120"
+      SERVER_TOMCAT_MIN_SPARE: "25"
     depends_on:
       mysql:
         condition: service_healthy
@@ -150,10 +150,10 @@ services:
       SERVER_PORT: "8081"
       SPRING_FLYWAY_ENABLED: "false"
       MKT_FLYWAY_ENABLED: "false"
-      # Residual dropped clear: accept queue up; threads 120→160 only (sat. evidence); keep Xss512k/1536M.
-      SERVER_TOMCAT_ACCEPT_COUNT: "400"
-      SERVER_TOMCAT_THREADS_MAX: "160"
-      SERVER_TOMCAT_MIN_SPARE: "30"
+      # List-under-p1 mem: keep accept queue; cap threads so stacks fit in 1536M (was 300 → memcg OOM).
+      SERVER_TOMCAT_ACCEPT_COUNT: "200"
+      SERVER_TOMCAT_THREADS_MAX: "120"
+      SERVER_TOMCAT_MIN_SPARE: "25"
     depends_on:
       mysql:
         condition: service_healthy

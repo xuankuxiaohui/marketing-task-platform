@@ -11,19 +11,17 @@ import { BASE, DURATION, loadState, portalHeaders, pick } from "./lib.js";
  * Residual dropped cut (post-#144/#146): post-#144 5m showed ~174 drops clustered at ~4m16s
  * with a ~1.87s outlier and VU scale-up 80→243 — synchronized L1/L2 published-index TTL
  * expiry mid-run, not mass 5xx. This script:
- * - warms both portals + pools before the gate window (startTime; 45s warm / 50s gate)
- * - pre-allocates enough VUs (350/500) to absorb brief stalls without mid-run alloc drops
+ * - warms both portals + pools before the gate window (startTime)
+ * - pre-allocates enough VUs to absorb brief refresh spikes without arrival drops
  * - scopes dropped_iterations to scenario:list (warmup excluded = drop window)
  * Threshold numbers unchanged (no DEC-006 reopen).
  */
 const LIST_QPS = Number(__ENV.LIST_QPS || 500);
-// Post-#159 residual dropped (~0.304/s): formal peak active VUs≈258 and pool grew 330→415
-// while allocating — prealloc covers that spike so constant-arrival-rate does not drop.
-const LIST_MAX_VUS = Number(__ENV.LIST_MAX_VUS || 500);
-const LIST_PRE_VUS = Number(__ENV.LIST_PRE_VUS || 350);
+const LIST_MAX_VUS = Number(__ENV.LIST_MAX_VUS || 400);
+const LIST_PRE_VUS = Number(__ENV.LIST_PRE_VUS || 250);
 const WARM_QPS = Number(__ENV.LIST_WARM_QPS || 200);
-const WARM_DURATION = __ENV.LIST_WARM_DURATION || "45s";
-const GATE_START = __ENV.LIST_GATE_START || "50s";
+const WARM_DURATION = __ENV.LIST_WARM_DURATION || "30s";
+const GATE_START = __ENV.LIST_GATE_START || "35s";
 
 export const options = {
   scenarios: {
