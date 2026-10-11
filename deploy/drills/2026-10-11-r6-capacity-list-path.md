@@ -62,3 +62,5 @@ Seed gray is mostly `NONE` / `RATIO` (no crowd DB N+1 on list for p0) → primar
 1. Rebuild portal images on bot box Compose `mkt` (leave UP; no `down -v`).
 2. Targeted list re-measure (`DURATION` short smoke then 5m) only if authorized; document commands + fail-stop on Docker Hub rate limit.
 3. If list still FAIL → profile remaining (Tomcat threads, GC, Outbox drain). Else proceed to **advance callback** saturation.
+
+**Update (2026-10-11 CST)**: rebuild + targeted list retest **DONE FAIL** — see [list-retest](2026-10-11-r6-capacity-list-retest.md). Throughput ~54→~116/s but P95/errors worse; **fail-stop**; advance **not** started.
