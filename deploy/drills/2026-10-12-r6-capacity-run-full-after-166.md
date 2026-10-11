@@ -8,3 +8,5 @@
 | run-full | **FAIL-STOP at list** P95 804ms dropped 0.579/s |
 | Caps | Tomcat120 / 1536M / Redisson≤32/1s/1; skip-renew deferred |
 | Capacity | **勾空**; **非 RC** |
+
+Overall http_reqs ≈465/s; thresholds: dropped + list P95. Evidence: `docs/capacity/2026-10-12-run-full-after-166.md`.

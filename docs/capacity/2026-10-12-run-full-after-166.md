@@ -26,10 +26,12 @@ Isolation: compose project `mkt`; reused existing `perf/state.json` (p0/p1 token
 
 | scene | result | notes |
 |---|---|---|
-| **list** | **FAIL** | P95 **804.4 ms** ✗; dropped **0.579/s** (194) ✗; http_fail **0** ✓; checks **100%** ✓ |
+| **list** | **FAIL** | ~**465**/s; P95 **804.4 ms** ✗; dropped **0.579/s** (194) ✗; http_fail **0** ✓; checks **100%** ✓ |
 | advance…capacity_check | **not run** | fail-stop at list |
 
 vs pre-merge dual-IN PASS (P95 174 / dropped 0): post-merge suite list degraded (MySQL still ~1GiB memcg; possible residual noise / cold portals after prior suite). Honest FAIL — Capacity勾仍空.
+
+Overall http_reqs ≈**464.6**/s (warm+list). Thresholds crossed: `dropped_iterations{scenario:list}`, `http_req_duration{name:list,scenario:list}`.
 
 ## Caps confirmed on mkt
 - `SERVER_TOMCAT_THREADS_MAX=120`
