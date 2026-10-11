@@ -1,0 +1,9 @@
+=== pre-list 2026-10-12 05:43:26 +0800 ===
+NAME                 CPU %     MEM USAGE / LIMIT     MEM %
+mkt-nginx-1          0.00%     7.23MiB / 15.64GiB    0.05%
+mkt-prometheus-1     0.00%     23.81MiB / 15.64GiB   0.15%
+mkt-portal-app-1-1   0.88%     1.075GiB / 1.5GiB     71.64%
+mkt-portal-app-2-1   0.68%     678MiB / 1.5GiB       44.14%
+mkt-admin-app-1      3.29%     866MiB / 1.5GiB       56.38%
+mkt-redis-1          0.40%     10.72MiB / 256MiB     4.19%
+mkt-mysql-1          99.24%    755.3MiB / 1GiB       73.76%
