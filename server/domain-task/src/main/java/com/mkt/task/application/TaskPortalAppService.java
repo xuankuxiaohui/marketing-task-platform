@@ -590,12 +590,12 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // MySQL dropped cut: cycle_key IN only (few keys) via idx_user_cycle — avoids
-        // ~1k task_id IN parse/plan cost that digest'd at ~53ms avg under 500 QPS.
-        // Still bounded (not listByUser); Java keeps exact published (task_id, cycle_key).
+        // Dual-IN restore (#165 near-PASS): task_id IN + cycle_key IN + Java pair filter.
+        // Architect 2026-10-12: revert cycle_key-only (regressed formal); keep V8 idx_user_cycle.
+        List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
         List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : instances.listByUserCycleKeys(userId, cycleKeys)) {
+        for (TaskInstanceEntity row : instances.listByUserTaskIdsAndCycleKeys(userId, taskIds, cycleKeys)) {
             if (row == null || row.getTaskId() == null) {
                 continue;
             }
