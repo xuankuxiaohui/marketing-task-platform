@@ -1,0 +1,15 @@
+qps=242.76
+p95_ms_list=548.4
+p95_ms_overall=680.13
+http_fail_list=0.2751
+checks_list=0.7248
+dropped_per_s_list=177.21
+dropped_count_list=64689
+http_reqs=88616
+k6_exit=99
+peak_portal1=1.484GiB
+peak_portal2=1.477GiB
+redis_mem=~12MiB/256MiB
+oom=False
+restarts=0
+skip_renew=ON

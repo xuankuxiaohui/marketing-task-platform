@@ -1,0 +1,120 @@
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:42Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+
+running (5m56.9s), 183/550 VUs, 88586 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+
+running (5m57.9s), 178/550 VUs, 88591 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:44Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+
+running (5m58.9s), 172/550 VUs, 88597 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+
+running (5m59.9s), 172/550 VUs, 88597 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+
+running (6m00.9s), 172/550 VUs, 88597 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+
+running (6m01.9s), 172/550 VUs, 88597 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+
+running (6m02.9s), 172/550 VUs, 88597 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+
+running (6m03.9s), 171/550 VUs, 88598 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+time="2026-10-11T21:16:50Z" level=warning msg="Request Failed" error="Get \"http://nginx/api/common/task/list?page=1&pageSize=20\": request timeout"
+
+running (6m04.9s), 153/550 VUs, 88616 complete and 0 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ↓ [ 100% ] 400/400 VUs  5m0s  500.00 iters/s
+
+     ✗ list http 200
+      ↳  73% — ✓ 65167 / ✗ 23449
+     ✗ list code 0
+      ↳  73% — ✓ 65167 / ✗ 23449
+
+     checks..........................: 73.53% 130334 out of 177232
+     ✗ { scenario:list }.............: 72.48% 123452 out of 170318
+     data_received...................: 304 MB 832 kB/s
+     data_sent.......................: 26 MB  72 kB/s
+     dropped_iterations..............: 67233  184.18418/s
+     ✗ { scenario:list }.............: 64689  177.214916/s
+     http_req_blocked................: avg=20.63µs  min=1.54µs   med=5.53µs  max=36.35ms p(90)=7.98µs   p(95)=12.11µs 
+     http_req_connecting.............: avg=10.79µs  min=0s       med=0s      max=36.28ms p(90)=0s       p(95)=0s      
+     http_req_duration...............: avg=1.01s    min=85.52µs  med=2.55ms  max=1m0s    p(90)=162.39ms p(95)=680.13ms
+       { expected_response:true }....: avg=507.29ms min=1.51ms   med=4.44ms  max=1m0s    p(90)=227.53ms p(95)=773.77ms
+     ✗ { name:list,scenario:list }...: avg=994.12ms min=85.52µs  med=2.46ms  max=1m0s    p(90)=145.72ms p(95)=548.4ms 
+     http_req_failed.................: 26.46% 23449 out of 88616
+     ✗ { scenario:list }.............: 27.51% 23433 out of 85159
+     http_req_receiving..............: avg=65.37µs  min=0s       med=49.25µs max=69.24ms p(90)=81.67µs  p(95)=120.9µs 
+     http_req_sending................: avg=21.51µs  min=4.91µs   med=17.04µs max=13.76ms p(90)=24.23µs  p(95)=32.32µs 
+     http_req_tls_handshaking........: avg=0s       min=0s       med=0s      max=0s      p(90)=0s       p(95)=0s      
+     http_req_waiting................: avg=1.01s    min=52.62µs  med=2.47ms  max=1m0s    p(90)=162.25ms p(95)=680.06ms
+     http_reqs.......................: 88616  242.762711/s
+     iteration_duration..............: avg=1.01s    min=177.89µs med=2.83ms  max=1m0s    p(90)=162.79ms p(95)=682.27ms
+     iterations......................: 88616  242.762711/s
+     vus.............................: 153    min=1                max=486
+     vus_max.........................: 550    min=374              max=550
+
+
+running (6m05.0s), 000/550 VUs, 88616 complete and 153 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ✓ [ 100% ] 153/400 VUs  5m0s  500.00 iters/s
+time="2026-10-11T21:16:52Z" level=error msg="thresholds on metrics 'checks{scenario:list}, dropped_iterations{scenario:list}, http_req_duration{name:list,scenario:list}, http_req_failed{scenario:list}' have been crossed"

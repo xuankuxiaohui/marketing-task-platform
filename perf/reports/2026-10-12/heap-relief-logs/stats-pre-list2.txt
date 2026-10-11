@@ -1,0 +1,7 @@
+mkt-portal-app-2-1 cpu=0.51% mem=527.7MiB / 1.5GiB
+mkt-portal-app-1-1 cpu=0.40% mem=539.5MiB / 1.5GiB
+mkt-nginx-1 cpu=0.00% mem=7.578MiB / 15.64GiB
+mkt-admin-app-1 cpu=0.39% mem=852.1MiB / 1.5GiB
+mkt-redis-1 cpu=0.46% mem=11.26MiB / 256MiB
+mkt-prometheus-1 cpu=0.00% mem=33.67MiB / 15.64GiB
+mkt-mysql-1 cpu=0.55% mem=849.8MiB / 1GiB

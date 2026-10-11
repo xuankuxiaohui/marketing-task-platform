@@ -1,0 +1,4 @@
+Formal list2 (list-heap-relief2.summary.json / list2-formal-5m.log) ran 2026-10-12 ~05:10–05:17 CST
+AFTER portals were rebuilt from clean master jars (skip-renew OFF).
+An earlier skip-renew-on list was aborted (k6 137) at ~05:07 and must NOT be cited as this formal.
+Parallel docs that labeled list2 as skip-renew alone were incorrect; corrected in this commit.

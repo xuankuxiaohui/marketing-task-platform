@@ -1,0 +1,2 @@
+ABORTED run1: k6_exit=137 after ~57s wall; portal1 mem→1.487GiB; redis idle ~11MiB
+dmesg had prior memcg OOM on java (likely #162 era); this run OOMKilled=false Restarts=0
