@@ -22,6 +22,9 @@ public interface TaskInstanceStore {
     List<TaskInstanceEntity> listByUserTaskIdsAndCycleKeys(
             long userId, List<Long> taskIds, List<String> cycleKeys);
 
+    /** Current cycle keys only; caller filters published pairs. Uses idx_user_cycle. */
+    List<TaskInstanceEntity> listByUserCycleKeys(long userId, List<String> cycleKeys);
+
     List<TaskInstanceEntity> listByUser(long userId);
 
     List<TaskInstanceEntity> listInProgressByUser(long userId);

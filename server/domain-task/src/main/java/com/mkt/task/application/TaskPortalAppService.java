@@ -590,12 +590,12 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // Dump-targeted: task_id IN + cycle_key IN (few distinct keys), not unbounded
-        // listByUser (500k rows) and not 1000-pair tuple IN (MySQL latency).
-        List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
+        // MySQL dropped cut: cycle_key IN only (few keys) via idx_user_cycle — avoids
+        // ~1k task_id IN parse/plan cost that digest'd at ~53ms avg under 500 QPS.
+        // Still bounded (not listByUser); Java keeps exact published (task_id, cycle_key).
         List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : instances.listByUserTaskIdsAndCycleKeys(userId, taskIds, cycleKeys)) {
+        for (TaskInstanceEntity row : instances.listByUserCycleKeys(userId, cycleKeys)) {
             if (row == null || row.getTaskId() == null) {
                 continue;
             }
