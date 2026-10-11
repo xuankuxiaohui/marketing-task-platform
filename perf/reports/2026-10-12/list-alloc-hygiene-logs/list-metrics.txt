@@ -1,0 +1,28 @@
+checks..........................: 86.09% 154634 out of 179614
+     ✗ { scenario:list }.............: 85.17% 143518 out of 168498
+     data_received...................: 355 MB 973 kB/s
+     data_sent.......................: 27 MB  73 kB/s
+     dropped_iterations..............: 65964  180.646194/s
+     ✗ { scenario:list }.............: 65521  179.433013/s
+     http_req_blocked................: avg=20.62µs min=1.61µs   med=5.38µs  max=89.73ms  p(90)=7.92µs   p(95)=12.28µs 
+     http_req_connecting.............: avg=11.87µs min=0s       med=0s      max=89.65ms  p(90)=0s       p(95)=0s      
+     http_req_duration...............: avg=1.08s   min=82.9µs   med=65.19ms max=1m0s     p(90)=955.75ms p(95)=1.44s   
+       { expected_response:true }....: avg=726.4ms min=1.52ms   med=89.8ms  max=55.13s   p(90)=962.67ms p(95)=1.32s   
+     ✗ { name:list,scenario:list }...: avg=1.14s   min=82.9µs   med=74.12ms max=1m0s     p(90)=968.22ms p(95)=1.48s   
+     http_req_failed.................: 13.90% 12490 out of 89807
+     ✗ { scenario:list }.............: 14.82% 12490 out of 84249
+     http_req_receiving..............: avg=87.98µs min=0s       med=52.06µs max=110.32ms p(90)=132.51µs p(95)=244.88µs
+     http_req_sending................: avg=25.06µs min=5.3µs    med=16.92µs max=8.21ms   p(90)=26.97µs  p(95)=39.89µs 
+     http_req_tls_handshaking........: avg=0s      min=0s       med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting................: avg=1.08s   min=47.77µs  med=65.08ms max=1m0s     p(90)=955.67ms p(95)=1.44s   
+     http_reqs.......................: 89807  245.941615/s
+     iteration_duration..............: avg=1.08s   min=160.14µs med=65.61ms max=1m0s     p(90)=956.09ms p(95)=1.44s   
+     iterations......................: 89807  245.941615/s
+     vus.............................: 231    min=0                max=400
+     vus_max.........................: 550    min=334              max=550
+
+
+running (6m05.2s), 000/550 VUs, 89807 complete and 231 interrupted iterations
+warm ✓ [ 100% ] 000/150 VUs  30s   200.00 iters/s
+list ✓ [ 100% ] 231/400 VUs  5m0s  500.00 iters/s
+time="2026-10-11T21:49:35Z" level=error msg="thresholds on metrics 'checks{scenario:list}, dropped_iterations{scenario:list}, http_req_duration{name:list,scenario:list}, http_req_failed{scenario:list}' have been crossed"

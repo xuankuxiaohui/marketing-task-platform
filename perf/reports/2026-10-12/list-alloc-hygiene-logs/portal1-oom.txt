@@ -1,0 +1,30 @@
+### Cause: java.sql.SQLException: Java heap space
+; Java heap space
+Caused by: java.sql.SQLException: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+### Error querying database.  Cause: java.sql.SQLException: Java heap space
+### Cause: java.sql.SQLException: Java heap space
+; uncategorized SQLException; SQL state [HY001]; error code [0]; Java heap space
+Caused by: java.sql.SQLException: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+### Error querying database.  Cause: java.sql.SQLException: Java heap space
+### Cause: java.sql.SQLException: Java heap space
+; Java heap space
+Caused by: java.sql.SQLException: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+java.lang.OutOfMemoryError: Java heap space
+jakarta.servlet.ServletException: Handler dispatch failed: java.lang.OutOfMemoryError: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+jakarta.servlet.ServletException: Handler dispatch failed: java.lang.OutOfMemoryError: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+jakarta.servlet.ServletException: Handler dispatch failed: java.lang.OutOfMemoryError: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+jakarta.servlet.ServletException: Handler dispatch failed: java.lang.OutOfMemoryError: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+jakarta.servlet.ServletException: Handler dispatch failed: java.lang.OutOfMemoryError: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+### Error querying database.  Cause: org.apache.ibatis.reflection.ReflectionException: Could not set property 'expireAt' of 'class com.mkt.task.entity.TaskInstanceEntity' with value '2026-11-10T18:31:13.411' Cause: java.lang.OutOfMemoryError: Java heap space
+### Cause: org.apache.ibatis.reflection.ReflectionException: Could not set property 'expireAt' of 'class com.mkt.task.entity.TaskInstanceEntity' with value '2026-11-10T18:31:13.411' Cause: java.lang.OutOfMemoryError: Java heap space
+Caused by: org.apache.ibatis.reflection.ReflectionException: Could not set property 'expireAt' of 'class com.mkt.task.entity.TaskInstanceEntity' with value '2026-11-10T18:31:13.411' Cause: java.lang.OutOfMemoryError: Java heap space
+Caused by: java.lang.OutOfMemoryError: Java heap space
+Exception in thread "http-nio-8081-Acceptor" java.lang.OutOfMemoryError: Java heap space

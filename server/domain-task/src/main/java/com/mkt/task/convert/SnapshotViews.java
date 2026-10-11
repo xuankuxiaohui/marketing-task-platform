@@ -12,11 +12,14 @@ import java.util.List;
 
 public final class SnapshotViews {
 
+    /** Shared empty preview — avoids per-card alloc when snapshot has no reward steps. */
+    public static final RewardPreviewView EMPTY_REWARD = new RewardPreviewView("", 0);
+
     private SnapshotViews() {}
 
     public static RewardPreviewView rewardPreview(SnapshotContent snapshot) {
         if (snapshot == null || snapshot.steps() == null) {
-            return new RewardPreviewView("", 0);
+            return EMPTY_REWARD;
         }
         int total = 0;
         String first = "";
@@ -27,6 +30,9 @@ public final class SnapshotViews {
                     first = step.name() == null ? "" : step.name();
                 }
             }
+        }
+        if (total == 0 && first.isEmpty()) {
+            return EMPTY_REWARD;
         }
         return new RewardPreviewView(first, total);
     }

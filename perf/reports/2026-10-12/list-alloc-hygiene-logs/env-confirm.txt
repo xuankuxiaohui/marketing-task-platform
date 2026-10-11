@@ -1,0 +1,39 @@
+=== env-confirm 2026-10-12 05:43:10 +0800 ===
+-- portal-app-1 --
+JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k
+SERVER_TOMCAT_ACCEPT_COUNT=200
+SERVER_TOMCAT_MIN_SPARE=25
+SERVER_TOMCAT_THREADS_MAX=120
+-- portal-app-2 --
+JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss512k
+SERVER_TOMCAT_ACCEPT_COUNT=200
+SERVER_TOMCAT_MIN_SPARE=25
+SERVER_TOMCAT_THREADS_MAX=120
+-- memory limits --
+portal1 mem=1610612736
+portal2 mem=1610612736
+redis mem=268435456 nano=500000000
+-- redisson / session defaults from running process --
+
+/workspace/marketing-task-platform/deploy/R31-go-live-checklist.md:75:  - **Redis/session 稳定化实验（#162 证据-only；勾仍空）**：Redisson netty/timeout 加码实测 **Java heap OOM**（Redis≈空闲）；**产品杠杆不落地**（master 仍 Redisson 32/1s/1、Redis 0.5CPU/256M、Tomcat120）。证据：[drills/2026-10-12-r6-capacity-redis-session.md](drills/2026-10-12-r6-capacity-redis-session.md)。**勾仍空**；**非 RC**。
+/workspace/marketing-task-platform/deploy/docker-compose.yml:53:      timeout: 5s
+/workspace/marketing-task-platform/deploy/docker-compose.yml:72:      timeout: 3s
+/workspace/marketing-task-platform/deploy/docker-compose.yml:103:      timeout: 5s
+/workspace/marketing-task-platform/deploy/docker-compose.yml:135:      timeout: 5s
+/workspace/marketing-task-platform/deploy/docker-compose.yml:167:      timeout: 5s
+/workspace/marketing-task-platform/deploy/docker-compose.yml:201:      timeout: 3s
+/workspace/marketing-task-platform/deploy/drills/2026-10-11-r6-capacity-list-retest.md:92:## http_fail ~61% vs #139 ≈0% (timeouts vs 5xx)
+/workspace/marketing-task-platform/deploy/drills/2026-10-11-r6-capacity-list-retest.md:102:| k6 warnings | **109** `Request Failed` … **`request timeout`** (client-side; aligns with p95=30s / max=60s on failed path) |
+/workspace/marketing-task-platform/deploy/drills/2026-10-11-r6-capacity-list-retest.md:107:**Reading**: #139 saturated into multi-second **successful** responses. Post-#142, higher attempted throughput (~116/s) pushed portals into **pool exhaustion + upstream 502/500**, so k6 `http_req_failed` flipped from 0% → ~61%. Failures are **mostly server/proxy errors and pool waits**, not a pure client-timeout-only story (timeouts are present but secondary by count).
+/workspace/marketing-task-platform/deploy/drills/2026-10-11-r6-capacity-list-retest.md:136:| `hikaricp_connections_timeout_total` rate | **~4–7 /s per portal** during peak |
+/workspace/marketing-task-platform/deploy/drills/2026-10-11-r6-capacity-list-retest.md:144:| Tomcat worker queue metrics | **not exposed** in Prometheus (only `tomcat_sessions_*`); cannot claim queue depth — only infer from VU saturation + 502/timeout |
+/workspace/marketing-task-platform/deploy/nginx/tls.conf.example:5:ssl_session_timeout 1d;
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-rebuild-list.md:95:- Under formal 500 QPS, portals peaked ~**200% CPU** and MySQL ~**105% CPU**; timeouts + VU starvation → P95≈1.58s, dropped≈83/s, http_fail≈1.6%, checks≈98.4%.
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-rebuild-list.md:130:Implication for architect: list-under-p1 on current portal **1.5 GiB** memcg is unstable (OOM kill → restart → timeout/drop storm). Options (architect chooses; **do not** lower DEC-006 gates on this PR): raise portal mem limit / heap tune / allocate less per-request; or other capacity cut — **not** RC.
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-list-settle.md:82:- Under formal 500 QPS, portals climbed to ~**100% mem / high CPU** and MySQL returned to ~**100% CPU**; many request **timeouts** → high http_fail + VU starvation → massive dropped_iterations.
+/workspace/marketing-task-platform/deploy/nginx/drills/docker-compose.tls-static.yml:43:      timeout: 3s
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-redis-session.md:9:| Architect | #162 **产品杠杆不合**（Redisson netty/timeout 加码 → **heap OOM**；Redis 几乎空闲）→ 改 **证据-only**；`mkt` 回退；下一刀 list 堆压减负 |
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-redis-session.md:14:| Redisson on master | netty **32** / timeout **1s** / retry **1** |
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-redis-session.md:21:`RedisResponseTimeout` on `satoken:client:session` → nginx upstream closed/timeout. Tried Redis capacity + Redisson headroom + optional-auth skip-renew.
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-redis-session.md:28:| RedissonFactory | timeout 1s→**2s**; retry 1→**2**; netty 32→**48** |
+/workspace/marketing-task-platform/deploy/drills/2026-10-12-r6-capacity-redis-session.md:45:**Diagnosis:** Redisson netty/timeout/retry bump coincided with **heap OOM**; Redis itself was nearly empty. Product levers **reverted**. Next: list **heap-relief** with Redisson kept ≤32/1s/1; optional A/B skip-renew alone.

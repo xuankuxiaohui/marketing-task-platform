@@ -1,0 +1,46 @@
+{
+  "scenario": "list",
+  "verdict": "FAIL",
+  "master_base": "35eae57",
+  "branch_tip_pre_docs": "4b85a3e",
+  "cut": "list alloc/response hygiene (top-K PendingCard + visible() + reward cache + cycle memo + compileCached)",
+  "skip_renew": false,
+  "caps": {
+    "tomcat": 120,
+    "portal_mem": "1536M",
+    "redisson": "32/1s/1",
+    "redis": "0.5CPU/256M"
+  },
+  "formal_5m": {
+    "qps": 245.94,
+    "p95_ms": 1477.0,
+    "http_fail_pct": 14.82,
+    "checks_pct": 85.17,
+    "dropped_per_s": 179.43,
+    "k6_exit": 99,
+    "note": "rates from k6 end-of-run stdout (scenario:list where tagged); overall http_reqs rate\u2248245.9/s"
+  },
+  "heap": {
+    "peak_portal1": "\u22481.49GiB",
+    "peak_portal2": "\u22481.50GiB",
+    "redis_peak": "\u224814MiB idle",
+    "oom_java_heap": true,
+    "oom_killed": false,
+    "portal2_restarts": 3
+  },
+  "capacity_boxes": "empty",
+  "rc": false,
+  "vs_163_skip_renew": {
+    "qps": "\u2248246 vs \u2248243",
+    "p95_ms": "\u22481477 vs \u2248548 (worse)",
+    "http_fail": "\u224814.8% vs \u224827.5% (better)",
+    "checks": "\u224885% vs \u224872.5% (better)",
+    "dropped": "\u2248179 vs \u2248177 (similar)",
+    "still_heap_oom": true
+  },
+  "artifacts": {
+    "host_logs": "/workspace/r6-capacity-logs/list-alloc-hygiene/",
+    "repo_logs": "perf/reports/2026-10-12/list-alloc-hygiene-logs/"
+  },
+  "generated_at_cst": "2026-10-12 ~05:49 CST"
+}
