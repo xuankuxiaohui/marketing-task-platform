@@ -61,3 +61,7 @@ In-repo artifacts: `risk-on.json`, `risk-off.json`, `risk-delta.txt`, this `EVID
 ## What was not run
 
 - Early-day note above skipped `ad.js`; **re-cut after #150**: formal 5m ad **PASS**. **admin-list p1 after #151**: formal 5m **PASS** (see drill `2026-10-11-r6-capacity-admin-list-p1.md` / `admin-list-p1.json`). Still **not** `run-full.sh` / Outbox recovery; capacity checkbox **empty**.
+
+## Outbox backlog / recovery (after #153)
+
+See [outbox-backlog-recovery.json](outbox-backlog-recovery.json) and [deploy/drills/2026-10-11-r6-capacity-outbox.md](../../deploy/drills/2026-10-11-r6-capacity-outbox.md). Idle PENDING=0; keep-up@50/s peak PENDING≈800 / oldest≤19s; 10k drain ≈119s (~83 eps); DEAD=0. Capacity checkbox still empty; DEC-002 not reopened.
