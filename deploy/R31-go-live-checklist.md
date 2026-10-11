@@ -31,8 +31,9 @@
   - **R6 首片（2026-10-11）**：compose/env 中 admin `SPRING_FLYWAY_ENABLED=true`，portal×2 `SPRING_FLYWAY_ENABLED=false` / `MKT_FLYWAY_ENABLED=false`（进程环境已核对）；admin 日志 `<< Empty Schema >>` → `Successfully applied 9 migrations … v7`；portal 日志 **0** 条 Flyway；两端 readiness UP 后再由 nginx 挂载。证据同上 [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md)。
   - **说明**：本勾证明迁移归属与就绪，**不**等于全量业务旅程或双实例故障通过。
 - [ ] 首次发布失败的恢复步骤与数据保留策略明确。将来采用滚动发布时，再验证新旧版本共存与回退兼容；不能把未上线理解成可以随意改已应用迁移。
-- [ ] portal 双实例及就绪检查有效，单节点退出时服务可继续使用。
-  - **部分观察（非本勾通过）**：R6 首片中 `portal-app-1` / `portal-app-2` 均 readiness UP（见 [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md)）；**单节点退出故障 Continuity 未做**，本勾保持空。
+- [x] portal 双实例及就绪检查有效，单节点退出时服务可继续使用。
+  - **R6 双实例故障 Continuity（2026-10-11）**：bot box Compose `mkt`；baseline portal×2 readiness UP + nginx `/healthz` ok；`docker compose stop portal-app-1` → Exited (143)，portal-app-2 仍 UP；Continuity：`/healthz` 5/5 ok；nginx 门户 API（login `smoke_p0` + points/balance）5/5 PASS（failures=0）；可选恢复后双节点再 UP。证据：[drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md)。
+  - **说明**：本勾覆盖单节点退出时 nginx 入口仍可服务门户流量；**不**等于容量(DEC-006)、恢复取证、真实浏览器或 RC 通过。
 - [x] [deploy-smoke.sh](../ci/deploy-smoke.sh) 的重复启动与业务幂等验证有运行结果；不能仅凭脚本存在认定通过。
   - **R6 旅程片（2026-10-11）**：bot box 运行 `bash ci/deploy-smoke.sh` → exit 0 / `deploy-smoke ok`；compose up×2 就绪；Flyway `1…7`；admin 登录 + prize/task；portal `smoke_p0` 注册/登录 → 任务 start → instance **COMPLETED**、grant **GRANTED**、balance **10**；flow1==flow2 幂等；SQL users/instances/grants=1。证据：[drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md)。
   - **说明**：本勾覆盖脚本定义的重复启动与业务幂等（登录 / 领取 / 完成 / 领奖 API 旅程）；**不**等于真实浏览器静态/刷新路由，也不等于双实例故障或 RC 通过。
@@ -54,5 +55,6 @@
 | 提交/版本 | 环境 | 日期 | 责任人 | 证据位置 | 未解决项 / 发布结论 |
 |---|---|---|---|---|---|
 | `7f73856`（master tip；#135 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 首片） | [drills/2026-10-11-r6-empty-flyway-dual-app.md](drills/2026-10-11-r6-empty-flyway-dual-app.md) | R6 **已开 / 进行中**；首片空库 Flyway + 双应用装配 **PASS**；旅程 / 双实例故障 / 容量 / 恢复 **当时未做**；**非 RC 通过** |
-| `e281f60`（master tip；本 PR 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 旅程片） | [drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md) | R6 **已开 / 进行中**；deploy-smoke 业务旅程（登录/领取/完成/领奖）**PASS**；双实例故障 / 容量 / 恢复 / 真实浏览器静态 **未做**；**非 RC 通过** |
+| `e281f60`（master tip；#136 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 旅程片） | [drills/2026-10-11-r6-full-journey-deploy-smoke.md](drills/2026-10-11-r6-full-journey-deploy-smoke.md) | R6 **已开 / 进行中**；deploy-smoke 业务旅程（登录/领取/完成/领奖）**PASS**；双实例故障 / 容量 / 恢复 / 真实浏览器静态 **当时未做**；**非 RC 通过** |
+| `e9b90ca`（master tip；本 PR 文档/证据） | bot box Compose `mkt`（throwaway volume） | 2026-10-11 CST | Grok Bot（huihuang 授权 R6 双实例故障 Continuity） | [drills/2026-10-11-r6-dual-instance-fault-continuity.md](drills/2026-10-11-r6-dual-instance-fault-continuity.md) | R6 **已开 / 进行中**；portal 单节点退出 Continuity **PASS**；容量 / 恢复 / 真实浏览器静态 **未做**；**非 RC 通过** |
 | 待后续切片 | | | | | |
