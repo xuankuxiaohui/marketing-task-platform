@@ -78,5 +78,25 @@
   "rc": false,
   "dec006_thresholds_changed": false,
   "dec002_reopened": false,
-  "logs": "/workspace/r6-capacity-logs/rebuild-list/"
+  "logs": "/workspace/r6-capacity-logs/rebuild-list/",
+  "oom_diagnosis": {
+    "portal_mem_limit": "1.5GiB",
+    "dmesg_memcg_oom_java": true,
+    "portal_restart_counts_after_window": {
+      "portal-app-1": 6,
+      "portal-app-2": 5
+    },
+    "confirmatory_second_list": {
+      "note": "diagnostic only; primary metrics unchanged above",
+      "verdict": "FAIL",
+      "http_reqs_per_s": 251.5053251074522,
+      "p95_ms": 1976.5851201999958,
+      "http_fail_rate": 0.7115984047259314,
+      "checks_rate": 0.2884015952740686,
+      "dropped_count": 66705,
+      "dropped_per_s": 211.12014989357075,
+      "k6_note": "aborted near end (terminated) while portals near memcg ceiling"
+    }
+  },
+  "run_full_continued": false
 }

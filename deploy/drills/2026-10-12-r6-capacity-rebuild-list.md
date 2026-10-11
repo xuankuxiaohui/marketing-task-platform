@@ -120,3 +120,12 @@ k6 exit **99**. Thresholds crossed: `checks{scenario:list}`, `dropped_iterations
 ## Checklist pointer
 
 See [R31-go-live-checklist.md](../R31-go-live-checklist.md) §数据与运行保障 —「性能报告…满足 DEC-006」: evidence linked; **checkbox remains unchecked**. R6 stays **进行中** / **非 RC**.
+
+## Addendum — portal memcg OOM (same session, post-evidence)
+
+After the formal FAIL above (and PR open), host `dmesg` showed repeated **Memory cgroup OOM** kills of portal `java` against the **1.5 GiB** container limit (examples CST ≈02:41:46, 02:42:11, 02:44:16, 02:48:33). Compose restart counts after the window: portal-app-1 **Restarts=6**, portal-app-2 **Restarts=5**.
+
+A second list attempt in the same session (after a longer settle-to-quiet poll) also **FAIL**ed harder under ongoing OOM thrash (overall ≈251.5/s; formal P95≈1977 ms; http_fail≈71.2%; checks≈28.8%; dropped≈211.1/s; k6 aborted near end with terminated signal while portals sat ≈98–99% of 1.5 GiB). **Primary gate evidence remains the first formal 5m** (P95≈1580 ms / http_fail≈1.64% / dropped≈83.4/s). Second run is diagnostic only — not a threshold change and not a capacity tick.
+
+Implication for architect: list-under-p1 on current portal **1.5 GiB** memcg is unstable (OOM kill → restart → timeout/drop storm). Options (architect chooses; **do not** lower DEC-006 gates on this PR): raise portal mem limit / heap tune / allocate less per-request; or other capacity cut — **not** RC.
+
