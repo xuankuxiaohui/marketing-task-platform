@@ -1,6 +1,6 @@
 # 性能验证
 
-这里存放 k6 场景、容量种子与报告生成入口。旧规格中的性能数字已退役，现有脚本阈值仅是当前配置，不自动成为新的验收目标；[DEC-006](../docs/decisions.md#dec-006性能目标及证据口径) 现有推荐草案（仍开放/待拍板），拍板前脚本数值不得升格为门禁。本文未提供当前版本的容量通过结论。
+这里存放 k6 场景、容量种子与报告生成入口。旧规格中的性能数字已退役。[DEC-006](../docs/decisions.md#dec-006性能目标及证据口径已关闭) **已关闭**：证据口径与场景数值已升格为**门禁**。现有 `perf/*.js` 默认阈值仍是历史配置，**本关闭未改脚本**；脚本与门禁对齐及可复现报告属后续验收/R6 前置。本文未提供当前版本的容量通过结论。
 
 ## 入口与环境
 
@@ -22,11 +22,11 @@ SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh
 
 这些是运行入口，不代表现有脚本已达到验收质量。压测属于发布验收，不进例行 PR CI；`run-full.sh` 在 GitHub Actions 中默认拒绝执行，人工性能作业需要显式配置。
 
-## 测量缺口（F14 本轮已修脚本断言；容量数字仍待 DEC-006）
+## 测量缺口（F14 本轮已修脚本断言；DEC-006 门禁已批准，脚本数值待对齐）
 
 - [advance.js](advance.js) **本轮**：按 VU 分区消费单步 callback（每实例至多一次真实推进），耗尽后回退到大目标 progress 的持续写入；`check` / `advance_business_ok` / `advance_data_exhausted` / `dropped_iterations` 入门槛。随机复用已完成 callback 不再当作持续推进。
 - [complete.js](complete.js) **本轮**：对用户 × 级联任务笛卡尔积线性消费（不再取模重放）；耗尽则 `grant_data_exhausted` 失败；`grant_first_ok` / `grant_business_ok` / `checks` 入门槛，区分首次真实发奖与耗尽后的失败路径。
-- [track.js](track.js) **本轮**：业务 `check`（含 accepted>0）与 `track_business_ok` / `checks` 入门槛；`track_accepted` 设结构性下限（`count>0`/`rate>0`）避免零成功；`dropped_iterations` 入门槛。满配 events/s 数字仍按 DEC-006 确认，不在此脚本自动升格为验收目标。
+- [track.js](track.js) **本轮**：业务 `check`（含 accepted>0）与 `track_business_ok` / `checks` 入门槛；`track_accepted` 设结构性下限（`count>0`/`rate>0`）避免零成功；`dropped_iterations` 入门槛。满配 events/s 门禁见已关闭的 DEC-006；本脚本数值尚未与门禁对齐改写。
 - 恒定到达率场景（advance / track / list / ad）**本轮**已加 `dropped_iterations` 结构性门槛（`rate<0.05`）。验收仍须同时证明负载实际达到、业务结果正确和调度完整。
 - 监控规则存在不等于指标已接入。`TrackDropCounters` **已**注册 Micrometer `mkt.track.drop`（Prometheus `mkt_track_drop_total`，见 F15）；[alerts.yml](../deploy/prometheus/alerts.yml) 的埋点比例仍可能把事件数和请求数相加，需统一计量单位并验证实际暴露数据。
 
