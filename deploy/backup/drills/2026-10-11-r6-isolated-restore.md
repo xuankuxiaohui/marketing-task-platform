@@ -14,9 +14,7 @@
 
 R6 bind of restore/deploy evidence per [RESTORE-DRILL.md](../RESTORE-DRILL.md).
 
-Primary path this slice: **full → continuous `ship-binlog.sh` → A/B → PITR via `BINLOG_ARCHIVE_DIR`** (same pattern as F16 continuous ship). An earlier same-day companion-binlog-only pass (`20261011T075420Z`) also reached PITR_OK; this report records the fuller re-run.
-
- reusable F16 patterns (`backup.sh` / `ship-binlog.sh` / `restore.sh`) → full backup → continuous ship → markers A/B → PITR with `STOP_DATETIME` via `BINLOG_ARCHIVE_DIR` → business check (A present, B absent, ledger=150).
+Primary path this slice: **full → continuous `ship-binlog.sh` → A/B → PITR via `BINLOG_ARCHIVE_DIR`** (same pattern as F16 continuous ship; reusable `backup.sh` / `ship-binlog.sh` / `restore.sh`). Business check: A present, B absent, ledger=150. An earlier same-day companion-binlog-only pass (`20261011T075420Z`) also reached PITR_OK; this report records the fuller re-run.
 
 Deploy-side R6 slices already bound elsewhere (this PR only **points**; does not re-run):
 
