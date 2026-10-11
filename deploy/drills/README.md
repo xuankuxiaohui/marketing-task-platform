@@ -20,6 +20,7 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 | 2026-10-11 | R6 capacity risk-on/off after #149（**PASS** formal 5m ΔP95≈−4ms；双变体业务成功；勾仍空；非 RC） | [2026-10-11-r6-capacity-risk-on.md](2026-10-11-r6-capacity-risk-on.md) |
 | 2026-10-11 | R6 capacity ad after #150（**PASS** formal 5m；P95≈1.84ms；勾仍空；非 RC；未 tick 容量） | [2026-10-11-r6-capacity-ad.md](2026-10-11-r6-capacity-ad.md) |
 | 2026-10-11 | R6 capacity admin-list **p1** after #151（**PASS** formal 5m；instances P95≈700ms≤800；勾仍空；非 RC；未 tick 容量） | [2026-10-11-r6-capacity-admin-list-p1.md](2026-10-11-r6-capacity-admin-list-p1.md) |
+| 2026-10-11 | R6 capacity **勾评估** after #152（汇总已绿 formal；缺口：Outbox/冷热/run-full/p1 captcha；**两勾仍空**；非 RC） | [2026-10-11-r6-capacity-checkbox-eval.md](2026-10-11-r6-capacity-checkbox-eval.md) |
 | 2026-10-11 | R6 browser/static SPA：真实 dist + Playwright 登录/刷新/领取/完成/领奖 **PASS**（进行中；非 RC；容量仍 FAIL） | [2026-10-11-r6-browser-static-spa.md](2026-10-11-r6-browser-static-spa.md) |
 
 - [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) — post-#142 MySQL/GC list hot-path (非 RC)
