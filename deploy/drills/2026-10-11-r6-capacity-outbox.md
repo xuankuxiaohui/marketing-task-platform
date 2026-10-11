@@ -136,3 +136,17 @@ Advance@300 was attempted first but **not** used for Outbox steady numbers: stal
 ## Checklist binding
 
 See [R31-go-live-checklist.md](../R31-go-live-checklist.md) §数据与运行保障 — Outbox backlog/recovery evidence linked; **capacity boxes remain empty**. R6 stays **已开 / 进行中** / **非 RC**.
+
+## Corroboration (same box / concurrent executor pass)
+
+Independent stop→inject→restart pass on the same Compose `mkt` while this evidence was being finalized:
+
+| Item | Value |
+|---|---|
+| Idle steady (6×5s, no load) | PENDING **0**; oldest **0** |
+| Controlled inject (relay stopped) | **20000** portal `task.step.complete` (+6 stray auth.register → peak **20006**); engineered oldest **60 s**; **no drain** while apps stopped (15s hold) |
+| Restart + concurrent ad ~300/s | mid-window **9806 → 0** in **~106 s** (≈**92 eps**); DEAD **0** |
+| Final idle 30s | PENDING **0** |
+
+Consistent with primary ~83 eps / 10k@119s recovery numbers above. Ad concurrent run had tiny startup http_fail/dropped (not an ad capacity claim). Host log: `/workspace/r6-capacity-logs/outbox-backlog-recovery.log` (box-local).
+

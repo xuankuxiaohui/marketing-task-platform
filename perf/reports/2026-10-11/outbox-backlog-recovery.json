@@ -1,0 +1,40 @@
+{
+  "slice": "outbox-backlog-recovery",
+  "master_base": "f147abd",
+  "verdict": "PASS",
+  "capacity_checkbox": false,
+  "rc": false,
+  "dec002_reopened": false,
+  "dec006_thresholds_changed": false,
+  "topology": "portalx2+adminx1 via nginx (compose mkt)",
+  "idle_steady_pending": 0,
+  "idle_oldest_lag_s": 0,
+  "keepup_append_per_s": 50,
+  "keepup_pending_peak": 800,
+  "keepup_pending_last_third_avg": 231,
+  "keepup_oldest_max_s": 19,
+  "keepup_oldest_median_s": 2,
+  "recovery_inject_n": 10000,
+  "recovery_time_to_empty_s": 119,
+  "recovery_effective_drain_eps": 83.2,
+  "recovery_dead_residual": 0,
+  "overload_append_per_s": 200,
+  "overload_pending_peak": 4538,
+  "proposed_gates": {
+    "steady_pending_peak_le": 1000,
+    "steady_pending_last_third_avg_le": 500,
+    "steady_oldest_age_s_le": 30,
+    "recovery_10k_within_s_le": 180,
+    "recovery_dead_residual_eq": 0
+  },
+  "corroboration_this_executor": {
+    "idle_steady_pending_30s": 0,
+    "controlled_20k_under_concurrent_ad": {
+      "peak_pending": 20006,
+      "mid_window_drain_eps": 92,
+      "dead": 0,
+      "note": "stop relay → SQL inject 20k aged 60s → restart + ad@~300/s; mid-window 9806→0 in ~106s"
+    }
+  },
+  "drill": "deploy/drills/2026-10-11-r6-capacity-outbox.md"
+}
