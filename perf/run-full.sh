@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P1 k6 full gate (design §7.8 NFR 性能 1–8 + §2.6 capacity).
+# P1 k6 full gate — DEC-006 formal thresholds (NFR 性能 1–8 + capacity).
 # Staging compose, 5-minute soak. MUST NOT be invoked from routine PR CI.
 set -euo pipefail
 

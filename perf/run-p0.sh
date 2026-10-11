@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P0 k6 gate (design §7.8 NFR 性能 1–5、7). Staging compose, not routine CI.
+# P0 k6 gate — DEC-006 formal thresholds (NFR 性能 1–5、7). Staging compose, not routine CI.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

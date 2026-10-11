@@ -4,9 +4,10 @@ import { Counter, Rate } from "k6/metrics";
 import { BASE, DURATION, loadState, portalHeaders } from "./lib.js";
 
 /**
- * NFR 性能 3: 领取 → 50 步满配级联 → REWARD 完成链, 事务 P95 ≤ 500 ms.
+ * DEC-006 formal gate (NFR 性能 3): claim → 50-step cascade → REWARD completion chain,
+ * grant P95 ≤ 500 ms, business failure ≈ 0. Steady duration default 5m.
  *
- * F14 data lifecycle:
+ * F14 data lifecycle (structural floors alongside DEC-006):
  * - Seed publishes a finite set of cascade tasks and users (cycleType NONE).
  * - Each (user, task) pair yields at most one first real grant; further /start calls are
  *   idempotent replays of the existing instance and must not be counted as first grants.
@@ -15,7 +16,8 @@ import { BASE, DURATION, loadState, portalHeaders } from "./lib.js";
  * - Cascade start may finish the instance in the same request (COMPLETED is still a first
  *   grant for an unused slot). Replay is prevented by not wrapping the pool.
  *
- * Thresholds are structural (zero-success / exhaustion / check failure), not DEC-006 targets.
+ * Thresholds: grant P95 is the DEC-006 formal gate; grant_first_ok / grant_business_ok /
+ * grant_data_exhausted / checks are F14 structural floors.
  */
 
 const grantFirstOk = new Counter("grant_first_ok");

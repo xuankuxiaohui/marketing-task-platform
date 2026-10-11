@@ -3,7 +3,8 @@ import { check } from "k6";
 import { BASE, DURATION, adminHeaders, loadState } from "./lib.js";
 
 /**
- * NFR 性能 7: 后台任务/实例/流水典型列表（50 万实例数据量）P95 ≤ 800 ms.
+ * DEC-006 formal gate (NFR 性能 7): admin typical lists (p1 data scale) P95 ≤ 800 ms,
+ * business failure ≈ 0. Steady duration default 5m.
  */
 export const options = {
   scenarios: {
