@@ -92,6 +92,6 @@ describe("ActivityHubPage", () => {
     listMock.mockRejectedValue(new Error("timeout"));
     const { wrapper } = await mountHub();
     expect(wrapper.get('[data-testid="activity-hub-error"]').text()).toContain(zhCN.common.networkError);
-    expect(wrapper.get('[data-testid="activity-hub-retry"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="activity-hub-retry"]').exists()).toBe(true);
   });
 });

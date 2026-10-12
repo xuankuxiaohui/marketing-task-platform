@@ -37,7 +37,7 @@ function looksLikeErrorCode(msg: string): boolean {
   );
 }
 
-export function resultMessage(result: Result, fallback = zhCN.common.networkError): string {
+export function resultMessage(result: Result, fallback: string = zhCN.common.networkError): string {
   if (!isFail(result)) {
     return fallback;
   }
@@ -52,7 +52,7 @@ export function resultMessage(result: Result, fallback = zhCN.common.networkErro
   return fallback;
 }
 
-export function showPortalFail(result: Result, fallback = zhCN.common.networkError): void {
+export function showPortalFail(result: Result, fallback: string = zhCN.common.networkError): void {
   showFailToast(resultMessage(result, fallback));
 }
 
