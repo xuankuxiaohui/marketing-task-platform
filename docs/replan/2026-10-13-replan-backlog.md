@@ -19,6 +19,9 @@
 
 ## P0-② task / risk / platform 边界图
 
+**活规则文档：** [`docs/replan/module-boundaries.md`](./module-boundaries.md)（架构师拥有；开发只修文中「第一刀」列出的违规）
+
+
 | Done | ID | Item | Owner | Notes |
 |:---:|:---|:---|:---|:---|
 | [ ] | BND-1 | 画出 `domain-task` / `domain-risk` / `platform-*` 允许依赖图 | 架构师 | 开发出一版草稿供批 |
