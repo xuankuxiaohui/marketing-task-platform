@@ -195,6 +195,9 @@ export const zhCN = {
     noMore: "没有更多了",
     finishedEmpty: "暂无任务",
     frozen: "账号受限",
+    claimDailyLimit: "今日领取次数已达上限，明天再来试试",
+    claimRiskBlocked: "暂时无法参与此任务，请稍后再试",
+    claimAccountRestricted: "账号受限，暂无法领取任务",
   },
   common: {
     loading: "加载中…",
