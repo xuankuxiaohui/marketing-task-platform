@@ -4,6 +4,8 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
@@ -39,6 +41,7 @@ import com.mkt.task.response.RewardPreviewView;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -63,6 +66,19 @@ public class TaskPortalAppService {
     private final PlatformCache cache;
     /** Process-local reuse of parsed snapshots while L1 returns the same catalog instance. */
     private volatile ParsedPublishedCatalog parsedPublishedCatalog;
+
+    /**
+     * Architect 2026-10-12: Caffeine TTL 3s + {@code get(key, loader)} singleflight for
+     * portal list current-instances. Loader uses dual-IN (not oneshot-tuple-only).
+     * Keep V9 (idx_user_cycle dropped). 1536M not raised.
+     */
+    private static final Duration CURRENT_INSTANCES_TTL = Duration.ofSeconds(3);
+
+    private final Cache<Long, Map<Long, TaskInstanceEntity>> currentInstancesByUser =
+            Caffeine.newBuilder()
+                    .expireAfterWrite(CURRENT_INSTANCES_TTL)
+                    .maximumSize(8_192)
+                    .build();
 
     @Autowired
     public TaskPortalAppService(
@@ -149,7 +165,7 @@ public class TaskPortalAppService {
         Map<Long, TaskInstanceEntity> currentByTask =
                 userId == null
                         ? Map.of()
-                        : currentInstancesForPublished(userId, published, snapshotByTask, now);
+                        : cachedCurrentInstancesForPublished(userId, published, snapshotByTask, now);
         // One membership/resolver/evalContext per list request (was N× per published task).
         CrowdMembership membership = userId == null ? null : new StoreCrowdMembership(crowds);
         CrowdResolver resolver = userId == null ? null : new StoreCrowdResolver(crowds, users, userId);
@@ -530,11 +546,24 @@ public class TaskPortalAppService {
         }
     }
 
+    /** Singleflight via Caffeine {@code get(key, loader)} — coalesce concurrent loads. */
+    private Map<Long, TaskInstanceEntity> cachedCurrentInstancesForPublished(
+            long userId,
+            List<TaskDefinitionEntity> published,
+            Map<Long, SnapshotContent> snapshotByTask,
+            Instant now) {
+        return currentInstancesByUser.get(
+                userId,
+                ignored -> Map.copyOf(
+                        currentInstancesForPublished(userId, published, snapshotByTask, now)));
+    }
+
     /**
      * Heap-dump relief (2026-10-12): near-ceiling histogram showed ~343k–500k
      * {@link TaskInstanceEntity} + MySQL {@code ByteArrayRow}/LocalDateTime when
      * {@code listByUser} hit seed user_id=1 (500001 rows). Prefer bounded
-     * {@code listByUserTaskCycles} for published (task_id, cycle_key) only.
+     * dual-IN {@code listByUserTaskIdsAndCycleKeys}; wrapped by Caffeine TTL3s
+     * {@code get(key, loader)} singleflight (V9 uk plan).
      */
     private Map<Long, TaskInstanceEntity> currentInstancesForPublished(
             long userId,
@@ -590,8 +619,9 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // Dual-IN (task_id IN + cycle_key IN + Java pair filter). FORCE INDEX experiment
-        // FAIL (P95~3.3s) — stripped before merge; see docs/capacity FORCE evidence.
+        // Dual-IN (task_id IN + cycle_key IN + Java pair filter). Behind Caffeine TTL3s
+        // singleflight. Keep V9 (idx_user_cycle dropped). Forbid oneshot-only / pair128 /
+        // cycle_key-only / FORCE / dual-IN×128.
         List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
         List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();

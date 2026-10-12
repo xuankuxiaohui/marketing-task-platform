@@ -301,8 +301,7 @@ class TaskPortalAppServiceTest {
 
     @Test
     void listLoadsCurrentInstancesViaTaskCycleTuplesNotUnboundedListByUser() {
-        // MySQL dropped cut: listByUser can return 500k+ rows; list must bound via
-        // cycle_key IN (idx_user_cycle) then Java pair filter — not ~1k task_id IN.
+        // Bound via dual-IN + Java pair filter; Caffeine TTL3s singleflight wraps loader.
         TaskInstanceStore spyInstances = spy(instances);
         service = new TaskPortalAppService(
                 definitions,
