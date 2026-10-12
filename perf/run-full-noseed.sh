@@ -81,6 +81,9 @@ fail_stop() {
 run_k6 list.js list || fail_stop list
 run_k6 advance.js advance || fail_stop advance
 
+# Measurement hygiene: backdate today claims (does NOT raise dailyLimit). Needed after
+# stripe expand uses shared fresh pool — prior scenarios burn daily quota.
+python3 "$ROOT/perf/seed/clear_today_claim_counts.py" >>"$LOGDIR/run-full.log" 2>&1 || true
 python3 "$ROOT/perf/seed/seed.py" --risk off >>"$LOGDIR/run-full.log" 2>&1 || true
 run_k6 complete.js complete || { python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true; fail_stop complete; }
 python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true
@@ -89,9 +92,12 @@ run_k6 track.js track || fail_stop track
 run_k6 admin-list.js admin-list || fail_stop admin-list
 run_k6 ad.js ad || fail_stop ad
 
-run_k6 risk-delta.js risk-on -e VARIANT=on || fail_stop risk-on
+python3 "$ROOT/perf/seed/clear_today_claim_counts.py" >>"$LOGDIR/run-full.log" 2>&1 || true
+run_k6 risk-delta.js risk-on -e VARIANT=on -e RISK_POOL=shared || fail_stop risk-on
+# Shared pool: clear again so risk-off has independent daily quota (post-hygiene only).
+python3 "$ROOT/perf/seed/clear_today_claim_counts.py" >>"$LOGDIR/run-full.log" 2>&1 || true
 python3 "$ROOT/perf/seed/seed.py" --risk off >>"$LOGDIR/run-full.log" 2>&1 || true
-run_k6 risk-delta.js risk-off -e VARIANT=off || { python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true; fail_stop risk-off; }
+run_k6 risk-delta.js risk-off -e VARIANT=off -e RISK_POOL=shared || { python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true; fail_stop risk-off; }
 python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true
 
 # Fixed: if ! … heredoc …; then …; fi  (NOT  cmd <<PY || { … }  with body after)
