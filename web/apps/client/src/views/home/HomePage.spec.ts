@@ -392,7 +392,22 @@ describe("HomePage", () => {
     expect(PORTAL_PRIMARY.toLowerCase()).not.toBe("#e11d48");
   });
 
+  it("shows activities loading while pending and never flashes empty (UX-3 P1)", async () => {
+    const pending = deferred<Result<PortalActivityView[]>>();
+    activityMock.mockReturnValueOnce(pending.promise);
+    const { wrapper } = await mountHome(false);
+    expect(wrapper.get('[data-testid="home-activities-loading"]').text()).toBe(zhCN.common.loading);
+    expect(wrapper.find('[data-testid="home-empty"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="home-activities-error"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="home-activity-list"]').exists()).toBe(false);
+    pending.resolve(ok([]));
+    await flushPromises();
+    expect(wrapper.find('[data-testid="home-activities-loading"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="home-empty"]').text()).toContain(zhCN.home.empty);
+  });
+
   it("shows activities fail copy with retry instead of empty (UX-3 P0)", async () => {
+
     activityMock.mockResolvedValue(fail("common.server-error", "服务异常，请稍后重试") as never);
     const { wrapper } = await mountHome(false);
     expect(wrapper.find('[data-testid="home-empty"]').exists()).toBe(false);

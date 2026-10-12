@@ -169,6 +169,9 @@ async function loadActivities(): Promise<void> {
   if (!isCurrent()) {
     return;
   }
+  activitiesLoaded.value = false;
+  activitiesError.value = false;
+  activitiesErrorMessage.value = "";
   try {
     const result = await fetchActivities();
     if (!isCurrent()) {
@@ -360,8 +363,16 @@ watch(requestScope, () => {
       <AdCarousel position-code="home_banner" />
       <section class="home-activities">
         <h2>{{ zhCN.home.activities }}</h2>
+        <div
+          v-if="!activitiesLoaded"
+          role="status"
+          class="home-activities__status"
+          data-testid="home-activities-loading"
+        >
+          {{ zhCN.common.loading }}
+        </div>
         <Empty
-          v-if="activitiesLoaded && activitiesError"
+          v-else-if="activitiesError"
           :description="activitiesErrorMessage"
           data-testid="home-activities-error"
         >

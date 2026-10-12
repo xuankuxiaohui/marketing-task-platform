@@ -3,6 +3,9 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
 import { fail, ok } from "@/test-utils/result";
+import { deferred } from "@/test-utils/deferred";
+import type { Result } from "@mkt/shared";
+import type { PortalActivityView } from "@/api/activity";
 
 vi.mock("@/api/activity", () => ({
   fetchActivities: vi.fn(),
@@ -60,7 +63,22 @@ describe("ActivityHubPage", () => {
     expect(router.currentRoute.value.query.id).toBe("3");
   });
 
-  it("shows empty copy only when the activity catalog is empty", async () => {
+  it("shows loading while catalog is pending and never flashes empty (UX-3 P1)", async () => {
+    const pending = deferred<Result<PortalActivityView[]>>();
+    listMock.mockReturnValueOnce(pending.promise);
+    const { wrapper } = await mountHub();
+    expect(wrapper.get('[data-testid="activity-hub-loading"]').text()).toBe(zhCN.common.loading);
+    expect(wrapper.find('[data-testid="activity-hub-empty"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-hub-error"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-hub-list"]').exists()).toBe(false);
+    pending.resolve(ok([]));
+    await flushPromises();
+    expect(wrapper.find('[data-testid="activity-hub-loading"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-hub-empty"]').text()).toContain(zhCN.activity.empty);
+  });
+
+  it("keeps empty copy only when the activity catalog is empty after load", async () => {
+
     listMock.mockResolvedValue(ok([]));
     const { wrapper } = await mountHub();
     expect(wrapper.get('[data-testid="activity-hub-empty"]').text()).toContain(zhCN.activity.empty);

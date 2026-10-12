@@ -17,6 +17,7 @@ const loadError = ref(false);
 const errorMessage = ref("");
 
 async function load(): Promise<void> {
+  loaded.value = false;
   loadError.value = false;
   errorMessage.value = "";
   try {
@@ -49,8 +50,11 @@ onMounted(() => {
 <template>
   <section class="activity-hub">
     <NavBar :title="zhCN.mine.activityHub" left-arrow @click-left="router.back()" />
+    <div v-if="!loaded" role="status" class="activity-hub__status" data-testid="activity-hub-loading">
+      {{ zhCN.common.loading }}
+    </div>
     <Empty
-      v-if="loaded && loadError"
+      v-else-if="loadError"
       :description="errorMessage"
       data-testid="activity-hub-error"
     >
@@ -59,11 +63,11 @@ onMounted(() => {
       </Button>
     </Empty>
     <Empty
-      v-else-if="loaded && activities.length === 0"
+      v-else-if="activities.length === 0"
       :description="zhCN.activity.empty"
       data-testid="activity-hub-empty"
     />
-    <div v-else-if="activities.length > 0" data-testid="activity-hub-list">
+    <div v-else data-testid="activity-hub-list">
       <button
         v-for="row in activities"
         :key="row.id"
@@ -90,6 +94,10 @@ onMounted(() => {
   min-height: 100%;
   padding-bottom: 16px;
   background: var(--portal-bg);
+}
+.activity-hub__status {
+  padding: 24px 16px;
+  text-align: center;
 }
 .activity-hub__card {
   display: flex;
