@@ -56,3 +56,4 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`.
 
 - [2026-10-12 list alloc/response hygiene FAIL](2026-10-12-r6-capacity-list-alloc-hygiene.md)
+| 2026-10-12 | R6 capacity **risk rule listAll cache after #194**（risk-on FAIL exhausted=378；P95≈75；勾仍空；非 RC） | [2026-10-12-r6-capacity-risk-rule-cache-after-194.md](2026-10-12-r6-capacity-risk-rule-cache-after-194.md) |
