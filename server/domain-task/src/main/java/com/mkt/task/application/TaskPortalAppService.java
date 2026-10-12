@@ -4,6 +4,8 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
@@ -39,6 +41,7 @@ import com.mkt.task.response.RewardPreviewView;
 import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -63,6 +66,19 @@ public class TaskPortalAppService {
     private final PlatformCache cache;
     /** Process-local reuse of parsed snapshots while L1 returns the same catalog instance. */
     private volatile ParsedPublishedCatalog parsedPublishedCatalog;
+
+    /**
+     * Architect 2026-10-12: short-TTL read cache for portal list current-instances.
+     * Caffeine expireAfterWrite 3s (in 2–5s band). Keyed by userId — cycle keys stable
+     * within TTL. Miss → one-shot tuple IN (V9 uk). Caps: 1536M not raised.
+     */
+    private static final Duration CURRENT_INSTANCES_TTL = Duration.ofSeconds(3);
+
+    private final Cache<Long, Map<Long, TaskInstanceEntity>> currentInstancesByUser =
+            Caffeine.newBuilder()
+                    .expireAfterWrite(CURRENT_INSTANCES_TTL)
+                    .maximumSize(8_192)
+                    .build();
 
     @Autowired
     public TaskPortalAppService(
@@ -149,7 +165,7 @@ public class TaskPortalAppService {
         Map<Long, TaskInstanceEntity> currentByTask =
                 userId == null
                         ? Map.of()
-                        : currentInstancesForPublished(userId, published, snapshotByTask, now);
+                        : cachedCurrentInstancesForPublished(userId, published, snapshotByTask, now);
         // One membership/resolver/evalContext per list request (was N× per published task).
         CrowdMembership membership = userId == null ? null : new StoreCrowdMembership(crowds);
         CrowdResolver resolver = userId == null ? null : new StoreCrowdResolver(crowds, users, userId);
@@ -534,8 +550,25 @@ public class TaskPortalAppService {
      * Heap-dump relief (2026-10-12): near-ceiling histogram showed ~343k–500k
      * {@link TaskInstanceEntity} + MySQL {@code ByteArrayRow}/LocalDateTime when
      * {@code listByUser} hit seed user_id=1 (500001 rows). Bounded one-shot
-     * {@code listByUserTaskCycles} — {@code (task_id, cycle_key) IN} (no ≤64 serial).
+     * {@code listByUserTaskCycles} — {@code (task_id, cycle_key) IN} one-shot; wrapped by
+     * {@code cachedCurrentInstancesForPublished} (Caffeine TTL 3s).
      */
+    private Map<Long, TaskInstanceEntity> cachedCurrentInstancesForPublished(
+            long userId,
+            List<TaskDefinitionEntity> published,
+            Map<Long, SnapshotContent> snapshotByTask,
+            Instant now) {
+        Map<Long, TaskInstanceEntity> hit = currentInstancesByUser.getIfPresent(userId);
+        if (hit != null) {
+            return hit;
+        }
+        Map<Long, TaskInstanceEntity> loaded =
+                currentInstancesForPublished(userId, published, snapshotByTask, now);
+        Map<Long, TaskInstanceEntity> frozen = Map.copyOf(loaded);
+        currentInstancesByUser.put(userId, frozen);
+        return frozen;
+    }
+
     private Map<Long, TaskInstanceEntity> currentInstancesForPublished(
             long userId,
             List<TaskDefinitionEntity> published,
