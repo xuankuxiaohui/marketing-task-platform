@@ -92,11 +92,26 @@ run_k6 track.js track || fail_stop track
 run_k6 admin-list.js admin-list || fail_stop admin-list
 run_k6 ad.js ad || fail_stop ad
 
+# Per-leg claim hygiene before risk-on (shared pool).
 python3 "$ROOT/perf/seed/clear_today_claim_counts.py" >>"$LOGDIR/run-full.log" 2>&1 || true
 run_k6 risk-delta.js risk-on -e VARIANT=on -e RISK_POOL=shared || fail_stop risk-on
-# Shared pool: clear again so risk-off has independent daily quota (post-hygiene only).
+# Between legs: portal cold-restart (symmetric JIT/heap) — required measurement hygiene;
+# do NOT skip restart and only flip order to game Δ.
+bash "$ROOT/perf/seed/cold_restart_portals.sh" >>"$LOGDIR/run-full.log" 2>&1 || fail_stop cold-restart
 python3 "$ROOT/perf/seed/clear_today_claim_counts.py" >>"$LOGDIR/run-full.log" 2>&1 || true
 python3 "$ROOT/perf/seed/seed.py" --risk off >>"$LOGDIR/run-full.log" 2>&1 || true
+# brief settle after cold restart
+ok=0
+for i in $(seq 1 18); do
+  line=$(docker stats --no-stream --format '{{.Name}}={{.CPUPerc}}' mkt-mysql-1 mkt-portal-app-1-1 2>/dev/null)
+  mysql_cpu=$(echo "$line" | rg 'mysql' | sed -E 's/.*=([0-9.]+)%.*/\1/')
+  p1_cpu=$(echo "$line" | rg 'portal-app-1' | sed -E 's/.*=([0-9.]+)%.*/\1/')
+  echo "settle-off $i mysql=${mysql_cpu}% p1=${p1_cpu}%" >>"$LOGDIR/run-full.log"
+  python3 -c "open('/tmp/sokrf','w').write('1' if float('${mysql_cpu}' or 999)<8 and float('${p1_cpu}' or 999)<15 else '0')"
+  if [ "$(cat /tmp/sokrf)" = 1 ]; then ok=$((ok+1)); else ok=0; fi
+  if [ "$ok" -ge 3 ] && [ "$i" -ge 3 ]; then echo SETTLE_OFF_READY >>"$LOGDIR/run-full.log"; break; fi
+  sleep 15
+done
 run_k6 risk-delta.js risk-off -e VARIANT=off -e RISK_POOL=shared || { python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true; fail_stop risk-off; }
 python3 "$ROOT/perf/seed/seed.py" --risk on >>"$LOGDIR/run-full.log" 2>&1 || true
 
