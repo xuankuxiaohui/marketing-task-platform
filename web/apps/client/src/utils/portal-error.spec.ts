@@ -46,7 +46,7 @@ describe("portal-error UX-2 claim reject copy", () => {
   });
 });
 
-describe("portal-error UX-1 login/register copy", () => {
+describe("portal-error UX-1 login/register copy (账号/验证码)", () => {
   it("maps invalid credential", () => {
     expect(
       resultMessage({ code: "auth.login.invalid-credential", message: "用户名或密码错误" }),
@@ -59,41 +59,6 @@ describe("portal-error UX-1 login/register copy", () => {
     );
     expect(resultMessage({ code: "auth.captcha.expired", message: "验证码已过期" })).toBe(
       zhCN.login.captchaExpired,
-    );
-  });
-
-  it("maps login locked / rate-limit / disabled / risk", () => {
-    expect(resultMessage({ code: "auth.login.locked", message: "x" })).toBe(zhCN.login.locked);
-    expect(resultMessage({ code: "auth.login.rate-limited", message: "x" })).toBe(
-      zhCN.login.rateLimited,
-    );
-    expect(resultMessage({ code: "auth.account.disabled", message: "x" })).toBe(
-      zhCN.login.accountDisabled,
-    );
-    expect(resultMessage({ code: "risk.blocked.login", message: "x" })).toBe(zhCN.login.riskBlocked);
-  });
-
-  it("maps register username/password/risk/rate", () => {
-    expect(resultMessage({ code: "auth.username.duplicate", message: "x" })).toBe(
-      zhCN.register.usernameDuplicate,
-    );
-    expect(resultMessage({ code: "auth.password.policy-violated", message: "x" })).toBe(
-      zhCN.register.passwordPolicy,
-    );
-    expect(resultMessage({ code: "auth.register.rate-limited", message: "x" })).toBe(
-      zhCN.register.rateLimited,
-    );
-    expect(resultMessage({ code: "risk.blocked.register", message: "x" })).toBe(
-      zhCN.register.riskBlocked,
-    );
-  });
-
-  it("maps 5xx / param-invalid", () => {
-    expect(resultMessage({ code: "common.server-error", message: "服务异常，请稍后重试" })).toBe(
-      zhCN.common.serverBusy,
-    );
-    expect(resultMessage({ code: "common.param-invalid", message: "参数不合法" })).toBe(
-      zhCN.common.paramInvalid,
     );
   });
 

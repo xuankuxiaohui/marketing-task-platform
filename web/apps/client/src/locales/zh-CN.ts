@@ -18,12 +18,8 @@ export const zhCN = {
     showPassword: "显示密码",
     hidePassword: "隐藏密码",
     invalidCredential: "账号或密码不正确，请重试",
-    locked: "账号已暂时锁定，请稍后再试",
-    rateLimited: "登录太频繁，请稍后再试",
     captchaInvalid: "验证码不正确，请重新输入",
     captchaExpired: "验证码已过期，请点击刷新后重试",
-    accountDisabled: "账号已停用，请联系客服",
-    riskBlocked: "暂时无法登录，请稍后再试",
   },
   register: {
     title: "注册",
@@ -40,11 +36,6 @@ export const zhCN = {
     usernameAvailable: "用户名可用",
     usernameFormat: "用户名格式不正确",
     usernameDuplicate: "用户名已存在",
-    rateLimited: "注册太频繁，请稍后再试",
-    captchaInvalid: "验证码不正确，请重新输入",
-    captchaExpired: "验证码已过期，请点击刷新后重试",
-    passwordPolicy: "密码至少 8 位，且须同时包含字母和数字",
-    riskBlocked: "暂时无法完成注册，请稍后再试",
   },
   session: {
     kickedConcurrent: "账号已在其他设备登录",
@@ -217,7 +208,5 @@ export const zhCN = {
     confirm: "确认",
     retry: "重试",
     networkError: "网络异常，请重试",
-    serverBusy: "服务暂时繁忙，请稍后再试",
-    paramInvalid: "填写有误，请检查后重试",
   },
 } as const;
