@@ -1,6 +1,8 @@
 # Project health checklist draft (2026-10-13) — post capacity Δ收口
 
-**Status:** draft for 架构师/产品. **Not** a rewrite plan. **Not** RC. Capacity勾仍空.
+**Status:** draft — **产品优先级已写入**（2026-10-13）；待架构对齐. **Not** a rewrite plan. **Not** RC. Capacity勾仍空.
+
+**主线：** 整项目重规划；**默认不再排容量刀**。两勾仍空、非 RC。
 
 **Trigger:** Team 2026-10-12 ~23:51 — after risk Δ收口, switch to **whole-project replan**; forbid big-bang rewrite; inventory first.
 
@@ -57,18 +59,30 @@
 
 **Action:** product walkthrough + severity tags (P0/P1/P2); **no UI rewrite** in this draft.
 
-## 5. Proposed replan phases (for 架构师/产品 to edit)
-1. **Doc triage** — archive capacity FAIL noise; one living capacity status page.
-2. **Boundary map** — freeze illegal dependencies; small seams only.
-3. **UX debt backlog** — login/list/claim copy & states (product-owned).
-4. **Selective hardening** — only if product prioritizes (not capacity soak by default).
-5. **RC gate** — reopen only with explicit DEC/R31 owner.
+## 5. 产品已定优先级（2026-10-13）— 请架构对齐
 
-## 6. Explicit non-goals
-- Big-bang rewrite / greenfield
+主线：整项目重规划；默认不再排容量刀。两勾仍空、非 RC。界面：美观简洁，优先门户/登录/领奖三条旅程；有界切片，不整站重写。
+
+| 级 | 主题 | 范围 |
+|---|---|---|
+| **P0** | 旅程完整性 | 门户/登录/领奖：登录报错文案、领取被拒（日限/risk）说明、列表空态/加载/失败态。只列债分级，不整站重写。 |
+| **P0** | 能力边界 | 文档与实现一致；过时 capacity FAIL 噪音归档；R31 勾空保持诚实；一份活的状态页。 |
+| **P1** | 可读性/模块边界 | 跟架构体检清单，有界小切，禁大重构。 |
+| **P2** | 选择性加固 / RC | 等产品+架构明确再开。 |
+
+#196 证据勾空产品认；合入听架构+CI。
+
+## 6. Proposed replan phases（按产品优先级重排）
+1. **P0 UX debt backlog** — login / list / claim copy & states（产品主导 severity）。
+2. **P0 Doc triage** — archive capacity FAIL noise；one living status page；R31 勾空诚实。
+3. **P1 Boundary map** — 架构主导：freeze illegal deps；小缝合 only。
+4. **P2 Selective hardening / RC** — 明确 DEC/R31 owner 后再开。
+
+## 7. Explicit non-goals
+- Big-bang rewrite / greenfield / 整站 UI 重写
 - Lowering DEC-006 Δ or relaxing k6 gates
 - Raising dailyLimit / 1536M / Tomcat / Redisson “to pass”
 - More capacity knives unless 架构师 re-opens
 
 ## Ping
-开发 → 架构师/产品: please review this draft, prioritize §1–4, assign owners.
+开发 → @架构师: 请对齐产品 §5 优先级并分配 P1 边界切片 owner。产品侧 P0 旅程债已认。
