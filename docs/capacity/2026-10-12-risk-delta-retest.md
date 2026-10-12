@@ -37,6 +37,10 @@ Ad-hoc `run-full-noseed.sh` (and the risk-delta-only twin) put `|| { … }` betw
 - **禁** lower Δ gate; **禁** raise 1536M.
 - Next: continue/re-run **run-full** fail-stop 不重seed on same `mkt` (must clear risk-delta-gate; prefer full stage PASS). 容量勾评估 only if full PASS.
 
+
+## Follow-up: run-full after #175
+Same `mkt` 不重seed run-full → **PASS-ALL** (Δ≈7.70 ms). See [2026-10-12-run-full-after-175.md](2026-10-12-run-full-after-175.md). 勾空; 非 RC.
+
 ## Artifacts
 `/workspace/r6-capacity-logs/risk-delta-retest/`  
 (`SUMMARY.txt`, `result.txt`, `risk-delta.txt`, `k6-risk-on.log`, `k6-risk-off.log`, `run.log`, `console.log`)  
