@@ -38,3 +38,6 @@ Evidence: [docs/capacity/2026-10-12-admin-list-instances-relief.md](../../docs/c
 2. **Not** threshold / Δ / 1536M change.
 3. **Not** run-full / RC.
 4. **Not** merge without architect 批合.
+
+## Post-merge confirm
+Merged as #178 (`5695191`). Same-mkt formal admin-list confirm **PASS** (instances P95≈116.62 ms). See [confirm](../../docs/capacity/2026-10-12-admin-list-confirm-after-178.md) and logs `/workspace/r6-capacity-logs/admin-list-confirm-after-178/`. **勾仍空; 非 RC.**

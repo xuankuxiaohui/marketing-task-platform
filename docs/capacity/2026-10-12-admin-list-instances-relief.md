@@ -1,6 +1,6 @@
 # Capacity: admin-list instances 减压 — COUNT TTL 3s (2026-10-12)
 
-**Status:** admin-list formal 5m **PASS** (勾空; 非 RC). **先测后合** — asking architect **批合**; do **not** auto-merge product.  
+**Status:** **merged** as #178 → `5695191`. Pre-merge formal PASS; post-merge admin-list confirm PASS (勾空; 非 RC).  
 **Baseline before:** run-full-after-#175 admin-instances P95≈**795.78 ms** (≤800; near ceiling).  
 **After:** admin-instances P95≈**118.07 ms**.  
 **Locks:** Tomcat120; Redisson≤32/1s/1; portal **1536M not raised**; **禁降 Δ 门禁**.
@@ -39,4 +39,7 @@ Logs: `/workspace/r6-capacity-logs/admin-list-relief/`. Tiny summary: `perf/repo
 1. **Not** capacity checklist tick (勾仍空; 非 RC).
 2. **Not** DEC-006 threshold value change / Δ gate lower / 1536M raise.
 3. **Not** full run-full retest (targeted admin-list only; architect may order run-full after 批合).
-4. **Not** auto-merge — await architect 批合.
+4. **Merged** #178 (`5695191`); post-merge confirm: [admin-list-confirm-after-178](2026-10-12-admin-list-confirm-after-178.md).
+
+## Post-merge confirm (#178 → `5695191`)
+Same `mkt` 不重seed; admin rebuilt from merge tip. Formal 5m **PASS**: instances P95≈**116.62 ms**; definitions 92.55; grants 283.51; checks 100%; http_fail 0%. Logs: `/workspace/r6-capacity-logs/admin-list-confirm-after-178/`.
