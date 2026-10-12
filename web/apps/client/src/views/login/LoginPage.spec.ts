@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PortalAuthData, CaptchaData } from "@/api/auth";
+import { zhCN } from "@/locales/zh-CN";
 import { setField } from "@/test-utils/form";
 import { fail, ok } from "@/test-utils/result";
 
@@ -96,7 +97,7 @@ describe("LoginPage", () => {
     await setField(wrapper, "login-captcha", "bad");
     await wrapper.get("form").trigger("submit.prevent");
     await flushPromises();
-    expect(wrapper.get('[data-testid="login-error"]').text()).toBe("验证码错误");
+    expect(wrapper.get('[data-testid="login-error"]').text()).toBe(zhCN.login.captchaInvalid);
     expect(fetchCaptchaMock).toHaveBeenCalledTimes(2);
   });
 
@@ -108,7 +109,7 @@ describe("LoginPage", () => {
     await setField(wrapper, "login-captcha", "ab12");
     await wrapper.get("form").trigger("submit.prevent");
     await flushPromises();
-    expect(wrapper.get('[data-testid="login-error"]').text()).toBe("用户名或密码错误");
+    expect(wrapper.get('[data-testid="login-error"]').text()).toBe(zhCN.login.invalidCredential);
     expect(fetchCaptchaMock).toHaveBeenCalledTimes(1);
   });
 
@@ -136,6 +137,17 @@ describe("LoginPage", () => {
     expect(wrapper.get('[data-testid="login-submit"]').attributes("disabled")).toBeDefined();
     finish(ok<PortalAuthData>({ token: "client:t", userId: 9, nickname: "用户9" }));
     await flushPromises();
+  });
+
+  it("shows human network copy when login throws", async () => {
+    loginMock.mockRejectedValue(new Error("timeout"));
+    const { wrapper } = await mountLogin();
+    await setField(wrapper, "login-username", "bob_01");
+    await setField(wrapper, "login-password", "abcdefg1");
+    await setField(wrapper, "login-captcha", "ab12");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="login-error"]').text()).toBe(zhCN.common.networkError);
   });
 });
 

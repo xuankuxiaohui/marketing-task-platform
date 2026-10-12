@@ -6,6 +6,7 @@ import { CAPTCHA_ERROR_CODES, fetchCaptcha, login } from "@/api/auth";
 import CaptchaField from "@/components/CaptchaField.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
+import { resultMessage } from "@/utils/portal-error";
 
 defineOptions({ name: "LoginForm" });
 
@@ -27,14 +28,18 @@ const errorMessage = ref("");
 const loading = ref(false);
 
 async function refreshCaptcha(): Promise<void> {
-  const result = await fetchCaptcha();
-  if (isOk(result) && result.data) {
-    captchaId.value = result.data.captchaId ?? "";
-    captchaImage.value = result.data.imageBase64 ?? "";
-    return;
-  }
-  if (isFail(result)) {
-    errorMessage.value = result.message;
+  try {
+    const result = await fetchCaptcha();
+    if (isOk(result) && result.data) {
+      captchaId.value = result.data.captchaId ?? "";
+      captchaImage.value = result.data.imageBase64 ?? "";
+      return;
+    }
+    if (isFail(result)) {
+      errorMessage.value = resultMessage(result);
+    }
+  } catch {
+    errorMessage.value = zhCN.common.networkError;
   }
 }
 
@@ -54,12 +59,14 @@ async function submit(): Promise<void> {
       return;
     }
     if (isFail(result)) {
-      errorMessage.value = result.message;
+      errorMessage.value = resultMessage(result);
       if (CAPTCHA_ERROR_CODES.has(result.code)) {
         captchaCode.value = "";
         await refreshCaptcha();
       }
     }
+  } catch {
+    errorMessage.value = zhCN.common.networkError;
   } finally {
     loading.value = false;
   }

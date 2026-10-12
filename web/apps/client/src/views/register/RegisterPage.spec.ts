@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaptchaData, PortalAuthData, UsernameAvailableData } from "@/api/auth";
 import { zhCN } from "@/locales/zh-CN";
 import { setField } from "@/test-utils/form";
-import { ok } from "@/test-utils/result";
+import { fail, ok } from "@/test-utils/result";
 
 vi.mock("@/api/auth", async () => {
   const actual = await vi.importActual<typeof import("@/api/auth")>("@/api/auth");
@@ -103,5 +103,33 @@ describe("RegisterPage", () => {
     await wrapper.get('[data-testid="register-username"]').find("input").trigger("blur");
     await flushPromises();
     expect(wrapper.get('[data-testid="register-username-hint"]').text()).toBe(zhCN.register.usernameDuplicate);
+  });
+
+  it("shows human captcha copy and refreshes captcha on register fail", async () => {
+    registerMock.mockResolvedValue(fail("auth.captcha.invalid", "auth.captcha.invalid") as never);
+    fetchCaptchaMock
+      .mockResolvedValueOnce(ok<CaptchaData>({ captchaId: "cid-1", imageBase64: "data:image/png;base64,xx" }))
+      .mockResolvedValueOnce(ok<CaptchaData>({ captchaId: "cid-2", imageBase64: "data:image/png;base64,yy" }));
+    const { wrapper } = await mountRegister();
+    await setField(wrapper, "register-username", "bob_01");
+    await setField(wrapper, "register-password", "abcdefg1");
+    await setField(wrapper, "login-captcha", "bad");
+    await wrapper.get('[data-testid="register-agree"]').trigger("click");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="register-error"]').text()).toBe(zhCN.login.captchaInvalid);
+    expect(fetchCaptchaMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows human network copy when register throws", async () => {
+    registerMock.mockRejectedValue(new Error("timeout"));
+    const { wrapper } = await mountRegister();
+    await setField(wrapper, "register-username", "bob_01");
+    await setField(wrapper, "register-password", "abcdefg1");
+    await setField(wrapper, "login-captcha", "ab12");
+    await wrapper.get('[data-testid="register-agree"]').trigger("click");
+    await wrapper.get("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="register-error"]').text()).toBe(zhCN.common.networkError);
   });
 });

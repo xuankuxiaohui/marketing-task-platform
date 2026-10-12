@@ -9,6 +9,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { HOME_ROUTE } from "@/router/guards";
 import { useSessionStore } from "@/store/session";
 import { portalPasswordSatisfied } from "@/utils/password";
+import { resultMessage } from "@/utils/portal-error";
 import { portalUsernameSatisfied } from "@/utils/username";
 
 defineOptions({ name: "RegisterPage" });
@@ -35,10 +36,18 @@ const passwordHint = computed(() => {
 const canSubmit = computed(() => agreed.value && !loading.value);
 
 async function refreshCaptcha(): Promise<void> {
-  const result = await fetchCaptcha();
-  if (isOk(result) && result.data) {
-    captchaId.value = result.data.captchaId ?? "";
-    captchaImage.value = result.data.imageBase64 ?? "";
+  try {
+    const result = await fetchCaptcha();
+    if (isOk(result) && result.data) {
+      captchaId.value = result.data.captchaId ?? "";
+      captchaImage.value = result.data.imageBase64 ?? "";
+      return;
+    }
+    if (isFail(result)) {
+      errorMessage.value = resultMessage(result);
+    }
+  } catch {
+    errorMessage.value = zhCN.common.networkError;
   }
 }
 
@@ -64,7 +73,7 @@ async function onUsernameBlur(): Promise<void> {
     return;
   }
   if (isFail(result)) {
-    usernameHint.value = result.message;
+    usernameHint.value = resultMessage(result);
   }
 }
 
@@ -88,12 +97,14 @@ async function submit(): Promise<void> {
       return;
     }
     if (isFail(result)) {
-      errorMessage.value = result.message;
+      errorMessage.value = resultMessage(result);
       if (CAPTCHA_ERROR_CODES.has(result.code)) {
         captchaCode.value = "";
         await refreshCaptcha();
       }
     }
+  } catch {
+    errorMessage.value = zhCN.common.networkError;
   } finally {
     loading.value = false;
   }

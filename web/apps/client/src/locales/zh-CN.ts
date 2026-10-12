@@ -17,6 +17,9 @@ export const zhCN = {
     toRegister: "没有账号？去注册",
     showPassword: "显示密码",
     hidePassword: "隐藏密码",
+    invalidCredential: "账号或密码不正确，请重试",
+    captchaInvalid: "验证码不正确，请重新输入",
+    captchaExpired: "验证码已过期，请点击刷新后重试",
   },
   register: {
     title: "注册",

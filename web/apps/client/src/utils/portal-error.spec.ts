@@ -45,3 +45,26 @@ describe("portal-error UX-2 claim reject copy", () => {
     expect(toast).toHaveBeenCalledWith(zhCN.task.claimDailyLimit);
   });
 });
+
+describe("portal-error UX-1 login/register copy (账号/验证码)", () => {
+  it("maps invalid credential", () => {
+    expect(
+      resultMessage({ code: "auth.login.invalid-credential", message: "用户名或密码错误" }),
+    ).toBe(zhCN.login.invalidCredential);
+  });
+
+  it("maps captcha invalid/expired without exposing codes", () => {
+    expect(resultMessage({ code: "auth.captcha.invalid", message: "auth.captcha.invalid" })).toBe(
+      zhCN.login.captchaInvalid,
+    );
+    expect(resultMessage({ code: "auth.captcha.expired", message: "验证码已过期" })).toBe(
+      zhCN.login.captchaExpired,
+    );
+  });
+
+  it("does not toast raw auth.* codes as message", () => {
+    expect(resultMessage({ code: "auth.unknown", message: "auth.unknown" })).toBe(
+      zhCN.common.networkError,
+    );
+  });
+});
