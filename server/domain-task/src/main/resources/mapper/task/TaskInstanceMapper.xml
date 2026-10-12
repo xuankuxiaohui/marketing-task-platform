@@ -34,7 +34,7 @@
 
     <select id="selectByUserTaskIdsAndCycleKeys" resultType="com.mkt.task.entity.TaskInstanceEntity">
         SELECT <include refid="cols"/>
-        FROM task_instance
+        FROM task_instance FORCE INDEX (uk_user_task_cycle)
         WHERE user_id = #{userId}
           AND task_id IN
         <foreach collection="taskIds" item="tid" open="(" separator="," close=")">

@@ -590,9 +590,8 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // Dual-IN restore (#165 shape): task_id IN + cycle_key IN + Java pair filter.
-        // Pair 分批 (chunk 128) formal FAIL (P95~5.5s, dropped~362/s) — reverted.
-        // Keep V8 idx_user_cycle; forbid cycle_key-only.
+        // Dual-IN + FORCE INDEX (uk_user_task_cycle): avoid optimizer picking idx_user_cycle
+        // under V8 coexistence (digest/warm FAIL). Keep dual-IN; forbid cycle_key-only/pair128.
         List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
         List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();
