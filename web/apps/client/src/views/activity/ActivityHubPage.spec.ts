@@ -66,9 +66,32 @@ describe("ActivityHubPage", () => {
     expect(wrapper.get('[data-testid="activity-hub-empty"]').text()).toContain(zhCN.activity.empty);
   });
 
-  it("shows empty copy when the catalog request fails", async () => {
+  it("shows fail copy with retry when the catalog request fails (UX-3 P0)", async () => {
     listMock.mockResolvedValue(fail("activity.not-found", "不存在"));
     const { wrapper } = await mountHub();
-    expect(wrapper.get('[data-testid="activity-hub-empty"]').text()).toContain(zhCN.activity.empty);
+    expect(wrapper.find('[data-testid="activity-hub-empty"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-hub-error"]').text()).toContain(zhCN.common.listLoadFailed);
+    expect(wrapper.get('[data-testid="activity-hub-retry"]').text()).toBe(zhCN.common.retry);
+    listMock.mockResolvedValue(
+      ok([
+        {
+          id: 3,
+          code: "summer",
+          name: "夏季专题",
+          startTime: "2026-08-01T00:00:00Z",
+          endTime: "2026-08-31T16:00:00Z",
+        },
+      ]),
+    );
+    await wrapper.get('[data-testid="activity-hub-retry"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="activity-hub-card"]').text()).toContain("夏季专题");
+  });
+
+  it("shows human network copy with retry when catalog throws", async () => {
+    listMock.mockRejectedValue(new Error("timeout"));
+    const { wrapper } = await mountHub();
+    expect(wrapper.get('[data-testid="activity-hub-error"]').text()).toContain(zhCN.common.networkError);
+    expect(wrapper.get('[data-testid="activity-hub-retry"]').exists()).toBe(true);
   });
 });

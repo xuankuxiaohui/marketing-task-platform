@@ -1,27 +1,37 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { Empty, NavBar } from "vant";
+import { Button, Empty, NavBar } from "vant";
 import { isOk } from "@mkt/shared";
 import { fetchActivities, type PortalActivityView } from "@/api/activity";
 import FallbackImage from "@/components/FallbackImage.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { activityCover, activityWindow } from "@/utils/activity-cover";
-import { showNetworkFail } from "@/utils/portal-error";
 
 defineOptions({ name: "ActivityHubPage" });
 
 const router = useRouter();
 const activities = ref<PortalActivityView[]>([]);
 const loaded = ref(false);
+const loadError = ref(false);
+const errorMessage = ref("");
 
 async function load(): Promise<void> {
+  loadError.value = false;
+  errorMessage.value = "";
   try {
     const result = await fetchActivities();
-    activities.value = isOk(result) && result.data ? result.data : [];
-  } catch {
-    showNetworkFail();
+    if (isOk(result) && result.data) {
+      activities.value = result.data;
+      return;
+    }
     activities.value = [];
+    loadError.value = true;
+    errorMessage.value = zhCN.common.listLoadFailed;
+  } catch {
+    activities.value = [];
+    loadError.value = true;
+    errorMessage.value = zhCN.common.networkError;
   } finally {
     loaded.value = true;
   }
@@ -39,7 +49,20 @@ onMounted(() => {
 <template>
   <section class="activity-hub">
     <NavBar :title="zhCN.mine.activityHub" left-arrow @click-left="router.back()" />
-    <Empty v-if="loaded && activities.length === 0" :description="zhCN.activity.empty" data-testid="activity-hub-empty" />
+    <Empty
+      v-if="loaded && loadError"
+      :description="errorMessage"
+      data-testid="activity-hub-error"
+    >
+      <Button type="primary" size="small" data-testid="activity-hub-retry" @click="load">
+        {{ zhCN.common.retry }}
+      </Button>
+    </Empty>
+    <Empty
+      v-else-if="loaded && activities.length === 0"
+      :description="zhCN.activity.empty"
+      data-testid="activity-hub-empty"
+    />
     <div v-else-if="activities.length > 0" data-testid="activity-hub-list">
       <button
         v-for="row in activities"

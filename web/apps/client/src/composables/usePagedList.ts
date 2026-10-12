@@ -55,7 +55,7 @@ export function usePagedList<T>(options: PagedListOptions<T>) {
       }
       if (!isOk(result) || !result.data) {
         error.value = true;
-        errorMessage.value = resultMessage(result);
+        errorMessage.value = resultMessage(result, zhCN.common.listLoadFailed);
         return;
       }
       const next = result.data.records ?? [];
