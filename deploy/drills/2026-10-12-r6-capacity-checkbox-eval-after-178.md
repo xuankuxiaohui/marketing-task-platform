@@ -57,3 +57,9 @@ See [R31-go-live-checklist.md](../R31-go-live-checklist.md) §数据与运行保
 ## Follow-up: run-full-noseed after #179 merge (same day)
 
 Architect ordered same-mkt **不重seed** `run-full-after-178` after #179 merge. Result: **FAIL-STOP at list** (dropped≈0.319/s). See [docs/capacity/2026-10-12-run-full-after-178.md](../../docs/capacity/2026-10-12-run-full-after-178.md). **勾仍空**; **非 RC**; await architect next knife.
+
+## Follow-up: list settle + run-full after #180 (same day)
+
+Architect ordered #180 merge (CI green) → same-mkt settle → isolated list → continue run-full.
+Isolated list **PASS** (dropped **0**; P95≈139ms). run-full **FAIL-STOP at complete** (grant/checks/http_fail).
+See [docs/capacity/2026-10-12-list-settle-run-full-after-180.md](../../docs/capacity/2026-10-12-list-settle-run-full-after-180.md). **勾仍空**; **非 RC**; await architect next knife.

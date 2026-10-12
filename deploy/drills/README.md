@@ -38,6 +38,8 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 
 - [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) — post-#142 MySQL/GC list hot-path (非 RC)
 
+| 2026-10-12 | R6 capacity **list settle + run-full after #180**（isolated list **PASS** dropped0；run-full **FAIL-STOP at complete**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-settle-after-180.md](2026-10-12-r6-capacity-list-settle-after-180.md) |
+
 Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`.
 
 - [2026-10-12 list alloc/response hygiene FAIL](2026-10-12-r6-capacity-list-alloc-hygiene.md)
