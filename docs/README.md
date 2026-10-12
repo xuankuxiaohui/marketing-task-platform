@@ -12,6 +12,7 @@
 | 后续重构的依据与候选批次 | [重构方案](refactoring-blueprint.md) | 历史诊断与计划（R0–R6）；已合 PR 常用 P1–P4 相位，二者对照见蓝图 §4；**R6 已开 / 进行中**（首片证据见 deploy/drills）；实施前核实问题是否仍存在 |
 | 已确认或仍待定的行为 | [决策记录](decisions.md) | 保留明确决定；未决项不因旧规格删除而自动获批 |
 | 开发命令与工程边界 | [server](../server/README.md) / [web](../web/README.md)、[AGENTS](../AGENTS.md) | 构建、测试、契约生成和仓库约束 |
+| 模块谁可以调用谁 | [模块边界](replan/module-boundaries.md) | P1 活规则（架构师）；开发仅在列出的违规上做小修复 |
 | 界面与交互工作 | [DESIGN](../DESIGN.md) | 体验约束和视觉验收方式 |
 | 历史需求对应哪些测试 | [验证映射](verification-matrix.md) | 历史检索索引，不是当前规格或执行报告 |
 | 发布及性能如何取证 | [部署](../deploy/R31-go-live-checklist.md)、[性能](../perf/README.md) | 检查入口与证据要求；性能目标见 [DEC-006](decisions.md#dec-006性能目标及证据口径已关闭)（**已关闭**；证据口径与场景数值为门禁） |
