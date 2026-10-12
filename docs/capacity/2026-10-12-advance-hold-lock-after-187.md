@@ -34,9 +34,23 @@ Host logs: `/workspace/r6-capacity-logs/hold-lock-knife/` and `/workspace/r6-cap
 - `MetricsSchedulerTest` (incl. `skipsWhenDisabled`) + `MetricsConfigurationTest` (incl. `wiresSchedulerDisabledShortCircuit`) PASS
 - Command: `mvn -pl domain-task,admin-app -am test -Dtest='MetricsSchedulerTest,MetricsConfigurationTest,*TaskStep*' -Dsurefire.failIfNoSpecifiedTests=false -Djacoco.skip=true`
 
+
+## run-full-noseed (same mkt; no reseed) — through complete **PASS** (续跑中)
+
+Started ~18:41 CST tip `b181217`; fail-stop by stage. Host: `/workspace/r6-capacity-logs/hold-lock-knife/run-full/`.
+
+| stage | result | notes |
+|---|---|---|
+| list | **PASS** | list P95≈15.0ms; scenario dropped **0**; checks 100%; http_fail 0% |
+| advance | **PASS** | progress P95≈44.5ms; callback≈25.9ms; dropped **0** |
+| complete | **PASS** | grant P95≈**362.6**ms ≤500; checks 100%; http_fail 0%; grant_first_ok 25311 |
+| track… | in progress | suite continues (admin-list / ad / risk-on/off) |
+
+**勾空; 非 RC.** Caps/bans unchanged.
+
 ## Disposition
 - **勾空; 非 RC.** Do **not** tick either capacity box.
-- Isolated advance **PASS** → **run-full-noseed** started on same mkt (fail-stop; at least through complete→Δ per convention).
+- Isolated advance **PASS** → **run-full-noseed** through **complete PASS** (grant P95≈362.6); suite continues (track…).
 - Ask architect: **CI green → merge #188**; keep 勾空; confirm next after run-full stage outcome.
 - Caps unchanged; bans held.
 
