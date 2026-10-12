@@ -15,7 +15,9 @@ import { BASE, DURATION, loadState, portalHeaders } from "./lib.js";
  * cascade elapsed (R-e).
  *
  * warm → formal (same pattern as complete.js): cold JIT excluded from gate P95.
- * Finite striped (user × riskTask) pool per variant — no modulo wrap.
+ * Finite striped (user × riskTask) pool — no modulo wrap; grant_data_exhausted
+ * count==0 stays mandatory. Default RISK_POOL=shared uses full fresh users for
+ * each variant (expand via perf/seed/expand_risk_stripe.py). RISK_POOL=half = legacy.
  */
 const grantDataExhausted = new Counter("grant_data_exhausted");
 
@@ -58,12 +60,23 @@ export function setup() {
   const tasks = state.riskTaskIds || state.cascadeTaskIds || [];
   // Skip pre-started progress/callback users ([:150]) — they already burned a daily claim.
   const fresh = allUsers.slice(150);
-  const half = Math.floor(fresh.length / 2);
-  const variantPool =
-    state.variant === "off" ? fresh.slice(half) : fresh.slice(0, half || fresh.length);
-  const pool = variantPool.length
-    ? variantPool
-    : allUsers.slice(0, Math.max(1, Math.floor(allUsers.length / 2)));
+  // Shared fresh pool for on/off (deviceId already suffixes variant). Disjoint half-split
+  // capped formal users at ~905 × 20 tasks = 18100 — post-hygiene 5m @ 5 VUs burns past that
+  // (dailyLimit=20 binds success capacity to formal_users×20; expanding tasks alone does not).
+  // Runners MUST clear_today_claim_counts between paired on/off so daily quota is independent.
+  // Optional RISK_POOL=half restores legacy disjoint split.
+  const poolMode = __ENV.RISK_POOL || "shared";
+  let pool;
+  if (poolMode === "half") {
+    const half = Math.floor(fresh.length / 2);
+    const variantPool =
+      state.variant === "off" ? fresh.slice(half) : fresh.slice(0, half || fresh.length);
+    pool = variantPool.length
+      ? variantPool
+      : allUsers.slice(0, Math.max(1, Math.floor(allUsers.length / 2)));
+  } else {
+    pool = fresh.length ? fresh : allUsers;
+  }
 
   // Warm burns a small user prefix only; formal keeps the full riskTask list for capacity.
   const warmUsers = pool.slice(0, Math.min(WARM_USER_N, pool.length));
