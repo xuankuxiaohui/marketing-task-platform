@@ -13,7 +13,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * V1–V9 migrate + validate + second migrate is a no-op (design §6.9). Requires Docker; leave for CI.
+ * V1–V8 migrate + validate + second migrate is a no-op (design §6.9). Requires Docker; leave for CI.
  */
 @Testcontainers
 class FlywayFullIT {
@@ -32,7 +32,7 @@ class FlywayFullIT {
                 .load();
 
         MigrateResult first = flyway.migrate();
-        assertThat(first.migrationsExecuted).isEqualTo(11);
+        assertThat(first.migrationsExecuted).isEqualTo(10);
         flyway.validate();
 
         MigrateResult second = flyway.migrate();
@@ -49,7 +49,7 @@ class FlywayFullIT {
         assertThat(tables).isEqualTo(51);
 
         assertThat(indexExists(jdbc, "task_instance", "uk_user_task_cycle")).isTrue();
-        assertThat(indexExists(jdbc, "task_instance", "idx_user_cycle")).isFalse();
+        assertThat(indexExists(jdbc, "task_instance", "idx_user_cycle")).isTrue();
         assertThat(indexExists(jdbc, "task_progress_report", "uk_dedup")).isTrue();
         assertThat(indexExists(jdbc, "rwd_grant_record", "uk_idempotent")).isTrue();
         assertThat(indexExists(jdbc, "pnt_account", "uk_user")).isTrue();

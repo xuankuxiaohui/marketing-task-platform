@@ -1,3 +1,5 @@
+**Product disposition (Architect ~09:31):** 产品不合 — evidence-only merge. TTL/oneshot/V9/Caffeine **stripped**; must not enter master via this PR. Next: dual-IN + V9 + TTL3s + singleflight.
+
 # Capacity: currentInstances Caffeine TTL 3s + oneshot tuple IN + V9 (2026-10-12)
 
 **Status:** list formal 5m **FAIL** (勾空; 非 RC). 先测后合 — **ask architect 批合**; do not auto-merge.  
