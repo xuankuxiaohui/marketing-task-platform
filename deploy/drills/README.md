@@ -42,6 +42,7 @@ Isolation drills and first-release evidence linked from [R31-go-live-checklist.m
 | 2026-10-12 | R6 capacity **complete residual after #181**（fail-code `task.claim.daily-limit`；isolated complete risk-off **FAIL** checks≈93.3% http_fail≈6.7%；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-complete-residual-after-181.md](2026-10-12-r6-capacity-complete-residual-after-181.md) |
 | 2026-10-12 | R6 capacity **claim-pool hygiene after #182**（daily-limit cleared；isolated complete **FAIL** grant P95≈510.51；checks100% http_fail0；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-claim-pool-hygiene-after-182.md](2026-10-12-r6-capacity-claim-pool-hygiene-after-182.md) |
 | 2026-10-12 | R6 capacity **cool complete + run-full after #183**（cool→isolated complete **PASS** grant P95≈315.43；run-full **FAIL-STOP at list** dropped≈0.310/s；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-cool-complete-run-full-after-183.md](2026-10-12-r6-capacity-cool-complete-run-full-after-183.md) |
+| 2026-10-12 | R6 capacity **settle → isolated list after #184**（SETTLE_TIMEOUT；list formal **FAIL** dropped≈0.397/s (133)；P95≈156.40ms；checks100% http_fail0；run-full **未跑**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-settle-dropped-after-184.md](2026-10-12-r6-capacity-list-settle-dropped-after-184.md) |
 
 Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`.
 
