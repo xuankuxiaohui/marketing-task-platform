@@ -15,7 +15,7 @@
 | [x] | DOC-3 | `deploy/R31-go-live-checklist.md` 容量两勾保持 `[ ]`；加「另议」注 | 开发 | 本 PR：两勾仍空 +「另议」；禁自动勾 |
 | [x] | DOC-4 | `perf/README.md` 门禁表 vs 现网 `perf/*.js` 对齐 | 开发 | 2026-10-13 文档核对完成；**未改门禁值**；见 `perf/README.md` |
 | [ ] | DOC-5 | `docs/decisions.md` DEC 状态 vs 代码核对 | 架构师 | 开发协助举证 |
-| [ ] | DOC-6 | 根 README onboarding vs 实际 compose/`mkt` 流程 | 开发 | 小改，不重写全书 |
+| [x] | DOC-6 | 根 README onboarding vs 实际 compose/`mkt` 流程 | 开发 | 2026-10-13 小改：本机 vs `mkt` 两路径；**未**重写全书 |
 
 ## P0-② task / risk / platform 边界图
 
