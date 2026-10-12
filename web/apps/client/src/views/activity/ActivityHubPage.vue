@@ -13,16 +13,19 @@ defineOptions({ name: "ActivityHubPage" });
 const router = useRouter();
 const activities = ref<PortalActivityView[]>([]);
 const loaded = ref(false);
+const loading = ref(false);
 const loadError = ref(false);
 const errorMessage = ref("");
 
 async function load(): Promise<void> {
-  loadError.value = false;
-  errorMessage.value = "";
+  loading.value = true;
+  // Keep prior error/list until result — avoid flash-empty while retrying
   try {
     const result = await fetchActivities();
     if (isOk(result) && result.data) {
       activities.value = result.data;
+      loadError.value = false;
+      errorMessage.value = "";
       return;
     }
     activities.value = [];
@@ -33,6 +36,7 @@ async function load(): Promise<void> {
     loadError.value = true;
     errorMessage.value = zhCN.common.networkError;
   } finally {
+    loading.value = false;
     loaded.value = true;
   }
 }
@@ -49,8 +53,11 @@ onMounted(() => {
 <template>
   <section class="activity-hub">
     <NavBar :title="zhCN.mine.activityHub" left-arrow @click-left="router.back()" />
+    <p v-if="loading" class="activity-hub__loading" data-testid="activity-hub-loading">
+      {{ zhCN.common.loading }}
+    </p>
     <Empty
-      v-if="loaded && loadError"
+      v-else-if="loadError"
       :description="errorMessage"
       data-testid="activity-hub-error"
     >
@@ -90,6 +97,12 @@ onMounted(() => {
   min-height: 100%;
   padding-bottom: 16px;
   background: var(--portal-bg);
+}
+.activity-hub__loading {
+  margin: 24px 16px;
+  color: var(--portal-muted);
+  font-size: 14px;
+  text-align: center;
 }
 .activity-hub__card {
   display: flex;

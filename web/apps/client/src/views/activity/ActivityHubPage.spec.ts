@@ -94,4 +94,20 @@ describe("ActivityHubPage", () => {
     expect(wrapper.get('[data-testid="activity-hub-error"]').text()).toContain(zhCN.common.networkError);
     expect(wrapper.find('[data-testid="activity-hub-retry"]').exists()).toBe(true);
   });
+
+  it("shows loading copy before catalog resolves (UX-3 P1; no flash-empty)", async () => {
+    let finish!: (value: unknown) => void;
+    listMock.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { wrapper } = await mountHub();
+    expect(wrapper.get('[data-testid="activity-hub-loading"]').text()).toBe(zhCN.common.loading);
+    expect(wrapper.find('[data-testid="activity-hub-empty"]').exists()).toBe(false);
+    finish(ok([]));
+    await flushPromises();
+    expect(wrapper.find('[data-testid="activity-hub-loading"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-hub-empty"]').text()).toContain(zhCN.activity.empty);
+  });
 });

@@ -45,6 +45,7 @@ const activities = ref<PortalActivityView[]>([]);
 const activitiesLoaded = ref(false);
 const activitiesError = ref(false);
 const activitiesErrorMessage = ref("");
+const activitiesLoading = ref(false);
 const requestScope = () => session.token;
 const beginPointsRequest = useLatestRequest(requestScope);
 const beginSigninRequest = useLatestRequest(requestScope);
@@ -169,6 +170,7 @@ async function loadActivities(): Promise<void> {
   if (!isCurrent()) {
     return;
   }
+  activitiesLoading.value = true;
   try {
     const result = await fetchActivities();
     if (!isCurrent()) {
@@ -191,6 +193,7 @@ async function loadActivities(): Promise<void> {
     }
   } finally {
     if (isCurrent()) {
+      activitiesLoading.value = false;
       activitiesLoaded.value = true;
     }
   }
@@ -360,8 +363,11 @@ watch(requestScope, () => {
       <AdCarousel position-code="home_banner" />
       <section class="home-activities">
         <h2>{{ zhCN.home.activities }}</h2>
+        <p v-if="activitiesLoading" class="home-activities__loading" data-testid="home-activities-loading">
+          {{ zhCN.common.loading }}
+        </p>
         <Empty
-          v-if="activitiesLoaded && activitiesError"
+          v-else-if="activitiesError"
           :description="activitiesErrorMessage"
           data-testid="home-activities-error"
         >
