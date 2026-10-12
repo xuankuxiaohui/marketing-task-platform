@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import type { PortalActivityView } from "@/api/activity";
 import { fail, ok } from "@/test-utils/result";
 
 vi.mock("@/api/activity", () => ({
@@ -96,7 +97,7 @@ describe("ActivityHubPage", () => {
   });
 
   it("shows loading copy before catalog resolves (UX-3 P1; no flash-empty)", async () => {
-    let finish!: (value: unknown) => void;
+    let finish!: (value: ReturnType<typeof ok<PortalActivityView[]>>) => void;
     listMock.mockReturnValue(
       new Promise((resolve) => {
         finish = resolve;

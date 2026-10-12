@@ -417,7 +417,7 @@ describe("HomePage", () => {
   });
 
   it("shows activities loading copy before catalog resolves (UX-3 P1; no flash-empty)", async () => {
-    let finish!: (value: unknown) => void;
+    let finish!: (value: ReturnType<typeof ok<PortalActivityView[]>>) => void;
     activityMock.mockReturnValue(
       new Promise((resolve) => {
         finish = resolve;
