@@ -26,4 +26,8 @@ SQL unchanged vs oneshot+V9: `uk_user_task_cycle` rows=N; `idx_user_cycle` absen
 
 vs #171 oneshot-alone FAIL (P95≈2.08s, dropped≈192/s, ~73 QPS): TTL cache improved throughput/drops but **still misses P95 gate**.
 
+During list: MySQL ≈100–103% CPU; portals ≈1.43GiB / 1.5GiB memcg (1536M **not** raised).
+
+Unit: `TaskPortalAppServiceTest` 16/16 pass locally (JaCoCo module check N/A for single-class run).
+
 run-full **not** started. Logs: `/workspace/r6-capacity-logs/instances-ttl-cache/`.
