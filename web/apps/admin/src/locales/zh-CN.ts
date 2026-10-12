@@ -419,6 +419,9 @@ export const zhCN = {
     action: "命中动作",
     save: "保存",
     loadFailed: "规则加载失败",
+    // N=3 from MybatisRiskRuleConfigStore.LIST_ALL_TTL (see constants/risk.ts)
+    cacheTtlHint: "规则变更不会立刻全量生效，大约 3 秒内随缓存刷新",
+    savedEffective: "保存成功。约 3 秒内生效；急需可走缓存失效",
   },
   cases: {
     title: "命中与处置",
