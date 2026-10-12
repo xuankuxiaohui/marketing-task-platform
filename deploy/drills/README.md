@@ -57,3 +57,4 @@ Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`
 
 - [2026-10-12 list alloc/response hygiene FAIL](2026-10-12-r6-capacity-list-alloc-hygiene.md)
 | 2026-10-12 | R6 capacity **risk rule listAll cache after #194**（risk-on FAIL exhausted=378；P95≈75；勾仍空；非 RC） | [2026-10-12-r6-capacity-risk-rule-cache-after-194.md](2026-10-12-r6-capacity-risk-rule-cache-after-194.md) |
+| 2026-10-12 | R6 capacity **stripe→5000 cold Δ after #195**（exhausted=0；http_fail≈0.27% FAIL；勾仍空；Δ收口→replan） | [2026-10-12-r6-capacity-stripe-expand-4500-after-195.md](2026-10-12-r6-capacity-stripe-expand-4500-after-195.md) |
