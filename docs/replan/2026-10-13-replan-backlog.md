@@ -24,8 +24,8 @@
 
 | Done | ID | Item | Owner | Notes |
 |:---:|:---|:---|:---|:---|
-| [ ] | BND-1 | 画出 `domain-task` / `domain-risk` / `platform-*` 允许依赖图 | 架构师 | 开发出一版草稿供批 |
-| [ ] | BND-2 | 列出违规/过重交叉调用（hot-path） | 开发 | 跟 BND-1 |
+| [x] | BND-1 | 画出 `domain-task` / `domain-risk` / `platform-*` 允许依赖图 | 架构师（开发草稿） | 2026-10-13 草稿：`module-boundaries.md` §BND-1 mermaid+POM 表；**待架构批**；POM 无违规未进 BND-2 |
+| [ ] | BND-2 | 列出违规/过重交叉调用（hot-path） | 开发 | 跟 BND-1；2026-10-13 POM 扫描 **无违规可登记**；热点密度仍见 `module-boundaries`「已知热点」（非违规） |
 | [ ] | BND-3 | 冻结「谁可调谁」规则写入 docs（短页） | 架构师 | 有界；不借机重构 |
 
 ## P0-③ 门户 / 登录 / 领奖界面债（产品已标级 2026-10-13）

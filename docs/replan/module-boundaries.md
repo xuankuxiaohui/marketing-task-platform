@@ -55,6 +55,75 @@
 | `web/**` | 只消费 HTTP 与生成契约，不进入服务端编译图 |
 | `perf/`、`scripts/`、测量用 SQL / k6 | 只观察或加压。脚本不得改变产品语义、门禁数值或业务代码 |
 
+### BND-1 允许依赖图（开发草稿 · 2026-10-13）
+
+对照基线：`master` `1ad543c`（#203 后）。**只改文档**；未改 Java / POM。勾空；非 RC。
+
+#### 层方向（应用 → 域 → contract / infra / kernel）
+
+```mermaid
+flowchart TB
+  subgraph apps["应用层"]
+    admin["admin-app"]
+    portal["portal-app"]
+  end
+  subgraph domains["域层 domain-*"]
+    identity["identity"]
+    task["task"]
+    reward["reward"]
+    risk["risk"]
+    tracking["tracking"]
+    signin["signin"]
+    activity["activity"]
+    ad["ad"]
+  end
+  subgraph platform["平台层"]
+    contract["platform-contract<br/>端口：Reward / UserAttribute / RiskCheck / TaskRead / Crowd"]
+    infra["platform-infra"]
+    db["platform-db"]
+    kernel["platform-kernel"]
+  end
+
+  admin --> identity & task & reward & risk & tracking & signin & activity & ad
+  portal --> identity & task & reward & risk & tracking & signin & activity & ad
+  admin --> infra & db
+  portal --> infra & db
+
+  identity & task & reward & risk & tracking & signin & activity & ad --> contract
+  identity & task & reward & risk & tracking & signin & activity & ad --> infra
+
+  contract --> kernel
+  infra --> kernel
+  db --> kernel
+```
+
+域与域之间 **没有** Maven 边：同步只经 `platform-contract` 端口（实现类在提供方域内，由 Spring 装配）；异步经 Outbox。
+
+#### POM 编译依赖核对表（2026-10-13）
+
+| 模块 | 编译依赖（本仓库 artifact） | 测试依赖（本仓库） | 与规则 |
+|---|---|---|---|
+| `platform-kernel` | — | — | ✓ 无域/应用 |
+| `platform-contract` | `platform-kernel` | — | ✓ |
+| `platform-infra` | `platform-kernel` | `platform-db` | ✓ |
+| `platform-db` | `platform-kernel` | — | ✓ |
+| 每个 `domain-*` | `platform-contract`、`platform-infra`（kernel 传递） | `platform-kernel`（tests classifier）、`platform-db` | ✓ 无兄弟域 / 无应用 |
+| `admin-app` / `portal-app` | `platform-infra`、`platform-db`、全部 8 个 `domain-*` | — | ✓ |
+
+**POM 违规扫描结果：** 无（无 `domain-*`→兄弟域 / 无 `domain-*`→应用 / 无 kernel→域）。
+
+跨域**允许**的运行时端口用法（非 POM 边，供对照）：
+
+| 消费方域 | 端口（contract） | 提供方域 |
+|---|---|---|
+| `domain-task` | `UserAttributePort`、`RiskCheckPort`、`CrowdPort`（本域实现 Crowd/TaskRead） | identity / risk |
+| `domain-reward` | `RiskCheckPort` 等 | risk |
+| `domain-identity` | `RewardPort` / `TaskReadPort`（可 stub） | reward / task |
+| 其他域 | 仅经已声明 contract 端口 | 对应提供方 |
+
+密度/热点（`TaskPortalAppService` 等）见下文「已知热点」——**不是** BND-1 POM 违规，勿据此拆类。
+
+
 已登记例外（DEC-003，F06）：管理端只读聚合 `MetricsAggregateService` / `MetricsQueryService` / `JdbcSimulateGrantLookup` 可以按表白名单读源表，写仅限 `mtr_*`。表所有权留在数据域。未登记的跨域 SQL 仍由 `ArchAdminAggregateSqlTest` 失败。这条例外不推广到域模块。
 
 `domain-identity` 在缺少真实 Bean 时用 `@ConditionalOnMissingBean` 注册 `RewardPortStub`、`TaskReadPortStub`。二者只实现契约类型，不 import `domain-reward` / `domain-task` 内部包。
@@ -115,7 +184,7 @@
 
 对照范围：14 个模块的 `pom.xml`；`domain-*` 与 `platform-*` 的 Java import（生产与测试）是否引用其他域包或 `com.mkt.admin` / `com.mkt.portal`。
 
-**no violation found — stop at doc**
+**no violation found — stop at doc**（BND-1 草稿 2026-10-13 复查 POM：仍无违规）
 
 未发现域 POM 依赖兄弟域或应用，也未发现域代码 import 他域内部包或应用包。`ArchLayerRuleTest` 已覆盖生产类的层方向和域间依赖。本片到文档为止，不开 Java 修复。
 
