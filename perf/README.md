@@ -4,19 +4,21 @@
 
 ## DEC-006 正式门禁（脚本默认已对齐）
 
-| 场景 | 门禁 | 脚本 |
-|---|---|---|
-| 门户列表 | **500 QPS**，双实例 **P95≤300ms** | [list.js](list.js) |
-| internal 推进/回调 | **300 QPS**，**P95≤200ms** | [advance.js](advance.js) |
-| 级联发奖链 | **P95≤500ms** | [complete.js](complete.js) |
-| 埋点满批 | **≥6000 events/s**，**P95≤100ms**，丢弃率 **<0.1%** | [track.js](track.js)（`TRACK_EPS` 驱动到达率；`track_accepted` 保留结构性下限） |
-| 广告位 | **300 QPS**，**P95≤100ms** | [ad.js](ad.js) |
-| 后台典型列表（p1） | **P95≤800ms** | [admin-list.js](admin-list.js) |
-| 风控 on vs off | 领取/发奖 **P95 差值≤20ms** | [risk-delta.js](risk-delta.js) + runner 比较 |
-| 恒定到达率 | `dropped_iterations` **rate<0.05** | list / advance / track / ad |
-| 业务失败 | ≈0（F14 结构性门槛） | 各场景 `checks` / `*_business_ok` |
-| 稳态时长 | 默认 **5m**（`DURATION`） | [lib.js](lib.js) |
-| 拓扑 | portal×2 + admin×1 经 nginx；**不得**单实例外推 | Compose + 报告须记录 |
+**DOC-4（2026-10-13）核对：** 下表门禁数值与现网 `perf/*.js` **默认阈值一致**；本页只改文档表述，**未改任何门禁值 / 脚本 thresholds**。勾空；非 RC。
+
+| 场景 | 门禁（DEC-006） | 现网脚本默认（核对） | 脚本 |
+|---|---|---|---|
+| 门户列表 | **500 QPS**，双实例 **P95≤300ms** | `LIST_QPS=500`；formal `p(95)<=300`；`http_req_failed rate==0`；`checks rate>0.99` | [list.js](list.js) |
+| internal 推进/回调 | **300 QPS**，**P95≤200ms** | `ADVANCE_QPS=300`；progress/callback `p(95)<=200`；`checks`/`advance_business_ok rate>0.99`；`advance_data_exhausted count==0` | [advance.js](advance.js) |
+| 级联发奖链 | **P95≤500ms** | grant `p(95)<=500`；`checks`/`grant_business_ok rate>0.99`；`grant_data_exhausted count==0` | [complete.js](complete.js) |
+| 埋点满批 | **≥6000 events/s**，**P95≤100ms**，丢弃率 **<0.1%** | `TRACK_EPS=6000`；`p(95)<=100`；`track_drop_rate rate<0.001`；`track_accepted` 结构性下限 | [track.js](track.js) |
+| 广告位 | **300 QPS**，**P95≤100ms** | `AD_QPS=300`；`p(95)<=100`；`checks rate>0.99` | [ad.js](ad.js) |
+| 后台典型列表（p1） | **P95≤800ms** | instances/definitions/grants 各 `p(95)<=800`；`http_req_failed rate==0` | [admin-list.js](admin-list.js) |
+| 风控 on vs off | 领取/发奖 **P95 差值≤20ms** | 单腿 grant `p(95)<=500` + `checks rate==1` + `grant_data_exhausted count==0`；**Δ≤20ms 由 paired runner 比较**（非 k6 thresholds 内硬编码） | [risk-delta.js](risk-delta.js) + [run-risk-delta-paired.sh](run-risk-delta-paired.sh) |
+| 恒定到达率 | `dropped_iterations` **rate<0.05** | list / advance / track / ad formal 场景 | 同上 |
+| 业务失败 | ≈0（F14） | 多数场景 `checks`/`*_business_ok rate>0.99`；risk formal `checks rate==1` | 各场景 |
+| 稳态时长 | 默认 **5m**（`DURATION`） | [lib.js](lib.js) | [lib.js](lib.js) |
+| 拓扑 | portal×2 + admin×1 经 nginx；**不得**单实例外推 | Compose + 报告须记录 | — |
 
 ## 入口与环境
 
@@ -38,7 +40,7 @@ SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh
 
 这些是运行入口，不代表已有可复现容量通过报告。压测属于发布验收，不进例行 PR CI；`run-full.sh` 在 GitHub Actions 中默认拒绝执行，人工性能作业需要显式配置。种子与 `run-*.sh` / k6 实跑需**显式授权**（R6 开启本身不等于授权本执行器跑 seed）。
 
-## 测量缺口（F14 结构性断言已合；DEC-006 门禁脚本已对齐；可复现报告待跑）
+## 测量缺口与证据指针（F14 已合；门禁脚本已对齐；**DOC-4 文档核对 2026-10-13**；勾仍空；非 RC）
 
 - [advance.js](advance.js) / [complete.js](complete.js) / [track.js](track.js) / [list.js](list.js) / [ad.js](ad.js) / [admin-list.js](admin-list.js) / [risk-delta.js](risk-delta.js)：注释与门槛说明已指向 **已关闭的 DEC-006 正式门禁**；QPS/P95/`dropped_iterations` 默认与门禁表一致。
 - [track.js](track.js)：业务 `check` 与 `track_business_ok` / `checks` 入门槛；`track_accepted` 保留结构性下限（`count>0`/`rate>0`）；到达率由 `TRACK_EPS`（默认 6000）驱动。**满配 ≥6000 events/s 须在可复现报告中证明有效 accepted 吞吐**（本批不加硬 eps 计数门槛，避免无实跑时误伤）。
