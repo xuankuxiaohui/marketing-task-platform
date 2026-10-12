@@ -149,7 +149,18 @@ describe("TaskCompleteSheet", () => {
     const { wrapper, router } = await mountSheet();
     await wrapper.get('[data-testid="task-claim"]').trigger("click");
     await flushPromises();
-    expect(failToast).toHaveBeenCalledWith("暂时无法参与");
+    expect(failToast).toHaveBeenCalledWith(zhCN.task.claimRiskBlocked);
+    expect(wrapper.get('[data-testid="task-claim"]').text()).toBe(zhCN.task.claim);
+    expect(router.currentRoute.value.path).toBe("/activity");
+  });
+
+  it("toasts human daily-limit copy and keeps 领取", async () => {
+    detailMock.mockResolvedValue(ok(notStarted()));
+    startMock.mockResolvedValue(fail("task.claim.daily-limit", "今日领取次数已达上限"));
+    const { wrapper, router } = await mountSheet();
+    await wrapper.get('[data-testid="task-claim"]').trigger("click");
+    await flushPromises();
+    expect(failToast).toHaveBeenCalledWith(zhCN.task.claimDailyLimit);
     expect(wrapper.get('[data-testid="task-claim"]').text()).toBe(zhCN.task.claim);
     expect(router.currentRoute.value.path).toBe("/activity");
   });
