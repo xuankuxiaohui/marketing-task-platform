@@ -1,8 +1,10 @@
 # 项目决策记录
 
-更新：2026-10-11。下文保留 2026-10-07 各批次的决定及背景；当时的分支、工作区和测试描述不是当前状态。Kiro 规格已退役，文中的旧需求编号、设计章节和已删除规范仅用于追溯，原文查阅方式见 [文档导航](README.md)。DEC-002 / DEC-003 / DEC-004 / DEC-005 / DEC-006 / DEC-007 / DEC-008 已明确关闭或确定。未决项不因删除旧规格自动关闭。新结论在此记录，并同步相关 README、契约、验收与实现。**R6 状态**：huihuang 于 2026-10-11 **显式开启**发布候选验收（**已开 / 进行中**；**不等于通过**）。DEC-005/006/008 关闭**不**自动启动 R6；首片（空库 Flyway + 双应用装配）证据见 [deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md](../deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md)。容量场景正式 5m 证据与勾评估（**两勾仍空**；非 RC）见 [deploy/drills/2026-10-11-r6-capacity-checkbox-eval.md](../deploy/drills/2026-10-11-r6-capacity-checkbox-eval.md)。
+更新：2026-10-13（DOC-5 状态核对，对照 master `1ad543c`）。下文保留 2026-10-07 各批次的决定及背景；当时的分支、工作区和测试描述不是当前状态。Kiro 规格已退役，文中的旧需求编号、设计章节和已删除规范仅用于追溯，原文查阅方式见 [文档导航](README.md)。DEC-002 / DEC-003 / DEC-004 / DEC-005 / DEC-006 / DEC-007 / DEC-008 已明确关闭或确定。**DEC-001 仍未关闭**（见该节状态注）。未决项不因删除旧规格自动关闭。新结论在此记录，并同步相关 README、契约、验收与实现。**R6 状态**：huihuang 于 2026-10-11 **显式开启**发布候选验收（**已开 / 进行中**；**不等于通过**；**勾空；非 RC**）。DEC-005/006/008 关闭**不**自动启动 R6；首片（空库 Flyway + 双应用装配）证据见 [deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md](../deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md)。容量活状态见 [docs/capacity/STATUS.md](capacity/STATUS.md)（2026-10-13，#196 后：R31 容量两勾仍空、非 RC、Δ 收口）与 [R31 清单](../deploy/R31-go-live-checklist.md) 的「另议」注。2026-10-11 勾评估是当时汇总，不是最新容量结论：[deploy/drills/2026-10-11-r6-capacity-checkbox-eval.md](../deploy/drills/2026-10-11-r6-capacity-checkbox-eval.md)。
 
 ## DEC-001：代码与功能基线
+
+**状态（2026-10-13 核对）**：仍**未关闭**。文首未把它列入已关闭集合。下面「本批已明确 / 当时事实」描述的是 2026-10-07 R5-01 开工基线（`feat/portal-guest-home-ux` 的 `dd9feba` 加当时未提交工作区），**不是**当前 master。R5-01 门户个人中心已落地，见 [重构蓝图](refactoring-blueprint.md) 的 R5-01 与 [验证映射](verification-matrix.md)「当前代码重构批次 R5-01」。关闭条件（实施 commit、保留/放弃功能清单、未提交改动的归属与前置分支关系）未在本文件收口。本核对**不**升格关闭，也不把历史工作区写成当前基线。
 
 **本批已明确**：用户授权继续到完成一个较大的功能。以当前 `dd9feba` 加既有未提交工作区作为门户个人中心批次 R5-01 的实施基线，保留已有功能和文档改动，不切到旧主干、不混入提交。需编辑的既有列表文件在本批开始时保存了临时快照。R5-01 只调整前端列表、详情和相应会话隔离，测试与相关说明同批交付；后端、Schema、依赖与 API 契约不变。本结论仅覆盖本批，不授权自动推进全部路线或清理环境数据。
 
@@ -17,6 +19,8 @@
 ## DEC-002：Outbox 消费容量（已关闭）
 
 **状态**：已关闭（2026-10-10）。架构推荐默认已写入；**F08 已落地**（合入 **#120**，对照 tip `15af760`）：持锁多批、单次持锁预算约 2s、空队列退出、调度 `fixedDelay` 5s、无 MQ。容量数字门禁仍属 [DEC-006](#dec-006性能目标及证据口径已关闭)，本决定只钉机制与起步参数。
+
+**对照（2026-10-13）**：机制与代码一致，本项保持关闭。`OutboxRelay` 默认批大小 100、持锁预算 2s，空批立即返回，无 MQ；`OutboxRelayTicker` 为 `fixedDelay` 5000ms。默认可由 `mkt.outbox.batch-size` / `mkt.outbox.lock-hold-budget-ms` 覆盖，仍不是 DEC-006 的最终容量门禁。2026-10-11 Outbox drill 只记录候选排空数字，R31 未把它们升格为门禁，也未重开本项（见 [outbox drill](../deploy/drills/2026-10-11-r6-capacity-outbox.md)、[STATUS](capacity/STATUS.md)）。
 
 **依据**：历史 design-architecture §6.4 写每 5 秒取最多 100 条；关闭前 [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每 tick 只处理一批，[InfraAutoConfiguration](../server/platform-infra/src/main/java/com/mkt/infra/InfraAutoConfiguration.java) 使用 5000 ms fixedDelay。旧性能条款的推进/回调 300 QPS 只保留为背景；业务成功仍需可靠投递事件。
 
@@ -39,6 +43,8 @@
 ## DEC-003：跨域只读契约与人群能力（已关闭）
 
 **状态**：已关闭（2026-10-10）。余量四项决定已写入下表；**F06 与 CrowdPort 组合条件已实现**（本批 / `feat/p2-f06-admin-aggregate-crowdport-combo`）。不强制关闭 DEC-005/006/008。
+
+**对照（2026-10-13）**：「不强制关闭 DEC-005/006/008」是 2026-10-10 的关闭约束。这三项已由各自决定关闭，不是仍开放。实现仍在：`CrowdPort` 的 `memberOf` / `memberOfCode` / `memberOfAll` / `memberOfAny`（`domain-task` 的 `CrowdPortImpl`）；活动允许名单走 `memberOfAny`；广告在 `userId == null` 时不筛人群，登录后 `memberOf`（`AdPortalAppService`）。F06 门禁是 `ArchAdminAggregateSqlTest`，登记类仍只有 `MetricsAggregateService`、`MetricsQueryService`、`JdbcSimulateGrantLookup`。域间依赖见 `ArchLayerRuleTest`（RL-01..03）与 [模块边界](replan/module-boundaries.md)。
 
 **依据**：领域间禁止互访表的边界保留在 [AGENTS](../AGENTS.md)。旧设计 §2.2.3 / §3.11 和需求 R22.3、R30.3/6 曾描述只读端口、活动与广告的人群复用能力。
 
@@ -66,6 +72,8 @@
 ## DEC-004：独立事务与失败审计语义（已关闭）
 
 **状态**：已关闭（2026-10-10）。决定与回归已合入 **#111**（对照 tip 含于 `967d694` 栈）。下列对照表保留决策背景；行为以文末「决定」表为准。
+
+**对照（2026-10-13）**：关闭状态与代码一致。`GrantFailureLedger.markPermanent` 在已有事务时使用 `REQUIRES_NEW`；`PointsAppService.expireDue` 按笔独立事务，注释写明不是 earn 路径。回归仍在：`GrantPermanentFailureSurviveRollbackIT`、`Dec004AuditSemanticsIT`（非法参数 / 唯一冲突 / 回滚无 SUCCESS）。未另建 `domain-points`。
 
 这是三项需要分别核对的边界，不得统一用 `REQUIRES_NEW` 解决：
 
@@ -98,6 +106,8 @@
 
 **状态**：已关闭（2026-10-11）。huihuang「按推荐关闭」；「未上线默认」决定表正式生效（见下）。合入 **#130**（本关闭 PR；推荐草案源自 #129 / `e669ecd`）。本项**不**关闭 [DEC-006](#dec-006性能目标及证据口径已关闭) / [DEC-008](#dec-008门户交互与规格的待对齐项已关闭)；**不**据此自动启动 R6。
 
+**对照（2026-10-13）**：「不关闭 DEC-006/008」和「不自动启动 R6」描述的是本项关闭动作的边界。DEC-006/008 已各自关闭；R6 随后由 huihuang 显式开启，仍**未通过**（勾空；非 RC）。Flyway 仍集中在 `server/platform-db`。本项不授权清库或改写已应用迁移。
+
 **依据**：用户已明确项目未上线。未知或需逐环境核对的是：哪些开发/演示库已应用 Flyway、是否有需保留的业务/种子数据、是否有内部调用方仍依赖旧接口。旧 R31.4 仅作历史背景，不构成清库或永久兼容层授权。
 
 **决定（2026-10-11，huihuang「按推荐」；本项关闭）**：
@@ -114,7 +124,9 @@
 
 ## DEC-006：性能目标及证据口径（已关闭）
 
-**状态**：已关闭（2026-10-11）。huihuang「按推荐」；证据口径与场景数值升格为**正式门禁**（见下）。合入本关闭 PR（推荐草案源自 **#131**；tip 对照 `67ece6f` / Merge #133）。本项**不**借关闭改写 `perf/` 脚本数值（k6 默认仍须另批与门禁对齐）；**不**据此自动启动 R6。
+**状态**：已关闭（2026-10-11）。huihuang「按推荐」；证据口径与场景数值升格为**正式门禁**（见下）。合入本关闭 PR（推荐草案源自 **#131**；tip 对照 `67ece6f` / Merge #133）。本项**不**借关闭改写 `perf/` 脚本数值，也**不**据此自动启动或通过 R6。
+
+**对照（2026-10-13）**：关闭当时写的「k6 默认仍须另批与门禁对齐」已过时。DOC-4 核对现网 `perf/*.js` 默认阈值与下表一致，只更新了 [perf/README.md](../perf/README.md)，**未改门禁值**。容量是否达标另计：R31 两勾仍空（**另议**）、**勾空；非 RC**；Δ 收口后 cold risk-on 仍 FAIL。活状态见 [STATUS](capacity/STATUS.md)，检查单见 [R31](../deploy/R31-go-live-checklist.md)。Outbox 候选排空数字未升格为门禁（见 DEC-002 对照）。
 
 **依据**：Kiro 规格退役后，旧 requirements NFR、design §7.8 和脚本中的数值均不直接视为本轮已确认目标。旧重构草案还记载了“单实例读取 1000 次/秒、写入 200 次/秒”，但没有独立确认该记录的来源、接口范围或资源预算；这些数字仅保留为候选背景。F14（#109）已收紧结构性断言（业务成功 / 耗尽失败 / `dropped_iterations`），满配容量数字属本项。[DEC-002](#dec-002outbox-消费容量已关闭) 只钉 Outbox 机制与起步参数，容量数字门禁属本项。
 
@@ -135,9 +147,11 @@
 | Outbox 容量 | 与 DEC-002 弱耦合：机制已关；稳态积压、最老事件延迟、恢复排空的**数字门禁**随本项关闭写入验收口径。起步 100/5s/2s **不是**最终容量门禁（最终数字在符合本口径的压测报告中钉死） |
 | 证据落盘 | 按 [性能验证说明](../perf/README.md) 写入 `perf/reports/<日期>/`；至少含提交、资源、拓扑、数据量、冷热、时长、分列吞吐、P95、业务错误、丢弃、锁等待、Outbox 积压。无报告只能陈述静态风险，**不能**承诺容量 |
 
-**关闭说明**：上表由 #131 推荐草案升格为正式决定（证据口径 + 场景数值均为**门禁**）；huihuang 2026-10-11 确认按推荐关闭。本关闭 PR **docs-only**：不改写 `perf/*.js` 数值；脚本与门禁的对齐、以及至少一份符合口径的可复现报告，属后续验收/R6 前置，不重开本项。关闭后同步相关 README / 清单指针；**不**自动进入 R6。
+**关闭说明**：上表由 #131 推荐草案升格为正式决定（证据口径 + 场景数值均为**门禁**）；huihuang 2026-10-11 确认按推荐关闭。本关闭 PR **docs-only**：不改写 `perf/*.js` 数值。脚本默认与门禁表的文档对齐已由 DOC-4 核对（数值本就匹配）。让 R31 容量勾可以勾上的可复现报告仍未成立，不重开本项，也不下调门禁。关闭后同步相关 README / 清单指针；**不**自动进入 R6。
 
 ## DEC-007：任务旧实例、下线与到期优先级（已确定）
+
+**状态（2026-10-13 核对）**：仍是**已确定**（2026-10-07），不是另一次「已关闭」仪式。文首把它列入「已明确关闭或确定」。规则仍在代码：下线重算见 `TaskPublishAppService.recomputeInProgressExpiry`（绑定快照、冻结 cycleKey、CAS）；重新发布在 `freezeToPublished` 清除 `offlineAt`；期限公式见 `ExpireAtCalculator`。真实 MySQL 回归见 `OfflineLifecycleIT`。本核对不重写规则表。
 
 2026-10-07，用户明确选择推荐规则，用于生命周期批次 R2-01。原冲突为 R12.2 快照隔离与 §5.5 编辑态组查询不一致、R14.10 重发语句未区分新旧实例，以及 EXPIRED 拒绝与终态完成步骤幂等描述重叠。
 
@@ -155,6 +169,8 @@
 ## DEC-008：门户交互与规格的待对齐项（已关闭）
 
 **状态**：已关闭（2026-10-11）。huihuang「按推荐」；门户交互体验表升格为**正式决定**（见下）。合入本关闭 PR（推荐草案源自 **#132**；tip 对照 `67ece6f` / Merge #133）。本项**不**借关闭修改门户前端代码、路由/守卫、契约或旅程测试（实现与测试对齐属后续批次）；**不**据此自动启动 R6；**明确不回退**游客能力。
+
+**对照（2026-10-13）**：本项保持关闭，决定表不改。首页、活动、活动中心在 `PUBLIC_PATHS`（`web/apps/client/src/router/guards.ts`），游客进入不改道到 `/login`。公开任务列表由公开活动页调用 `fetchTaskList`；`/tasks` 重定向到私有的 `/mine/tasks`。`/task/:taskId` **不在**公开集；未登录进入该路径会唤起可关闭的 LoginOverlay，导航仍留在原页（`router/index.ts`）。活动卡仍进入全页 `/task/${taskId}`（`views/activity/index.vue`）。公开任务读接口仍跳过未授权处理（`api/http.ts` 的 list/detail）。与决定表「公开任务详情匿名可达」的字面相比，详情路由会先弹出可关闭登录层；本核对只记录差异，不改前端、不重开本项。UX-1..3（#200 / #199 / #201）改了登录报错、领取被拒文案和列表失败重试，未回退游客浏览，也未把登录改成整页跳转。
 
 **依据**：2026-10-07 真实浏览器核验发现：旧 requirements R32.1 及 design-api §4.9.0 写受保护操作整页跳登录并保留回跳、活动半屏完成；当前 [guards](../web/apps/client/src/router/guards.ts)、[LoginOverlay](../web/apps/client/src/components/LoginOverlay.vue) 与活动页面采用私有页保留路径和登录弹层、活动卡进入全页任务详情，已有组件测试也采用该行为。旧文档删除后不再要求回退到旧方案；本项确认产品体验。当时核验当前交互及私有 API 401，修正了旧旅程假设，保留注册、领取、推进、发奖、领奖、积分和退出断言——这不是以代码确认规格正确。实际通过与失败见 [核验报告](full-flow-verification-2026-10-07.md)。
 
