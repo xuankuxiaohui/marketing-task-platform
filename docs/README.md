@@ -6,7 +6,7 @@
 
 | 问题 | 资料 | 定位 |
 |---|---|---|
-| 项目是什么、怎么启动 | [根 README](../README.md)、[本机脚本](../scripts/README.md) | 项目介绍与操作入口 |
+| 项目是什么、怎么启动 | [根 README](../README.md)（本机 `dev.ps1` / Compose `mkt`）、[本机脚本](../scripts/README.md) | 项目介绍与操作入口 |
 | 当前有哪些功能 | [功能清单](current-features.md) | 入口盘点，不代表全部验收通过 |
 | 真实环境验证过什么 | [2026-10-07 报告](full-flow-verification-2026-10-07.md) | 当时的环境、结果、失败与覆盖边界 |
 | 后续重构的依据与候选批次 | [重构方案](refactoring-blueprint.md) | 历史诊断与计划（R0–R6）；已合 PR 常用 P1–P4 相位，二者对照见蓝图 §4；**R6 已开 / 进行中**（首片证据见 deploy/drills）；实施前核实问题是否仍存在 |

@@ -57,12 +57,15 @@
 
 ```bash
 cp deploy/.env.example deploy/.env   # 按需改密钥；勿提交
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
-# 对外入口经 nginx：默认 http://127.0.0.1:18080 （NGINX_HTTP_PORT）
-# 冒烟：bash ci/deploy-smoke.sh
+mvn -f server/pom.xml -DskipTests -DskipITs package -q   # 镜像只 COPY jar，不会在镜像内编译
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+# 对外入口经 nginx：默认 http://127.0.0.1:18080 （NGINX_HTTP_PORT）；/healthz → ok
+# 一键冒烟（缺 jar 时会先 package）：bash ci/deploy-smoke.sh
+# 销毁 throwaway 卷（清空该项目 MySQL/Redis 数据）：
+# docker compose --env-file deploy/.env -f deploy/docker-compose.yml down -v
 ```
 
-`deploy/docker-compose.yml` 顶部 `name: mkt`；拓扑为 **portal×2 + admin×1 + MySQL + Redis + nginx**（及监控组件）。真实浏览器静态资源可叠加 [docker-compose.r6-browser-dist.yml](deploy/docker-compose.r6-browser-dist.yml)。发布检查与证据入口见 [R31 检查单](deploy/R31-go-live-checklist.md)；容量姿态见 [docs/capacity/STATUS.md](docs/capacity/STATUS.md)（勾空；非 RC）。
+`deploy/docker-compose.yml` 顶部 `name: mkt`（也可显式 `-p mkt`）；拓扑为 **portal×2 + admin×1 + MySQL + Redis + nginx**（及监控组件）。默认挂 nginx **占位**静态页；真实 dist 叠加 [docker-compose.r6-browser-dist.yml](deploy/docker-compose.r6-browser-dist.yml)，细节见 [nginx 说明](deploy/nginx/README.md)。发布检查与证据入口见 [R31 检查单](deploy/R31-go-live-checklist.md)；容量姿态见 [docs/capacity/STATUS.md](docs/capacity/STATUS.md)（勾空；非 RC）。
 
 存在启动脚本、测试或部署模板，不代表已经通过验收或具备上线条件。检查结果必须对应具体代码版本和运行记录。
 
