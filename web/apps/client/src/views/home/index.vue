@@ -408,9 +408,7 @@ watch(requestScope, () => {
 .home-page {
   min-height: 100%;
   padding-bottom: 16px;
-  background:
-    radial-gradient(120% 70% at 50% -20%, var(--portal-bg-wash) 0%, transparent 58%),
-    var(--portal-bg);
+  background: var(--portal-bg);
 }
 .home-page :deep(.van-nav-bar) {
   background: transparent;
@@ -423,7 +421,7 @@ watch(requestScope, () => {
   padding: 12px;
   border-radius: var(--portal-radius);
   background: var(--portal-surface);
-  box-shadow: var(--portal-shadow-soft);
+  border: 1px solid var(--portal-line);
 }
 .signin-panel__head {
   display: flex;
@@ -497,7 +495,7 @@ watch(requestScope, () => {
   border: 0;
   border-radius: var(--portal-radius);
   background: var(--portal-surface);
-  box-shadow: var(--portal-shadow-soft);
+  border: 1px solid var(--portal-line);
   text-align: left;
 }
 .home-activity :deep(.fallback-image),

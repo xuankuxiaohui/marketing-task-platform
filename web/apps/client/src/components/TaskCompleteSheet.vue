@@ -26,7 +26,7 @@ const open = computed({
     position="bottom"
     round
     closeable
-    :style="{ height: '60vh', background: 'var(--portal-bg)' }"
+    :style="{ maxHeight: '70vh', background: 'var(--portal-bg)' }"
     data-testid="task-complete-sheet"
   >
     <div class="task-complete-sheet">

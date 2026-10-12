@@ -56,7 +56,7 @@ describe("LoginOverlay", () => {
   it("opens as a half-screen sheet on the host route", async () => {
     const { wrapper, router } = await mountOverlay("/home");
     const sheet = wrapper.get('[data-testid="login-overlay"]');
-    expect(sheet.attributes("style") ?? "").toMatch(/62vh/);
+    expect(sheet.attributes("style") ?? "").toMatch(/max-height:\s*70vh/i);
     expect(router.currentRoute.value.path).toBe("/home");
   });
 

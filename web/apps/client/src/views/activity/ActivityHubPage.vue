@@ -114,7 +114,7 @@ onMounted(() => {
   border: 0;
   border-radius: var(--portal-radius);
   background: var(--portal-surface);
-  box-shadow: var(--portal-shadow-soft);
+  border: 1px solid var(--portal-line);
   text-align: left;
 }
 .activity-hub__card :deep(.fallback-image),

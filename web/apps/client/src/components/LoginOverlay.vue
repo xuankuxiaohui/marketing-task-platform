@@ -10,8 +10,6 @@ import { useSessionStore } from "@/store/session";
 
 defineOptions({ name: "LoginOverlay" });
 
-const OVERLAY_HEIGHT = "62vh";
-
 const route = useRoute();
 const router = useRouter();
 const overlay = useLoginOverlayStore();
@@ -52,7 +50,7 @@ async function onSuccess(): Promise<void> {
     position="bottom"
     round
     closeable
-    :style="{ height: OVERLAY_HEIGHT }"
+    :style="{ maxHeight: '70vh' }"
     data-testid="login-overlay"
   >
     <section class="login-overlay">
@@ -69,7 +67,7 @@ async function onSuccess(): Promise<void> {
 .login-overlay {
   height: 100%;
   overflow: auto;
-  padding: 12px 8px 24px;
+  padding: 8px 8px 16px;
   background: var(--portal-bg);
 }
 .login-overlay__title {
@@ -78,7 +76,7 @@ async function onSuccess(): Promise<void> {
 }
 .login-overlay__hint {
   margin: 0 16px 8px;
-  color: var(--portal-accent);
+  color: var(--portal-muted);
   font-size: 13px;
 }
 </style>
