@@ -28,7 +28,7 @@ An earlier risk-on leg (same tip, before log overwrite) had **PASS** (P95≈481.
 ## Disposition
 - Stripe expand **cleared** prior exhausted=378 residual.
 - Residual is **http_fail/checks** under risk-on — not pool size. Per team 2026-10-12 ~23:51: **Δ收口后规划主线**; **do not** invent more capacity knives / CntWindow / rewrite.
-- **勾空; 非 RC.** Ask 架构师/产品 for whole-project replan (see project-replan draft).
+- **勾空; 非 RC.** Ask 架构师/产品 for whole-project replan — draft: [`docs/replan/2026-10-13-project-health-checklist-draft.md`](../replan/2026-10-13-project-health-checklist-draft.md). Box mirror: `/workspace/r6-capacity-logs/project-replan-2026-10-13/`.
 
 ## Artifacts
 `/workspace/r6-capacity-logs/stripe-expand-4500-after-195/` (`paired-result.txt`, `k6-risk-on.log`, `collision-salvage/`, `expand-apply.log`)
