@@ -122,7 +122,7 @@ describe("TaskCompleteSheet", () => {
     startMock.mockResolvedValue(ok({ instanceId: 77, instanceStatus: "IN_PROGRESS" }));
     const { wrapper, router } = await mountSheet();
     const sheet = wrapper.get('[data-testid="task-complete-sheet"]');
-    expect(sheet.attributes("style") ?? "").toMatch(/60vh/);
+    expect(sheet.attributes("style") ?? "").toMatch(/max-height:\s*70vh/i);
     expect(wrapper.get('[data-testid="task-claim"]').text()).toBe(zhCN.task.claim);
     await wrapper.get('[data-testid="task-claim"]').trigger("click");
     await flushPromises();
