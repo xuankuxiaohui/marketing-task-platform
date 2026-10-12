@@ -1,6 +1,6 @@
 # 模块边界（P1）
 
-**状态**：活规则。架构师拥有本文；开发只在本文「第一刀」列出具体违规时做小修复。未列出的热点、密度和缓存形态保持现状。
+**状态**：活规则（**BND-3 已冻结**「谁可调谁」短规则，见 §BND-3）。架构师拥有本文；开发只在本文「第一刀」列出具体违规时做小修复。未列出的热点、密度和缓存形态保持现状。
 
 **本片**：勾空；非 RC。文档冻结非法跨模块依赖，不改产品代码，不做大爆炸重构，不降低 [DEC-006](../decisions.md#dec-006性能目标及证据口径已关闭) 门禁，不重开容量刀。
 
@@ -55,7 +55,7 @@
 | `web/**` | 只消费 HTTP 与生成契约，不进入服务端编译图 |
 | `perf/`、`scripts/`、测量用 SQL / k6 | 只观察或加压。脚本不得改变产品语义、门禁数值或业务代码 |
 
-### BND-1 允许依赖图（开发草稿 · 2026-10-13）
+### BND-1 允许依赖图（2026-10-13；BND-3 冻结后仍有效）
 
 对照基线：`master` `1ad543c`（#203 后）。**只改文档**；未改 Java / POM。勾空；非 RC。
 
@@ -127,6 +127,24 @@ flowchart TB
 已登记例外（DEC-003，F06）：管理端只读聚合 `MetricsAggregateService` / `MetricsQueryService` / `JdbcSimulateGrantLookup` 可以按表白名单读源表，写仅限 `mtr_*`。表所有权留在数据域。未登记的跨域 SQL 仍由 `ArchAdminAggregateSqlTest` 失败。这条例外不推广到域模块。
 
 `domain-identity` 在缺少真实 Bean 时用 `@ConditionalOnMissingBean` 注册 `RewardPortStub`、`TaskReadPortStub`。二者只实现契约类型，不 import `domain-reward` / `domain-task` 内部包。
+
+
+
+### BND-3 冻结：「谁可调谁」（短规则 · 2026-10-13）
+
+**只改文档**；未改 Java / POM。勾空；非 RC；不借机重构；不重开容量刀。
+
+下列规则即日起视为冻结口径（与上文「允许的依赖」「禁止」及 `ArchLayerRuleTest` 一致；冲突时以已关闭 DEC 与测试为准）：
+
+1. **单向**：`admin-app` / `portal-app` → `domain-*` → `platform-contract` / `platform-infra`（+ 传递 `platform-kernel`）。`platform-db` 仅由两应用编译装配。
+2. **域 ↔ 域**：禁止 POM 依赖兄弟域；禁止 import 他域 mapper / entity / application / domain。同步只经 `platform-contract` 端口；异步经 Outbox。
+3. **域 ↛ 应用**：任何 `domain-*` 不得依赖或 import `portal-app` / `admin-app`。
+4. **kernel**：不堆积领域模型；跨域类型进 `platform-contract`。
+5. **例外不推广**：DEC-003 管理端只读聚合白名单、identity 的 `ConditionalOnMissingBean` 端口 stub —— 登记在案，不得扩到域模块。
+6. **热点 ≠ 违规**：`TaskPortalAppService` 等密度、域内短 TTL Caffeine —— 见「已知热点」；拆分/迁缓存需架构师另批，本片不改代码。
+7. **违约处置**：发现一处非法依赖 → 单独立项只修该处；禁止顺手大重构。
+
+**BND-2 对照**：POM / import 扫描仍为 **no violation found — stop at doc**（与 BND-1 节一致）。无违规清单可进 BND-2 修复刀；BND-2 行保持观察，不单开 Java。
 
 ## 禁止
 
