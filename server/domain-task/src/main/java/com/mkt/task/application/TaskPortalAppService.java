@@ -68,11 +68,11 @@ public class TaskPortalAppService {
     private volatile ParsedPublishedCatalog parsedPublishedCatalog;
 
     /**
-     * Architect 2026-10-12: Caffeine TTL 3s + {@code get(key, loader)} singleflight for
+     * Architect 2026-10-12: Caffeine TTL 5s (2–5s band) + {@code get(key, loader)} singleflight for
      * portal list current-instances. Loader uses dual-IN (not oneshot-tuple-only).
      * Keep V9 (idx_user_cycle dropped). 1536M not raised.
      */
-    private static final Duration CURRENT_INSTANCES_TTL = Duration.ofSeconds(3);
+    private static final Duration CURRENT_INSTANCES_TTL = Duration.ofSeconds(5);
 
     private final Cache<Long, Map<Long, TaskInstanceEntity>> currentInstancesByUser =
             Caffeine.newBuilder()
@@ -562,7 +562,7 @@ public class TaskPortalAppService {
      * Heap-dump relief (2026-10-12): near-ceiling histogram showed ~343k–500k
      * {@link TaskInstanceEntity} + MySQL {@code ByteArrayRow}/LocalDateTime when
      * {@code listByUser} hit seed user_id=1 (500001 rows). Prefer bounded
-     * dual-IN {@code listByUserTaskIdsAndCycleKeys}; wrapped by Caffeine TTL3s
+     * dual-IN {@code listByUserTaskIdsAndCycleKeys}; wrapped by Caffeine TTL5s
      * {@code get(key, loader)} singleflight (V9 uk plan).
      */
     private Map<Long, TaskInstanceEntity> currentInstancesForPublished(

@@ -390,6 +390,66 @@ class SessionAuthFilterTest {
         assertThat(seen.get()).isEqualTo(raw);
     }
 
+    @Test
+    void portalListFamilyGetSkipsSessionRenew() throws Exception {
+        CountingDao dao = new CountingDao();
+        SaManager.setSaTokenDao(dao);
+        SessionService sessions = new SessionService(kicks);
+        String presented = sessions.loginClient(9L, 3, null, "list_user");
+        int renewsAfterLogin = dao.updateTimeoutCalls;
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+
+        MockHttpServletRequest list = request("GET", "/api/common/task/list");
+        list.addHeader("Authorization", "Bearer " + presented);
+        RecordingChain chain = new RecordingChain();
+        chain.assertDuring = () -> assertThat(UserContext.current()).isPresent();
+        filter.doFilter(list, new MockHttpServletResponse(), chain);
+        assertThat(chain.called).isTrue();
+        assertThat(dao.updateTimeoutCalls).isEqualTo(renewsAfterLogin);
+
+        MockHttpServletRequest ad = request("GET", "/api/common/ad/positions/home");
+        ad.addHeader("Authorization", "Bearer " + presented);
+        filter.doFilter(ad, new MockHttpServletResponse(), new RecordingChain());
+        assertThat(dao.updateTimeoutCalls).isEqualTo(renewsAfterLogin);
+
+        MockHttpServletRequest activity = request("GET", "/api/common/activity/activities");
+        activity.addHeader("Authorization", "Bearer " + presented);
+        filter.doFilter(activity, new MockHttpServletResponse(), new RecordingChain());
+        assertThat(dao.updateTimeoutCalls).isEqualTo(renewsAfterLogin);
+    }
+
+    @Test
+    void portalWriteAndRequiredGetStillRenew() throws Exception {
+        CountingDao dao = new CountingDao();
+        SaManager.setSaTokenDao(dao);
+        SessionService sessions = new SessionService(kicks);
+        String presented = sessions.loginClient(11L, 3, null, "write_user");
+        int renewsAfterLogin = dao.updateTimeoutCalls;
+        SessionAuthFilter filter = new SessionAuthFilter(SessionSide.PORTAL, kicks, availability);
+
+        MockHttpServletRequest mine = request("GET", "/api/common/task/mine");
+        mine.addHeader("Authorization", "Bearer " + presented);
+        filter.doFilter(mine, new MockHttpServletResponse(), new RecordingChain());
+        assertThat(dao.updateTimeoutCalls).isGreaterThan(renewsAfterLogin);
+
+        int afterMine = dao.updateTimeoutCalls;
+        MockHttpServletRequest track = request("POST", "/api/common/track/batch");
+        track.addHeader("Authorization", "Bearer " + presented);
+        filter.doFilter(track, new MockHttpServletResponse(), new RecordingChain());
+        assertThat(dao.updateTimeoutCalls).isGreaterThan(afterMine);
+    }
+
+    /** Counts Sa-Token timeout renewals (renewTimeout → updateTimeout). */
+    private static final class CountingDao extends SaTokenDaoDefaultImpl {
+        int updateTimeoutCalls;
+
+        @Override
+        public void updateTimeout(String key, long timeout) {
+            updateTimeoutCalls++;
+            super.updateTimeout(key, timeout);
+        }
+    }
+
     private static String setCookie(MockHttpServletResponse response, String name) {
         return response.getHeaders("Set-Cookie").stream()
                 .filter(h -> h.startsWith(name + "="))

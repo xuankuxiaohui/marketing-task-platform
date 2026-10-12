@@ -137,8 +137,12 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
             bindToken(logic, raw);
             String username = SessionUsernames.read(logic, raw, id);
             UserContext.set(new UserPrincipal(Long.parseLong(id), loginType, username));
-            logic.updateLastActiveToNow(raw);
-            renew(logic, raw);
+            // Portal list-family pure GET: skip Sa-Token renew/lastActive Redis writes.
+            // Auth bind + UserContext still run; write paths and required-auth GETs still renew.
+            if (!skipPortalSessionRenew(side, method, path)) {
+                logic.updateLastActiveToNow(raw);
+                renew(logic, raw);
+            }
             slideAdminCookies(request, response, presented);
             chain.doFilter(downstream, response);
             auditForbidden(downstream, response);
@@ -232,6 +236,17 @@ public final class SessionAuthFilter extends OncePerRequestFilter {
         } catch (SaTokenContextException ignored) {
             // no Sa servlet context; UserContext is the request principal
         }
+    }
+
+    /**
+     * List / activity / ad-position GET (portal optional-auth pure GET family).
+     * Skipping renew cuts Redis write churn on the hot list path without changing
+     * bind/kick/auth semantics. POST optional-auth (track/dismiss) still renews.
+     */
+    private static boolean skipPortalSessionRenew(SessionSide side, String method, String path) {
+        return side == SessionSide.PORTAL
+                && "GET".equalsIgnoreCase(method)
+                && AnonymousPaths.portalOptionalAuth(method, path);
     }
 
     private static void renew(StpLogic logic, String raw) {
