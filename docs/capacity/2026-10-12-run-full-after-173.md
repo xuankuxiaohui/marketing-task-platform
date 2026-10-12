@@ -35,6 +35,11 @@ No stage emitted k6 `thresholds on metrics` / abort. Script `run-full-noseed.sh`
 - Evidence-only PR — no product / no 1536M raise.
 - Await architect for next knife.
 
+
+
+## Follow-up: cooled risk-delta retest (same day)
+Isolated cooled retest on same `mkt` (no scale reseed) → **PASS** Δ≈−6.06 ms. See [2026-10-12-risk-delta-retest.md](2026-10-12-risk-delta-retest.md). Architect: **no** risk-grant product knife; prior FAIL attributed to hot stack. `run-full-noseed.sh` EOF heredoc fixed in `perf/run-full-noseed.sh`.
+
 ## Artifacts
 `/workspace/r6-capacity-logs/run-full-after-173/`  
 (`k6-*.log`, `run-full-console.log`, `run-full.log`, `run-full-result.txt`, `risk-delta.txt`, `master-tip.txt`)  
