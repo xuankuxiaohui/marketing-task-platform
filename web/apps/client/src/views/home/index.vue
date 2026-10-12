@@ -43,6 +43,8 @@ const loadedMonths = ref(new Set<string>());
 const weekStart = ref(weekStartSunday(toIsoDate(new Date())));
 const activities = ref<PortalActivityView[]>([]);
 const activitiesLoaded = ref(false);
+const activitiesError = ref(false);
+const activitiesErrorMessage = ref("");
 const requestScope = () => session.token;
 const beginPointsRequest = useLatestRequest(requestScope);
 const beginSigninRequest = useLatestRequest(requestScope);
@@ -58,7 +60,9 @@ const todaySigned = computed(() =>
 );
 const streakDays = computed(() => consecutiveDays.value);
 const weekCells = computed(() => signinWeek(signinDays.value, weekStart.value));
-const emptyActivities = computed(() => activitiesLoaded.value && activities.value.length === 0);
+const emptyActivities = computed(
+  () => activitiesLoaded.value && !activitiesError.value && activities.value.length === 0,
+);
 
 function resetSignin(): void {
   signinDays.value = [];
@@ -167,12 +171,23 @@ async function loadActivities(): Promise<void> {
   }
   try {
     const result = await fetchActivities();
-    if (isCurrent()) {
-      activities.value = isOk(result) && result.data ? result.data : [];
+    if (!isCurrent()) {
+      return;
     }
+    if (isOk(result) && result.data) {
+      activities.value = result.data;
+      activitiesError.value = false;
+      activitiesErrorMessage.value = "";
+      return;
+    }
+    activities.value = [];
+    activitiesError.value = true;
+    activitiesErrorMessage.value = zhCN.common.listLoadFailed;
   } catch {
     if (isCurrent()) {
       activities.value = [];
+      activitiesError.value = true;
+      activitiesErrorMessage.value = zhCN.common.networkError;
     }
   } finally {
     if (isCurrent()) {
@@ -346,7 +361,16 @@ watch(requestScope, () => {
       <section class="home-activities">
         <h2>{{ zhCN.home.activities }}</h2>
         <Empty
-          v-if="emptyActivities"
+          v-if="activitiesLoaded && activitiesError"
+          :description="activitiesErrorMessage"
+          data-testid="home-activities-error"
+        >
+          <Button type="primary" size="small" data-testid="home-activities-retry" @click="loadActivities">
+            {{ zhCN.common.retry }}
+          </Button>
+        </Empty>
+        <Empty
+          v-else-if="emptyActivities"
           :description="zhCN.home.empty"
           data-testid="home-empty"
         />

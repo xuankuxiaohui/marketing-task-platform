@@ -208,5 +208,6 @@ export const zhCN = {
     confirm: "确认",
     retry: "重试",
     networkError: "网络异常，请重试",
+    listLoadFailed: "列表加载失败，请重试",
   },
 } as const;

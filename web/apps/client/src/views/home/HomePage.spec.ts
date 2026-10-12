@@ -391,4 +391,28 @@ describe("HomePage", () => {
     expect(PORTAL_PRIMARY.toLowerCase()).not.toBe("#0f766e");
     expect(PORTAL_PRIMARY.toLowerCase()).not.toBe("#e11d48");
   });
+
+  it("shows activities fail copy with retry instead of empty (UX-3 P0)", async () => {
+    activityMock.mockResolvedValue(fail("common.server-error", "服务异常，请稍后重试") as never);
+    const { wrapper } = await mountHome(false);
+    expect(wrapper.find('[data-testid="home-empty"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="home-activities-error"]').text()).toContain(
+      zhCN.common.listLoadFailed,
+    );
+    expect(wrapper.get('[data-testid="home-activities-retry"]').text()).toBe(zhCN.common.retry);
+    activityMock.mockResolvedValue(
+      ok([
+        {
+          id: 9,
+          code: "a",
+          name: "活动甲",
+          startTime: "2026-08-01T00:00:00Z",
+          endTime: "2026-08-31T16:00:00Z",
+        },
+      ]) as never,
+    );
+    await wrapper.get('[data-testid="home-activities-retry"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="home-activity-list"]').text()).toContain("活动甲");
+  });
 });
