@@ -30,6 +30,9 @@ Applied on live `mkt`: `instances_today` **532964 → 0**; `users_at_limit_ge20`
 
 Sole crossed threshold: `http_req_duration{name:grant,scenario:complete}`. **No run-full** this slice.
 
+
+Settle note: pre-k6 settle window exhausted 12 polls without quiet×2 (mysql CPU often >90% after bulk UPDATE); may contribute to P95 miss. Post-complete dry-run: instances_today≈2603 (from this run), users_at_limit_ge20=0.
+
 ## Disposition
 - **勾空; 非 RC.**
 - **Ask architect next knife** for grant P95≈510 vs 500 (cooldown? complete warm? product — await).
