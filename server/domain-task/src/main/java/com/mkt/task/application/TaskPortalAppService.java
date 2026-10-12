@@ -590,8 +590,8 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // Dual-IN + FORCE INDEX (uk_user_task_cycle): avoid optimizer picking idx_user_cycle
-        // under V8 coexistence (digest/warm FAIL). Keep dual-IN; forbid cycle_key-only/pair128.
+        // Dual-IN (task_id IN + cycle_key IN + Java pair filter). FORCE INDEX experiment
+        // FAIL (P95~3.3s) — stripped before merge; see docs/capacity FORCE evidence.
         List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
         List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
         Map<Long, TaskInstanceEntity> out = new HashMap<>();

@@ -2,6 +2,8 @@
 
 **Result: list formal 5m FAIL.** Capacity勾空; 非 RC. run-full not started.
 
+**Product disposition:** FORCE INDEX **stripped** before merge — evidence-only; do not land FORCE on master.
+
 ## #168 merge
 - Tip: `550c42b891c1726ab9d11939c57ec72104e6e230`
 - Master: `2778ea97356b5e94423262c7daa10eea6eb279f5`
