@@ -2,6 +2,7 @@ package com.mkt.admin.metrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.mkt.identity.config.ConfigService;
 import com.mkt.infra.lock.PlatformLock;
@@ -25,5 +26,17 @@ class MetricsConfigurationTest {
         assertThat(aggregates).isNotNull();
         assertThat(queries).isNotNull();
         assertThat(scheduler).isNotNull();
+    }
+
+    @Test
+    void wiresSchedulerDisabledShortCircuit() {
+        MetricsConfiguration config = new MetricsConfiguration();
+        MetricsAggregateService aggregates = mock(MetricsAggregateService.class);
+        PlatformLock locks = mock(PlatformLock.class);
+        MetricsScheduler scheduler =
+                config.metricsScheduler(aggregates, locks, Clock.systemUTC(), false);
+        assertThat(scheduler).isNotNull();
+        scheduler.tick();
+        verifyNoInteractions(aggregates, locks);
     }
 }
