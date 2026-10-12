@@ -1,3 +1,5 @@
+**Product disposition (Architect ~09:30):** 产品不合 — evidence-only merge. Oneshot+V9 **stripped**; must not enter master via this PR. Next: singleflight + dual-IN + V9 + TTL3s.
+
 # Capacity: tuple IN 单次打满 + V9 (2026-10-12)
 
 **Status:** formal list **FAIL** (勾空; 非 RC). 先测后合 — **do not merge** until architect 批合.  
