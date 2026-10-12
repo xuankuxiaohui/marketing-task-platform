@@ -39,6 +39,10 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
         return instances.selectByUserTaskCycle(userId, taskId, cycleKey);
     }
 
+    /**
+     * Architect 2026-10-12: tuple IN 单次打满 — one shot for all pairs (no ≤64 serial
+     * chunking; forbid dual-IN×128 / pair128). Published catalog fits a single IN.
+     */
     @Override
     public List<TaskInstanceEntity> listByUserTaskCycles(long userId, List<TaskCycleKey> keys) {
         if (keys == null || keys.isEmpty()) {

@@ -533,8 +533,8 @@ public class TaskPortalAppService {
     /**
      * Heap-dump relief (2026-10-12): near-ceiling histogram showed ~343k–500k
      * {@link TaskInstanceEntity} + MySQL {@code ByteArrayRow}/LocalDateTime when
-     * {@code listByUser} hit seed user_id=1 (500001 rows). Prefer bounded
-     * {@code listByUserTaskCycles} for published (task_id, cycle_key) only.
+     * {@code listByUser} hit seed user_id=1 (500001 rows). Bounded one-shot
+     * {@code listByUserTaskCycles} — {@code (task_id, cycle_key) IN} (no ≤64 serial).
      */
     private Map<Long, TaskInstanceEntity> currentInstancesForPublished(
             long userId,
@@ -590,19 +590,18 @@ public class TaskPortalAppService {
         if (cycleByTask.isEmpty()) {
             return Map.of();
         }
-        // Dual-IN (task_id IN + cycle_key IN + Java pair filter). FORCE INDEX experiment
-        // FAIL (P95~3.3s) — stripped before merge; see docs/capacity FORCE evidence.
-        List<Long> taskIds = new ArrayList<>(cycleByTask.keySet());
-        List<String> cycleKeys = new ArrayList<>(new java.util.LinkedHashSet<>(cycleByTask.values()));
-        Map<Long, TaskInstanceEntity> out = new HashMap<>();
-        for (TaskInstanceEntity row : instances.listByUserTaskIdsAndCycleKeys(userId, taskIds, cycleKeys)) {
+        // Tuple IN 单次打满 via listByUserTaskCycles (no serial ≤64 chunking).
+        // Keep V9 (idx_user_cycle dropped). Forbid dual-IN×128 / pair128 / cycle_key-only / FORCE.
+        List<TaskCycleKey> pairs = new ArrayList<>(cycleByTask.size());
+        for (Map.Entry<Long, String> e : cycleByTask.entrySet()) {
+            pairs.add(new TaskCycleKey(e.getKey(), e.getValue()));
+        }
+        Map<Long, TaskInstanceEntity> out = new HashMap<>(pairs.size());
+        for (TaskInstanceEntity row : instances.listByUserTaskCycles(userId, pairs)) {
             if (row == null || row.getTaskId() == null) {
                 continue;
             }
-            String want = cycleByTask.get(row.getTaskId());
-            if (want != null && want.equals(row.getCycleKey())) {
-                out.putIfAbsent(row.getTaskId(), row);
-            }
+            out.putIfAbsent(row.getTaskId(), row);
         }
         return out;
     }
