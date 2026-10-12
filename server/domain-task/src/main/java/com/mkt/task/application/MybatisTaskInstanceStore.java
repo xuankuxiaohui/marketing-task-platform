@@ -5,7 +5,6 @@ import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.mapper.TaskInstanceMapper;
 import com.mkt.task.mapper.TaskInstanceStepMapper;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
@@ -40,23 +39,12 @@ public class MybatisTaskInstanceStore implements TaskInstanceStore {
         return instances.selectByUserTaskCycle(userId, taskId, cycleKey);
     }
 
-    /** Architect 2026-10-12: pair IN batch ≤64 — forbid dual-IN×128 / large batch 128. */
-    private static final int PAIR_IN_BATCH = 64;
-
     @Override
     public List<TaskInstanceEntity> listByUserTaskCycles(long userId, List<TaskCycleKey> keys) {
         if (keys == null || keys.isEmpty()) {
             return List.of();
         }
-        if (keys.size() <= PAIR_IN_BATCH) {
-            return instances.selectByUserTaskCycles(userId, keys);
-        }
-        ArrayList<TaskInstanceEntity> out = new ArrayList<>(keys.size());
-        for (int i = 0; i < keys.size(); i += PAIR_IN_BATCH) {
-            List<TaskCycleKey> chunk = keys.subList(i, Math.min(i + PAIR_IN_BATCH, keys.size()));
-            out.addAll(instances.selectByUserTaskCycles(userId, chunk));
-        }
-        return out;
+        return instances.selectByUserTaskCycles(userId, keys);
     }
 
     @Override
