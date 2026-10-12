@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zhCN } from "@/locales/zh-CN";
+import type { PortalActivityView } from "@/api/activity";
 import { fail, ok } from "@/test-utils/result";
 
 vi.mock("@/api/activity", () => ({
@@ -93,5 +94,21 @@ describe("ActivityHubPage", () => {
     const { wrapper } = await mountHub();
     expect(wrapper.get('[data-testid="activity-hub-error"]').text()).toContain(zhCN.common.networkError);
     expect(wrapper.find('[data-testid="activity-hub-retry"]').exists()).toBe(true);
+  });
+
+  it("shows loading copy before catalog resolves (UX-3 P1; no flash-empty)", async () => {
+    let finish!: (value: ReturnType<typeof ok<PortalActivityView[]>>) => void;
+    listMock.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { wrapper } = await mountHub();
+    expect(wrapper.get('[data-testid="activity-hub-loading"]').text()).toBe(zhCN.common.loading);
+    expect(wrapper.find('[data-testid="activity-hub-empty"]').exists()).toBe(false);
+    finish(ok([]));
+    await flushPromises();
+    expect(wrapper.find('[data-testid="activity-hub-loading"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-hub-empty"]').text()).toContain(zhCN.activity.empty);
   });
 });

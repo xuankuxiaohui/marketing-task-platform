@@ -415,4 +415,20 @@ describe("HomePage", () => {
     await flushPromises();
     expect(wrapper.get('[data-testid="home-activity-list"]').text()).toContain("活动甲");
   });
+
+  it("shows activities loading copy before catalog resolves (UX-3 P1; no flash-empty)", async () => {
+    let finish!: (value: ReturnType<typeof ok<PortalActivityView[]>>) => void;
+    activityMock.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { wrapper } = await mountHome(false);
+    expect(wrapper.get('[data-testid="home-activities-loading"]').text()).toBe(zhCN.common.loading);
+    expect(wrapper.find('[data-testid="home-empty"]').exists()).toBe(false);
+    finish(ok([]));
+    await flushPromises();
+    expect(wrapper.find('[data-testid="home-activities-loading"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="home-empty"]').text()).toContain(zhCN.home.empty);
+  });
 });
