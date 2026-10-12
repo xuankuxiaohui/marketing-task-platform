@@ -54,3 +54,10 @@ springdoc:
     path: /admin/v3/api-docs
   swagger-ui:
     enabled: false
+
+# Capacity measurement hygiene: set MKT_METRICS_AGGREGATE_ENABLED=false on throwaway mkt
+# during advance formal to stop mtr_* JSON agg co-load. Default true (production unchanged).
+mkt:
+  metrics:
+    aggregate:
+      enabled: ${MKT_METRICS_AGGREGATE_ENABLED:true}

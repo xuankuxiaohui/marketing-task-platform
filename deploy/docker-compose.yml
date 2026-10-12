@@ -92,6 +92,8 @@ services:
       MKT_FLYWAY_USER: ${MKT_FLYWAY_USER}
       MKT_FLYWAY_PASSWORD: ${MKT_FLYWAY_PASSWORD}
       MKT_INIT_ADMIN_PASSWORD: ${MKT_INIT_ADMIN_PASSWORD}
+      # measurement hygiene for advance formal on throwaway mkt (default true)
+      MKT_METRICS_AGGREGATE_ENABLED: ${MKT_METRICS_AGGREGATE_ENABLED:-true}
     depends_on:
       mysql:
         condition: service_healthy

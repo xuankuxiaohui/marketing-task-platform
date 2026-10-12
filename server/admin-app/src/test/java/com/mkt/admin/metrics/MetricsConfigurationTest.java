@@ -21,7 +21,7 @@ class MetricsConfigurationTest {
         MetricsAggregateService aggregates = config.metricsAggregateService(jdbc, configs, clock);
         MetricsQueryService queries = config.metricsQueryService(jdbc, clock);
         MetricsScheduler scheduler =
-                config.metricsScheduler(aggregates, new PlatformLock(new MemoryKeyValueStore()), clock);
+                config.metricsScheduler(aggregates, new PlatformLock(new MemoryKeyValueStore()), clock, true);
         assertThat(aggregates).isNotNull();
         assertThat(queries).isNotNull();
         assertThat(scheduler).isNotNull();
