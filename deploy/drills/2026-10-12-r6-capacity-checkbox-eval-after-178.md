@@ -53,3 +53,7 @@ Still **非 RC** / **非 R6 通过**. No threshold value changes. No 1536M raise
 ## Checklist binding
 
 See [R31-go-live-checklist.md](../R31-go-live-checklist.md) §数据与运行保障 — both capacity-related boxes **remain empty**; this eval linked. R6 stays **已开 / 进行中** / **非 RC**.
+
+## Follow-up: run-full-noseed after #179 merge (same day)
+
+Architect ordered same-mkt **不重seed** `run-full-after-178` after #179 merge. Result: **FAIL-STOP at list** (dropped≈0.319/s). See [docs/capacity/2026-10-12-run-full-after-178.md](../../docs/capacity/2026-10-12-run-full-after-178.md). **勾仍空**; **非 RC**; await architect next knife.
