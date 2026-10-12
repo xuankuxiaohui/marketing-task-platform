@@ -1,5 +1,7 @@
 # Deploy drills / R6 evidence
 
+> **Capacity living status:** [`docs/capacity/STATUS.md`](../../docs/capacity/STATUS.md) (勾空; 非 RC; Δ收口). Historical capacity pages indexed at [`docs/capacity/ARCHIVE-INDEX.md`](../../docs/capacity/ARCHIVE-INDEX.md).
+
 Isolation drills and first-release evidence linked from [R31-go-live-checklist.md](../R31-go-live-checklist.md).
 
 | Date | Topic | Report |

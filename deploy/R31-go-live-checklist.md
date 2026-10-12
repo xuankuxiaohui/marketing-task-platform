@@ -52,6 +52,7 @@
   - **说明**：本勾覆盖隔离 PITR 标记/账本核对；**不**等于生产已调度归档、容量 PASS、真实浏览器或 RC。
 - [ ] Prometheus 可查询实际业务指标；告警通过受控故障验证，埋点比例使用一致的事件单位。
 - [ ] 性能报告记录有效业务吞吐、P95、错误/丢弃、积压恢复及资源条件，满足 DEC-006 确认的验收目标。
+  - **另议（2026-10-13；#196 后 Δ收口）**：本勾保持 `[ ]`；**禁自动勾**。活状态见 [docs/capacity/STATUS.md](../docs/capacity/STATUS.md)。**勾空; 非 RC**；默认不再排容量刀。
   - **已取证 / 整体 FAIL（勾保持空，待架构师审阅）**：bot box Compose `mkt` 跑 p0 seed + k6 P0（`DURATION=5m`）；**list / advance / complete / risk-on FAIL**；**track PASS**（≈6000 eps、P95≈11ms）；**admin-list PASS**（p0 数据量）；risk delta 数值≤20 但 risk-on 自身 HTTP/业务失败 → 不作干净 性能4 PASS。证据：[drills/2026-10-11-r6-capacity-dec006.md](drills/2026-10-11-r6-capacity-dec006.md)。**未**跑 p1/`run-full.sh`。**不**等于容量 PASS / RC；勾是否勾选待架构师审阅本报告。
   - **list 路径补强（#142；勾仍空）**：根因=每请求全量 `listPublished`+snapshots（~1000）且未读已有 `TASK_PUBLISHED_INDEX`；已接 catalog 缓存 + Hikari portal40/admin20。证据：[drills/2026-10-11-r6-capacity-list-path.md](drills/2026-10-11-r6-capacity-list-path.md)。**未**重跑 k6；**不**宣称 list/DEC-006 PASS。
   - **list 重测 after #142（#143；勾仍空）**：bot box Compose `mkt` 重建 portal 后 targeted list smoke 30s + 5m **FAIL**（~116 http/s vs 500；list P95~30s；checks~38%；http_req_failed~61%；dropped 仍高）。相对 #139：吞吐约翻倍，但出现大量 502/500/Hikari wait（#139 http_fail≈0）。证据：[drills/2026-10-11-r6-capacity-list-retest.md](drills/2026-10-11-r6-capacity-list-retest.md)。**fail-stop**；**未**开 advance；**不**改阈值 / 重开 DEC-006；**不**等于容量 PASS / RC。
@@ -93,6 +94,7 @@
   - **risk rule listAll Caffeine TTL3s after #194（本 PR；勾仍空）**：合入 `b37965c` 后 portal 部署 tip `46ac78d`；冷对称孤立 risk-on **FAIL** exhausted=**378**（P95≈**74.98** ms，较冷对称≈295 明显下降；http_fail 0）；Δ/off/run-full 未跑。证据：[docs/capacity/2026-10-12-risk-rule-cache-after-194.md](../docs/capacity/2026-10-12-risk-rule-cache-after-194.md)。**勾仍空**；**非 RC**；**未**降 Δ / **未**抬日限·频率·1536M / **未**放宽门禁 / **未**重seed / **未**revert #178 / **未**Redisson加码；**待架构师** stripe 扩条带 vs CntWindow trim。
   - **stripe→5000 cold Δ after #195（本 PR；勾仍空）**：合入 `e5c3f4f` 后 expand users **5000**（禁重seed/抬日限）；冷对称 risk-on **FAIL** http_fail≈**0.27%**（exhausted **0**；P95≈**67.96**）；Δ/off/run-full 未跑；**Δ收口→项目规划主线**。证据：[docs/capacity/2026-10-12-stripe-expand-4500-delta-after-195.md](../docs/capacity/2026-10-12-stripe-expand-4500-delta-after-195.md)。**勾仍空**；**非 RC**；**未**降 Δ / **未**抬日限 / **未**放宽门禁 / **未**发明更多容量刀。
 - [ ] 容量场景与正常/异常业务回归均有证据；压测不属于例行 PR CI，入口与限制见 [perf/README.md](../perf/README.md)。
+  - **另议（2026-10-13；#196 后 Δ收口）**：本勾保持 `[ ]`；**禁自动勾**（第二勾另议）。活状态见 [docs/capacity/STATUS.md](../docs/capacity/STATUS.md)。**勾空; 非 RC**。
 
 ## 验收记录
 

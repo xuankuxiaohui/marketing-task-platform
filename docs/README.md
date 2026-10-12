@@ -15,6 +15,7 @@
 | 界面与交互工作 | [DESIGN](../DESIGN.md) | 体验约束和视觉验收方式 |
 | 历史需求对应哪些测试 | [验证映射](verification-matrix.md) | 历史检索索引，不是当前规格或执行报告 |
 | 发布及性能如何取证 | [部署](../deploy/R31-go-live-checklist.md)、[性能](../perf/README.md) | 检查入口与证据要求；性能目标见 [DEC-006](decisions.md#dec-006性能目标及证据口径已关闭)（**已关闭**；证据口径与场景数值为门禁） |
+| 容量/R6 当前姿态（两勾仍空、非 RC、Δ收口） | [capacity/STATUS](capacity/STATUS.md) | **活状态**；历史证据见 [ARCHIVE-INDEX](capacity/ARCHIVE-INDEX.md)；禁当 RC |
 
 ## 维护约定
 
