@@ -9,7 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
-/** §6.7 metrics aggregate: 1min, tryLock(0), lock key sched:metrics-aggregate. */
+/**
+ * §6.7 metrics aggregate: 1min, tryLock(0), lock key sched:metrics-aggregate.
+ *
+ * <p>Measurement hygiene (capacity advance formal): set {@code mkt.metrics.aggregate.enabled=false}
+ * (env {@code MKT_METRICS_AGGREGATE_ENABLED=false}) on throwaway mkt admin to stop {@code mtr_*}
+ * JSON aggs co-load. Default remains enabled. Not a permanent product disable.
+ */
 public class MetricsScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(MetricsScheduler.class);
@@ -17,15 +23,25 @@ public class MetricsScheduler {
     private final MetricsAggregateService aggregates;
     private final PlatformLock locks;
     private final Clock clock;
+    private final boolean enabled;
 
     public MetricsScheduler(MetricsAggregateService aggregates, PlatformLock locks, Clock clock) {
+        this(aggregates, locks, clock, true);
+    }
+
+    public MetricsScheduler(
+            MetricsAggregateService aggregates, PlatformLock locks, Clock clock, boolean enabled) {
         this.aggregates = aggregates;
         this.locks = locks;
         this.clock = clock;
+        this.enabled = enabled;
     }
 
     @Scheduled(fixedDelay = 60_000)
     public void tick() {
+        if (!enabled) {
+            return;
+        }
         String lockKey = LockKeys.sched("metrics-aggregate");
         LockAcquire acquired = locks.tryLock(lockKey);
         if (acquired != LockAcquire.ACQUIRED) {

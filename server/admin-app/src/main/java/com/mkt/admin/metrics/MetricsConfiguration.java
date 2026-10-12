@@ -3,6 +3,7 @@ package com.mkt.admin.metrics;
 import com.mkt.identity.config.ConfigService;
 import com.mkt.infra.lock.PlatformLock;
 import java.time.Clock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,7 +22,11 @@ public class MetricsConfiguration {
     }
 
     @Bean
-    MetricsScheduler metricsScheduler(MetricsAggregateService aggregates, PlatformLock locks, Clock clock) {
-        return new MetricsScheduler(aggregates, locks, clock);
+    MetricsScheduler metricsScheduler(
+            MetricsAggregateService aggregates,
+            PlatformLock locks,
+            Clock clock,
+            @Value("${mkt.metrics.aggregate.enabled:true}") boolean aggregateEnabled) {
+        return new MetricsScheduler(aggregates, locks, clock, aggregateEnabled);
     }
 }

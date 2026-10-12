@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.mkt.infra.lock.LockAcquire;
@@ -40,5 +41,13 @@ class MetricsSchedulerTest {
         when(aggregates.run()).thenThrow(new IllegalStateException("boom"));
         new MetricsScheduler(aggregates, locks, Clock.systemUTC()).tick();
         assertThat(locks.tryLock("sched:metrics-aggregate")).isEqualTo(LockAcquire.ACQUIRED);
+    }
+
+    @Test
+    void skipsWhenDisabled() {
+        MetricsAggregateService aggregates = mock(MetricsAggregateService.class);
+        PlatformLock locks = mock(PlatformLock.class);
+        new MetricsScheduler(aggregates, locks, Clock.systemUTC(), false).tick();
+        verifyNoInteractions(aggregates, locks);
     }
 }
