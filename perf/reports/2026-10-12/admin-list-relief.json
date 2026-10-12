@@ -1,0 +1,17 @@
+{
+  "before_run_full_after_175": {
+    "admin_instances_p95_ms": 795.78,
+    "result": "PASS near ceiling"
+  },
+  "after_count_ttl_cache": {
+    "admin_instances_p95_ms": 118.07,
+    "admin_definitions_p95_ms": 92.59,
+    "admin_grants_p95_ms": 208.37,
+    "http_fail": 0.0,
+    "checks": 1.0,
+    "result": "PASS"
+  },
+  "gate_ms": 800,
+  "isolation": "mkt",
+  "reseed": false
+}

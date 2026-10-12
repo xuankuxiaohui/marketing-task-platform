@@ -94,6 +94,27 @@ class TaskInstanceAppServiceTest {
     }
 
     @Test
+    void pageReusesAdminCountWithinTtl() {
+        MemoryTaskInstanceStore store = spy(new MemoryTaskInstanceStore());
+        TaskInstanceAppService cached = new TaskInstanceAppService(
+                store,
+                snapshots,
+                timeline,
+                publisher,
+                risk,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                null);
+        TaskInstanceEntity row = inProgress(1L, 9L, NOW.plusSeconds(86400));
+        store.insert(row);
+        InstanceQuery query =
+                new InstanceQuery(null, null, null, null, null, null, PageQuery.of(1, 20));
+        assertThat(cached.page(query).total()).isEqualTo(1);
+        assertThat(cached.page(query).total()).isEqualTo(1);
+        verify(store, times(1)).countAdmin(null, null, null, null, null, null);
+        verify(store, times(2)).listAdmin(null, null, null, null, null, null, 0L, 20);
+    }
+
+    @Test
     void getMissingThrowsNotFound() {
         assertThatThrownBy(() -> service.get(99L))
                 .isInstanceOf(BusinessException.class)
