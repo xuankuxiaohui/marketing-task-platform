@@ -83,12 +83,18 @@ export const zhCN = {
   activity: {
     title: "活动",
     empty: "暂无进行中的活动",
+    goHub: "去活动中心",
     owner: "所属活动",
     join: "立即参与",
     joined: "参与成功",
     rejected: "暂不符合参与条件",
     rules: "规则",
     rulesTitle: "活动规则",
+    failTitle: "活动信息加载失败",
+    failHint: "请检查网络后重试",
+    reload: "重新加载",
+    gone: "活动已结束或不存在",
+    backToHub: "返回活动中心",
   },
   signin: {
     title: "签到",

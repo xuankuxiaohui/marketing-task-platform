@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSessionStore } from "@/store/session";
+import { zhCN } from "@/locales/zh-CN";
 import { fail, ok } from "@/test-utils/result";
 import { showFailToast } from "vant";
 import type { TaskCardView } from "@/api/task";
@@ -113,24 +114,30 @@ describe("ActivityPage", () => {
     prizeListMock.mockResolvedValue(ok({ total: 0, records: [] }));
   });
 
-  it("renders empty with a back-to-hub button when no published activity", async () => {
+  it("renders catalog-empty (not gone) with go-hub CTA when no published activity (U4)", async () => {
     listMock.mockResolvedValue(ok([]));
     const { wrapper, router } = await mountPage();
-    expect(wrapper.get('[data-testid="activity-empty"]').text()).toContain("活动已结束或不存在");
+    expect(wrapper.get('[data-testid="activity-empty"]').text()).toContain(zhCN.activity.empty);
+    expect(wrapper.get('[data-testid="activity-empty"]').text()).not.toContain(zhCN.activity.gone);
     expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(false);
-    const back = wrapper.get('[data-testid="activity-back-hub"]');
-    expect(back.text()).toContain("返回活动中心");
-    await back.trigger("click");
+    const go = wrapper.get('[data-testid="activity-go-hub"]');
+    expect(go.text()).toContain(zhCN.activity.goHub);
+    await go.trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/activities");
   });
 
-  it("treats activity not-found as empty, not a retryable failure", async () => {
+  it("treats activity not-found as gone empty with back-to-hub, not a retryable failure (U4)", async () => {
     detailMock.mockResolvedValue(fail("activity.activity.not-found", "活动不存在"));
-    const { wrapper } = await mountPage({ id: "3" });
-    expect(wrapper.find('[data-testid="activity-empty"]').exists()).toBe(true);
+    const { wrapper, router } = await mountPage({ id: "3" });
+    expect(wrapper.get('[data-testid="activity-empty"]').text()).toContain(zhCN.activity.gone);
     expect(wrapper.find('[data-testid="activity-back-hub"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="activity-back-hub"]').text()).toContain(zhCN.activity.backToHub);
+    expect(wrapper.find('[data-testid="activity-go-hub"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(false);
+    await wrapper.get('[data-testid="activity-back-hub"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/activities");
   });
 
   it("shows the fail state (not empty) on detail failure, without toast or raw message", async () => {
@@ -139,9 +146,9 @@ describe("ActivityPage", () => {
     const { wrapper } = await mountPage({ id: "3" });
     expect(wrapper.find('[data-testid="activity-empty"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="activity-detail"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="activity-error-title"]').text()).toBe("活动信息加载失败");
-    expect(wrapper.get('[data-testid="activity-error-hint"]').text()).toBe("请检查网络后重试");
-    expect(wrapper.get('[data-testid="activity-retry"]').text()).toContain("重新加载");
+    expect(wrapper.get('[data-testid="activity-error-title"]').text()).toBe(zhCN.activity.failTitle);
+    expect(wrapper.get('[data-testid="activity-error-hint"]').text()).toBe(zhCN.activity.failHint);
+    expect(wrapper.get('[data-testid="activity-retry"]').text()).toContain(zhCN.activity.reload);
     expect(wrapper.text()).not.toContain("IllegalStateException");
     expect(showFailToast).not.toHaveBeenCalled();
   });
