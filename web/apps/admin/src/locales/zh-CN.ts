@@ -413,6 +413,7 @@ export const zhCN = {
   },
   rule: {
     title: "风控规则",
+    ruleCode: "规则编号",
     enabled: "启用",
     threshold: "阈值",
     windowSeconds: "窗口（秒）",
@@ -425,7 +426,7 @@ export const zhCN = {
   },
   cases: {
     title: "命中与处置",
-    ruleCode: "规则编码",
+    ruleCode: "规则编号",
     hitType: "命中类型",
     dimensionValue: "维度值",
     userId: "用户 ID",
@@ -439,6 +440,39 @@ export const zhCN = {
     reason: "原因",
     expireAt: "加黑过期时间",
     occurredAt: "发生时间",
+  },
+  /** Risk closed-enum display labels (Top2 U2). Codes stay as values; unknown codes show as-is. */
+  risk: {
+    action: {
+      REJECT: "拦截",
+      SILENT_REJECT: "静默拦截",
+      MARK: "标记观察",
+      PASS: "放行",
+    },
+    actionResult: {
+      REJECTED: "已拦截",
+      SILENT_REJECTED: "已静默拦截",
+      MARKED: "已标记",
+      FROZEN: "已冻结",
+    },
+    listType: {
+      BLACK: "黑名单",
+      WHITE: "白名单",
+    },
+    hitType: {
+      RULE: "规则命中",
+      LIST: "名单命中",
+    },
+    handleAction: {
+      ADD_BLACK: "加入黑名单",
+      REMOVE_BLACK: "移出黑名单",
+      MARK_FALSE_POSITIVE: "标记误判",
+    },
+    dimension: {
+      USER: "用户",
+      IP: "IP",
+      DEVICE: "设备",
+    },
   },
   metadata: {
     title: "埋点元数据",

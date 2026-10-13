@@ -56,6 +56,36 @@ describe("RiskRulePage", () => {
     expect(wrapper.text()).toContain("R-f");
   });
 
+  it("shows 规则编号 header (no bare code) and Chinese action labels; rule codes untranslated", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().permissions = [PERMS.RISK_RULE_QUERY, PERMS.RISK_RULE_CONFIG];
+    const wrapper = mount(RulePage, { global: { plugins: [pinia], directives: { auth } } });
+    await flushPromises();
+    const headers = wrapper.findAll("th").map((th) => th.text().trim());
+    expect(headers).toContain(zhCN.rule.ruleCode);
+    expect(zhCN.rule.ruleCode).toBe("规则编号");
+    expect(headers).not.toContain("code");
+    expect(wrapper.get('[data-testid="rule-action-cell"]').text()).toBe("拦截");
+    expect(wrapper.text()).toContain("R-f");
+    await wrapper.get('[data-testid="rule-edit"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="rule-action"]').text()).toContain("拦截");
+    expect(wrapper.get('[data-testid="rule-action"]').text()).not.toContain("REJECT");
+  });
+
+  it("shows unknown action code as-is instead of blank", async () => {
+    listRulesMock.mockResolvedValue(
+      ok([{ ruleCode: "R-a", enabled: true, threshold: 1, windowSeconds: 60, action: "FUTURE_ACTION" as "REJECT" }]),
+    );
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useSessionStore().permissions = [PERMS.RISK_RULE_QUERY];
+    const wrapper = mount(RulePage, { global: { plugins: [pinia], directives: { auth } } });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="rule-action-cell"]').text()).toBe("FUTURE_ACTION");
+  });
+
   it("shows cache TTL hint (N from LIST_ALL_TTL) in edit dialog", async () => {
     expect(RISK_RULE_LIST_CACHE_TTL_SECONDS).toBe(3);
     expect(zhCN.rule.cacheTtlHint).toContain(`${RISK_RULE_LIST_CACHE_TTL_SECONDS} 秒`);

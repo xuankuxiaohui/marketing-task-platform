@@ -52,6 +52,20 @@ describe("RiskCasePage", () => {
     handleMock.mockResolvedValue(ok({ ok: true }));
   });
 
+  it("shows Chinese hit type / action result labels; rule codes untranslated", async () => {
+    const wrapper = await mountPage();
+    const table = wrapper.get('[data-testid="hit-table"]').text();
+    expect(table).toContain("规则命中");
+    expect(table).toContain("已拦截");
+    expect(table).not.toContain("REJECTED");
+    expect(table).toContain("R-a");
+    const headers = wrapper.findAll("th").map((th) => th.text().trim());
+    expect(headers).toContain("规则编号");
+    await wrapper.get('[data-testid="case-handle"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="handle-action"]').text()).toContain("加入黑名单");
+  });
+
   it("loads hits and handles a case with required reason", async () => {
     const wrapper = await mountPage();
     expect(wrapper.get('[data-testid="hit-table"]').text()).toContain("R-a");

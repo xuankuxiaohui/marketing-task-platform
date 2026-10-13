@@ -57,6 +57,15 @@ describe("RiskListItemPage", () => {
     removeMock.mockResolvedValue(ok({ ok: true }));
   });
 
+  it("shows Chinese dimension / list type labels", async () => {
+    const wrapper = await mountPage();
+    const table = wrapper.get('[data-testid="list-table"]').text();
+    expect(table).toContain("用户");
+    expect(table).toContain("黑名单");
+    expect(table).not.toContain("BLACK");
+    expect(table).not.toContain("USER");
+  });
+
   it("loads list items and adds a black entry with reason", async () => {
     const wrapper = await mountPage();
     expect(pageMock).toHaveBeenCalled();

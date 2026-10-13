@@ -9,6 +9,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { riskActionResultLabel, riskHandleActionLabel, riskHitTypeLabel } from "@/utils/risk-label";
 import { useLatestRequest } from "@/composables/useLatestRequest";
 import { runWithLoading } from "@/composables/runWithLoading";
 
@@ -127,13 +128,13 @@ onMounted(() => {
       </a-select>
       <a-select v-model:value="filters.hitType" data-testid="filter-hit-type">
         <a-select-option value="">{{ zhCN.cases.hitType }}</a-select-option>
-        <a-select-option v-for="item in RISK_HIT_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_HIT_TYPES" :key="item" :value="item">{{ riskHitTypeLabel(item) }}</a-select-option>
       </a-select>
       <a-input v-model:value="filters.dimensionValue" data-testid="filter-dimension" :placeholder="zhCN.cases.dimensionValue" />
       <a-input v-model:value="filters.userId" data-testid="filter-user" :placeholder="zhCN.cases.userId" />
       <a-select v-model:value="filters.actionResult" data-testid="filter-action-result">
         <a-select-option value="">{{ zhCN.cases.actionResult }}</a-select-option>
-        <a-select-option v-for="item in RISK_ACTION_RESULTS" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_ACTION_RESULTS" :key="item" :value="item">{{ riskActionResultLabel(item) }}</a-select-option>
       </a-select>
       <a-date-picker v-model:value="filters.from" data-testid="filter-from" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
       <a-date-picker v-model:value="filters.to" data-testid="filter-to" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
@@ -148,7 +149,7 @@ onMounted(() => {
       </template>
 
       <a-table-column :title="zhCN.cases.hitType">
-        <template #default="{ record: row }">{{ row.hitType }}</template>
+        <template #default="{ record: row }">{{ riskHitTypeLabel(row.hitType) }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.cases.ruleCode">
         <template #default="{ record: row }">{{ row.ruleCode }}</template>
@@ -166,7 +167,7 @@ onMounted(() => {
         <template #default="{ record: row }">{{ row.threshold }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.cases.actionResult">
-        <template #default="{ record: row }">{{ row.actionResult }}</template>
+        <template #default="{ record: row }">{{ riskActionResultLabel(row.actionResult) }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.cases.occurredAt">
         <template #default="{ record: row }">{{ formatDateTime(row.occurredAt) }}</template>
@@ -193,7 +194,7 @@ onMounted(() => {
       </a-form-item>
       <a-form-item :label="zhCN.cases.action">
         <a-select v-model:value="form.action" data-testid="handle-action">
-        <a-select-option v-for="item in RISK_HANDLE_ACTIONS" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_HANDLE_ACTIONS" :key="item" :value="item">{{ riskHandleActionLabel(item) }}</a-select-option>
       </a-select>
       </a-form-item>
       <a-form-item v-if="form.action === 'REMOVE_BLACK'" :label="zhCN.cases.toWhitelist">

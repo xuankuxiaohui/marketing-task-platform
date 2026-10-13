@@ -8,6 +8,7 @@ import { hasAuth } from "@/directives/auth";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
+import { riskActionLabel } from "@/utils/risk-label";
 import { useLatestRequest } from "@/composables/useLatestRequest";
 import { runWithLoading } from "@/composables/runWithLoading";
 
@@ -96,7 +97,7 @@ onMounted(() => {
       <template #emptyText>
         <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
-      <a-table-column title="code">
+      <a-table-column :title="zhCN.rule.ruleCode">
         <template #default="{ record: row }">{{ row.ruleCode }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.rule.enabled">
@@ -113,7 +114,7 @@ onMounted(() => {
         <template #default="{ record: row }">{{ row.windowSeconds ?? "-" }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.rule.action">
-        <template #default="{ record: row }">{{ row.action }}</template>
+        <template #default="{ record: row }"><span data-testid="rule-action-cell">{{ riskActionLabel(row.action) }}</span></template>
       </a-table-column>
       <a-table-column :title="zhCN.common.actions" :width="240">
         <template #default="{ record: row }">
@@ -148,7 +149,7 @@ onMounted(() => {
       <label>
         <span>{{ zhCN.rule.action }}</span>
         <a-select v-model:value="form.action" data-testid="rule-action">
-        <a-select-option v-for="action in ACTIONS" :key="action" :value="action">{{ action }}</a-select-option>
+        <a-select-option v-for="action in ACTIONS" :key="action" :value="action">{{ riskActionLabel(action) }}</a-select-option>
       </a-select>
       </label>
     </FormDialog>
