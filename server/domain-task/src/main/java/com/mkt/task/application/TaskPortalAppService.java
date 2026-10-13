@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.PriorityQueue;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +59,7 @@ public class TaskPortalAppService {
     private final Clock clock;
     private final PlatformCache cache;
     private final TaskPortalPublishedCatalog publishedCatalog;
+    private final TaskPortalCardViews cardViews;
 
     @Autowired
     public TaskPortalAppService(
@@ -71,7 +71,8 @@ public class TaskPortalAppService {
             ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<PlatformCache> cache,
             Clock clock,
-            TaskPortalPublishedCatalog publishedCatalog) {
+            TaskPortalPublishedCatalog publishedCatalog,
+            TaskPortalCardViews cardViews) {
         this(
                 definitions,
                 snapshots,
@@ -81,7 +82,8 @@ public class TaskPortalAppService {
                 risk.getIfAvailable(),
                 clock,
                 cache.getIfAvailable(),
-                publishedCatalog);
+                publishedCatalog,
+                cardViews);
     }
 
     public TaskPortalAppService(
@@ -92,7 +94,7 @@ public class TaskPortalAppService {
             UserAttributePort users,
             RiskCheckPort risk,
             Clock clock) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null);
     }
 
     public TaskPortalAppService(
@@ -104,7 +106,7 @@ public class TaskPortalAppService {
             RiskCheckPort risk,
             Clock clock,
             PlatformCache cache) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null);
     }
 
     TaskPortalAppService(
@@ -116,7 +118,8 @@ public class TaskPortalAppService {
             RiskCheckPort risk,
             Clock clock,
             PlatformCache cache,
-            TaskPortalPublishedCatalog publishedCatalog) {
+            TaskPortalPublishedCatalog publishedCatalog,
+            TaskPortalCardViews cardViews) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -129,6 +132,10 @@ public class TaskPortalAppService {
                 publishedCatalog != null
                         ? publishedCatalog
                         : new TaskPortalPublishedCatalog(definitions, snapshots, instances, cache);
+        this.cardViews =
+                cardViews != null
+                        ? cardViews
+                        : new TaskPortalCardViews(snapshots, instances);
     }
 
     public TaskStepSource sourceForStep(long stepId) {
@@ -179,9 +186,11 @@ public class TaskPortalAppService {
         if (retain < 1) {
             retain = 1;
         }
-        Comparator<PendingCard> asc =
-                Comparator.comparingInt(PendingCard::sortWeight).thenComparingLong(PendingCard::taskId);
-        PriorityQueue<PendingCard> best = new PriorityQueue<>(Math.min(retain, 64), asc.reversed());
+        Comparator<TaskPortalCardViews.PendingCard> asc =
+                Comparator.comparingInt(TaskPortalCardViews.PendingCard::sortWeight)
+                        .thenComparingLong(TaskPortalCardViews.PendingCard::taskId);
+        PriorityQueue<TaskPortalCardViews.PendingCard> best =
+                new PriorityQueue<>(Math.min(retain, 64), asc.reversed());
         long total = 0;
         for (TaskDefinitionEntity definition : published) {
             SnapshotContent snapshot = snapshotByTask.get(definition.getId());
@@ -202,7 +211,8 @@ public class TaskPortalAppService {
                     continue;
                 }
                 total++;
-                considerPending(best, retain, definition, snapshot, InstanceStatuses.NOT_STARTED);
+                TaskPortalCardViews.considerPending(
+                        best, retain, definition, snapshot, InstanceStatuses.NOT_STARTED);
                 continue;
             }
             TaskInstanceEntity current = currentByTask.get(definition.getId());
@@ -225,17 +235,19 @@ public class TaskPortalAppService {
             }
             String userStatus = current == null ? InstanceStatuses.NOT_STARTED : current.getStatus();
             total++;
-            considerPending(best, retain, definition, snapshot, userStatus);
+            TaskPortalCardViews.considerPending(best, retain, definition, snapshot, userStatus);
         }
-        List<PendingCard> ranked = new ArrayList<>(best);
+        List<TaskPortalCardViews.PendingCard> ranked = new ArrayList<>(best);
         ranked.sort(asc);
         int from = (int) Math.min(offset, ranked.size());
         int to = (int) Math.min(from + (long) limit, ranked.size());
         List<TaskCardView> pageCards = new ArrayList<>(Math.max(0, to - from));
         Map<Long, RewardPreviewView> rewards = publishedBundle.rewardPreviews();
         for (int i = from; i < to; i++) {
-            PendingCard row = ranked.get(i);
-            pageCards.add(toCard(row.definition(), row.snapshot(), row.userStatus(), rewards));
+            TaskPortalCardViews.PendingCard row = ranked.get(i);
+            pageCards.add(
+                    TaskPortalCardViews.toCard(
+                            row.definition(), row.snapshot(), row.userStatus(), rewards));
         }
         return new PageData<>(total, pageCards);
     }
@@ -309,7 +321,7 @@ public class TaskPortalAppService {
                 }
                 snapIds.add(row.getSnapshotId());
             }
-            Map<Long, SnapshotContent> historySnaps = loadSnapshotsByIds(snapIds);
+            Map<Long, SnapshotContent> historySnaps = cardViews.loadSnapshotsByIds(snapIds);
             for (TaskInstanceEntity row : history) {
                 if (categoryTaskIds.contains(row.getTaskId()) || row.getSnapshotId() == null) {
                     continue;
@@ -329,7 +341,7 @@ public class TaskPortalAppService {
                 instances.listMine(userId, statusFilter, categoryTaskIds, query.offset(), query.pageSize());
         List<MineTaskView> views = new ArrayList<>(rows.size());
         for (TaskInstanceEntity row : rows) {
-            views.add(toMine(row));
+            views.add(cardViews.toMine(row));
         }
         return new PageData<>(total, views);
     }
@@ -454,36 +466,6 @@ public class TaskPortalAppService {
         return snap == null ? null : snap.getContent();
     }
 
-    /** Sort key only — avoids building TaskCardView/rewardPreview for every published task. */
-    private record PendingCard(
-            TaskDefinitionEntity definition, SnapshotContent snapshot, String userStatus) {
-        int sortWeight() {
-            return snapshot.sortWeight();
-        }
-
-        long taskId() {
-            return definition.getId();
-        }
-    }
-
-    private Map<Long, SnapshotContent> loadSnapshotsByIds(List<Long> ids) {
-        Map<Long, SnapshotContent> out = new HashMap<>();
-        if (ids == null || ids.isEmpty()) {
-            return out;
-        }
-        for (TaskVersionSnapshotEntity snap : snapshots.listByIds(ids)) {
-            if (snap == null || snap.getId() == null || snap.getContent() == null) {
-                continue;
-            }
-            SnapshotContent content = JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-            if (content != null) {
-                out.put(snap.getId(), content);
-            }
-        }
-        return out;
-    }
-
-
     private boolean blacklisted(long userId) {
         if (risk == null) {
             return false;
@@ -507,84 +489,6 @@ public class TaskPortalAppService {
         return fallback;
     }
 
-
-    /**
-     * Keep only the best {@code retain} pending cards (ascending sort key). Peek is the worst of
-     * the kept set — replace when the candidate sorts strictly earlier (lower weight / taskId).
-     */
-    private static void considerPending(
-            PriorityQueue<PendingCard> best,
-            int retain,
-            TaskDefinitionEntity definition,
-            SnapshotContent snapshot,
-            String userStatus) {
-        if (best.size() < retain) {
-            best.offer(new PendingCard(definition, snapshot, userStatus));
-            return;
-        }
-        PendingCard worst = best.peek();
-        int cmp = Integer.compare(snapshot.sortWeight(), worst.sortWeight());
-        if (cmp == 0) {
-            cmp = Long.compare(definition.getId(), worst.taskId());
-        }
-        if (cmp < 0) {
-            best.poll();
-            best.offer(new PendingCard(definition, snapshot, userStatus));
-        }
-    }
-
-    private static TaskCardView toCard(
-            TaskDefinitionEntity definition,
-            SnapshotContent snapshot,
-            String userStatus,
-            Map<Long, RewardPreviewView> rewards) {
-        int weight = snapshot.sortWeight();
-        RewardPreviewView reward =
-                rewards == null
-                        ? SnapshotViews.rewardPreview(snapshot)
-                        : rewards.getOrDefault(definition.getId(), SnapshotViews.rewardPreview(snapshot));
-        return new TaskCardView(
-                definition.getId(),
-                snapshot.code(),
-                snapshot.name(),
-                snapshot.category(),
-                snapshot.iconUrl(),
-                snapshot.badgeText(),
-                reward,
-                userStatus,
-                weight);
-    }
-
-    private MineTaskView toMine(TaskInstanceEntity row) {
-        TaskVersionSnapshotEntity snap = snapshots.getById(row.getSnapshotId());
-        SnapshotContent content =
-                snap == null ? null : JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-        String name = content == null ? row.getTaskCode() : content.name();
-        String icon = content == null ? null : content.iconUrl();
-        String category = content == null ? null : content.category();
-        String currentName = null;
-        if (InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
-            List<TaskInstanceStepEntity> steps = instances.listSteps(row.getId());
-            if (steps != null) {
-                for (TaskInstanceStepEntity step : steps) {
-                    if (StepStatuses.ACTIVE.equals(step.getStatus())) {
-                        TaskStepCommand def = SnapshotViews.step(content, step.getStepCode());
-                        currentName = def == null ? step.getStepCode() : def.name();
-                        break;
-                    }
-                }
-            }
-        }
-        return new MineTaskView(
-                row.getId(),
-                row.getTaskId(),
-                name,
-                icon,
-                category,
-                row.getStatus(),
-                currentName,
-                TaskTime.toInstant(row.getStartedAt()));
-    }
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
