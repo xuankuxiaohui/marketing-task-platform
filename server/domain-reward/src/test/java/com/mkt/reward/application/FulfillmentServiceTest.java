@@ -41,7 +41,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * HC-1 Top3 / T3: dedicated unit coverage for {@link FulfillmentService} (start / callback / confirm / retry /
  * tick / third-party stub dispatch / events). Test-only; no main-code change. FulfillmentOpsTest keeps the
- * original happy-path callback cases.
+ * original happy-path callback cases. Residual after #215: confirm happy/superseded, unknown ref, closed
+ * fail-reason keep, null retryCount, CAS lose on settle/timeout, missing-prize arm skip, blank adapter
+ * fallbacks, timeout recon pending.
  */
 class FulfillmentServiceTest {
 
@@ -230,6 +232,28 @@ class FulfillmentServiceTest {
     }
 
     @Test
+    void armStubBlankTypeParamsAdapterFallsBackToCategory() {
+        PrizeEntity prize = alipayPrize("{\"adapterCode\":\"   \"}");
+        GrantRecordEntity record = insert(prize, GrantRecordStatuses.FULFILL_SENDING, null);
+
+        fulfillment.armThirdPartyStub(record, prize, categories.getByCode(BuiltinCategories.ALIPAY_RED));
+
+        assertThat(grants.getById(record.getId()).getFulfillmentRef()).isEqualTo("alipay-red:stub-" + record.getId());
+    }
+
+    @Test
+    void armStubBlankCategoryAdapterFallsBackToStub() {
+        var category = categories.getByCode(BuiltinCategories.ALIPAY_RED);
+        category.setAdapterCode("  ");
+        PrizeEntity prize = alipayPrize(null);
+        GrantRecordEntity record = insert(prize, GrantRecordStatuses.FULFILL_SENDING, null);
+
+        fulfillment.armThirdPartyStub(record, prize, category);
+
+        assertThat(grants.getById(record.getId()).getFulfillmentRef()).isEqualTo("stub:stub-" + record.getId());
+    }
+
+    @Test
     void armStubIsNoopForPlatformPrizeOrExistingRef() {
         PrizeEntity physical = prize(BuiltinCategories.PHYSICAL, RewardTargets.PLATFORM, FulfillmentModes.ASYNC, null);
         GrantRecordEntity platformRow = insert(physical, GrantRecordStatuses.FULFILL_SENDING, null);
@@ -398,6 +422,109 @@ class FulfillmentServiceTest {
         assertErrorCode(() -> fulfillment.confirm(999L), CommonErrorCodes.NOT_FOUND);
     }
 
+    @Test
+    void confirmArrivesMarksReconAndEmits() {
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-confirm");
+
+        var response = fulfillment.confirm(row.getId());
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_ARRIVED);
+        assertThat(response.superseded()).isFalse();
+        GrantRecordEntity fresh = grants.getById(row.getId());
+        assertThat(fresh.getFulfilledAt()).isEqualTo(NOW_UTC);
+        assertThat(fresh.getReconStatus()).isEqualTo(GrantRecordStatuses.RECON_PENDING);
+        assertThat(outbox.all()).extracting(OutboxRecord::eventCode)
+                .containsExactly(EventCodes.REWARD_FULFILL_ARRIVED);
+    }
+
+    @Test
+    void confirmOnManualFailedIsSuperseded() {
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_FAILED, "ref-manual");
+        row.setFulfillFailReason(FulfillFailReasons.MANUAL);
+
+        var response = fulfillment.confirm(row.getId());
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_FAILED);
+        assertThat(response.superseded()).isTrue();
+        assertThat(grants.getById(row.getId()).getFulfillFailReason()).isEqualTo(FulfillFailReasons.MANUAL);
+        assertThat(outbox.all()).isEmpty();
+    }
+
+    @Test
+    void callbackUnknownRefIsNotFound() {
+        assertErrorCode(() -> fulfillment.callback("missing-ref", "SUCCESS", null), RewardErrorCodes.FULFILL_NOT_FOUND);
+    }
+
+    @Test
+    void failedCallbackPreservesClosedChannelRejectOnTerminalFail() {
+        settings.setFulfillRetryMax(1);
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-keep");
+
+        var response = fulfillment.callback("ref-keep", "FAILED", FulfillFailReasons.CHANNEL_REJECT);
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_FAILED);
+        GrantRecordEntity fresh = grants.getById(row.getId());
+        assertThat(fresh.getFulfillFailReason()).isEqualTo(FulfillFailReasons.CHANNEL_REJECT);
+        assertThat(fresh.getReconStatus()).isEqualTo(GrantRecordStatuses.RECON_PENDING);
+        assertThat(outbox.all()).singleElement().satisfies(event -> {
+            assertThat(event.eventCode()).isEqualTo(EventCodes.REWARD_FULFILL_FAILED);
+            assertThat(event.payload()).contains("\"fulfillFailReason\":\"CHANNEL_REJECT\"");
+        });
+    }
+
+    @Test
+    void nullRetryCountTreatedAsZeroThenSchedulesRetry() {
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-null-retry");
+        row.setRetryCount(null);
+
+        assertThat(fulfillment.callback("ref-null-retry", "FAILED", FulfillFailReasons.ADAPTER_ERROR).fulfillmentStatus())
+                .isEqualTo(GrantRecordStatuses.FULFILL_SENDING);
+
+        GrantRecordEntity fresh = grants.getById(row.getId());
+        assertThat(fresh.getRetryCount()).isEqualTo(1);
+        assertThat(fresh.getNextFulfillRetryAt()).isEqualTo(NOW_UTC.plusSeconds(60));
+    }
+
+    @Test
+    void successCallbackCasRaceResolvesIdempotentFromFreshRead() {
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-cas-ok");
+        // Concurrent writer already arrived; entity view is stale SENDING for settleSending entry.
+        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_ARRIVED);
+        grants.update(row);
+        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_SENDING);
+
+        var response = fulfillment.callback("ref-cas-ok", "SUCCESS", null);
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_ARRIVED);
+        assertThat(response.superseded()).isFalse();
+        // CAS lose → recurse on fresh ARRIVED; no second arrive event.
+        assertThat(outbox.all()).isEmpty();
+    }
+
+    @Test
+    void failedCallbackCasRaceOnRetryScheduleResolvesViaFreshArrived() {
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-cas-retry");
+        // Memory store shares one entity instance; install a fresh ARRIVED row on CAS lose so getById ≠ mutated SENDING.
+        grants.failNextUpdateIfFulfillmentWith(arrivedCopy(row));
+
+        var response = fulfillment.callback("ref-cas-retry", "FAILED", FulfillFailReasons.ADAPTER_ERROR);
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_ARRIVED);
+        assertThat(outbox.all()).isEmpty();
+    }
+
+    @Test
+    void failedCallbackCasRaceOnTerminalFailResolvesViaFreshArrived() {
+        settings.setFulfillRetryMax(1);
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-cas-term");
+        grants.failNextUpdateIfFulfillmentWith(arrivedCopy(row));
+
+        var response = fulfillment.callback("ref-cas-term", "FAILED", FulfillFailReasons.CHANNEL_REJECT);
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_ARRIVED);
+        assertThat(outbox.all()).isEmpty();
+    }
+
     // ---- retry ----
 
     @Test
@@ -450,6 +577,24 @@ class FulfillmentServiceTest {
         assertErrorCode(() -> fulfillment.retry(row.getId()), RewardErrorCodes.FULFILL_NOT_RETRYABLE);
     }
 
+    @Test
+    void retrySkipsArmWhenPrizeMissing() {
+        GrantRecordEntity row = record(null, GrantRecordStatuses.FULFILL_FAILED, null);
+        row.setPrizeId(4242L);
+        row.setCategoryCode(BuiltinCategories.ALIPAY_RED);
+        row.setFulfillFailReason(FulfillFailReasons.CHANNEL_REJECT);
+        row.setRetryCount(2);
+        grants.insert(row);
+
+        var response = fulfillment.retry(row.getId());
+
+        assertThat(response.fulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_SENDING);
+        GrantRecordEntity fresh = grants.getById(row.getId());
+        assertThat(fresh.getFulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_SENDING);
+        assertThat(fresh.getFulfillmentRef()).isNull();
+        assertThat(fresh.getRetryCount()).isZero();
+    }
+
     // ---- tick ----
 
     @Test
@@ -476,10 +621,37 @@ class FulfillmentServiceTest {
         assertThat(fresh.getFulfillmentStatus()).isEqualTo(GrantRecordStatuses.FULFILL_FAILED);
         assertThat(fresh.getFulfillFailReason()).isEqualTo(FulfillFailReasons.TIMEOUT);
         assertThat(fresh.getUpdatedAt()).isEqualTo(NOW_UTC);
+        assertThat(fresh.getReconStatus()).isEqualTo(GrantRecordStatuses.RECON_PENDING);
         assertThat(outbox.all()).singleElement().satisfies(event -> {
             assertThat(event.eventCode()).isEqualTo(EventCodes.REWARD_FULFILL_FAILED);
             assertThat(event.payload()).contains("\"fulfillFailReason\":\"TIMEOUT\"");
         });
+    }
+
+    @Test
+    void tickTimeoutCasLoseEmitsNothing() {
+        GrantRecordEntity row = insert(alipayPrize(null), GrantRecordStatuses.FULFILL_SENDING, "ref-to-cas");
+        row.setUpdatedAt(NOW_UTC.minusHours(settings.sendingTimeoutHours() + 1L));
+        // Concurrent writer already left SENDING; list still sees stale SENDING view.
+        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_ARRIVED);
+        grants.update(row);
+        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_SENDING);
+
+        assertThat(fulfillment.tick()).isEqualTo(1);
+
+        assertThat(outbox.all()).isEmpty();
+    }
+
+    @Test
+    void tickRetryDueCountsEvenWhenPrizeMissing() {
+        GrantRecordEntity due = record(null, GrantRecordStatuses.FULFILL_SENDING, null);
+        due.setPrizeId(4242L);
+        due.setCategoryCode(BuiltinCategories.ALIPAY_RED);
+        due.setNextFulfillRetryAt(NOW_UTC.minusMinutes(1));
+        grants.insert(due);
+
+        assertThat(fulfillment.tick()).isEqualTo(1);
+        assertThat(grants.getById(due.getId()).getFulfillmentRef()).isNull();
     }
 
     @Test
@@ -542,6 +714,29 @@ class FulfillmentServiceTest {
         GrantRecordEntity row = record(prize, fulfillmentStatus, ref);
         grants.insert(row);
         return row;
+    }
+
+    private static GrantRecordEntity arrivedCopy(GrantRecordEntity source) {
+        GrantRecordEntity copy = new GrantRecordEntity();
+        copy.setId(source.getId());
+        copy.setPrizeId(source.getPrizeId());
+        copy.setPrizeCode(source.getPrizeCode());
+        copy.setCategoryCode(source.getCategoryCode());
+        copy.setCostFen(source.getCostFen());
+        copy.setReconStatus(source.getReconStatus());
+        copy.setUserId(source.getUserId());
+        copy.setGrantSource(source.getGrantSource());
+        copy.setSourceId(source.getSourceId());
+        copy.setStatus(source.getStatus());
+        copy.setFulfillmentStatus(GrantRecordStatuses.FULFILL_ARRIVED);
+        copy.setFulfillmentRef(source.getFulfillmentRef());
+        copy.setRetryCount(source.getRetryCount());
+        copy.setSimulated(source.getSimulated());
+        copy.setGrantedAt(source.getGrantedAt());
+        copy.setCreatedAt(source.getCreatedAt());
+        copy.setUpdatedAt(source.getUpdatedAt());
+        copy.setFulfilledAt(NOW_UTC);
+        return copy;
     }
 
     private GrantRecordEntity record(PrizeEntity prize, String fulfillmentStatus, String ref) {
