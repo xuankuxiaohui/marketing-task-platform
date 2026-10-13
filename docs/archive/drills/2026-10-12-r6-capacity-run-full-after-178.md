@@ -10,5 +10,5 @@
 | Capacity | **勾空**; **非 RC** |
 | Next | **Ask architect next knife** |
 
-Evidence: [docs/capacity/2026-10-12-run-full-after-178.md](../../docs/capacity/2026-10-12-run-full-after-178.md).  
+Evidence: [docs/archive/capacity/2026-10-12-run-full-after-178.md](../capacity/2026-10-12-run-full-after-178.md).  
 Logs: `/workspace/r6-capacity-logs/run-full-after-178/`.

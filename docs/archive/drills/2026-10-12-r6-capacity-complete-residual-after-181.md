@@ -8,4 +8,4 @@
 | Caps | Tomcat120 / 1536M / 禁降Δ / 禁revert #178 |
 | Capacity | **勾空**; **非 RC**; **ask architect next knife** |
 
-Evidence: [docs/capacity/2026-10-12-complete-residual-after-181.md](../../docs/capacity/2026-10-12-complete-residual-after-181.md).
+Evidence: [docs/archive/capacity/2026-10-12-complete-residual-after-181.md](../capacity/2026-10-12-complete-residual-after-181.md).

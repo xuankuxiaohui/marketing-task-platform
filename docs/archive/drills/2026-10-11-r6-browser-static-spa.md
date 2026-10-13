@@ -29,7 +29,7 @@ Bind to **real Vite production dist** served by nginx (not placeholders; not Vit
 | Base URL | `http://127.0.0.1:18080` (nginx; portal default server) |
 | Dist | `web/apps/client/dist`, `web/apps/admin/dist` (`VITE_BASE=/console/`) — gitignored; rebuilt at tip |
 | Harness | [`web/playwright.nginx-dist.config.ts`](../../web/playwright.nginx-dist.config.ts) + [`web/e2e/r6-browser-static-spa.spec.ts`](../../web/e2e/r6-browser-static-spa.spec.ts); reuses e2e `global-setup` (admin seed prize/task/activity) |
-| Screenshots | [r6-browser-artifacts/screenshots/](r6-browser-artifacts/screenshots/) (small PNGs) |
+| Screenshots | [r6-browser-artifacts/screenshots/](../../../deploy/drills/r6-browser-artifacts/screenshots/) (small PNGs) |
 
 ## Commands run
 
@@ -94,15 +94,15 @@ Box log: `/workspace/r6-browser-logs/playwright-r6-browser.log` (not committed).
 
 | File | Step |
 |---|---|
-| [01-static-shell.png](r6-browser-artifacts/screenshots/01-static-shell.png) | Portal home shell from nginx dist |
-| [02-spa-refresh-mine-prizes.png](r6-browser-artifacts/screenshots/02-spa-refresh-mine-prizes.png) | Deep link / hard refresh |
-| [03-register-home.png](r6-browser-artifacts/screenshots/03-register-home.png) | Post-register home |
-| [04-overlay-login-mine.png](r6-browser-artifacts/screenshots/04-overlay-login-mine.png) | Overlay login |
-| [05-activity-list.png](r6-browser-artifacts/screenshots/05-activity-list.png) | Activity / task cards |
-| [06-task-detail.png](r6-browser-artifacts/screenshots/06-task-detail.png) | Task detail before claim |
-| [07-task-completed.png](r6-browser-artifacts/screenshots/07-task-completed.png) | 任务完成 sheet |
-| [08-prize-claimed.png](r6-browser-artifacts/screenshots/08-prize-claimed.png) | 已到账 |
-| [09-points-balance.png](r6-browser-artifacts/screenshots/09-points-balance.png) | Balance 10 |
+| [01-static-shell.png](../../../deploy/drills/r6-browser-artifacts/screenshots/01-static-shell.png) | Portal home shell from nginx dist |
+| [02-spa-refresh-mine-prizes.png](../../../deploy/drills/r6-browser-artifacts/screenshots/02-spa-refresh-mine-prizes.png) | Deep link / hard refresh |
+| [03-register-home.png](../../../deploy/drills/r6-browser-artifacts/screenshots/03-register-home.png) | Post-register home |
+| [04-overlay-login-mine.png](../../../deploy/drills/r6-browser-artifacts/screenshots/04-overlay-login-mine.png) | Overlay login |
+| [05-activity-list.png](../../../deploy/drills/r6-browser-artifacts/screenshots/05-activity-list.png) | Activity / task cards |
+| [06-task-detail.png](../../../deploy/drills/r6-browser-artifacts/screenshots/06-task-detail.png) | Task detail before claim |
+| [07-task-completed.png](../../../deploy/drills/r6-browser-artifacts/screenshots/07-task-completed.png) | 任务完成 sheet |
+| [08-prize-claimed.png](../../../deploy/drills/r6-browser-artifacts/screenshots/08-prize-claimed.png) | 已到账 |
+| [09-points-balance.png](../../../deploy/drills/r6-browser-artifacts/screenshots/09-points-balance.png) | Balance 10 |
 
 ## Gaps / explicit non-claims
 

@@ -9,4 +9,4 @@
 | Δ | **PASS** on−off ≈ **−102.06 ms** ≤20 |
 | Capacity | **勾空**; **非 RC**; ask architect merge-when-green + next (run-full-noseed in flight) |
 
-Evidence: [docs/capacity/2026-10-12-risk-stripe-expand-after-189.md](../../docs/capacity/2026-10-12-risk-stripe-expand-after-189.md).
+Evidence: [docs/archive/capacity/2026-10-12-risk-stripe-expand-after-189.md](../capacity/2026-10-12-risk-stripe-expand-after-189.md).

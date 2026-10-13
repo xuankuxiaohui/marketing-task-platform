@@ -8,4 +8,4 @@
 | Δ | **FAIL** ≈**213.50** ms ≫ 20 |
 | Capacity | **勾空**; **非 RC**; ask architect next |
 
-Evidence: [docs/capacity/2026-10-12-delta-cold-restart-after-193.md](../../docs/capacity/2026-10-12-delta-cold-restart-after-193.md).
+Evidence: [docs/archive/capacity/2026-10-12-delta-cold-restart-after-193.md](../capacity/2026-10-12-delta-cold-restart-after-193.md).

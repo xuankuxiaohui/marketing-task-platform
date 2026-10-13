@@ -7,4 +7,4 @@
 | Later stages | **not run** |
 | Capacity | **勾空**; **非 RC**; ask architect list-dropped residual next knife (**禁发明产品刀**) |
 
-Evidence: [docs/capacity/2026-10-12-run-full-list-dropped-after-190.md](../../docs/capacity/2026-10-12-run-full-list-dropped-after-190.md).
+Evidence: [docs/archive/capacity/2026-10-12-run-full-list-dropped-after-190.md](../capacity/2026-10-12-run-full-list-dropped-after-190.md).

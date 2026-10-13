@@ -7,4 +7,4 @@
 | Isolated risk-on | **FAIL** exhausted=378; P95≈75 (was≈296); http_fail 0; Δ/off/run-full not run |
 | Capacity | **勾空**; **非 RC**; ask architect (stripe vs CntWindow) |
 
-Evidence: [docs/capacity/2026-10-12-risk-rule-cache-after-194.md](../../docs/capacity/2026-10-12-risk-rule-cache-after-194.md).
+Evidence: [docs/archive/capacity/2026-10-12-risk-rule-cache-after-194.md](../capacity/2026-10-12-risk-rule-cache-after-194.md).

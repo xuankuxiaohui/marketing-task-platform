@@ -18,10 +18,10 @@ Primary path this slice: **full → continuous `ship-binlog.sh` → A/B → PITR
 
 Deploy-side R6 slices already bound elsewhere (this PR only **points**; does not re-run):
 
-- Empty Flyway + dual-app: [../../drills/2026-10-11-r6-empty-flyway-dual-app.md](../../drills/2026-10-11-r6-empty-flyway-dual-app.md)
-- Journey / deploy-smoke: [../../drills/2026-10-11-r6-full-journey-deploy-smoke.md](../../drills/2026-10-11-r6-full-journey-deploy-smoke.md)
-- Dual-instance Continuity: [../../drills/2026-10-11-r6-dual-instance-fault-continuity.md](../../drills/2026-10-11-r6-dual-instance-fault-continuity.md)
-- Capacity P0 (overall FAIL): [../../drills/2026-10-11-r6-capacity-dec006.md](../../drills/2026-10-11-r6-capacity-dec006.md)
+- Empty Flyway + dual-app: [../../drills/2026-10-11-r6-empty-flyway-dual-app.md](../../../docs/archive/drills/2026-10-11-r6-empty-flyway-dual-app.md)
+- Journey / deploy-smoke: [../../drills/2026-10-11-r6-full-journey-deploy-smoke.md](../../../docs/archive/drills/2026-10-11-r6-full-journey-deploy-smoke.md)
+- Dual-instance Continuity: [../../drills/2026-10-11-r6-dual-instance-fault-continuity.md](../../../docs/archive/drills/2026-10-11-r6-dual-instance-fault-continuity.md)
+- Capacity P0 (overall FAIL): [../../drills/2026-10-11-r6-capacity-dec006.md](../../../docs/archive/drills/2026-10-11-r6-capacity-dec006.md)
 
 Prior F16 drills reused for scripts/patterns: [2026-10-10-f16-isolated-restore.md](2026-10-10-f16-isolated-restore.md), [2026-10-10-f16-continuous-binlog-ship.md](2026-10-10-f16-continuous-binlog-ship.md).
 

@@ -1,6 +1,6 @@
 # Capacity status (living)
 
-**Last update:** 2026-10-13 (after #196 → master `33a1155`)
+**Last update:** 2026-10-13 (Top4 D5 archive triage; posture unchanged after #196 → master `33a1155`)
 
 | Posture | Value |
 |---|---|
@@ -9,17 +9,18 @@
 | DEC-006 Δ | **收口** — cold risk-on FAIL on http_fail≈0.27% with exhausted=0 (stripe OK) |
 | Default knives | **STOP** — no further capacity expand / gate relax / reseed / CntWindow |
 | Residual http_fail | ≈**0.27%** parked as **P2 selective backlog** (not a capacity-pool issue) |
+| Evidence layout | **2026-10-13 Top4** — dated FAIL/PASS pages moved under [`docs/archive/`](../archive/); this page + [`ARCHIVE-INDEX.md`](./ARCHIVE-INDEX.md) stay living |
 
 ## Latest evidence
 
 - Stripe expand →5000 + cold Δ FAIL: PR **#196** → merge `33a1155`
-- Detail: [`2026-10-12-stripe-expand-4500-delta-after-195.md`](./2026-10-12-stripe-expand-4500-delta-after-195.md)
+- Detail: [`2026-10-12-stripe-expand-4500-delta-after-195.md`](../archive/capacity/2026-10-12-stripe-expand-4500-delta-after-195.md)
 - Replan hand-off: [`../replan/2026-10-13-project-health-checklist-draft.md`](../replan/2026-10-13-project-health-checklist-draft.md)
 - Owner backlog: [`../replan/2026-10-13-replan-backlog.md`](../replan/2026-10-13-replan-backlog.md)
 
 ## Historical drills
 
-See [`ARCHIVE-INDEX.md`](./ARCHIVE-INDEX.md) for the 2026-10-12 capacity FAIL/PASS evidence list. Those docs are **archive**; this page is the live status.
+See [`ARCHIVE-INDEX.md`](./ARCHIVE-INDEX.md) for archived capacity/drill evidence under `docs/archive/capacity/` and `docs/archive/drills/`. Those docs are **archive**; this page is the live status.
 
 ## R31 binding
 

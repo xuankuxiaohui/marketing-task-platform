@@ -8,4 +8,4 @@
 | Isolated complete | **FAIL** grant P95≈510.51ms; checks 100%; http_fail 0% |
 | Capacity | **勾空**; **非 RC**; ask next knife (P95) |
 
-Evidence: [docs/capacity/2026-10-12-claim-pool-hygiene-after-182.md](../../docs/capacity/2026-10-12-claim-pool-hygiene-after-182.md).
+Evidence: [docs/archive/capacity/2026-10-12-claim-pool-hygiene-after-182.md](../capacity/2026-10-12-claim-pool-hygiene-after-182.md).
