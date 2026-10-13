@@ -18,14 +18,7 @@ import { resultMessage, showPortalFail } from "@/utils/portal-error";
 
 defineOptions({ name: "ActivityPage" });
 
-/** Top1 (HC-1 U1+U3): detail fail ≠ empty; copy owned by this page only. */
-const DETAIL_COPY = {
-  failTitle: "活动信息加载失败",
-  failHint: "请检查网络后重试",
-  reload: "重新加载",
-  gone: "活动已结束或不存在",
-  backToHub: "返回活动中心",
-} as const;
+/** Top1 (HC-1 U1+U3): detail fail ≠ empty. U4: catalog-empty ≠ by-id gone. Copy in zh-CN. */
 /** Backend "not found / not visible" is a real empty, not a retryable failure. */
 const GONE_CODES = new Set(["activity.activity.not-found"]);
 
@@ -37,19 +30,39 @@ const tasks = ref<TaskCardView[]>([]);
 const rulesOpen = ref(false);
 const rulesEl = ref<HTMLElement | null>(null);
 const loadError = ref(false);
-const failHint = ref<string>(DETAIL_COPY.failHint);
+const failHint = ref<string>(zhCN.activity.failHint);
+/** U4: zero published → catalog; by-id not-found/unpublished → gone. */
+const emptyKind = ref<"catalog" | "gone" | null>(null);
+
+const emptyDescription = computed(() =>
+  emptyKind.value === "catalog" ? zhCN.activity.empty : zhCN.activity.gone,
+);
+const emptyCta = computed(() =>
+  emptyKind.value === "catalog" ? zhCN.activity.goHub : zhCN.activity.backToHub,
+);
+const emptyCtaTestId = computed(() =>
+  emptyKind.value === "catalog" ? "activity-go-hub" : "activity-back-hub",
+);
 
 /** Mapped friendly copy (same table as showPortalFail) or the default hint — never raw response.message. */
 function detailFailHint(result: Result): string {
-  const msg = resultMessage(result, DETAIL_COPY.failHint);
-  return msg === result.message?.trim() ? DETAIL_COPY.failHint : msg;
+  const msg = resultMessage(result, zhCN.activity.failHint);
+  return msg === result.message?.trim() ? zhCN.activity.failHint : msg;
 }
 
-function markFailed(hint: string = DETAIL_COPY.failHint): void {
+function markFailed(hint: string = zhCN.activity.failHint): void {
   detail.value = null;
   tasks.value = [];
+  emptyKind.value = null;
   failHint.value = hint;
   loadError.value = true;
+}
+
+function markEmpty(kind: "catalog" | "gone"): void {
+  detail.value = null;
+  tasks.value = [];
+  loadError.value = false;
+  emptyKind.value = kind;
 }
 
 const activityId = computed(() => {
@@ -117,17 +130,13 @@ async function load(): Promise<void> {
       }
     }
     if (id == null || !Number.isFinite(id)) {
-      detail.value = null;
-      tasks.value = [];
-      loadError.value = false;
+      markEmpty("catalog");
       return;
     }
     const response = await fetchActivityDetail(id);
     if (isFail(response)) {
       if (GONE_CODES.has(response.code)) {
-        detail.value = null;
-        tasks.value = [];
-        loadError.value = false;
+        markEmpty("gone");
         return;
       }
       // No toast: the page-level fail state carries the message.
@@ -135,6 +144,7 @@ async function load(): Promise<void> {
       return;
     }
     loadError.value = false;
+    emptyKind.value = null;
     detail.value = response.data ?? null;
     await loadBoundTasks(detail.value?.submodules ?? []);
   } catch {
@@ -184,7 +194,7 @@ watch(
     <!-- Keep the fail state up while retrying (UX-3: no flash-empty) -->
     <Empty v-if="loadError" data-testid="activity-error">
       <template #description>
-        <p class="activity-error__title" data-testid="activity-error-title">{{ DETAIL_COPY.failTitle }}</p>
+        <p class="activity-error__title" data-testid="activity-error-title">{{ zhCN.activity.failTitle }}</p>
         <p class="activity-error__hint" data-testid="activity-error-hint">{{ failHint }}</p>
       </template>
       <Button
@@ -194,12 +204,16 @@ watch(
         data-testid="activity-retry"
         @click="reload"
       >
-        {{ DETAIL_COPY.reload }}
+        {{ zhCN.activity.reload }}
       </Button>
     </Empty>
-    <Empty v-else-if="!loading && !detail" :description="DETAIL_COPY.gone" data-testid="activity-empty">
-      <Button type="primary" size="small" data-testid="activity-back-hub" @click="backToHub">
-        {{ DETAIL_COPY.backToHub }}
+    <Empty
+      v-else-if="!loading && !detail && emptyKind"
+      :description="emptyDescription"
+      data-testid="activity-empty"
+    >
+      <Button type="primary" size="small" :data-testid="emptyCtaTestId" @click="backToHub">
+        {{ emptyCta }}
       </Button>
     </Empty>
     <div v-else-if="detail" data-testid="activity-detail">

@@ -101,6 +101,7 @@ async function mountHome(loggedIn = false) {
     routes: [
       { path: "/home", component: HomePage },
       { path: "/activity", component: { template: "<div />" } },
+      { path: "/activities", component: { template: "<div />" } },
       { path: "/signin", component: { template: "<div />" } },
       { path: "/login", component: { template: "<div />" } },
       { path: "/mine/points", component: { template: "<div />" } },
@@ -153,6 +154,11 @@ describe("HomePage", () => {
     expect(wrapper.find('[data-testid="signin-month-grid"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="home-activity-list"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="home-empty"]').text()).toContain(zhCN.home.empty);
+    const goHub = wrapper.get('[data-testid="home-go-activity-hub"]');
+    expect(goHub.text()).toBe(zhCN.activity.goHub);
+    await goHub.trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/activities");
     expect(wrapper.text()).toContain(zhCN.home.activities);
     expect(pointsMock).not.toHaveBeenCalled();
     expect(signinListMock).not.toHaveBeenCalled();

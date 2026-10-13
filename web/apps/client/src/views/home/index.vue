@@ -379,7 +379,16 @@ watch(requestScope, () => {
           v-else-if="emptyActivities"
           :description="zhCN.home.empty"
           data-testid="home-empty"
-        />
+        >
+          <Button
+            type="primary"
+            size="small"
+            data-testid="home-go-activity-hub"
+            @click="router.push('/activities')"
+          >
+            {{ zhCN.activity.goHub }}
+          </Button>
+        </Empty>
         <div v-else-if="activities.length > 0" data-testid="home-activity-list">
           <button
             v-for="row in activities"
