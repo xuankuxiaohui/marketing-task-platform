@@ -72,7 +72,7 @@ async function submit(): Promise<void> {
     action: form.action,
   });
   saving.value = false;
-  const parsed = writeOrFeedback(result);
+  const parsed = writeOrFeedback(result, zhCN.rule.savedEffective);
   if (!parsed.ok) {
     feedback.value = parsed.feedback;
     return;
@@ -132,6 +132,7 @@ onMounted(() => {
       @submit="submit"
       @cancel="formOpen = false"
     >
+      <p class="hint" data-testid="rule-cache-ttl-hint">{{ zhCN.rule.cacheTtlHint }}</p>
       <label>
         <span>{{ zhCN.rule.enabled }}</span>
         <a-checkbox v-model:checked="form.enabled" data-testid="rule-enabled" />
