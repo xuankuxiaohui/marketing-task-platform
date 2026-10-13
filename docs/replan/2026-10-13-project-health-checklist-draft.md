@@ -16,7 +16,7 @@
 | Area | Paths / notes | Risk |
 |---|---|---|
 | Decisions | `docs/decisions.md` (DEC-006 closed; confirm all DEC status vs code) | Spec drift |
-| Capacity drills | `docs/capacity/*`, `deploy/drills/*`, R31 bullets — many FAIL evidence PRs; checklist勾仍空 | Noise vs living docs |
+| Capacity drills | Living: `docs/capacity/STATUS.md` + `ARCHIVE-INDEX.md`; evidence under `docs/archive/` (Top4 2026-10-13); R31 勾仍空 | Noise archived; living status kept |
 | Perf README | `perf/README.md` — gate table vs live `perf/*.js` thresholds | Drift |
 | Deploy / R31 | `deploy/R31-go-live-checklist.md` — two capacity boxes still `[ ]` | Honest: not RC |
 | OpenAPI / contracts | `docs` + generated clients vs `platform-contract` | API drift |

@@ -1,6 +1,6 @@
 # 项目决策记录
 
-更新：2026-10-13（DOC-5 状态核对，对照 master `1ad543c`）。下文保留 2026-10-07 各批次的决定及背景；当时的分支、工作区和测试描述不是当前状态。Kiro 规格已退役，文中的旧需求编号、设计章节和已删除规范仅用于追溯，原文查阅方式见 [文档导航](README.md)。DEC-002 / DEC-003 / DEC-004 / DEC-005 / DEC-006 / DEC-007 / DEC-008 已明确关闭或确定。**DEC-001 仍未关闭**（见该节状态注）。未决项不因删除旧规格自动关闭。新结论在此记录，并同步相关 README、契约、验收与实现。**R6 状态**：huihuang 于 2026-10-11 **显式开启**发布候选验收（**已开 / 进行中**；**不等于通过**；**勾空；非 RC**）。DEC-005/006/008 关闭**不**自动启动 R6；首片（空库 Flyway + 双应用装配）证据见 [deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md](../deploy/drills/2026-10-11-r6-empty-flyway-dual-app.md)。容量活状态见 [docs/capacity/STATUS.md](capacity/STATUS.md)（2026-10-13，#196 后：R31 容量两勾仍空、非 RC、Δ 收口）与 [R31 清单](../deploy/R31-go-live-checklist.md) 的「另议」注。2026-10-11 勾评估是当时汇总，不是最新容量结论：[deploy/drills/2026-10-11-r6-capacity-checkbox-eval.md](../deploy/drills/2026-10-11-r6-capacity-checkbox-eval.md)。
+更新：2026-10-13（DOC-5 状态核对，对照 master `1ad543c`）。下文保留 2026-10-07 各批次的决定及背景；当时的分支、工作区和测试描述不是当前状态。Kiro 规格已退役，文中的旧需求编号、设计章节和已删除规范仅用于追溯，原文查阅方式见 [文档导航](README.md)。DEC-002 / DEC-003 / DEC-004 / DEC-005 / DEC-006 / DEC-007 / DEC-008 已明确关闭或确定。**DEC-001 仍未关闭**（见该节状态注）。未决项不因删除旧规格自动关闭。新结论在此记录，并同步相关 README、契约、验收与实现。**R6 状态**：huihuang 于 2026-10-11 **显式开启**发布候选验收（**已开 / 进行中**；**不等于通过**；**勾空；非 RC**）。DEC-005/006/008 关闭**不**自动启动 R6；首片（空库 Flyway + 双应用装配）证据见 [docs/archive/drills/2026-10-11-r6-empty-flyway-dual-app.md](archive/drills/2026-10-11-r6-empty-flyway-dual-app.md)。容量活状态见 [docs/capacity/STATUS.md](capacity/STATUS.md)（2026-10-13，#196 后：R31 容量两勾仍空、非 RC、Δ 收口）与 [R31 清单](../deploy/R31-go-live-checklist.md) 的「另议」注。2026-10-11 勾评估是当时汇总，不是最新容量结论：[docs/archive/drills/2026-10-11-r6-capacity-checkbox-eval.md](archive/drills/2026-10-11-r6-capacity-checkbox-eval.md)。
 
 ## DEC-001：代码与功能基线
 
@@ -20,7 +20,7 @@
 
 **状态**：已关闭（2026-10-10）。架构推荐默认已写入；**F08 已落地**（合入 **#120**，对照 tip `15af760`）：持锁多批、单次持锁预算约 2s、空队列退出、调度 `fixedDelay` 5s、无 MQ。容量数字门禁仍属 [DEC-006](#dec-006性能目标及证据口径已关闭)，本决定只钉机制与起步参数。
 
-**对照（2026-10-13）**：机制与代码一致，本项保持关闭。`OutboxRelay` 默认批大小 100、持锁预算 2s，空批立即返回，无 MQ；`OutboxRelayTicker` 为 `fixedDelay` 5000ms。默认可由 `mkt.outbox.batch-size` / `mkt.outbox.lock-hold-budget-ms` 覆盖，仍不是 DEC-006 的最终容量门禁。2026-10-11 Outbox drill 只记录候选排空数字，R31 未把它们升格为门禁，也未重开本项（见 [outbox drill](../deploy/drills/2026-10-11-r6-capacity-outbox.md)、[STATUS](capacity/STATUS.md)）。
+**对照（2026-10-13）**：机制与代码一致，本项保持关闭。`OutboxRelay` 默认批大小 100、持锁预算 2s，空批立即返回，无 MQ；`OutboxRelayTicker` 为 `fixedDelay` 5000ms。默认可由 `mkt.outbox.batch-size` / `mkt.outbox.lock-hold-budget-ms` 覆盖，仍不是 DEC-006 的最终容量门禁。2026-10-11 Outbox drill 只记录候选排空数字，R31 未把它们升格为门禁，也未重开本项（见 [outbox drill](archive/drills/2026-10-11-r6-capacity-outbox.md)、[STATUS](capacity/STATUS.md)）。
 
 **依据**：历史 design-architecture §6.4 写每 5 秒取最多 100 条；关闭前 [OutboxRelay](../server/platform-infra/src/main/java/com/mkt/infra/outbox/OutboxRelay.java) 每 tick 只处理一批，[InfraAutoConfiguration](../server/platform-infra/src/main/java/com/mkt/infra/InfraAutoConfiguration.java) 使用 5000 ms fixedDelay。旧性能条款的推进/回调 300 QPS 只保留为背景；业务成功仍需可靠投递事件。
 

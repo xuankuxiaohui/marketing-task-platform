@@ -1,62 +1,18 @@
 # Deploy drills / R6 evidence
 
-> **Capacity living status:** [`docs/capacity/STATUS.md`](../../docs/capacity/STATUS.md) (勾空; 非 RC; Δ收口). Historical capacity pages indexed at [`docs/capacity/ARCHIVE-INDEX.md`](../../docs/capacity/ARCHIVE-INDEX.md).
+> **Capacity living status:** [`docs/capacity/STATUS.md`](../../docs/capacity/STATUS.md) (勾空; 非 RC; Δ收口; capacity frozen).
+>
+> **Archive index:** [`docs/capacity/ARCHIVE-INDEX.md`](../../docs/capacity/ARCHIVE-INDEX.md) → dated evidence under [`docs/archive/capacity/`](../../docs/archive/capacity/) and [`docs/archive/drills/`](../../docs/archive/drills/).
+>
+> **Top4 D5 (2026-10-13):** chronological FAIL/PASS capacity and R6 evidence pages were moved into `docs/archive/`. This README is a thin pointer only — do **not** treat archived FAIL pages as current posture.
 
-Isolation drills and first-release evidence linked from [R31-go-live-checklist.md](../R31-go-live-checklist.md).
+## Still here
 
-| Date | Topic | Report |
-|---|---|---|
-| 2026-10-11 | R6 first slice: empty-DB Flyway + dual-app assembly（已开 / 进行中；非 RC） | [2026-10-11-r6-empty-flyway-dual-app.md](2026-10-11-r6-empty-flyway-dual-app.md) |
-| 2026-10-11 | R6 journey slice: deploy-smoke 业务流（登录/领取/完成/领奖；进行中；非 RC） | [2026-10-11-r6-full-journey-deploy-smoke.md](2026-10-11-r6-full-journey-deploy-smoke.md) |
-| 2026-10-11 | R6 dual-instance fault Continuity（单节点退出仍可服务；进行中；非 RC） | [2026-10-11-r6-dual-instance-fault-continuity.md](2026-10-11-r6-dual-instance-fault-continuity.md) |
-| 2026-10-11 | R6 capacity DEC-006 seed+k6 P0（FAIL overall；track/admin-list PASS；进行中；非 RC；勾未勾） | [2026-10-11-r6-capacity-dec006.md](2026-10-11-r6-capacity-dec006.md) |
-| 2026-10-11 | R6 restore/deploy：隔离 PITR **PASS** + 首次发布失败恢复策略（docs-only；进行中；非 RC） | [2026-10-11-r6-deploy-failure-recovery.md](2026-10-11-r6-deploy-failure-recovery.md)（PITR 见 [../backup/drills/2026-10-11-r6-isolated-restore.md](../backup/drills/2026-10-11-r6-isolated-restore.md)） |
-| 2026-10-11 | R6 capacity list-path：published-index 缓存 + Hikari 池（补强；**未**重跑 k6；容量仍 FAIL；非 RC） | [2026-10-11-r6-capacity-list-path.md](2026-10-11-r6-capacity-list-path.md) |
-| 2026-10-11 | R6 capacity list retest after #142（**FAIL**；~116/s vs 500；http_fail~61%；fail-stop；勾未勾；非 RC） | [2026-10-11-r6-capacity-list-retest.md](2026-10-11-r6-capacity-list-retest.md) |
-| 2026-10-11 | R6 capacity list hot-path（#144；onUserList / listByUser / parse reuse；勾仍空；非 RC） | [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) |
-| 2026-10-11 | R6 capacity list formal 5m after #144（~499/s P95~4ms http_fail0；**dropped~0.58/s FAIL**；勾未勾；非 RC；未进 advance） | [2026-10-11-r6-capacity-list-post144.md](2026-10-11-r6-capacity-list-post144.md) |
-| 2026-10-11 | R6 capacity list 5m after #144（**FAIL** dropped≈0.58/s；P95≈4ms / ~499/s / http_fail 0%；fail-stop；勾未勾；非 RC） | [2026-10-11-r6-capacity-list-5m-after-144.md](2026-10-11-r6-capacity-list-5m-after-144.md) |
-| 2026-10-11 | R6 capacity list residual dropped after #146（**PASS** list 5m；dropped 0；勾仍空；非 RC；未进 advance） | [2026-10-11-r6-capacity-list-dropped-residual.md](2026-10-11-r6-capacity-list-dropped-residual.md) |
-| 2026-10-11 | R6 capacity advance residual dropped after #147（**PASS** advance 5m；dropped 0；勾仍空；非 RC；未进 complete） | [2026-10-11-r6-capacity-advance-dropped.md](2026-10-11-r6-capacity-advance-dropped.md) |
-| 2026-10-11 | R6 capacity complete after #148（**PASS** formal 5m grant P95≈498ms；勾仍空；非 RC；risk-on 另开） | [2026-10-11-r6-capacity-complete.md](2026-10-11-r6-capacity-complete.md) |
-| 2026-10-11 | R6 capacity risk-on/off after #149（**PASS** formal 5m ΔP95≈−4ms；双变体业务成功；勾仍空；非 RC） | [2026-10-11-r6-capacity-risk-on.md](2026-10-11-r6-capacity-risk-on.md) |
-| 2026-10-11 | R6 capacity ad after #150（**PASS** formal 5m；P95≈1.84ms；勾仍空；非 RC；未 tick 容量） | [2026-10-11-r6-capacity-ad.md](2026-10-11-r6-capacity-ad.md) |
-| 2026-10-11 | R6 capacity admin-list **p1** after #151（**PASS** formal 5m；instances P95≈700ms≤800；勾仍空；非 RC；未 tick 容量） | [2026-10-11-r6-capacity-admin-list-p1.md](2026-10-11-r6-capacity-admin-list-p1.md) |
-| 2026-10-11 | R6 capacity **勾评估** after #152（汇总已绿 formal；缺口：Outbox/冷热/run-full/p1 captcha；**两勾仍空**；非 RC） | [2026-10-11-r6-capacity-checkbox-eval.md](2026-10-11-r6-capacity-checkbox-eval.md) |
-| 2026-10-11 | R6 capacity **Outbox** backlog/recovery numbers after #153（稳态 PENDING + 最老延迟 + 10k 排空；**勾仍空**；不重开 DEC-002；非 RC） | [2026-10-11-r6-capacity-outbox.md](2026-10-11-r6-capacity-outbox.md) |
-| 2026-10-12 | R6 capacity **冷热分列** after #154（list+ad cold\|hot；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-cold-hot.md](2026-10-12-r6-capacity-cold-hot.md) |
-| 2026-10-12 | R6 capacity **run-full.sh residual** after #155（p1 captcha→2000 OK；list formal **FAIL** fail-stop；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-run-full.md](2026-10-12-r6-capacity-run-full.md) |
-| 2026-10-12 | R6 capacity **沉降后 list 单场景复测** after #156（不叠 bulk；list formal **FAIL** fail-stop；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-settle.md](2026-10-12-r6-capacity-list-settle.md) |
-| 2026-10-12 | R6 capacity **重建至 DEC-006 p1** after #157（down -v + p1 seed 2000；list formal **FAIL** fail-stop；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-rebuild-list.md](2026-10-12-r6-capacity-rebuild-list.md) |
-| 2026-10-12 | R6 capacity **list-under-p1 内存补强** after #158（1536M 不抬；OOM cleared；list formal **FAIL**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-under-p1-mem.md](2026-10-12-r6-capacity-list-under-p1-mem.md) |
-| 2026-10-12 | R6 capacity **clear residual dropped** 实验 after #159（Tomcat160 卫生包 **FAIL**；#160 **证据-only**；产品仍 120；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-clear-dropped.md](2026-10-12-r6-capacity-clear-dropped.md) |
-| 2026-10-12 | R6 capacity **threads=120 revert retest** after #160 strip（近PASS **未**恢复；CPU 刀未开；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-threads120-retest.md](2026-10-12-r6-capacity-threads120-retest.md) |
-| 2026-10-12 | R6 capacity **Redis/session stabilize** 实验（Redisson 加码 **heap OOM**；#162 **证据-only**；产品回退；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-redis-session.md](2026-10-12-r6-capacity-redis-session.md) |
-| 2026-10-12 | R6 capacity **list 堆压减负** skip-renew alone A/B（**FAIL**；heap≈1.48GiB Redis idle；**证据-only**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-heap-relief.md](2026-10-12-r6-capacity-list-heap-relief.md) |
-| 2026-10-12 | R6 capacity **MySQL list 查询/索引** after #165（cycle_key-only 初刀 formal **FAIL**；后 #166 回退；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-mysql-list-index.md](2026-10-12-r6-capacity-mysql-list-index.md) |
-| 2026-10-12 | R6 capacity **dual-IN restore + V8 keep** (#166；list formal **PASS** P95≈174 dropped0；pair128 回退；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-dual-in-restore.md](2026-10-12-r6-capacity-dual-in-restore.md) |
-| 2026-10-12 | R6 capacity **run-full after #166**（no re-seed；list formal **FAIL-STOP** P95≈804 dropped≈0.58/s；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-run-full-after-166.md](2026-10-12-r6-capacity-run-full-after-166.md) |
-| 2026-10-11 | R6 browser/static SPA：真实 dist + Playwright 登录/刷新/领取/完成/领奖 **PASS**（进行中；非 RC；容量仍 FAIL） | [2026-10-11-r6-browser-static-spa.md](2026-10-11-r6-browser-static-spa.md) |
+| Path | Role |
+|---|---|
+| [`r6-browser-artifacts/`](r6-browser-artifacts/) | Operational screenshots for the archived browser/static SPA drill |
 
-- [2026-10-11-r6-capacity-list-hotpath.md](2026-10-11-r6-capacity-list-hotpath.md) — post-#142 MySQL/GC list hot-path (非 RC)
+## Related (outside this folder)
 
-| 2026-10-12 | R6 capacity **list settle + run-full after #180**（isolated list **PASS** dropped0；run-full **FAIL-STOP at complete**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-settle-after-180.md](2026-10-12-r6-capacity-list-settle-after-180.md) |
-| 2026-10-12 | R6 capacity **complete residual after #181**（fail-code `task.claim.daily-limit`；isolated complete risk-off **FAIL** checks≈93.3% http_fail≈6.7%；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-complete-residual-after-181.md](2026-10-12-r6-capacity-complete-residual-after-181.md) |
-| 2026-10-12 | R6 capacity **claim-pool hygiene after #182**（daily-limit cleared；isolated complete **FAIL** grant P95≈510.51；checks100% http_fail0；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-claim-pool-hygiene-after-182.md](2026-10-12-r6-capacity-claim-pool-hygiene-after-182.md) |
-| 2026-10-12 | R6 capacity **cool complete + run-full after #183**（cool→isolated complete **PASS** grant P95≈315.43；run-full **FAIL-STOP at list** dropped≈0.310/s；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-cool-complete-run-full-after-183.md](2026-10-12-r6-capacity-cool-complete-run-full-after-183.md) |
-| 2026-10-12 | R6 capacity **settle → isolated list after #184**（SETTLE_TIMEOUT；list formal **FAIL** dropped≈0.397/s (133)；P95≈156.40ms；checks100% http_fail0；run-full **未跑**；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-list-settle-dropped-after-184.md](2026-10-12-r6-capacity-list-settle-dropped-after-184.md) |
-| 2026-10-12 | R6 capacity **hold-lock after #187**（isolated advance **PASS** progress≈41.6 callback≈48.5 dropped0；run-full-noseed续；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-advance-hold-lock-after-187.md](2026-10-12-r6-capacity-advance-hold-lock-after-187.md) |
-| 2026-10-12 | R6 capacity **risk stripe expand after #189**（users 2800 / capacity≈52600；risk-off/on/Δ **PASS** exhausted0 Δ≈−102ms；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-risk-stripe-expand-after-189.md](2026-10-12-r6-capacity-risk-stripe-expand-after-189.md) |
-| 2026-10-12 | R6 capacity **run-full after #190**（FAIL-STOP at list dropped≈**20.706/s**；P95≈91.48；checks100% http_fail0；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-run-full-list-dropped-after-190.md](2026-10-12-r6-capacity-run-full-list-dropped-after-190.md) |
-| 2026-10-12 | R6 capacity **Δ paired cold-restart after #193**（on P95≈295.73 / off≈82.23 **PASS**; **Δ≈213.5 FAIL**; run-full未开；**勾仍空**；非 RC；禁降Δ） | [2026-10-12-r6-capacity-risk-delta-cold-restart-after-193.md](2026-10-12-r6-capacity-risk-delta-cold-restart-after-193.md) |
-| 2026-10-12 | R6 capacity **risk-on retest after #192**（on P95≈405.43 / off≈302.33 **PASS**; **Δ≈103.1 FAIL**; run-full未开；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-risk-on-retest-delta-fail-after-192.md](2026-10-12-r6-capacity-risk-on-retest-delta-fail-after-192.md) |
-| 2026-10-12 | R6 capacity **settle list PASS; run-full FAIL at risk-on after #191**（list P95≈58.75 dropped≈0.024；run-full FAIL risk-on http_fail=1 checks 2 fails；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-run-full-risk-on-fail-after-191.md](2026-10-12-r6-capacity-run-full-risk-on-fail-after-191.md) |
-| 2026-10-12 | R6 capacity **claim-pool hygiene after #188**（daily-limit cleared；isolated risk-off **FAIL** exhausted=1787 P95≈149；checks≈95.29%；Δ未跑；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-claim-pool-hygiene-after-188.md](2026-10-12-r6-capacity-claim-pool-hygiene-after-188.md) |
-| 2026-10-12 | R6 capacity **settle→isolated advance after #186**（**FAIL** dropped≈0.113/s callback P95≈308；progress P95≈101 PASS；progress热点取证；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-advance-settle-after-186.md](2026-10-12-r6-capacity-advance-settle-after-186.md) |
-| 2026-10-12 | R6 capacity **skip-renew+TTL5 #186**（isolated list **PASS** P95≈94.3 dropped0；run-full **FAIL-STOP at advance** progress P95≈218.11 dropped≈0.063/s；**勾仍空**；非 RC） | [2026-10-12-r6-capacity-skip-renew-list-ttl5-run-full.md](2026-10-12-r6-capacity-skip-renew-list-ttl5-run-full.md) |
-
-Related F16 evidence lives under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`.
-
-- [2026-10-12 list alloc/response hygiene FAIL](2026-10-12-r6-capacity-list-alloc-hygiene.md)
-| 2026-10-12 | R6 capacity **risk rule listAll cache after #194**（risk-on FAIL exhausted=378；P95≈75；勾仍空；非 RC） | [2026-10-12-r6-capacity-risk-rule-cache-after-194.md](2026-10-12-r6-capacity-risk-rule-cache-after-194.md) |
-| 2026-10-12 | R6 capacity **stripe→5000 cold Δ after #195**（exhausted=0；http_fail≈0.27% FAIL；勾仍空；Δ收口→replan） | [2026-10-12-r6-capacity-stripe-expand-4500-after-195.md](2026-10-12-r6-capacity-stripe-expand-4500-after-195.md) |
+- R31 checklist: [`../R31-go-live-checklist.md`](../R31-go-live-checklist.md)
+- Backup / nginx / scripts drills remain under `deploy/backup/drills/`, `deploy/nginx/drills/`, and `scripts/drills/`

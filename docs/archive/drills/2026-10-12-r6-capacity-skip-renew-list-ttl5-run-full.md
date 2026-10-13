@@ -8,4 +8,4 @@
 | Caps | Tomcat120 / 1536M / Redisson≤32/1s/1 / 禁降Δ / 禁抬阈值 / 禁抬日限 / 禁revert #178 / 禁Tomcat200–250 / cycle_key-only / pair128 / FORCE / Redisson bump |
 | Capacity | **勾空**; **非 RC**; **ask architect next knife** (advance residual) |
 
-Evidence: [docs/capacity/2026-10-12-skip-renew-list-ttl5-run-full.md](../../docs/capacity/2026-10-12-skip-renew-list-ttl5-run-full.md).
+Evidence: [docs/archive/capacity/2026-10-12-skip-renew-list-ttl5-run-full.md](../capacity/2026-10-12-skip-renew-list-ttl5-run-full.md).

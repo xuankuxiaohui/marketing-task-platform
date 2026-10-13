@@ -9,4 +9,4 @@
 | Δ | **not run** (FAIL-STOP at risk-off) |
 | Capacity | **勾空**; **非 RC**; ask architect next knife |
 
-Evidence: [docs/capacity/2026-10-12-claim-pool-hygiene-after-188.md](../../docs/capacity/2026-10-12-claim-pool-hygiene-after-188.md).
+Evidence: [docs/archive/capacity/2026-10-12-claim-pool-hygiene-after-188.md](../capacity/2026-10-12-claim-pool-hygiene-after-188.md).

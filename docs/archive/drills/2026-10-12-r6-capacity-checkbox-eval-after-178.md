@@ -19,9 +19,9 @@ Architect (~12:34 CST): after #178 tip `24e799a` approved and CI all green (incl
 |---|---|---|
 | #178 CI | all green (e2e / server / openapi-backend / web / deploy-smoke) | tip `24e799a` |
 | #178 merge | `5695191` | this master tip |
-| Post-merge admin-list formal 5m | **PASS** — instances P95 **116.62 ms**; definitions 92.55; grants 283.51; checks 100%; http_fail 0% | [confirm doc](../../docs/capacity/2026-10-12-admin-list-confirm-after-178.md); logs `/workspace/r6-capacity-logs/admin-list-confirm-after-178/` |
-| Prior run-full-after-#175 | PASS-ALL (Δ≈7.70 ms); admin-instances then ≈795.78 ms near ceiling | [run-full-after-175](../../docs/capacity/2026-10-12-run-full-after-175.md) |
-| Pre-merge relief formal | PASS — instances P95 ≈118.07 ms | [relief](../../docs/capacity/2026-10-12-admin-list-instances-relief.md) |
+| Post-merge admin-list formal 5m | **PASS** — instances P95 **116.62 ms**; definitions 92.55; grants 283.51; checks 100%; http_fail 0% | [confirm doc](../capacity/2026-10-12-admin-list-confirm-after-178.md); logs `/workspace/r6-capacity-logs/admin-list-confirm-after-178/` |
+| Prior run-full-after-#175 | PASS-ALL (Δ≈7.70 ms); admin-instances then ≈795.78 ms near ceiling | [run-full-after-175](../capacity/2026-10-12-run-full-after-175.md) |
+| Pre-merge relief formal | PASS — instances P95 ≈118.07 ms | [relief](../capacity/2026-10-12-admin-list-instances-relief.md) |
 
 **Also closed since early 勾评估 (#153 era):** Outbox backlog/recovery; cold/hot 分列; run-full residual (PASS-ALL after #175).
 
@@ -56,10 +56,10 @@ See [R31-go-live-checklist.md](../R31-go-live-checklist.md) §数据与运行保
 
 ## Follow-up: run-full-noseed after #179 merge (same day)
 
-Architect ordered same-mkt **不重seed** `run-full-after-178` after #179 merge. Result: **FAIL-STOP at list** (dropped≈0.319/s). See [docs/capacity/2026-10-12-run-full-after-178.md](../../docs/capacity/2026-10-12-run-full-after-178.md). **勾仍空**; **非 RC**; await architect next knife.
+Architect ordered same-mkt **不重seed** `run-full-after-178` after #179 merge. Result: **FAIL-STOP at list** (dropped≈0.319/s). See [docs/archive/capacity/2026-10-12-run-full-after-178.md](../capacity/2026-10-12-run-full-after-178.md). **勾仍空**; **非 RC**; await architect next knife.
 
 ## Follow-up: list settle + run-full after #180 (same day)
 
 Architect ordered #180 merge (CI green) → same-mkt settle → isolated list → continue run-full.
 Isolated list **PASS** (dropped **0**; P95≈139ms). run-full **FAIL-STOP at complete** (grant/checks/http_fail).
-See [docs/capacity/2026-10-12-list-settle-run-full-after-180.md](../../docs/capacity/2026-10-12-list-settle-run-full-after-180.md). **勾仍空**; **非 RC**; await architect next knife.
+See [docs/archive/capacity/2026-10-12-list-settle-run-full-after-180.md](../capacity/2026-10-12-list-settle-run-full-after-180.md). **勾仍空**; **非 RC**; await architect next knife.

@@ -8,4 +8,4 @@
 | Caps | Tomcat120 / 1536M / 禁降Δ / 禁抬阈值 / 禁抬日限 / 禁revert #178 |
 | Capacity | **勾空**; **非 RC**; **ask architect next knife** (list dropped residual) |
 
-Evidence: [docs/capacity/2026-10-12-cool-complete-run-full-after-183.md](../../docs/capacity/2026-10-12-cool-complete-run-full-after-183.md).
+Evidence: [docs/archive/capacity/2026-10-12-cool-complete-run-full-after-183.md](../capacity/2026-10-12-cool-complete-run-full-after-183.md).

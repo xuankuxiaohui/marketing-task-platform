@@ -15,7 +15,7 @@ Architect (~11:09 CST + steering): after cooled risk-delta PASS and full **run-f
 
 ## Fresh suite evidence (single run-full)
 
-Cite: [run-full-after-175](../../docs/capacity/2026-10-12-run-full-after-175.md) · logs `/workspace/r6-capacity-logs/run-full-after-175/` · tip `ab02562`.
+Cite: [run-full-after-175](../capacity/2026-10-12-run-full-after-175.md) · logs `/workspace/r6-capacity-logs/run-full-after-175/` · tip `ab02562`.
 
 | Scenario | Gate (DEC-006) | This run-full | Result |
 |---|---|---|---|

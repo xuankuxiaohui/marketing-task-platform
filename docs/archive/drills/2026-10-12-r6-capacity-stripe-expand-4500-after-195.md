@@ -8,4 +8,4 @@
 | Δ / off / run-full | not run |
 | Capacity | **勾空**; **非 RC**; Δ收口 → project replan |
 
-Evidence: [docs/capacity/2026-10-12-stripe-expand-4500-delta-after-195.md](../../docs/capacity/2026-10-12-stripe-expand-4500-delta-after-195.md).
+Evidence: [docs/archive/capacity/2026-10-12-stripe-expand-4500-delta-after-195.md](../capacity/2026-10-12-stripe-expand-4500-delta-after-195.md).

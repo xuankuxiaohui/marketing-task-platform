@@ -41,7 +41,7 @@
 | D2 | 前端 client/admin/shared 未发现零引用源文件 | 文件名 import grep | — | — |
 | D3 | 根目录 `spike/`（8 个技术验证子目录，46 个跟踪文件）自 2026-08-19 后未动，不参与构建 | `git log -- spike` | P3 | S（归档或删） |
 | D4 | 根目录 `com/` 里有本地编译残留 `.class`（未跟踪，已被 `*.class` 忽略） | 仅本机杂物，不进仓库 | P3 | S |
-| D5 | `docs/capacity`(35) + `deploy/drills`(56) 共 90+ 份容量/演练 md，多为 FAIL 证据 | 与 `docs/replan/2026-10-13-replan-backlog.md` P0 文档分诊同项 | P2 | M（归档，非删） |
+| D5 | `docs/capacity`(35) + `deploy/drills`(56) 共 90+ 份容量/演练 md，多为 FAIL 证据 | **2026-10-13 Top4 已归档** → `docs/archive/`；活页 `docs/capacity/STATUS.md` + `ARCHIVE-INDEX.md` | P2 | M（归档，非删） **done** |
 
 ## 3. 依赖
 
@@ -77,7 +77,7 @@
 | 1 | **U1+U3 门户活动详情失败态**：失败走 `showPortalFail` 映射，失败与空态分开，加重试按钮，补 spec | P1 | S | 一处修两条产品项，门户主旅程 |
 | 2 | **U2 Admin 风控页中文化**：列头 + 动作/案例结果/名单类型加中文标签（复用 `status-label.ts` 模式） | P2 | S | 产品点名、改动小、无后端变更 |
 | 3 | **T1+T3 补测**：6 个 Controller 的 WebMvc 切片测试 + `FulfillmentService` 单测 | P2 | M | 零行为改动，给后续可读性小切打底 |
-| 4 | **D5 容量文档归档**：`docs/capacity`、`deploy/drills` 的 FAIL 证据挪进 `docs/archive/`，留一份活状态页 | P2 | M | 与 replan P0 文档分诊合并，只动文档 |
+| 4 | **D5 容量文档归档**：`docs/capacity`、`deploy/drills` 的 FAIL 证据挪进 `docs/archive/`，留一份活状态页 | P2 | M | **2026-10-13 Top4 done**（本刀）；与 replan P0 文档分诊合并，只动文档 |
 | 5 | **R1 第一刀**：从 `TaskPortalAppService` 抽一个方法簇（只搬不改语义，前后测试不变） | P1 | L→S 切 | 热路径可读性最大债；须在 #3 之后、架构定切口 |
 
 UX 项在 Top5 中占 2 条（#1、#2），符合「Top5 UX ≤ 2」。

@@ -8,4 +8,4 @@
 | Next | progress 产品刀 — hotspot evidence on `/internal/task/progress` (FOR UPDATE / attrs+crowds+snapshot / evt+outbox+mtr co-load) |
 | Caps | Tomcat120 / 1536M / Redisson≤32/1s/1; **未**抬阈值; **非 RC**; **勾空** |
 
-Full write-up: [docs/capacity/2026-10-12-advance-settle-after-186.md](../../docs/capacity/2026-10-12-advance-settle-after-186.md).
+Full write-up: [docs/archive/capacity/2026-10-12-advance-settle-after-186.md](../capacity/2026-10-12-advance-settle-after-186.md).

@@ -12,4 +12,4 @@
 | run-full-noseed | not started |
 | Capacity | **勾空**; **非 RC**; residual for product knife — 禁发明产品刀 / 禁降Δ |
 
-Evidence: [docs/capacity/2026-10-12-risk-delta-cold-restart-after-193.md](../../docs/capacity/2026-10-12-risk-delta-cold-restart-after-193.md).
+Evidence: [docs/archive/capacity/2026-10-12-risk-delta-cold-restart-after-193.md](../capacity/2026-10-12-risk-delta-cold-restart-after-193.md).

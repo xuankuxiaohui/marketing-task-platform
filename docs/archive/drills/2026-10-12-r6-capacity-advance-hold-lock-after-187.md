@@ -9,4 +9,4 @@
 | Next | run-full through complete **PASS** (续); CI绿就合勾空 |
 | Caps | Tomcat120 / 1536M / Redisson≤32/1s/1; **未**抬频率; **非 RC**; **勾空** |
 
-Full write-up: [docs/capacity/2026-10-12-advance-hold-lock-after-187.md](../../docs/capacity/2026-10-12-advance-hold-lock-after-187.md).
+Full write-up: [docs/archive/capacity/2026-10-12-advance-hold-lock-after-187.md](../capacity/2026-10-12-advance-hold-lock-after-187.md).

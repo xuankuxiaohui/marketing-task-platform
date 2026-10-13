@@ -11,5 +11,5 @@
 | Capacity | **勾空**; **非 RC** |
 | Next | **Ask architect next knife** (complete grant residual) |
 
-Evidence: [docs/capacity/2026-10-12-list-settle-run-full-after-180.md](../../docs/capacity/2026-10-12-list-settle-run-full-after-180.md).  
+Evidence: [docs/archive/capacity/2026-10-12-list-settle-run-full-after-180.md](../capacity/2026-10-12-list-settle-run-full-after-180.md).  
 Logs: `/workspace/r6-capacity-logs/list-settle-after-180/`, `/workspace/r6-capacity-logs/run-full-after-180/`.

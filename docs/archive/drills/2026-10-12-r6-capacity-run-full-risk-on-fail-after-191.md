@@ -8,4 +8,4 @@
 | Prior PASS in same run | list/advance/complete/track/admin-list/ad |
 | Capacity | **勾空**; **非 RC**; ask architect next knife |
 
-Evidence: [docs/capacity/2026-10-12-run-full-risk-on-fail-after-191.md](../../docs/capacity/2026-10-12-run-full-risk-on-fail-after-191.md).
+Evidence: [docs/archive/capacity/2026-10-12-run-full-risk-on-fail-after-191.md](../capacity/2026-10-12-run-full-risk-on-fail-after-191.md).
