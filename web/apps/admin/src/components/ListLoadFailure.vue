@@ -3,6 +3,8 @@ import { zhCN } from "@/locales/zh-CN";
 
 defineOptions({ name: "ListLoadFailure" });
 
+withDefaults(defineProps<{ loading?: boolean }>(), { loading: false });
+
 defineEmits<{
   reload: [];
 }>();
@@ -16,7 +18,14 @@ defineEmits<{
     <p class="list-load-failure__hint" data-testid="list-load-failed-hint">
       {{ zhCN.common.listLoadFailedHint }}
     </p>
-    <a-button type="primary" size="small" data-testid="list-load-reload" @click="$emit('reload')">
+    <a-button
+      type="primary"
+      size="small"
+      data-testid="list-load-reload"
+      :loading="loading"
+      :disabled="loading"
+      @click="$emit('reload')"
+    >
       {{ zhCN.common.reload }}
     </a-button>
   </div>

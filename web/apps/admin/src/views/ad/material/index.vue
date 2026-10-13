@@ -182,7 +182,7 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="ad-material-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
       <template #emptyText>
-        <ListLoadFailure v-if="listFailed" @reload="load" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="load" />
       <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty">
 <a-button v-auth="PERMS.AD_MATERIAL_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}

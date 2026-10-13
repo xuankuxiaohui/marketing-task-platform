@@ -192,7 +192,7 @@ async function reverseRun(): Promise<void> {
     <p v-if="lastResult" data-testid="simulate-result">{{ lastResult }}</p>
     <a-table size="small" :loading="loading" :data-source="records" class="data-table" data-testid="simulate-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <ListLoadFailure v-if="listFailed" @reload="loadList" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="loadList" />
       <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 

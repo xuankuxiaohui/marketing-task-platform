@@ -95,7 +95,7 @@ onMounted(() => {
     <a-spin :spinning="loading">
     <a-table size="small" :data-source="versions" class="data-table" data-testid="version-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <ListLoadFailure v-if="listFailed" @reload="load" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="load" />
       <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 

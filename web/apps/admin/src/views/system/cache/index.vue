@@ -95,7 +95,7 @@ onMounted(() => {
     <p v-if="success" class="hint" data-testid="cache-success">{{ success }}</p>
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="cache-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <ListLoadFailure v-if="listFailed" @reload="load" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="load" />
       <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 

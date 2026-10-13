@@ -100,7 +100,7 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <ListLoadFailure v-if="listFailed" @reload="load" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="load" />
       <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
       <a-table-column :title="zhCN.rule.ruleCode">

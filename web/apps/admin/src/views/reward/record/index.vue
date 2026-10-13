@@ -145,7 +145,7 @@ onMounted(() => {
     <h3>{{ zhCN.record.spend }}</h3>
     <a-table size="small" :loading="loading" :data-source="spendRows" class="data-table admin-table" data-testid="spend-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <ListLoadFailure v-if="listFailed" @reload="loadSpend" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="loadSpend" />
       <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 
