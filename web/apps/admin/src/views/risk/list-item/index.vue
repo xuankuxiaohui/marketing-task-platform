@@ -16,6 +16,7 @@ import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime, toIsoInstant } from "@/utils/datetime";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
+import { riskDimensionLabel, riskListTypeLabel } from "@/utils/risk-label";
 import { useLatestRequest } from "@/composables/useLatestRequest";
 import { runWithLoading } from "@/composables/runWithLoading";
 
@@ -187,11 +188,11 @@ onMounted(() => {
     <a-form layout="inline" class="admin-toolbar" @submit.prevent>
       <a-select v-model:value="filters.dimension" data-testid="filter-dimension">
         <a-select-option value="">{{ zhCN.list.dimension }}</a-select-option>
-        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ riskDimensionLabel(item) }}</a-select-option>
       </a-select>
       <a-select v-model:value="filters.listType" data-testid="filter-list-type">
         <a-select-option value="">{{ zhCN.list.listType }}</a-select-option>
-        <a-select-option v-for="item in RISK_LIST_TYPES" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_LIST_TYPES" :key="item" :value="item">{{ riskListTypeLabel(item) }}</a-select-option>
       </a-select>
       <a-input v-model:value="filters.value" data-testid="filter-value" :placeholder="zhCN.list.listValue" />
       <a-date-picker v-model:value="filters.from" data-testid="filter-from" show-time value-format="YYYY-MM-DDTHH:mm" format="YYYY-MM-DD HH:mm" />
@@ -212,10 +213,10 @@ onMounted(() => {
       </template>
 
       <a-table-column :title="zhCN.list.dimension">
-        <template #default="{ record: row }">{{ row.dimension }}</template>
+        <template #default="{ record: row }">{{ riskDimensionLabel(row.dimension) }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.list.listType">
-        <template #default="{ record: row }">{{ row.listType }}</template>
+        <template #default="{ record: row }">{{ riskListTypeLabel(row.listType) }}</template>
       </a-table-column>
       <a-table-column :title="zhCN.list.listValue">
         <template #default="{ record: row }">{{ row.listValue }}</template>
@@ -251,7 +252,7 @@ onMounted(() => {
     >
       <a-form-item :label="zhCN.list.dimension">
         <a-select v-model:value="form.dimension" data-testid="list-dimension">
-        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ riskDimensionLabel(item) }}</a-select-option>
       </a-select>
       </a-form-item>
       <a-form-item :label="zhCN.list.listType">
@@ -285,7 +286,7 @@ onMounted(() => {
     >
       <a-form-item :label="zhCN.list.dimension">
         <a-select v-model:value="form.dimension" data-testid="import-dimension">
-        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ item }}</a-select-option>
+        <a-select-option v-for="item in RISK_DIMENSIONS" :key="item" :value="item">{{ riskDimensionLabel(item) }}</a-select-option>
       </a-select>
       </a-form-item>
       <a-form-item :label="zhCN.list.content">
