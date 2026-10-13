@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Empty, NavBar, showFailToast } from "vant";
-import { isFail, isOk } from "@mkt/shared";
+import { Button, Empty, NavBar } from "vant";
+import { isFail, isOk, type Result } from "@mkt/shared";
 import {
   fetchActivities,
   fetchActivityDetail,
@@ -14,9 +14,20 @@ import FallbackImage from "@/components/FallbackImage.vue";
 import TaskCard from "@/components/TaskCard.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { activityCover, activityWindow } from "@/utils/activity-cover";
-import { showNetworkFail, showPortalFail } from "@/utils/portal-error";
+import { resultMessage, showPortalFail } from "@/utils/portal-error";
 
 defineOptions({ name: "ActivityPage" });
+
+/** Top1 (HC-1 U1+U3): detail fail ≠ empty; copy owned by this page only. */
+const DETAIL_COPY = {
+  failTitle: "活动信息加载失败",
+  failHint: "请检查网络后重试",
+  reload: "重新加载",
+  gone: "活动已结束或不存在",
+  backToHub: "返回活动中心",
+} as const;
+/** Backend "not found / not visible" is a real empty, not a retryable failure. */
+const GONE_CODES = new Set(["activity.activity.not-found"]);
 
 const route = useRoute();
 const router = useRouter();
@@ -25,6 +36,21 @@ const detail = ref<PortalActivityDetailView | null>(null);
 const tasks = ref<TaskCardView[]>([]);
 const rulesOpen = ref(false);
 const rulesEl = ref<HTMLElement | null>(null);
+const loadError = ref(false);
+const failHint = ref<string>(DETAIL_COPY.failHint);
+
+/** Mapped friendly copy (same table as showPortalFail) or the default hint — never raw response.message. */
+function detailFailHint(result: Result): string {
+  const msg = resultMessage(result, DETAIL_COPY.failHint);
+  return msg === result.message?.trim() ? DETAIL_COPY.failHint : msg;
+}
+
+function markFailed(hint: string = DETAIL_COPY.failHint): void {
+  detail.value = null;
+  tasks.value = [];
+  failHint.value = hint;
+  loadError.value = true;
+}
 
 const activityId = computed(() => {
   const raw = route.query.id;
@@ -82,31 +108,51 @@ async function load(): Promise<void> {
     let id = activityId.value;
     if (id == null || !Number.isFinite(id)) {
       const list = await fetchActivities();
-      if (isOk(list) && list.data && list.data.length > 0) {
+      if (!isOk(list)) {
+        markFailed(detailFailHint(list));
+        return;
+      }
+      if (list.data && list.data.length > 0) {
         id = list.data[0].id;
       }
     }
     if (id == null || !Number.isFinite(id)) {
       detail.value = null;
       tasks.value = [];
+      loadError.value = false;
       return;
     }
     const response = await fetchActivityDetail(id);
     if (isFail(response)) {
-      showFailToast(response.message);
-      detail.value = null;
-      tasks.value = [];
+      if (GONE_CODES.has(response.code)) {
+        detail.value = null;
+        tasks.value = [];
+        loadError.value = false;
+        return;
+      }
+      // No toast: the page-level fail state carries the message.
+      markFailed(detailFailHint(response));
       return;
     }
+    loadError.value = false;
     detail.value = response.data ?? null;
     await loadBoundTasks(detail.value?.submodules ?? []);
   } catch {
-    showNetworkFail();
-    detail.value = null;
-    tasks.value = [];
+    markFailed();
   } finally {
     loading.value = false;
   }
+}
+
+function reload(): void {
+  if (loading.value) {
+    return;
+  }
+  void load();
+}
+
+function backToHub(): void {
+  void router.push("/activities");
 }
 
 function openTask(task: TaskCardView): void {
@@ -135,7 +181,27 @@ watch(
 <template>
   <section class="activity-page">
     <NavBar :title="zhCN.activity.title" left-arrow @click-left="router.back()" />
-    <Empty v-if="!loading && !detail" :description="zhCN.activity.empty" data-testid="activity-empty" />
+    <!-- Keep the fail state up while retrying (UX-3: no flash-empty) -->
+    <Empty v-if="loadError" data-testid="activity-error">
+      <template #description>
+        <p class="activity-error__title" data-testid="activity-error-title">{{ DETAIL_COPY.failTitle }}</p>
+        <p class="activity-error__hint" data-testid="activity-error-hint">{{ failHint }}</p>
+      </template>
+      <Button
+        type="primary"
+        size="small"
+        :disabled="loading"
+        data-testid="activity-retry"
+        @click="reload"
+      >
+        {{ DETAIL_COPY.reload }}
+      </Button>
+    </Empty>
+    <Empty v-else-if="!loading && !detail" :description="DETAIL_COPY.gone" data-testid="activity-empty">
+      <Button type="primary" size="small" data-testid="activity-back-hub" @click="backToHub">
+        {{ DETAIL_COPY.backToHub }}
+      </Button>
+    </Empty>
     <div v-else-if="detail" data-testid="activity-detail">
       <header class="activity-hero">
         <div class="activity-hero__cover">
@@ -178,6 +244,16 @@ watch(
 }
 .activity-page :deep(.van-nav-bar) {
   background: transparent;
+}
+.activity-error__title {
+  margin: 0;
+  color: var(--portal-ink);
+  font-size: 15px;
+}
+.activity-error__hint {
+  margin: 6px 0 0;
+  color: var(--portal-muted);
+  font-size: 13px;
 }
 .activity-hero {
   overflow: hidden;

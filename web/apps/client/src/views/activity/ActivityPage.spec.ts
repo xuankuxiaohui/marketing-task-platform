@@ -2,9 +2,9 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { zhCN } from "@/locales/zh-CN";
 import { useSessionStore } from "@/store/session";
-import { ok } from "@/test-utils/result";
+import { fail, ok } from "@/test-utils/result";
+import { showFailToast } from "vant";
 import type { TaskCardView } from "@/api/task";
 
 vi.mock("@/api/activity", () => ({
@@ -84,6 +84,7 @@ async function mountPage(query: Record<string, string> = {}, loggedIn = true) {
       { path: "/task/:taskId", component: { template: "<div />" } },
       { path: "/mine", component: { template: "<div />" } },
       { path: "/login", component: { template: "<div />" } },
+      { path: "/activities", component: { template: "<div />" } },
     ],
   });
   await router.push({ path: "/activity", query });
@@ -112,10 +113,82 @@ describe("ActivityPage", () => {
     prizeListMock.mockResolvedValue(ok({ total: 0, records: [] }));
   });
 
-  it("renders empty when no published activity", async () => {
+  it("renders empty with a back-to-hub button when no published activity", async () => {
     listMock.mockResolvedValue(ok([]));
-    const { wrapper } = await mountPage();
-    expect(wrapper.get('[data-testid="activity-empty"]').text()).toContain(zhCN.activity.empty);
+    const { wrapper, router } = await mountPage();
+    expect(wrapper.get('[data-testid="activity-empty"]').text()).toContain("活动已结束或不存在");
+    expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(false);
+    const back = wrapper.get('[data-testid="activity-back-hub"]');
+    expect(back.text()).toContain("返回活动中心");
+    await back.trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/activities");
+  });
+
+  it("treats activity not-found as empty, not a retryable failure", async () => {
+    detailMock.mockResolvedValue(fail("activity.activity.not-found", "活动不存在"));
+    const { wrapper } = await mountPage({ id: "3" });
+    expect(wrapper.find('[data-testid="activity-empty"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="activity-back-hub"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(false);
+  });
+
+  it("shows the fail state (not empty) on detail failure, without toast or raw message", async () => {
+    vi.mocked(showFailToast).mockClear();
+    detailMock.mockResolvedValue(fail("common.system.error", "java.lang.IllegalStateException: boom"));
+    const { wrapper } = await mountPage({ id: "3" });
+    expect(wrapper.find('[data-testid="activity-empty"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activity-detail"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-error-title"]').text()).toBe("活动信息加载失败");
+    expect(wrapper.get('[data-testid="activity-error-hint"]').text()).toBe("请检查网络后重试");
+    expect(wrapper.get('[data-testid="activity-retry"]').text()).toContain("重新加载");
+    expect(wrapper.text()).not.toContain("IllegalStateException");
+    expect(showFailToast).not.toHaveBeenCalled();
+  });
+
+  it("treats a thrown detail request as failure, not empty", async () => {
+    vi.mocked(showFailToast).mockClear();
+    detailMock.mockRejectedValue(new Error("Network Error"));
+    const { wrapper } = await mountPage({ id: "3" });
+    expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="activity-empty"]').exists()).toBe(false);
+    expect(showFailToast).not.toHaveBeenCalled();
+  });
+
+  it("retry re-fetches only the detail, disables while loading, then shows content", async () => {
+    detailMock.mockResolvedValueOnce(fail("common.system.error", "boom"));
+    const { wrapper } = await mountPage({ id: "3" });
+    expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(true);
+
+    let resolveDetail!: (value: unknown) => void;
+    detailMock.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveDetail = resolve as (value: unknown) => void;
+      }) as ReturnType<typeof fetchActivityDetail>,
+    );
+    await wrapper.get('[data-testid="activity-retry"]').trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="activity-empty"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-retry"]').attributes("disabled")).toBeDefined();
+
+    resolveDetail(
+      ok({
+        id: 3,
+        code: "summer",
+        name: "夏季专题",
+        richText: "<p>hello</p>",
+        contentHash: "abc",
+        version: 1,
+        submodules: [],
+      }),
+    );
+    await flushPromises();
+    expect(detailMock).toHaveBeenCalledTimes(2);
+    expect(detailMock).toHaveBeenLastCalledWith(3);
+    expect(listMock).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="activity-error"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="activity-name"]').text()).toContain("夏季专题");
   });
 
   it("lazy-reveals rules on the side button and has no join CTA", async () => {
