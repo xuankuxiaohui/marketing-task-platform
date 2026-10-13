@@ -13,16 +13,18 @@ import {
   type SimulateTaskCard,
 } from "@/api/simulate";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "SimulateTaskPage" });
 
 const loading = ref(false);
+const listFailed = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const records = ref<SimulateTaskCard[]>([]);
 const flowSteps = ref<SimulateFlowStepView[]>([]);
@@ -72,7 +74,7 @@ const beginListLoad = useLatestRequest(() => [form.userId, form.category]);
 
 async function loadList(): Promise<void> {
   const isCurrent = beginListLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const result = await simulateList({
       userId: userId(),
@@ -81,18 +83,21 @@ async function loadList(): Promise<void> {
       pageSize: ADMIN_PAGE_SIZE,
     });
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     if (parsed.data == null) {
-      return;
+      return true;
     }
     records.value = parsed.data.records ?? [];
     lastResult.value = `${zhCN.simulate.list}: ${parsed.data.total ?? 0}`;
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    records.value = [];
   });
 }
 
@@ -187,7 +192,8 @@ async function reverseRun(): Promise<void> {
     <p v-if="lastResult" data-testid="simulate-result">{{ lastResult }}</p>
     <a-table size="small" :loading="loading" :data-source="records" class="data-table" data-testid="simulate-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+        <ListLoadFailure v-if="listFailed" @reload="loadList" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 
       <a-table-column :title="zhCN.simulate.taskId">

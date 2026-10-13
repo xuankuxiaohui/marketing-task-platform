@@ -2,18 +2,20 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { evictCache, fetchCacheStats, type CacheStatsView } from "@/api/system";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import { PERMS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
 import { buildCacheEvictCommand, CACHE_EVICT_LEVELS, SESSION_NAMESPACE } from "@/utils/cache-evict";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "CacheManagePage" });
 
 const records = ref<CacheStatsView[]>([]);
 const loading = ref(false);
+const listFailed = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const success = ref("");
 const form = reactive({
@@ -39,18 +41,21 @@ const beginLoad = useLatestRequest(() => null);
 
 async function load(): Promise<void> {
   const isCurrent = beginLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const result = await fetchCacheStats();
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     records.value = parsed.data?.records ?? [];
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    records.value = [];
   });
 }
 
@@ -90,7 +95,8 @@ onMounted(() => {
     <p v-if="success" class="hint" data-testid="cache-success">{{ success }}</p>
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="cache-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+        <ListLoadFailure v-if="listFailed" @reload="load" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 
       <a-table-column :title="zhCN.cache.namespace" :width="240">

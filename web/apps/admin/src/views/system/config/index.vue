@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from "vue";
 import { createConfig, pageConfigs, updateConfig, type ConfigView } from "@/api/system";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { CONFIG_VALUE_TYPES, PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
@@ -10,7 +11,7 @@ import { buildConfigUpdateBody, CONFIG_MASK_DISPLAY } from "@/utils/config-updat
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "ConfigManagePage" });
 
@@ -19,6 +20,7 @@ const total = ref(0);
 const page = ref(1);
 const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
+const listFailed = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ configGroup: "", key: "" });
 const formOpen = ref(false);
@@ -42,7 +44,7 @@ const beginLoad = useLatestRequest(() => [
 
 async function load(): Promise<void> {
   const isCurrent = beginLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const result = await pageConfigs({
       configGroup: filters.configGroup,
@@ -51,15 +53,19 @@ async function load(): Promise<void> {
       pageSize,
     });
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     records.value = parsed.data?.records ?? [];
     total.value = parsed.data?.total ?? 0;
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    records.value = [];
+    total.value = 0;
   });
 }
 
@@ -158,7 +164,8 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="config-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+        <ListLoadFailure v-if="listFailed" @reload="load" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty">
 <a-button v-auth="PERMS.CONFIG_CREATE" type="primary" size="small" @click="openCreate">
         {{ zhCN.common.create }}
       </a-button>

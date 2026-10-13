@@ -2,13 +2,14 @@
 import { onMounted, reactive, ref } from "vue";
 import { pageAudits, type AuditView } from "@/api/system";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import EllipsisCell from "@/components/EllipsisCell.vue";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "AuditLogPage" });
 
@@ -17,6 +18,7 @@ const total = ref(0);
 const page = ref(1);
 const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
+const listFailed = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({
   operatorId: "",
@@ -39,7 +41,7 @@ const beginLoad = useLatestRequest(() => [
 
 async function load(): Promise<void> {
   const isCurrent = beginLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const toIso = (value: string): string | undefined => {
       if (!value) {
@@ -59,15 +61,19 @@ async function load(): Promise<void> {
       pageSize,
     });
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     records.value = parsed.data?.records ?? [];
     total.value = parsed.data?.total ?? 0;
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    records.value = [];
+    total.value = 0;
   });
 }
 
@@ -100,7 +106,8 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table audit-table" data-testid="audit-table" table-layout="fixed" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+        <ListLoadFailure v-if="listFailed" @reload="load" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 
       <a-table-column :title="zhCN.audit.module" :width="120">
