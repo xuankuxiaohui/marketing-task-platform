@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -74,12 +73,9 @@ class SpendAdminControllerTest {
 
     /**
      * Spend has no bean-validation params; its only input check is query-param type conversion.
-     * DEFECT D1 (recorded, not fixed here): GlobalExceptionHandler has no handler for
-     * MethodArgumentTypeMismatchException, so {@code from=not-an-instant} falls to handleUnknown → 500
-     * common.server-error + ERROR log instead of 400 common.param-invalid. Enable once main is fixed.
+     * Malformed Instant query params raise MethodArgumentTypeMismatchException → 400 common.param-invalid.
      */
     @Test
-    @Disabled("DEFECT D1: MethodArgumentTypeMismatchException → 500 common.server-error (expected 400)")
     void malformedInstantParamIs400() throws Exception {
         stp.grant(RewardPermissions.RECORD_QUERY);
         mvc.perform(get("/admin/reward/spend").param("from", "not-an-instant"))

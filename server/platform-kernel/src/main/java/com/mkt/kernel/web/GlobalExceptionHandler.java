@@ -16,8 +16,10 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 /** Unique {@code @RestControllerAdvice} (appendix C / docs/standards/09). */
@@ -58,6 +60,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Result<Void>> handleUnreadable(HttpMessageNotReadableException ex) {
         log.warn("unreadable body, traceId={}", TraceIds.current());
+        return paramInvalid(CommonErrorCodes.PARAM_INVALID.message());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Result<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.warn("type mismatch, name={}, traceId={}", ex.getName(), TraceIds.current());
+        return paramInvalid(CommonErrorCodes.PARAM_INVALID.message());
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Result<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
+        log.warn("missing param, name={}, traceId={}", ex.getParameterName(), TraceIds.current());
         return paramInvalid(CommonErrorCodes.PARAM_INVALID.message());
     }
 
