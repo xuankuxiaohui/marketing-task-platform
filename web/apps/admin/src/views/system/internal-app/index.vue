@@ -10,6 +10,7 @@ import {
 } from "@/api/identity";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import FormDialog from "@/components/FormDialog.vue";
 import { PERMS, STATUS } from "@/constants/identity";
 import { zhCN } from "@/locales/zh-CN";
@@ -18,7 +19,7 @@ import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { ADMIN_PAGE_SIZE, adminPagination, adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "InternalAppPage" });
 
@@ -27,6 +28,7 @@ const total = ref(0);
 const page = ref(1);
 const pageSize = ADMIN_PAGE_SIZE;
 const loading = ref(false);
+const listFailed = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const formOpen = ref(false);
 const saving = ref(false);
@@ -38,19 +40,23 @@ const beginLoad = useLatestRequest(() => page.value);
 
 async function load(): Promise<void> {
   const isCurrent = beginLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const result = await pageInternalApps({ page: page.value, pageSize });
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     records.value = parsed.data?.records ?? [];
     total.value = parsed.data?.total ?? 0;
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    records.value = [];
+    total.value = 0;
   });
 }
 
@@ -145,7 +151,8 @@ onMounted(() => {
     <FeedbackBanner :feedback="feedback" />
     <a-table size="small" :loading="loading" :data-source="records" class="data-table admin-table" data-testid="internal-app-table" :pagination="adminPagination(page, pageSize, total)" :row-key="adminRowKey" @change="onTableChange">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty">
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="load" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty">
 <a-button v-auth="PERMS.APP_ADD" type="primary" size="small" @click="formOpen = true">
         {{ zhCN.app.add }}
       </a-button>

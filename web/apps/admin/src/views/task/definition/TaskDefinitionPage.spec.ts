@@ -5,7 +5,8 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { auth } from "@/directives/auth";
 import { PERMS } from "@/constants/identity";
 import { useSessionStore } from "@/store/session";
-import { ok } from "@/test-utils/result";
+import { fail, ok } from "@/test-utils/result";
+import { zhCN } from "@/locales/zh-CN";
 import { PUBLISH_REVISION_HINT } from "@/utils/publish-confirm";
 
 vi.mock("@/api/task", () => ({
@@ -150,5 +151,44 @@ describe("TaskDefinitionPage list request lifecycle", () => {
 
     expect(wrapper.get('[data-testid="task-table"]').text()).toContain("newer");
     expect(wrapper.get('[data-testid="task-table"]').text()).not.toContain("stale");
+  });
+});
+
+
+describe("TaskDefinitionPage list failure state", () => {
+  beforeEach(() => {
+    pageMock.mockReset();
+    failMock.mockReset();
+    publishMock.mockReset();
+    failMock.mockResolvedValue(ok({ total: 0, records: [] }));
+  });
+
+  it("shows locked failure copy and hides empty state without leaking codes", async () => {
+    pageMock.mockResolvedValue(fail("task.def.unknown", "secret boom"));
+    const wrapper = await mountPage();
+    expect(wrapper.get('[data-testid="list-load-failed-title"]').text()).toBe(zhCN.common.listLoadFailed);
+    expect(wrapper.get('[data-testid="list-load-failed-hint"]').text()).toBe(zhCN.common.listLoadFailedHint);
+    expect(wrapper.get('[data-testid="list-load-reload"]').text()).toBe(zhCN.common.reload);
+    expect(wrapper.find('[data-testid="page-empty"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("task.def.unknown");
+    expect(wrapper.text()).not.toContain("secret boom");
+    expect(wrapper.find('[data-testid="page-error"]').exists()).toBe(false);
+  });
+
+  it("retries from failure and restores rows", async () => {
+    pageMock
+      .mockResolvedValueOnce(fail("common.server-error", "boom"))
+      .mockResolvedValueOnce(
+        ok({
+          total: 1,
+          records: [{ id: 8, code: "daily", name: "每日", status: "DRAFT", version: 1 }],
+        }),
+      );
+    const wrapper = await mountPage();
+    expect(wrapper.find('[data-testid="list-load-failure"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="list-load-reload"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="list-load-failure"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="task-table"]').text()).toContain("daily");
   });
 });

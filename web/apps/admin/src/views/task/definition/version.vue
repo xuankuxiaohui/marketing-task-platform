@@ -3,12 +3,13 @@ import { onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { diffVersions, listVersions, type TaskVersionView, type VersionDiffResponse } from "@/api/task";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import { zhCN } from "@/locales/zh-CN";
 import { formatDateTime } from "@/utils/datetime";
 import { okOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "TaskDefinitionVersionPage" });
 
@@ -17,6 +18,7 @@ const versions = ref<TaskVersionView[]>([]);
 const diff = ref<VersionDiffResponse | null>(null);
 const feedback = ref<PageFeedback | null>(null);
 const loading = ref(false);
+const listFailed = ref(false);
 const left = ref("");
 const right = ref("");
 
@@ -36,18 +38,21 @@ async function load(): Promise<void> {
     return;
   }
   const isCurrent = beginLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const result = await listVersions(id);
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     versions.value = parsed.data ?? [];
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    versions.value = [];
   });
 }
 
@@ -90,7 +95,8 @@ onMounted(() => {
     <a-spin :spinning="loading">
     <a-table size="small" :data-source="versions" class="data-table" data-testid="version-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="load" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 
       <a-table-column :title="zhCN.task.version">

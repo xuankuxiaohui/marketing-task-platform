@@ -9,18 +9,20 @@ import {
   type SpendRowView,
 } from "@/api/reward";
 import FeedbackBanner from "@/components/FeedbackBanner.vue";
+import ListLoadFailure from "@/components/ListLoadFailure.vue";
 import { PERMS } from "@/constants/identity";
 import { BYPASS_RULES } from "@/constants/reward";
 import { zhCN } from "@/locales/zh-CN";
 import { okOrFeedback, writeOrFeedback, type PageFeedback } from "@/utils/feedback";
 import { adminRowKey } from "@/utils/table";
 import { useLatestRequest } from "@/composables/useLatestRequest";
-import { runWithLoading } from "@/composables/runWithLoading";
+import { applyListQueryOutcome, runListQuery } from "@/composables/runListQuery";
 
 defineOptions({ name: "RewardRecordPage" });
 
 const spendRows = ref<SpendRowView[]>([]);
 const loading = ref(false);
+const listFailed = ref(false);
 const feedback = ref<PageFeedback | null>(null);
 const filters = reactive({ categoryCode: "", prizeId: "", from: "", to: "" });
 const recordId = ref("");
@@ -40,7 +42,7 @@ const beginLoad = useLatestRequest(() => [
 
 async function loadSpend(): Promise<void> {
   const isCurrent = beginLoad();
-  await runWithLoading(loading, isCurrent, async () => {
+  const outcome = await runListQuery(loading, isCurrent, async () => {
     feedback.value = null;
     const result = await fetchSpend({
       categoryCode: filters.categoryCode,
@@ -49,14 +51,17 @@ async function loadSpend(): Promise<void> {
       to: filters.to || undefined,
     });
     if (!isCurrent()) {
-      return;
+      return true;
     }
     const parsed = okOrFeedback(result);
     if (!parsed.ok) {
-      feedback.value = parsed.feedback;
-      return;
+      return false;
     }
     spendRows.value = parsed.data?.rows ?? [];
+    return true;
+  });
+  applyListQueryOutcome(outcome, listFailed, () => {
+    spendRows.value = [];
   });
 }
 
@@ -140,7 +145,8 @@ onMounted(() => {
     <h3>{{ zhCN.record.spend }}</h3>
     <a-table size="small" :loading="loading" :data-source="spendRows" class="data-table admin-table" data-testid="spend-table" :pagination="false" :row-key="adminRowKey">
       <template #emptyText>
-        <a-empty :description="zhCN.common.empty" data-testid="page-empty" />
+        <ListLoadFailure v-if="listFailed" :loading="loading" @reload="loadSpend" />
+      <a-empty v-else :description="zhCN.common.empty" data-testid="page-empty" />
       </template>
 
       <a-table-column :title="zhCN.prize.category">
