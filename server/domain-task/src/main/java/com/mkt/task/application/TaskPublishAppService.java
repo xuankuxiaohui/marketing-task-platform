@@ -9,15 +9,12 @@ import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.command.PublishCommand;
 import com.mkt.task.command.ScheduleCommand;
-import com.mkt.task.command.TaskActionCommand;
-import com.mkt.task.command.TaskDefinitionSaveCommand;
-import com.mkt.task.command.TaskFilterCommand;
-import com.mkt.task.command.TaskGrayCommand;
 import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.command.TaskTransitionCommand;
+import com.mkt.task.command.TaskDefinitionSaveCommand;
 import com.mkt.task.convert.SnapshotContent;
-import com.mkt.task.convert.TaskDefinitionConvert;
 import com.mkt.task.convert.TaskTime;
+import com.mkt.task.convert.TaskDefinitionConvert;
 import com.mkt.task.domain.CycleKeyResolver;
 import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.domain.ExpireAtCalculator;
@@ -33,7 +30,6 @@ import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.ExpressionCompileException;
 import com.mkt.task.expression.ExpressionEngine;
 import com.mkt.task.response.BatchItemResponse;
-import com.mkt.task.response.DiffEntry;
 import com.mkt.task.response.PublishCheckError;
 import com.mkt.task.response.PublishCheckResponse;
 import com.mkt.task.response.PublishResponse;
@@ -96,6 +92,7 @@ public class TaskPublishAppService {
     private final AlertWebhook alertsDirect;
     private final JdbcTemplate jdbcDirect;
     private final TransactionTemplate txDirect;
+    private final TaskPublishVersionDiff versionDiff;
 
     @Autowired
     public TaskPublishAppService(
@@ -111,7 +108,8 @@ public class TaskPublishAppService {
             ObjectProvider<TaskAuditAppender> audits,
             ObjectProvider<AlertWebhook> alerts,
             ObjectProvider<JdbcTemplate> jdbc,
-            ObjectProvider<PlatformTransactionManager> txm) {
+            ObjectProvider<PlatformTransactionManager> txm,
+            TaskPublishVersionDiff versionDiff) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -130,6 +128,7 @@ public class TaskPublishAppService {
         this.alertsDirect = null;
         this.jdbcDirect = null;
         this.txDirect = null;
+        this.versionDiff = versionDiff;
     }
 
     public TaskPublishAppService(
@@ -164,6 +163,7 @@ public class TaskPublishAppService {
         this.alertsDirect = alerts;
         this.jdbcDirect = jdbc;
         this.txDirect = tx;
+        this.versionDiff = new TaskPublishVersionDiff(snapshots);
     }
 
     @Transactional
@@ -337,10 +337,7 @@ public class TaskPublishAppService {
 
     public List<TaskVersionView> versions(long id) {
         requireLive(id);
-        return snapshots.listByTaskId(id).stream()
-                .map(row -> new TaskVersionView(
-                        row.getVersion(), TaskTime.toInstant(row.getPublishedAt()), row.getPublishedBy()))
-                .toList();
+        return versionDiff.listVersions(id);
     }
 
     public VersionDiffResponse diff(long id, Integer left, Integer right) {
@@ -348,14 +345,7 @@ public class TaskPublishAppService {
         if (left == null || right == null) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "left 与 right 必填");
         }
-        SnapshotContent leftContent = requireSnapshot(id, left);
-        SnapshotContent rightContent = requireSnapshot(id, right);
-        return new VersionDiffResponse(
-                diffByKey(indexSteps(leftContent.steps()), indexSteps(rightContent.steps())),
-                diffByKey(indexEdges(leftContent.transitions()), indexEdges(rightContent.transitions())),
-                asObject(diffByKey(indexFilter(leftContent.filter()), indexFilter(rightContent.filter()))),
-                asObject(diffByKey(indexGray(leftContent.gray()), indexGray(rightContent.gray()))),
-                diffByKey(indexActions(leftContent.actions()), indexActions(rightContent.actions())));
+        return versionDiff.diff(id, left, right);
     }
 
     public PageData<ScheduleFailureView> scheduleFailures(PageQuery page) {
@@ -667,14 +657,6 @@ public class TaskPublishAppService {
         return manager == null ? null : new TransactionTemplate(manager);
     }
 
-    private SnapshotContent requireSnapshot(long taskId, int version) {
-        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(taskId, version);
-        if (snap == null) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND, "版本快照不存在");
-        }
-        return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-    }
-
     static ScheduleFailureView failureView(long id, String summary, String error, Timestamp created) {
         Long taskId = null;
         String code = null;
@@ -751,94 +733,6 @@ public class TaskPublishAppService {
 
     private static int versionOf(TaskDefinitionEntity entity) {
         return entity.getVersion() == null ? 0 : entity.getVersion();
-    }
-
-    private static Map<String, Object> indexSteps(List<TaskStepCommand> steps) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (steps == null) {
-            return map;
-        }
-        for (TaskStepCommand step : steps) {
-            map.put(step.code(), step);
-        }
-        return map;
-    }
-
-    private static Map<String, Object> indexEdges(List<TaskTransitionCommand> edges) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (edges == null) {
-            return map;
-        }
-        for (TaskTransitionCommand edge : edges) {
-            map.put(edge.fromStepCode() + "->" + edge.toStepCode(), edge);
-        }
-        return map;
-    }
-
-    private static Map<String, Object> indexFilter(TaskFilterCommand filter) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (filter == null) {
-            return map;
-        }
-        map.put("expr", filter.expr());
-        map.put("allowCrowdIds", filter.allowCrowdIds());
-        map.put("excludeCrowdIds", filter.excludeCrowdIds());
-        return map;
-    }
-
-    private static Map<String, Object> indexGray(TaskGrayCommand gray) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (gray == null) {
-            return map;
-        }
-        map.put("type", gray.type());
-        map.put("ratio", gray.ratio());
-        map.put("abGroup", gray.abGroup());
-        map.put("crowdId", gray.crowdId());
-        map.put("excludeCrowdId", gray.excludeCrowdId());
-        return map;
-    }
-
-    private static Map<String, Object> indexActions(List<TaskActionCommand> actions) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (actions == null) {
-            return map;
-        }
-        for (TaskActionCommand action : actions) {
-            String key = action.scope() + "|" + action.platform()
-                    + (action.stepCode() == null ? "" : "|" + action.stepCode());
-            map.put(key, action);
-        }
-        return map;
-    }
-
-    private static Map<String, DiffEntry> asObject(List<DiffEntry> entries) {
-        Map<String, DiffEntry> map = new LinkedHashMap<>();
-        for (DiffEntry entry : entries) {
-            map.put(entry.key(), entry);
-        }
-        return map;
-    }
-
-    private static List<DiffEntry> diffByKey(Map<String, Object> left, Map<String, Object> right) {
-        List<DiffEntry> out = new ArrayList<>();
-        for (String key : left.keySet()) {
-            if (!right.containsKey(key)) {
-                out.add(new DiffEntry("REMOVE", key, left.get(key), null));
-            } else if (!sameJson(left.get(key), right.get(key))) {
-                out.add(new DiffEntry("CHANGE", key, left.get(key), right.get(key)));
-            }
-        }
-        for (String key : right.keySet()) {
-            if (!left.containsKey(key)) {
-                out.add(new DiffEntry("ADD", key, null, right.get(key)));
-            }
-        }
-        return out;
-    }
-
-    private static boolean sameJson(Object left, Object right) {
-        return Objects.equals(JsonUtil.toJson(left), JsonUtil.toJson(right));
     }
 
     @FunctionalInterface
