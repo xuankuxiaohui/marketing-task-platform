@@ -6,5 +6,5 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @MapperScan("com.mkt.task.mapper")
-@ComponentScan(basePackages = {"com.mkt.task.application", "com.mkt.task.support"})
+@ComponentScan(basePackages = {"com.mkt.task.application", "com.mkt.task.support", "com.mkt.task.engine"})
 public class TaskPersistenceScan {}
