@@ -9,12 +9,8 @@ import com.mkt.reward.command.PrizeSaveCommand;
 import com.mkt.reward.command.StockReplenishCommand;
 import com.mkt.reward.convert.RewardJson;
 import com.mkt.reward.convert.RewardTime;
-import com.mkt.reward.domain.CategoryStatuses;
-import com.mkt.reward.domain.ClaimModes;
-import com.mkt.reward.domain.PrizeCodes;
 import com.mkt.reward.domain.PrizeParamRules;
 import com.mkt.reward.domain.PrizeStatuses;
-import com.mkt.reward.domain.ReconPolicies;
 import com.mkt.reward.domain.StockChangeTypes;
 import com.mkt.reward.entity.PrizeCategoryEntity;
 import com.mkt.reward.entity.PrizeEntity;
@@ -30,8 +26,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +35,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class PrizeAppService {
 
     private final PrizeStore prizes;
-    private final PrizeCategoryStore categories;
     private final StockLogStore stockLogs;
     private final SnapshotPrizeLookup snapshots;
     private final Clock clock;
+    private final PrizeValidate validate;
+
+    @Autowired
+    public PrizeAppService(
+            PrizeStore prizes,
+            StockLogStore stockLogs,
+            SnapshotPrizeLookup snapshots,
+            Clock clock,
+            PrizeValidate validate) {
+        this.prizes = prizes;
+        this.stockLogs = stockLogs;
+        this.snapshots = snapshots;
+        this.clock = clock;
+        this.validate = validate;
+    }
 
     public PrizeAppService(
             PrizeStore prizes,
@@ -51,11 +60,7 @@ public class PrizeAppService {
             StockLogStore stockLogs,
             SnapshotPrizeLookup snapshots,
             Clock clock) {
-        this.prizes = prizes;
-        this.categories = categories;
-        this.stockLogs = stockLogs;
-        this.snapshots = snapshots;
-        this.clock = clock;
+        this(prizes, stockLogs, snapshots, clock, new PrizeValidate(categories));
     }
 
     public PrizeResponse get(long id) {
@@ -78,8 +83,8 @@ public class PrizeAppService {
 
     @Transactional
     public PrizeResponse create(PrizeSaveCommand command) {
-        PrizeSaveCommand normalized = requireValid(command);
-        PrizeCategoryEntity category = requireEnabledCategory(normalized.categoryCode());
+        PrizeSaveCommand normalized = validate.requireValid(command);
+        PrizeCategoryEntity category = validate.requireEnabledCategory(normalized.categoryCode());
         PrizeParamRules.requireValid(
                 category.getCode(),
                 category.getCostMode(),
@@ -109,7 +114,7 @@ public class PrizeAppService {
     @Transactional
     public PrizeResponse update(long id, PrizeSaveCommand command) {
         PrizeEntity existing = require(id);
-        PrizeSaveCommand normalized = requireValid(command);
+        PrizeSaveCommand normalized = validate.requireValid(command);
         if (!existing.getCode().equals(normalized.code())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 不可修改");
         }
@@ -119,10 +124,10 @@ public class PrizeAppService {
             if (!existing.getCategoryCode().equals(normalized.categoryCode())) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "启用后不可改分类");
             }
-            category = requireCategory(existing.getCategoryCode());
-            assertCostFieldsUnchanged(existing, normalized);
+            category = validate.requireCategory(existing.getCategoryCode());
+            validate.assertCostFieldsUnchanged(existing, normalized);
         } else {
-            category = requireEnabledCategory(normalized.categoryCode());
+            category = validate.requireEnabledCategory(normalized.categoryCode());
         }
         PrizeParamRules.requireValid(
                 category.getCode(),
@@ -182,7 +187,7 @@ public class PrizeAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "奖品已启用");
         }
         if (PrizeStatuses.DRAFT.equals(existing.getStatus())) {
-            requireEnabledCategory(existing.getCategoryCode());
+            validate.requireEnabledCategory(existing.getCategoryCode());
             existing.setStatus(PrizeStatuses.ENABLED);
             existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
             prizes.update(existing);
@@ -191,7 +196,7 @@ public class PrizeAppService {
         if (!PrizeStatuses.DISABLED.equals(existing.getStatus())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "状态流转非法");
         }
-        requireEnabledCategory(existing.getCategoryCode());
+        validate.requireEnabledCategory(existing.getCategoryCode());
         int affected = snapshots.affectedPublishedTaskCount(id);
         int inFlight = snapshots.inFlightInstanceCount(id);
         if (!Boolean.TRUE.equals(command.confirm())) {
@@ -245,62 +250,6 @@ public class PrizeAppService {
         return existing;
     }
 
-    private PrizeCategoryEntity requireCategory(String code) {
-        PrizeCategoryEntity category = categories.getByCode(code);
-        if (category == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "奖品分类不存在");
-        }
-        return category;
-    }
-
-    private PrizeCategoryEntity requireEnabledCategory(String code) {
-        PrizeCategoryEntity category = requireCategory(code);
-        if (!CategoryStatuses.ENABLED.equals(category.getStatus())) {
-            throw new BusinessException(RewardErrorCodes.PRIZE_CATEGORY_DISABLED);
-        }
-        return category;
-    }
-
-    private static PrizeSaveCommand requireValid(PrizeSaveCommand command) {
-        if (command == null || !PrizeCodes.valid(command.code())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "奖品编码格式非法");
-        }
-        if (command.totalStock() == null || command.totalStock() <= 0) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "总库存必须为正整数");
-        }
-        if (command.dailyClaimLimit() == null || command.dailyClaimLimit() < 0
-                || command.totalClaimLimit() == null
-                || command.totalClaimLimit() < 0) {
-            throw new BusinessException(RewardErrorCodes.PRIZE_LIMIT_NEGATIVE);
-        }
-        if (!ClaimModes.valid(command.claimMode())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "领取方式非法");
-        }
-        String policy = blankToNull(command.reconActionPolicy());
-        if (policy != null && !ReconPolicies.valid(policy)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "对账动作政策非法");
-        }
-        return new PrizeSaveCommand(
-                command.code().trim(),
-                command.name().trim(),
-                blankToNull(command.imageUrl()),
-                blankToNull(command.description()),
-                command.categoryCode().trim(),
-                command.typeParams() == null ? Map.of() : command.typeParams(),
-                command.unitCostFen(),
-                command.totalStock(),
-                command.dailyClaimLimit(),
-                command.totalClaimLimit(),
-                command.regionLimit(),
-                command.levelLimit(),
-                command.tagLimit(),
-                command.claimMode().trim(),
-                policy,
-                command.expireHours(),
-                command.groupId(),
-                command.extConfig());
-    }
-
     private static void applyWritable(
             PrizeEntity entity, PrizeSaveCommand command, PrizeCategoryEntity category, boolean copyCategory) {
         entity.setCode(command.code());
@@ -324,17 +273,6 @@ public class PrizeAppService {
             entity.setTypeParams(RewardJson.map(command.typeParams()));
             entity.setUnitCostFen(command.unitCostFen());
             entity.setTotalStock(command.totalStock());
-        }
-    }
-
-    private static void assertCostFieldsUnchanged(PrizeEntity existing, PrizeSaveCommand command) {
-        Map<String, Object> current = RewardJson.map(existing.getTypeParams());
-        Map<String, Object> next = command.typeParams() == null ? Map.of() : command.typeParams();
-        if (!Objects.equals(current, next)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "启用后不可改成本算法相关字段");
-        }
-        if (!Objects.equals(existing.getUnitCostFen(), command.unitCostFen())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "启用后不可改成本算法相关字段");
         }
     }
 
@@ -400,13 +338,6 @@ public class PrizeAppService {
                 entity.getBizId(),
                 entity.getOperatorId(),
                 RewardTime.toInstant(entity.getCreatedAt()));
-    }
-
-    private static String blankToNull(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
     }
 
     private static String emptyToNullJson(List<String> values) {
