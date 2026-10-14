@@ -6,7 +6,6 @@ import com.mkt.activity.command.ActivitySaveCommand;
 import com.mkt.activity.command.ActivityScheduleCommand;
 import com.mkt.activity.command.ActivitySubmoduleCommand;
 import com.mkt.activity.convert.ActivityDraftContent;
-import com.mkt.activity.convert.ActivityFieldCodec;
 import com.mkt.activity.domain.ActivityCodes;
 import com.mkt.activity.domain.ActivityDates;
 import com.mkt.activity.domain.ActivityStatuses;
@@ -21,19 +20,16 @@ import com.mkt.activity.response.OkResponse;
 import com.mkt.activity.response.ParticipationStatsView;
 import com.mkt.activity.response.ParticipationView;
 import com.mkt.activity.support.ActivityErrorCodes;
-import com.mkt.activity.support.ActivityOperator;
 import com.mkt.activity.support.ActivitySettings;
 import com.mkt.contract.RewardPort;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
-import com.mkt.kernel.json.JsonUtil;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +43,7 @@ public class ActivityAdminAppService {
     private final ActivityAdminNormalize normalize;
     private final ActivityAdminViews views;
     private final ActivityAdminDraft drafts;
+    private final ActivityAdminPersist persist;
 
     @Autowired
     public ActivityAdminAppService(
@@ -56,7 +53,8 @@ public class ActivityAdminAppService {
             Clock clock,
             ActivityAdminNormalize normalize,
             ActivityAdminViews views,
-            ActivityAdminDraft drafts) {
+            ActivityAdminDraft drafts,
+            ActivityAdminPersist persist) {
         this.activities = activities;
         this.participations = participations;
         this.rewards = rewards;
@@ -64,6 +62,7 @@ public class ActivityAdminAppService {
         this.normalize = normalize;
         this.views = views;
         this.drafts = drafts;
+        this.persist = persist;
     }
 
     public ActivityAdminAppService(
@@ -79,7 +78,13 @@ public class ActivityAdminAppService {
                 clock,
                 new ActivityAdminNormalize(settings),
                 new ActivityAdminViews(),
-                new ActivityAdminDraft(new ActivityAdminNormalize(settings), rewards));
+                new ActivityAdminDraft(new ActivityAdminNormalize(settings), rewards),
+                new ActivityAdminPersist(
+                        activities,
+                        new ActivityAdminDraft(new ActivityAdminNormalize(settings), rewards),
+                        new ActivityAdminNormalize(settings),
+                        rewards,
+                        clock));
     }
 
     public PageData<ActivityView> page(ActivityQuery query) {
@@ -94,7 +99,7 @@ public class ActivityAdminAppService {
     }
 
     public ActivityView get(long id) {
-        return views.toView(requireLive(id));
+        return views.toView(persist.requireLive(id));
     }
 
     @Transactional
@@ -133,14 +138,14 @@ public class ActivityAdminAppService {
                 command.regions() == null ? List.of() : List.copyOf(command.regions()),
                 null);
         if (command.id() == null) {
-            return insertNew(command, draft, now);
+            return persist.insertNew(command, draft, now);
         }
-        return updateExisting(command, draft, now);
+        return persist.updateExisting(command, draft, now);
     }
 
     @Transactional
     public OkResponse delete(long id) {
-        ActActivityEntity entity = requireLive(id);
+        ActActivityEntity entity = persist.requireLive(id);
         if (!ActivityStatuses.deletable(entity.getStatus())) {
             throw new BusinessException(ActivityErrorCodes.PUBLISHED_NOT_DELETABLE);
         }
@@ -165,18 +170,18 @@ public class ActivityAdminAppService {
         if (ActivityStatuses.DRAFT.equals(status)
                 || ActivityStatuses.SCHEDULED.equals(status)
                 || (ActivityStatuses.PUBLISHED.equals(status) && entity.pendingFlag())) {
-            freezeToPublished(entity);
+            persist.freezeToPublished(entity);
         } else {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "当前状态不可发布");
         }
-        ActActivityEntity fresh = requireLive(id);
+        ActActivityEntity fresh = persist.requireLive(id);
         return ActivityPublishResponse.done(
                 fresh.getId(), fresh.getCode(), fresh.versionOrZero(), fresh.getStatus());
     }
 
     @Transactional
     public ActivityPublishResponse schedule(long id, ActivityScheduleCommand command) {
-        ActActivityEntity entity = requireLive(id);
+        ActActivityEntity entity = persist.requireLive(id);
         LocalDateTime now = ActivityDates.toUtc(clock.instant());
         if (command.publishAt() != null) {
             if (!ActivityStatuses.DRAFT.equals(entity.getStatus())) {
@@ -212,7 +217,7 @@ public class ActivityAdminAppService {
 
     @Transactional
     public ActivityPublishResponse offline(long id) {
-        ActActivityEntity entity = requireLive(id);
+        ActActivityEntity entity = persist.requireLive(id);
         if (!ActivityStatuses.PUBLISHED.equals(entity.getStatus())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅已发布活动可下线");
         }
@@ -269,84 +274,12 @@ public class ActivityAdminAppService {
     }
 
     public ParticipationStatsView stats(long activityId) {
-        requireLive(activityId);
+        persist.requireLive(activityId);
         long total = participations.countAll(activityId);
         long pass = participations.countPassByActivity(activityId);
         long reject = total - pass;
         double rate = total == 0 ? 0d : (double) pass / (double) total;
         List<HitRuleCountView> reasons = participations.countRejectByRule(activityId);
         return new ParticipationStatsView(total, pass, reject, rate, reasons);
-    }
-
-    private ActivitySaveResponse insertNew(ActivitySaveCommand command, ActivityDraftContent draft, LocalDateTime now) {
-        if (activities.getByCode(command.code()) != null) {
-            throw new BusinessException(ActivityErrorCodes.CODE_DUPLICATE);
-        }
-        ActActivityEntity entity = new ActActivityEntity();
-        entity.setCode(command.code());
-        drafts.applyDraft(entity, draft, true);
-        entity.setStatus(ActivityStatuses.DRAFT);
-        entity.setVersion(0);
-        entity.setPendingRevision(0);
-        entity.setDeleted(0);
-        entity.setQuotaCount(0);
-        entity.setCreatedBy(ActivityOperator.requireUserId());
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-        entity.setDraftContent(JsonUtil.toJson(draft));
-        try {
-            activities.insert(entity);
-        } catch (DuplicateKeyException ex) {
-            throw new BusinessException(ActivityErrorCodes.CODE_DUPLICATE, ex);
-        }
-        return new ActivitySaveResponse(entity.getId(), entity.getCode(), 0, entity.getStatus());
-    }
-
-    private ActivitySaveResponse updateExisting(
-            ActivitySaveCommand command, ActivityDraftContent draft, LocalDateTime now) {
-        ActActivityEntity existing = requireLive(command.id());
-        if (!existing.getCode().equals(command.code())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 不可修改");
-        }
-        existing.setDraftContent(JsonUtil.toJson(draft));
-        if (ActivityStatuses.OFFLINE.equals(existing.getStatus())) {
-            existing.setStatus(ActivityStatuses.DRAFT);
-            existing.setPendingRevision(0);
-            drafts.applyDraft(existing, draft, true);
-        } else if (ActivityStatuses.publishedFamily(existing.getStatus())) {
-            existing.setPendingRevision(1);
-        } else {
-            drafts.applyDraft(existing, draft, true);
-        }
-        existing.setUpdatedAt(now);
-        activities.update(existing);
-        return new ActivitySaveResponse(
-                existing.getId(), existing.getCode(), existing.versionOrZero(), existing.getStatus());
-    }
-
-    private void freezeToPublished(ActActivityEntity entity) {
-        ActivityDraftContent draft = ActivityFieldCodec.draft(entity.getDraftContent());
-        if (draft == null) {
-            throw new BusinessException(ActivityErrorCodes.HTML_EMPTY);
-        }
-        String html = normalize.sanitizeHtml(draft.richText());
-        if (draft.participationPrizeId() != null && !rewards.prizeEnabled(draft.participationPrizeId())) {
-            throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
-        }
-        drafts.applyDraft(entity, ActivityAdminDraft.withHtml(draft, html), true);
-        entity.setStatus(ActivityStatuses.PUBLISHED);
-        entity.setVersion(entity.versionOrZero() + 1);
-        entity.setPendingRevision(0);
-        entity.setSchedulePublishAt(null);
-        entity.setUpdatedAt(ActivityDates.toUtc(clock.instant()));
-        activities.update(entity);
-    }
-
-    private ActActivityEntity requireLive(long id) {
-        ActActivityEntity entity = activities.getById(id);
-        if (entity == null || entity.deletedFlag()) {
-            throw new BusinessException(ActivityErrorCodes.NOT_FOUND);
-        }
-        return entity;
     }
 }
