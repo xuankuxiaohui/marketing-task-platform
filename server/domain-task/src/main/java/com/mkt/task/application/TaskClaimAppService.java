@@ -25,6 +25,7 @@ import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
 import com.mkt.task.engine.ClaimEnterEngine;
+import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
@@ -75,9 +76,9 @@ public class TaskClaimAppService {
             ObjectProvider<UserAttributePort> users,
             ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<EventPublisher> events,
-            ObjectProvider<RewardPort> rewards,
             Clock clock,
-            TaskSettings settings) {
+            TaskSettings settings,
+            StepEngineReward rewardOps) {
         this(
                 definitions,
                 snapshots,
@@ -87,9 +88,9 @@ public class TaskClaimAppService {
                 users.getIfAvailable(),
                 risk.getIfAvailable(),
                 events.getIfAvailable(),
-                rewards.getIfAvailable(),
                 clock,
-                settings);
+                settings,
+                rewardOps);
     }
 
     public TaskClaimAppService(
@@ -118,6 +119,32 @@ public class TaskClaimAppService {
             RewardPort rewards,
             Clock clock,
             TaskSettings settings) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                mutexGroups,
+                users,
+                risk,
+                events,
+                clock,
+                settings,
+                new StepEngineReward(instances, events, clock, rewards));
+    }
+
+    private TaskClaimAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskMutexGroupStore mutexGroups,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -128,7 +155,7 @@ public class TaskClaimAppService {
         this.events = events;
         this.clock = clock;
         this.settings = settings;
-        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewards);
+        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewardOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

@@ -16,6 +16,7 @@ import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.StepTypes;
 import com.mkt.task.engine.StepAdvanceResult;
 import com.mkt.task.engine.StepEngine;
+import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
@@ -56,12 +57,12 @@ public class TaskStepAppService {
             TaskProgressReportStore reports,
             ObjectProvider<UserAttributePort> users,
             ObjectProvider<EventPublisher> events,
-            ObjectProvider<RewardPort> rewards,
             Clock clock,
             TaskSettings settings,
             TaskStepPreload preload,
             TaskStepViews views,
-            TaskStepGuards guards) {
+            TaskStepGuards guards,
+            StepEngineReward rewardOps) {
         this(
                 definitions,
                 snapshots,
@@ -70,12 +71,12 @@ public class TaskStepAppService {
                 reports,
                 users.getIfAvailable(),
                 events.getIfAvailable(),
-                rewards.getIfAvailable(),
                 clock,
                 settings,
                 preload,
                 views,
-                guards);
+                guards,
+                rewardOps);
     }
 
     public TaskStepAppService(
@@ -98,12 +99,12 @@ public class TaskStepAppService {
                 reports,
                 users,
                 events,
-                rewards,
                 clock,
                 settings,
                 new TaskStepPreload(definitions, snapshots, instances, users),
                 new TaskStepViews(snapshots, instances),
-                new TaskStepGuards(instances, risk));
+                new TaskStepGuards(instances, risk),
+                new StepEngineReward(instances, events, clock, rewards));
     }
 
     private TaskStepAppService(
@@ -114,12 +115,12 @@ public class TaskStepAppService {
             TaskProgressReportStore reports,
             UserAttributePort users,
             EventPublisher events,
-            RewardPort rewards,
             Clock clock,
             TaskSettings settings,
             TaskStepPreload preload,
             TaskStepViews views,
-            TaskStepGuards guards) {
+            TaskStepGuards guards,
+            StepEngineReward rewardOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -129,7 +130,7 @@ public class TaskStepAppService {
         this.preload = preload;
         this.views = views;
         this.guards = guards;
-        this.engine = new StepEngine(instances, reports, events, clock, settings, rewards);
+        this.engine = new StepEngine(instances, reports, events, clock, settings, rewardOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

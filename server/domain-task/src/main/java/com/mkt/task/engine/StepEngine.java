@@ -1,11 +1,5 @@
 package com.mkt.task.engine;
 
-import com.mkt.contract.GrantContext;
-import com.mkt.contract.GrantResult;
-import com.mkt.contract.GrantSource;
-import com.mkt.contract.GrantStatus;
-import com.mkt.contract.PermanentGrantException;
-import com.mkt.contract.RetryableGrantException;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.event.EventCodes;
@@ -19,7 +13,6 @@ import com.mkt.task.command.TaskTransitionCommand;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.InstanceStatuses;
-import com.mkt.task.domain.SkipReasons;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.StepTypes;
 import com.mkt.task.entity.TaskInstanceEntity;
@@ -64,7 +57,7 @@ public final class StepEngine {
     private final EventPublisher events;
     private final Clock clock;
     private final TaskSettings settings;
-    private final RewardPort rewards;
+    private final StepEngineReward rewardOps;
 
     public StepEngine(
             TaskInstanceStore instances,
@@ -73,12 +66,22 @@ public final class StepEngine {
             Clock clock,
             TaskSettings settings,
             RewardPort rewards) {
+        this(instances, reports, events, clock, settings, new StepEngineReward(instances, events, clock, rewards));
+    }
+
+    public StepEngine(
+            TaskInstanceStore instances,
+            TaskProgressReportStore reports,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps) {
         this.instances = instances;
         this.reports = reports;
         this.events = events;
         this.clock = clock;
         this.settings = settings;
-        this.rewards = rewards;
+        this.rewardOps = rewardOps;
     }
 
     public void enter(
@@ -365,14 +368,14 @@ public final class StepEngine {
             next.setStatus(StepStatuses.ACTIVE);
             next.setActivatedAt(TaskTime.toUtc(now));
             if (StepTypes.PASSIVE.equals(next.getType())) {
-                if (!holdComplete(instance, next)) {
+                if (!rewardOps.holdComplete(instance, next)) {
                     return;
                 }
                 seq = seqOf(next);
                 continue;
             }
             if (StepTypes.REWARD.equals(next.getType())) {
-                if (!grantReward(instance, next, snapshot, sameRequestInsert, now, feedback, ip, deviceId)) {
+                if (!rewardOps.grantReward(instance, next, snapshot, sameRequestInsert, now, feedback, ip, deviceId)) {
                     return;
                 }
                 seq = seqOf(next);
@@ -406,7 +409,7 @@ public final class StepEngine {
             return;
         }
         try {
-            if (!holdComplete(instance, step)) {
+            if (!rewardOps.holdComplete(instance, step)) {
                 return;
             }
             cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>(), null, null);
@@ -417,91 +420,6 @@ public final class StepEngine {
             // A retry has already granted the reward. Stop the now-expired cascade
             // without rolling back that entitlement.
         }
-    }
-
-    private boolean grantReward(
-            TaskInstanceEntity instance,
-            TaskInstanceStepEntity step,
-            SnapshotContent snapshot,
-            boolean sameRequestInsert,
-            Instant now,
-            List<RewardFeedbackView> feedback,
-            String ip,
-            String deviceId) {
-        if (rewards == null) {
-            return false;
-        }
-        TaskStepCommand def = stepDef(snapshot, step.getStepCode());
-        if (def == null || def.prizeId() == null) {
-            throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
-        }
-        Long elapsed = null;
-        if (!sameRequestInsert) {
-            Instant started = TaskTime.toInstant(instance.getStartedAt());
-            if (started != null) {
-                elapsed = Math.max(0L, Duration.between(started, now).toSeconds());
-            }
-        }
-        boolean simulated = instance.getSimulated() != null && instance.getSimulated() == 1;
-        GrantContext ctx = new GrantContext(null, List.of(), null, simulated, elapsed, ip, deviceId);
-        try {
-            GrantResult result = rewards.grant(
-                    def.prizeId(),
-                    instance.getUserId(),
-                    GrantSource.TASK_STEP,
-                    String.valueOf(step.getId()),
-                    ctx);
-            if (result != null
-                    && (result.status() == GrantStatus.GRANTED || result.status() == GrantStatus.WON)) {
-                if (!holdComplete(instance, step)) {
-                    return false;
-                }
-                String name = result.prizeName();
-                if (name == null || name.isBlank()) {
-                    name = def.name() == null ? step.getStepCode() : def.name();
-                }
-                feedback.add(new RewardFeedbackView(name, 1));
-                return true;
-            }
-            if (result != null && result.status() == GrantStatus.PERMANENT_FAILED) {
-                return skipPermanentFailed(instance, step, clock.instant());
-            }
-            return false;
-        } catch (RetryableGrantException ex) {
-            return false;
-        } catch (PermanentGrantException ex) {
-            return skipPermanentFailed(instance, step, clock.instant());
-        }
-    }
-
-    private boolean skipPermanentFailed(TaskInstanceEntity instance, TaskInstanceStepEntity step, Instant now) {
-        rejectIfExpired(instance, now);
-        int version = step.getVersion() == null ? 0 : step.getVersion();
-        int affected = instances.skipStepCas(
-                step.getId(), version, TaskTime.toUtc(now), SkipReasons.GRANT_PERMANENT_FAILED);
-        if (affected == 1) {
-            step.setStatus(StepStatuses.SKIPPED);
-            step.setSkipReason(SkipReasons.GRANT_PERMANENT_FAILED);
-            step.setCompletedAt(TaskTime.toUtc(now));
-            step.setVersion(version + 1);
-            return true;
-        }
-        return false;
-    }
-
-    private boolean holdComplete(TaskInstanceEntity instance, TaskInstanceStepEntity step) {
-        Instant now = clock.instant();
-        rejectIfExpired(instance, now);
-        int version = step.getVersion() == null ? 0 : step.getVersion();
-        int affected = instances.completeStepCas(step.getId(), version, TaskTime.toUtc(now), null);
-        if (affected == 1) {
-            step.setStatus(StepStatuses.COMPLETED);
-            step.setCompletedAt(TaskTime.toUtc(now));
-            step.setVersion(version + 1);
-            appendStepComplete(instance, step);
-            return true;
-        }
-        return false;
     }
 
     private TaskInstanceStepEntity resolveNext(
