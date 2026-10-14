@@ -1,6 +1,5 @@
 package com.mkt.identity.audit;
 
-import cn.hutool.core.util.DesensitizedUtil;
 import com.mkt.kernel.json.JsonUtil;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -114,8 +113,22 @@ public final class AuditSummaries {
         }
         String lower = key == null ? "" : key.toLowerCase(Locale.ROOT);
         if (lower.contains("phone") || lower.contains("mobile")) {
-            return DesensitizedUtil.mobilePhone(raw);
+            return maskMobilePhone(raw);
         }
-        return DesensitizedUtil.password(raw);
+        return maskPassword(raw);
+    }
+
+    /** Same as Hutool DesensitizedUtil.mobilePhone / StrUtil.hide(num, 3, len-4). */
+    private static String maskMobilePhone(String num) {
+        int endExclude = num.length() - 4;
+        if (3 >= endExclude) {
+            return num;
+        }
+        return num.substring(0, 3) + "*".repeat(endExclude - 3) + num.substring(endExclude);
+    }
+
+    /** Hutool DesensitizedUtil.password: replace every char with '*'. */
+    private static String maskPassword(String value) {
+        return "*".repeat(value.length());
     }
 }

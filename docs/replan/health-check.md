@@ -48,7 +48,7 @@
 | # | 发现 | 证据 | 级 | 量 |
 |---|---|---|---|---|
 | DP1 | 主栈版本新：Spring Boot 4.1.0、Java 26、Redisson 4.6.1、Sa-Token 1.45.0、MyBatis-Plus 3.5.17、springdoc 3.1.0；前端 Vue 3.5 / Vite 7 / Vitest 3 / TS 5.9 | `server/pom.xml`、`web/*/package.json` | — | — |
-| DP2 | Hutool（core+crypto）只在 domain-identity 的 2 个 main 文件里用 | 可换 JDK 自带实现，减一个大依赖 | P3 | S |
+| DP2 | Hutool（core+crypto）只在 domain-identity 的 2 个 main 文件里用 | 可换 JDK 自带实现，减一个大依赖 | P3 | S | **done 2026-10-14** → JDK `MessageDigest`/`Mac`/`HexFormat` + 本地脱敏；`domain-identity` 去掉 hutool-core/crypto |
 | DP3 | Aviator 只在 domain-task 1 个文件里用（表达式引擎） | 用法集中，保留合理；记一笔版本跟踪 | P3 | — |
 | DP4 | 未发现重复的同类库 | — | — | — |
 

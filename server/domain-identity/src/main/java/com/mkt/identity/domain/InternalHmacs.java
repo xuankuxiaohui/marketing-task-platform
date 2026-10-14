@@ -1,12 +1,14 @@
 package com.mkt.identity.domain;
 
-import cn.hutool.crypto.SecureUtil;
-import cn.hutool.crypto.digest.DigestUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Locale;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /** HMAC-SHA256 stringToSign (R15.2 / design §4.8). */
 public final class InternalHmacs {
@@ -19,11 +21,17 @@ public final class InternalHmacs {
         String ts = timestamp == null ? "" : timestamp;
         String n = nonce == null ? "" : nonce;
         byte[] raw = body == null ? new byte[0] : body;
-        return upper + "\n" + resolvedPath + "\n" + ts + "\n" + n + "\n" + DigestUtil.sha256Hex(raw);
+        return upper + "\n" + resolvedPath + "\n" + ts + "\n" + n + "\n" + sha256Hex(raw);
     }
 
     public static String signHex(String secret, String stringToSign) {
-        return SecureUtil.hmacSha256(secret).digestHex(stringToSign);
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(utf8(secret), "HmacSHA256"));
+            return HexFormat.of().formatHex(mac.doFinal(utf8(stringToSign)));
+        } catch (GeneralSecurityException ex) {
+            throw new IllegalStateException("HmacSHA256 unavailable", ex);
+        }
     }
 
     public static boolean equalsConstantTime(String expectedHex, String presentedHex) {
@@ -64,5 +72,14 @@ public final class InternalHmacs {
 
     public static byte[] utf8(String value) {
         return value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String sha256Hex(byte[] raw) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(raw));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 unavailable", ex);
+        }
     }
 }
