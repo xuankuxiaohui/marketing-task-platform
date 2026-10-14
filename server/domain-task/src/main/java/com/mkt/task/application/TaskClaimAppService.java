@@ -15,8 +15,6 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.CycleKeyResolver;
-import com.mkt.task.domain.ExpireAtCalculator;
-import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
@@ -36,14 +34,12 @@ import com.mkt.task.response.CurrentStepView;
 import com.mkt.task.response.TaskStartResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,8 +54,8 @@ public class TaskClaimAppService {
     private final UserAttributePort users;
     private final EventPublisher events;
     private final Clock clock;
-    private final TaskSettings settings;
     private final ClaimChecks checks;
+    private final ClaimInsert insert;
     private final ClaimEnterEngine enter;
 
     @Autowired
@@ -73,6 +69,7 @@ public class TaskClaimAppService {
             Clock clock,
             TaskSettings settings,
             ClaimChecks checks,
+            ClaimInsert insert,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
@@ -88,6 +85,7 @@ public class TaskClaimAppService {
                 clock,
                 settings,
                 checks,
+                insert,
                 rewardOps,
                 cascadeOps,
                 advanceOps,
@@ -131,6 +129,7 @@ public class TaskClaimAppService {
                 clock,
                 settings,
                 new ClaimChecks(mutexGroups, instances, risk, settings),
+                new ClaimInsert(snapshots, instances, settings),
                 new StepEngineReward(instances, events, clock, rewards));
     }
 
@@ -144,6 +143,7 @@ public class TaskClaimAppService {
             Clock clock,
             TaskSettings settings,
             ClaimChecks checks,
+            ClaimInsert insert,
             StepEngineReward rewardOps) {
         this(
                 definitions,
@@ -155,6 +155,7 @@ public class TaskClaimAppService {
                 clock,
                 settings,
                 checks,
+                insert,
                 rewardOps,
                 new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
@@ -169,6 +170,7 @@ public class TaskClaimAppService {
             Clock clock,
             TaskSettings settings,
             ClaimChecks checks,
+            ClaimInsert insert,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps) {
         this(
@@ -181,6 +183,7 @@ public class TaskClaimAppService {
                 clock,
                 settings,
                 checks,
+                insert,
                 rewardOps,
                 cascadeOps,
                 new StepEngineAdvance(instances, clock, cascadeOps));
@@ -196,6 +199,7 @@ public class TaskClaimAppService {
             Clock clock,
             TaskSettings settings,
             ClaimChecks checks,
+            ClaimInsert insert,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps) {
@@ -209,6 +213,7 @@ public class TaskClaimAppService {
                 clock,
                 settings,
                 checks,
+                insert,
                 rewardOps,
                 cascadeOps,
                 advanceOps,
@@ -226,6 +231,7 @@ public class TaskClaimAppService {
             Clock clock,
             TaskSettings settings,
             ClaimChecks checks,
+            ClaimInsert insert,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
@@ -238,8 +244,8 @@ public class TaskClaimAppService {
         this.users = users;
         this.events = events;
         this.clock = clock;
-        this.settings = settings;
         this.checks = checks;
+        this.insert = insert;
         this.enter = new ClaimEnterEngine(
                 instances, events, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
     }
@@ -286,7 +292,7 @@ public class TaskClaimAppService {
         checks.checkRisk(userId, ip, deviceId, simulated);
         checks.checkMutex(snapshot, userId, cycleKey);
         checks.checkDailyLimit(userId, now);
-        Inserted inserted = insertInstance(definition, snapshot, userId, cycleKey, now, simulated);
+        ClaimInsert.Inserted inserted = insert.insertInstance(definition, snapshot, userId, cycleKey, now, simulated);
         if (!inserted.created()) {
             return toStart(inserted.row(), platform);
         }
@@ -306,65 +312,6 @@ public class TaskClaimAppService {
         TaskInstanceEntity fresh = instances.getById(inserted.row().getId());
         return toStart(fresh == null ? inserted.row() : fresh, platform);
     }
-
-    private Inserted insertInstance(
-            TaskDefinitionEntity definition,
-            SnapshotContent snapshot,
-            long userId,
-            String cycleKey,
-            Instant now,
-            boolean simulated) {
-        Instant cycleEnd = CycleKeyResolver.cycleEnd(
-                snapshot.cycleType(),
-                snapshot.cronExpr(),
-                snapshot.specialStart(),
-                snapshot.specialEnd(),
-                now);
-        Instant expireAt = ExpireAtCalculator.compute(
-                snapshot.endTime(),
-                TaskTime.toInstant(definition.getOfflineAt()),
-                cycleEnd,
-                now,
-                settings.expireAfterWindowDays());
-        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(definition.getId(), definition.getVersion());
-        TaskInstanceEntity row = new TaskInstanceEntity();
-        row.setTaskId(definition.getId());
-        row.setTaskCode(definition.getCode());
-        row.setVersion(definition.getVersion());
-        row.setSnapshotId(snap.getId());
-        row.setUserId(userId);
-        row.setCycleKey(cycleKey);
-        row.setStatus(InstanceStatuses.IN_PROGRESS);
-        row.setExpireAt(TaskTime.toUtc(expireAt));
-        row.setStartedAt(TaskTime.toUtc(now));
-        row.setSimulated(simulated ? 1 : 0);
-        row.setCreatedAt(TaskTime.toUtc(now));
-        try {
-            instances.insert(row);
-        } catch (RuntimeException ex) {
-            if (!duplicateKey(ex)) {
-                throw ex;
-            }
-            TaskInstanceEntity winner = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey);
-            if (winner != null) {
-                return new Inserted(winner, false);
-            }
-            throw ex;
-        }
-        return new Inserted(row, true);
-    }
-
-    private static boolean duplicateKey(Throwable ex) {
-        while (ex != null) {
-            if (ex instanceof DuplicateKeyException || ex instanceof SQLIntegrityConstraintViolationException) {
-                return true;
-            }
-            ex = ex.getCause();
-        }
-        return false;
-    }
-
-    private record Inserted(TaskInstanceEntity row, boolean created) {}
 
     private VisibilityResult visibility(
             TaskDefinitionEntity definition,
