@@ -7,8 +7,6 @@ import com.mkt.ad.convert.AdFieldCodec;
 import com.mkt.ad.domain.AdCodes;
 import com.mkt.ad.domain.AdDates;
 import com.mkt.ad.domain.AdForms;
-import com.mkt.ad.domain.AdGrayTypes;
-import com.mkt.ad.domain.AdJumpSchemas;
 import com.mkt.ad.domain.AdPlatforms;
 import com.mkt.ad.domain.AdStatuses;
 import com.mkt.ad.entity.AdMaterialEntity;
@@ -46,6 +44,7 @@ public class AdAdminAppService {
     private final AdPlacementStore placements;
     private final PlatformCache cache;
     private final AdAdminValidate validate;
+    private final AdAdminApply apply;
 
     @Autowired
     public AdAdminAppService(
@@ -53,12 +52,14 @@ public class AdAdminAppService {
             AdMaterialStore materials,
             AdPlacementStore placements,
             PlatformCache cache,
-            AdAdminValidate validate) {
+            AdAdminValidate validate,
+            AdAdminApply apply) {
         this.positions = positions;
         this.materials = materials;
         this.placements = placements;
         this.cache = cache;
         this.validate = validate;
+        this.apply = apply;
     }
 
     public AdAdminAppService(
@@ -66,7 +67,7 @@ public class AdAdminAppService {
             AdMaterialStore materials,
             AdPlacementStore placements,
             PlatformCache cache) {
-        this(positions, materials, placements, cache, new AdAdminValidate());
+        this(positions, materials, placements, cache, new AdAdminValidate(), new AdAdminApply());
     }
 
     public PageData<AdPositionView> pagePositions(AdPositionQuery query) {
@@ -164,14 +165,14 @@ public class AdAdminAppService {
         validate.validateMaterial(command);
         if (command.id() == null) {
             AdMaterialEntity entity = new AdMaterialEntity();
-            applyMaterial(entity, command);
+            apply.applyMaterial(entity, command);
             entity.setDeleted(0);
             entity.setCreatedBy(AdOperator.requireUserId());
             materials.insert(entity);
             return new AdSaveResponse(entity.getId());
         }
         AdMaterialEntity live = requireMaterial(command.id());
-        applyMaterial(live, command);
+        apply.applyMaterial(live, command);
         materials.update(live);
         evictPlacementsOf(live.getId());
         return new AdSaveResponse(live.getId());
@@ -197,7 +198,7 @@ public class AdAdminAppService {
             AdPositionMaterialEntity entity = new AdPositionMaterialEntity();
             entity.setPositionId(positionId);
             entity.setMaterialId(command.materialId());
-            applyPlacement(entity, command, material.weightOrZero());
+            apply.applyPlacement(entity, command, material.weightOrZero());
             try {
                 placements.insert(entity);
             } catch (DuplicateKeyException ex) {
@@ -206,7 +207,7 @@ public class AdAdminAppService {
             evict(position.getCode());
             return new AdSaveResponse(entity.getId());
         }
-        applyPlacement(existing, command, material.weightOrZero());
+        apply.applyPlacement(existing, command, material.weightOrZero());
         placements.update(existing);
         evict(position.getCode());
         return new AdSaveResponse(existing.getId());
@@ -221,34 +222,6 @@ public class AdAdminAppService {
         }
         evict(position.getCode());
         return OkResponse.yes();
-    }
-
-    private void applyMaterial(AdMaterialEntity entity, AdMaterialSaveCommand command) {
-        entity.setTitle(command.title());
-        entity.setSubtitle(command.subtitle());
-        entity.setImageUrl(command.imageUrl().trim());
-        entity.setJumpType(AdJumpSchemas.normalize(command.jumpType()));
-        entity.setJumpParams(AdFieldCodec.json(command.jumpParams()));
-        entity.setWeight(command.weight());
-        entity.setStartTime(AdDates.toUtc(command.startTime()));
-        entity.setEndTime(AdDates.toUtc(command.endTime()));
-        entity.setStatus(AdStatuses.normalize(command.status()));
-    }
-
-    private void applyPlacement(AdPositionMaterialEntity entity, AdPlacementSaveCommand command, int fallbackWeight) {
-        entity.setWeight(command.weight() == null ? fallbackWeight : command.weight());
-        entity.setStartTime(AdDates.toUtc(command.startTime()));
-        entity.setEndTime(AdDates.toUtc(command.endTime()));
-        List<String> platforms =
-                command.platforms() == null || command.platforms().isEmpty()
-                        ? List.of()
-                        : AdPlatforms.normalize(command.platforms());
-        entity.setPlatforms(platforms.isEmpty() ? null : AdFieldCodec.json(platforms));
-        String gray = AdGrayTypes.normalize(command.grayType());
-        entity.setGrayType(gray);
-        entity.setGrayRatio(AdGrayTypes.RATIO.equals(gray) ? command.grayRatio() : null);
-        entity.setCrowdId(command.crowdId());
-        entity.setStatus(AdStatuses.normalize(command.status()));
     }
 
     private AdPositionEntity requirePosition(long id) {
