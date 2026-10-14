@@ -12,9 +12,7 @@ import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.command.InternalCallbackCommand;
 import com.mkt.task.command.InternalProgressCommand;
-import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.convert.SnapshotContent;
-import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.StepTypes;
@@ -25,15 +23,12 @@ import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.CrowdResolver;
-import com.mkt.task.response.CurrentStepView;
-import com.mkt.task.response.RewardFeedbackView;
 import com.mkt.task.response.TaskCallbackResponse;
 import com.mkt.task.response.TaskClickResponse;
 import com.mkt.task.response.TaskProgressResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
-import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,6 +47,7 @@ public class TaskStepAppService {
     private final StepEngine engine;
     private final Clock clock;
     private final TaskStepPreload preload;
+    private final TaskStepViews views;
 
     @Autowired
     public TaskStepAppService(
@@ -66,7 +62,8 @@ public class TaskStepAppService {
             ObjectProvider<RewardPort> rewards,
             Clock clock,
             TaskSettings settings,
-            TaskStepPreload preload) {
+            TaskStepPreload preload,
+            TaskStepViews views) {
         this(
                 definitions,
                 snapshots,
@@ -79,7 +76,8 @@ public class TaskStepAppService {
                 rewards.getIfAvailable(),
                 clock,
                 settings,
-                preload);
+                preload,
+                views);
     }
 
     public TaskStepAppService(
@@ -106,7 +104,8 @@ public class TaskStepAppService {
                 rewards,
                 clock,
                 settings,
-                new TaskStepPreload(definitions, snapshots, instances, users));
+                new TaskStepPreload(definitions, snapshots, instances, users),
+                new TaskStepViews(snapshots, instances));
     }
 
     private TaskStepAppService(
@@ -121,7 +120,8 @@ public class TaskStepAppService {
             RewardPort rewards,
             Clock clock,
             TaskSettings settings,
-            TaskStepPreload preload) {
+            TaskStepPreload preload,
+            TaskStepViews views) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -130,6 +130,7 @@ public class TaskStepAppService {
         this.risk = risk;
         this.clock = clock;
         this.preload = preload;
+        this.views = views;
         this.engine = new StepEngine(instances, reports, events, clock, settings, rewards);
     }
 
@@ -144,7 +145,7 @@ public class TaskStepAppService {
         TaskInstanceStepEntity step = requireStep(instanceId, stepCode);
         StepAdvanceResult result =
                 engine.click(instance, step, snapshotOf(instance), attrs(userId), crowds(userId), ip, deviceId);
-        return toClick(result, platform);
+        return views.toClick(result, platform);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -293,42 +294,5 @@ public class TaskStepAppService {
 
     private CrowdResolver crowds(long userId) {
         return new StoreCrowdResolver(crowds, users, userId);
-    }
-
-    private TaskClickResponse toClick(StepAdvanceResult result, String platform) {
-        TaskInstanceEntity instance = result.instance();
-        SnapshotContent snapshot = snapshotOf(instance);
-        CurrentStepView next = currentStep(instance.getId(), snapshot, platform);
-        List<RewardFeedbackView> feedback = InstanceStatuses.COMPLETED.equals(instance.getStatus())
-                ? result.rewardFeedback()
-                : List.of();
-        return new TaskClickResponse(
-                instance.getId(), result.step().getStatus(), instance.getStatus(), next, feedback);
-    }
-
-    private CurrentStepView currentStep(long instanceId, SnapshotContent snapshot, String platform) {
-        List<TaskInstanceStepEntity> steps = instances.listSteps(instanceId);
-        TaskInstanceStepEntity current = null;
-        if (steps != null) {
-            for (TaskInstanceStepEntity step : steps) {
-                if (StepStatuses.ACTIVE.equals(step.getStatus())) {
-                    current = step;
-                    break;
-                }
-            }
-        }
-        if (current == null) {
-            return null;
-        }
-        TaskStepCommand def = SnapshotViews.step(snapshot, current.getStepCode());
-        String name = def == null ? current.getStepCode() : def.name();
-        Integer target = def == null ? null : def.progressTarget();
-        return new CurrentStepView(
-                current.getStepCode(),
-                name,
-                current.getType(),
-                current.getProgressCurrent(),
-                target,
-                SnapshotViews.action(snapshot, current.getStepCode(), platform));
     }
 }
