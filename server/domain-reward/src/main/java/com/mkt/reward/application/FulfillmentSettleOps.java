@@ -11,36 +11,47 @@ import com.mkt.reward.support.RewardErrorCodes;
 import com.mkt.reward.support.RewardRuntimeSettings;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
  * Fulfillment settle helpers extracted from {@link FulfillmentService} (R13-2).
  * Move-only: settleSending / failAttempt / failTimeout / arrive semantics unchanged.
+ * Arrived and failed events go through {@link FulfillmentEvents}. Retry limits are the
+ * {@link RewardRuntimeSettings} passed in (the service's resolved instance on the manual path,
+ * the shared bean on the Spring path). No back-pointer to the service.
  */
 @Component
 public class FulfillmentSettleOps {
 
     private final GrantRecordStore grants;
     private final FulfillmentLookups lookups;
+    private final FulfillmentEvents events;
+    private final RewardRuntimeSettings settings;
     private final Clock clock;
-    private FulfillmentService fulfillment;
-    private RewardRuntimeSettings settings;
 
     @Autowired
-    public FulfillmentSettleOps(GrantRecordStore grants, FulfillmentLookups lookups, Clock clock) {
-        this.grants = grants;
-        this.lookups = lookups;
-        this.clock = clock;
+    public FulfillmentSettleOps(
+            GrantRecordStore grants,
+            FulfillmentLookups lookups,
+            FulfillmentEvents events,
+            ObjectProvider<RewardRuntimeSettings> settings,
+            Clock clock) {
+        this(grants, lookups, events, settings.getIfAvailable(), clock);
     }
 
-    /**
-     * Wires the owning service after both objects exist. {@code emitArrived} and {@code append} stay on the
-     * service; settings is the same instance the service already resolved.
-     */
-    void bind(FulfillmentService fulfillment, RewardRuntimeSettings settings) {
-        this.fulfillment = fulfillment;
-        this.settings = settings;
+    public FulfillmentSettleOps(
+            GrantRecordStore grants,
+            FulfillmentLookups lookups,
+            FulfillmentEvents events,
+            RewardRuntimeSettings settings,
+            Clock clock) {
+        this.grants = grants;
+        this.lookups = lookups;
+        this.events = events;
+        this.settings = settings == null ? new RewardRuntimeSettings() : settings;
+        this.clock = clock;
     }
 
     FulfillmentCallbackResponse settleSending(GrantRecordEntity row, boolean success, String failReason) {
@@ -63,7 +74,7 @@ public class FulfillmentSettleOps {
                 GrantRecordEntity fresh = grants.getById(row.getId());
                 return settleSending(fresh, true, null);
             }
-            fulfillment.emitArrived(row);
+            events.emitArrived(row);
             return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_ARRIVED, false);
         }
         return failAttempt(row, now, failReason);
@@ -85,7 +96,7 @@ public class FulfillmentSettleOps {
             if (affected != 1) {
                 return settleSending(grants.getById(row.getId()), false, failReason);
             }
-            fulfillment.append(EventCodes.REWARD_FULFILL_FAILED, row);
+            events.append(EventCodes.REWARD_FULFILL_FAILED, row);
             return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_FAILED, false);
         }
         row.setNextFulfillRetryAt(now.plusSeconds(settings.fulfillRetryIntervalSeconds()));
@@ -105,7 +116,7 @@ public class FulfillmentSettleOps {
         }
         int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
         if (affected == 1) {
-            fulfillment.append(EventCodes.REWARD_FULFILL_FAILED, row);
+            events.append(EventCodes.REWARD_FULFILL_FAILED, row);
         }
     }
 
