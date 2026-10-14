@@ -16,6 +16,7 @@ import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.StepTypes;
 import com.mkt.task.engine.StepAdvanceResult;
 import com.mkt.task.engine.StepEngine;
+import com.mkt.task.engine.StepEngineCascadeSupport;
 import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
@@ -62,7 +63,8 @@ public class TaskStepAppService {
             TaskStepPreload preload,
             TaskStepViews views,
             TaskStepGuards guards,
-            StepEngineReward rewardOps) {
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps) {
         this(
                 definitions,
                 snapshots,
@@ -76,7 +78,8 @@ public class TaskStepAppService {
                 preload,
                 views,
                 guards,
-                rewardOps);
+                rewardOps,
+                cascadeOps);
     }
 
     public TaskStepAppService(
@@ -104,7 +107,8 @@ public class TaskStepAppService {
                 new TaskStepPreload(definitions, snapshots, instances, users),
                 new TaskStepViews(snapshots, instances),
                 new TaskStepGuards(instances, risk),
-                new StepEngineReward(instances, events, clock, rewards));
+                new StepEngineReward(instances, events, clock, rewards),
+                new StepEngineCascadeSupport(instances, events, clock));
     }
 
     private TaskStepAppService(
@@ -120,7 +124,8 @@ public class TaskStepAppService {
             TaskStepPreload preload,
             TaskStepViews views,
             TaskStepGuards guards,
-            StepEngineReward rewardOps) {
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -130,7 +135,7 @@ public class TaskStepAppService {
         this.preload = preload;
         this.views = views;
         this.guards = guards;
-        this.engine = new StepEngine(instances, reports, events, clock, settings, rewardOps);
+        this.engine = new StepEngine(instances, reports, clock, settings, rewardOps, cascadeOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
