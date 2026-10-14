@@ -19,6 +19,8 @@ import com.mkt.ad.application.AdPortalAppService;
 import com.mkt.ad.response.OkResponse;
 import com.mkt.ad.response.PortalAdMaterialView;
 import com.mkt.ad.response.PortalAdPositionView;
+import com.mkt.ad.support.AdErrorCodes;
+import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.UserContext;
 import com.mkt.kernel.UserPrincipal;
 import com.mkt.kernel.web.GlobalExceptionHandler;
@@ -117,5 +119,33 @@ class AdPortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ok").value(true));
         verify(portal).dismiss("float_corner", 21L, 7L, "dev-1");
+    }
+
+    @Test
+    void anonymousDismissPassesNullUser() throws Exception {
+        when(portal.dismiss("float_corner", 21L, null, null)).thenReturn(OkResponse.yes());
+        mvc.perform(post("/api/common/ad/materials/21/dismiss")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"positionCode\":\"float_corner\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ok").value(true));
+        verify(portal).dismiss("float_corner", 21L, null, null);
+    }
+
+    @Test
+    void missingPositionAndUnboundMaterialMapToErrorCodes() throws Exception {
+        when(portal.pull(eq("missing"), isNull(), isNull(), isNull()))
+                .thenThrow(new BusinessException(AdErrorCodes.POSITION_NOT_FOUND));
+        mvc.perform(get("/api/common/ad/positions/missing"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ad.position.not-found"));
+
+        when(portal.dismiss(eq("home_float"), eq(21L), isNull(), isNull()))
+                .thenThrow(new BusinessException(AdErrorCodes.MATERIAL_NOT_FOUND));
+        mvc.perform(post("/api/common/ad/materials/21/dismiss")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"positionCode\":\"home_float\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ad.material.not-found"));
     }
 }

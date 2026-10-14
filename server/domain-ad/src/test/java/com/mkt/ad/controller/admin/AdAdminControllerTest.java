@@ -18,8 +18,11 @@ import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 import com.mkt.ad.application.AdAdminAppService;
+import com.mkt.ad.command.AdPlacementSaveCommand;
 import com.mkt.ad.command.AdPositionSaveCommand;
+import com.mkt.ad.query.AdMaterialQuery;
 import com.mkt.ad.query.AdPositionQuery;
+import com.mkt.ad.response.AdMaterialView;
 import com.mkt.ad.response.AdPositionView;
 import com.mkt.ad.response.AdSaveResponse;
 import com.mkt.ad.response.OkResponse;
@@ -28,8 +31,10 @@ import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.web.GlobalExceptionHandler;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -164,6 +169,160 @@ class AdAdminControllerTest {
         mvc.perform(delete("/admin/ad/materials/5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ok").value(true));
+        verify(appService).deleteMaterial(5L);
+    }
+
+    @Test
+    void getAndDeletePositionRequireTheirPermissions() throws Exception {
+        mvc.perform(get("/admin/ad/positions/3"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("common.permission-denied"));
+        mvc.perform(delete("/admin/ad/positions/3"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(appService);
+
+        stp.grant(AdPermissions.POSITION_QUERY, AdPermissions.POSITION_DELETE);
+        when(appService.getPosition(3L))
+                .thenReturn(new AdPositionView(
+                        3L, "home_banner", "首页横幅", "CAROUSEL", List.of("H5"), "ENABLED", List.of(), 0));
+        when(appService.deletePosition(3L)).thenReturn(OkResponse.yes());
+        mvc.perform(get("/admin/ad/positions/3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.code").value("home_banner"))
+                .andExpect(jsonPath("$.data.overlapCount").value(0));
+        mvc.perform(delete("/admin/ad/positions/3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ok").value(true));
+        verify(appService).getPosition(3L);
+        verify(appService).deletePosition(3L);
+    }
+
+    @Test
+    void updatePositionRequiresUpdatePermission() throws Exception {
+        stp.grant(AdPermissions.POSITION_CREATE);
+        mvc.perform(post("/admin/ad/positions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":4,\"code\":\"home_banner\",\"name\":\"首页横幅\",\"form\":\"CAROUSEL\","
+                                + "\"platforms\":[\"H5\"]}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("common.permission-denied"));
+        verifyNoInteractions(appService);
+
+        stp.grant(AdPermissions.POSITION_UPDATE);
+        when(appService.savePosition(any())).thenReturn(new AdSaveResponse(4L));
+        mvc.perform(post("/admin/ad/positions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":4,\"code\":\"home_banner\",\"name\":\"首页横幅\",\"form\":\"CAROUSEL\","
+                                + "\"platforms\":[\"H5\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(4));
+        ArgumentCaptor<AdPositionSaveCommand> command = ArgumentCaptor.forClass(AdPositionSaveCommand.class);
+        verify(appService).savePosition(command.capture());
+        assertThat(command.getValue().id()).isEqualTo(4L);
+    }
+
+    @Test
+    void bindAndUnbindPassIds() throws Exception {
+        mvc.perform(delete("/admin/ad/positions/3/materials/9")).andExpect(status().isForbidden());
+        verifyNoInteractions(appService);
+
+        stp.grant(AdPermissions.POSITION_UPDATE);
+        when(appService.bind(eq(3L), any())).thenReturn(new AdSaveResponse(15L));
+        when(appService.unbind(3L, 9L)).thenReturn(OkResponse.yes());
+        mvc.perform(post("/admin/ad/positions/3/materials")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"materialId\":9,\"weight\":10,\"startTime\":\"2026-10-01T00:00:00Z\","
+                                + "\"endTime\":\"2026-10-31T00:00:00Z\",\"grayType\":\"RATIO\",\"grayRatio\":20}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(15));
+        ArgumentCaptor<AdPlacementSaveCommand> command = ArgumentCaptor.forClass(AdPlacementSaveCommand.class);
+        verify(appService).bind(eq(3L), command.capture());
+        assertThat(command.getValue().materialId()).isEqualTo(9L);
+        assertThat(command.getValue().weight()).isEqualTo(10);
+        assertThat(command.getValue().grayRatio()).isEqualTo(20);
+
+        mvc.perform(delete("/admin/ad/positions/3/materials/9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ok").value(true));
+        verify(appService).unbind(3L, 9L);
+    }
+
+    @Test
+    void pageAndGetMaterialPassFilters() throws Exception {
+        mvc.perform(get("/admin/ad/materials")).andExpect(status().isForbidden());
+        verifyNoInteractions(appService);
+
+        stp.grant(AdPermissions.MATERIAL_QUERY);
+        when(appService.pageMaterials(any()))
+                .thenReturn(new PageData<>(
+                        1,
+                        List.of(new AdMaterialView(
+                                5L,
+                                "国庆",
+                                null,
+                                "https://cdn.example/a.png",
+                                "NONE",
+                                Map.of(),
+                                10,
+                                Instant.parse("2026-10-01T00:00:00Z"),
+                                Instant.parse("2026-10-31T00:00:00Z"),
+                                "ENABLED"))));
+        when(appService.getMaterial(5L))
+                .thenReturn(new AdMaterialView(
+                        5L,
+                        "国庆",
+                        "副标题",
+                        "https://cdn.example/a.png",
+                        "LINK",
+                        Map.of("url", "https://example.com"),
+                        10,
+                        Instant.parse("2026-10-01T00:00:00Z"),
+                        Instant.parse("2026-10-31T00:00:00Z"),
+                        "ENABLED"));
+        mvc.perform(get("/admin/ad/materials").param("title", "国庆").param("status", "ENABLED").param("pageSize", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records[0].title").value("国庆"));
+        ArgumentCaptor<AdMaterialQuery> query = ArgumentCaptor.forClass(AdMaterialQuery.class);
+        verify(appService).pageMaterials(query.capture());
+        assertThat(query.getValue().title()).isEqualTo("国庆");
+        assertThat(query.getValue().status()).isEqualTo("ENABLED");
+        assertThat(query.getValue().page().pageSize()).isEqualTo(5);
+
+        mvc.perform(get("/admin/ad/materials/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.subtitle").value("副标题"))
+                .andExpect(jsonPath("$.data.jumpType").value("LINK"));
+        verify(appService).getMaterial(5L);
+    }
+
+    @Test
+    void createMaterialHappyPathAndInvalidBodyIs400() throws Exception {
+        stp.grant(AdPermissions.MATERIAL_CREATE);
+        mvc.perform(post("/admin/ad/materials")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"\",\"imageUrl\":\"https://cdn.example/a.png\",\"weight\":1,"
+                                + "\"startTime\":\"2026-10-01T00:00:00Z\",\"endTime\":\"2026-10-31T00:00:00Z\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("common.param-invalid"));
+        verifyNoInteractions(appService);
+
+        when(appService.saveMaterial(any())).thenReturn(new AdSaveResponse(21L));
+        mvc.perform(post("/admin/ad/materials")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"国庆\",\"imageUrl\":\"https://cdn.example/a.png\",\"weight\":10,"
+                                + "\"startTime\":\"2026-10-01T00:00:00Z\",\"endTime\":\"2026-10-31T00:00:00Z\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(21));
+        verify(appService).saveMaterial(any());
+
+        stp.grant(AdPermissions.MATERIAL_UPDATE);
+        when(appService.saveMaterial(any())).thenReturn(new AdSaveResponse(5L));
+        mvc.perform(post("/admin/ad/materials")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":5,\"title\":\"国庆\",\"imageUrl\":\"https://cdn.example/a.png\",\"weight\":10,"
+                                + "\"startTime\":\"2026-10-01T00:00:00Z\",\"endTime\":\"2026-10-31T00:00:00Z\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(5));
     }
 
     /** Grants a fixed permission set; otherwise throws the real Sa-Token {@link NotPermissionException}. */
