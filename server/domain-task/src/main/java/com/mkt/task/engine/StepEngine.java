@@ -86,7 +86,7 @@ public final class StepEngine {
                 settings,
                 rewardOps,
                 cascadeOps,
-                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+                new StepEngineAdvance(instances, clock, cascadeOps));
     }
 
     public StepEngine(
