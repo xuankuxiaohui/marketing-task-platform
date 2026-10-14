@@ -12,10 +12,8 @@ import com.mkt.activity.domain.ActivityDates;
 import com.mkt.activity.domain.ActivityStatuses;
 import com.mkt.activity.domain.ContentHasher;
 import com.mkt.activity.entity.ActActivityEntity;
-import com.mkt.activity.entity.ActParticipationEntity;
 import com.mkt.activity.query.ActivityQuery;
 import com.mkt.activity.query.ParticipationQuery;
-import com.mkt.activity.response.ActivityGrayView;
 import com.mkt.activity.response.ActivityPublishResponse;
 import com.mkt.activity.response.ActivitySaveResponse;
 import com.mkt.activity.response.ActivityView;
@@ -23,7 +21,6 @@ import com.mkt.activity.response.HitRuleCountView;
 import com.mkt.activity.response.OkResponse;
 import com.mkt.activity.response.ParticipationStatsView;
 import com.mkt.activity.response.ParticipationView;
-import com.mkt.activity.response.SubmoduleView;
 import com.mkt.activity.support.ActivityErrorCodes;
 import com.mkt.activity.support.ActivityOperator;
 import com.mkt.activity.support.ActivitySettings;
@@ -34,9 +31,7 @@ import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.json.JsonUtil;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -51,6 +46,7 @@ public class ActivityAdminAppService {
     private final RewardPort rewards;
     private final Clock clock;
     private final ActivityAdminNormalize normalize;
+    private final ActivityAdminViews views;
 
     @Autowired
     public ActivityAdminAppService(
@@ -58,12 +54,14 @@ public class ActivityAdminAppService {
             ActivityParticipationStore participations,
             RewardPort rewards,
             Clock clock,
-            ActivityAdminNormalize normalize) {
+            ActivityAdminNormalize normalize,
+            ActivityAdminViews views) {
         this.activities = activities;
         this.participations = participations;
         this.rewards = rewards;
         this.clock = clock;
         this.normalize = normalize;
+        this.views = views;
     }
 
     public ActivityAdminAppService(
@@ -72,7 +70,7 @@ public class ActivityAdminAppService {
             RewardPort rewards,
             ActivitySettings settings,
             Clock clock) {
-        this(activities, participations, rewards, clock, new ActivityAdminNormalize(settings));
+        this(activities, participations, rewards, clock, new ActivityAdminNormalize(settings), new ActivityAdminViews());
     }
 
     public PageData<ActivityView> page(ActivityQuery query) {
@@ -81,13 +79,13 @@ public class ActivityAdminAppService {
         List<ActivityView> rows = activities
                 .listByQuery(query.code(), query.name(), query.status(), page.offset(), page.pageSize())
                 .stream()
-                .map(this::toView)
+                .map(views::toView)
                 .toList();
         return new PageData<>(total, rows);
     }
 
     public ActivityView get(long id) {
-        return toView(requireLive(id));
+        return views.toView(requireLive(id));
     }
 
     @Transactional
@@ -256,7 +254,7 @@ public class ActivityAdminAppService {
                         page.offset(),
                         page.pageSize())
                 .stream()
-                .map(ActivityAdminAppService::toParticipationView)
+                .map(ActivityAdminViews::toParticipationView)
                 .toList();
         return new PageData<>(total, rows);
     }
@@ -388,86 +386,6 @@ public class ActivityAdminAppService {
         entity.setUserTotalLimit(draft.userTotalLimit());
         entity.setGlobalDailyLimit(draft.globalDailyLimit());
         entity.setRegions(ActivityFieldCodec.json(draft.regions()));
-    }
-
-    private ActivityView toView(ActActivityEntity entity) {
-        ActivityDraftContent draft = entity.pendingFlag() ? ActivityFieldCodec.draft(entity.getDraftContent()) : null;
-        String name = draft != null && draft.name() != null ? draft.name() : entity.getName();
-        Instant start = draft != null && draft.startTime() != null
-                ? draft.startTime()
-                : ActivityDates.toInstant(entity.getStartTime());
-        Instant end = draft != null && draft.endTime() != null
-                ? draft.endTime()
-                : ActivityDates.toInstant(entity.getEndTime());
-        String html = draft != null && draft.richText() != null ? draft.richText() : entity.getRichText();
-        ActivityGrayCommand grayCmd = draft != null && draft.gray() != null
-                ? draft.gray()
-                : ActivityFieldCodec.gray(entity.getGrayType(), entity.getGrayRatio());
-        List<ActivitySubmoduleCommand> subs = draft != null && draft.submodules() != null
-                ? draft.submodules()
-                : ActivityFieldCodec.submodules(entity.getSubmodules());
-        List<Long> allowUsers = draft != null && draft.allowUserIds() != null
-                ? draft.allowUserIds()
-                : ActivityFieldCodec.longs(entity.getAllowUserIds());
-        List<String> allowCrowds = draft != null && draft.allowCrowdCodes() != null
-                ? draft.allowCrowdCodes()
-                : ActivityFieldCodec.strings(entity.getAllowCrowdCodes());
-        boolean newUserOnly = draft != null && draft.newUserOnly() != null
-                ? draft.newUserOnly()
-                : entity.newUserOnlyFlag();
-        int newUserDays = draft != null && draft.newUserDays() != null
-                ? draft.newUserDays()
-                : entity.newUserDaysOrDefault();
-        Integer userDaily = draft != null ? draft.userDailyLimit() : entity.getUserDailyLimit();
-        Integer userTotal = draft != null ? draft.userTotalLimit() : entity.getUserTotalLimit();
-        Integer globalDaily = draft != null ? draft.globalDailyLimit() : entity.getGlobalDailyLimit();
-        List<String> regions = draft != null && draft.regions() != null
-                ? draft.regions()
-                : ActivityFieldCodec.strings(entity.getRegions());
-        Long prizeId = draft != null ? draft.participationPrizeId() : entity.getParticipationPrizeId();
-        List<SubmoduleView> submoduleViews = new ArrayList<>();
-        int i = 0;
-        for (ActivitySubmoduleCommand row : subs) {
-            int sort = row.sort() == null ? i : row.sort();
-            submoduleViews.add(new SubmoduleView(row.type(), row.refId(), sort));
-            i++;
-        }
-        return new ActivityView(
-                entity.getId(),
-                entity.getCode(),
-                name,
-                start,
-                end,
-                entity.getStatus(),
-                entity.versionOrZero(),
-                entity.pendingFlag(),
-                ActivityDates.toInstant(entity.getSchedulePublishAt()),
-                ActivityDates.toInstant(entity.getScheduleOfflineAt()),
-                html,
-                entity.getContentHash(),
-                new ActivityGrayView(grayCmd.type(), grayCmd.ratio()),
-                submoduleViews,
-                prizeId,
-                allowUsers,
-                allowCrowds,
-                newUserOnly,
-                newUserDays,
-                userDaily,
-                userTotal,
-                globalDaily,
-                regions);
-    }
-
-    private static ParticipationView toParticipationView(ActParticipationEntity row) {
-        Instant created = row.getCreatedAt() == null ? null : ActivityDates.toInstant(row.getCreatedAt());
-        return new ParticipationView(
-                row.getId(),
-                row.getActivityId(),
-                row.getUserId(),
-                row.getPeriodKey(),
-                row.getResult(),
-                row.getHitRule(),
-                created);
     }
 
     private ActActivityEntity requireLive(long id) {
