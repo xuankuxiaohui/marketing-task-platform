@@ -2,7 +2,6 @@ package com.mkt.reward.application;
 
 import com.mkt.contract.RetryableGrantException;
 import com.mkt.contract.RetryableGrantReason;
-import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
@@ -25,8 +24,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -45,7 +42,7 @@ public class FulfillmentService {
     private final GrantRecordStore grants;
     private final FulfillmentLookups lookups;
     private final FulfillmentSettleOps settleOps;
-    private final EventPublisher events;
+    private final FulfillmentEvents fulfillmentEvents;
     private final RewardRuntimeSettings settings;
     private final Clock clock;
 
@@ -55,7 +52,7 @@ public class FulfillmentService {
             GrantRecordStore grants,
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
-            ObjectProvider<EventPublisher> events,
+            FulfillmentEvents fulfillmentEvents,
             ObjectProvider<RewardRuntimeSettings> settings,
             Clock clock) {
         this(
@@ -63,7 +60,7 @@ public class FulfillmentService {
                 grants,
                 lookups,
                 settleOps,
-                events.getIfAvailable(),
+                fulfillmentEvents,
                 settings.getIfAvailable() == null ? new RewardRuntimeSettings() : settings.getIfAvailable(),
                 clock);
     }
@@ -90,13 +87,15 @@ public class FulfillmentService {
             EventPublisher events,
             RewardRuntimeSettings settings,
             Clock clock) {
+        FulfillmentEvents fulfillmentEvents = new FulfillmentEvents(events);
+        RewardRuntimeSettings resolved = settings == null ? new RewardRuntimeSettings() : settings;
         this(
                 points,
                 grants,
                 lookups,
-                new FulfillmentSettleOps(grants, lookups, clock),
-                events,
-                settings,
+                new FulfillmentSettleOps(grants, lookups, fulfillmentEvents, resolved, clock),
+                fulfillmentEvents,
+                resolved,
                 clock);
     }
 
@@ -105,17 +104,16 @@ public class FulfillmentService {
             GrantRecordStore grants,
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
-            EventPublisher events,
+            FulfillmentEvents fulfillmentEvents,
             RewardRuntimeSettings settings,
             Clock clock) {
         this.points = points;
         this.grants = grants;
         this.lookups = lookups;
         this.settleOps = settleOps;
-        this.events = events;
+        this.fulfillmentEvents = fulfillmentEvents;
         this.settings = settings == null ? new RewardRuntimeSettings() : settings;
         this.clock = clock;
-        settleOps.bind(this, this.settings);
     }
 
     public void start(GrantRecordEntity record, PrizeEntity prize, PrizeCategoryEntity category) {
@@ -143,9 +141,7 @@ public class FulfillmentService {
     }
 
     public void emitArrived(GrantRecordEntity record) {
-        if (GrantRecordStatuses.FULFILL_ARRIVED.equals(record.getFulfillmentStatus())) {
-            append(EventCodes.REWARD_FULFILL_ARRIVED, record);
-        }
+        fulfillmentEvents.emitArrived(record);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -300,22 +296,5 @@ public class FulfillmentService {
         } else {
             write.run();
         }
-    }
-
-    void append(String eventCode, GrantRecordEntity record) {
-        if (events == null) {
-            return;
-        }
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("recordId", record.getId());
-        payload.put("prizeId", record.getPrizeId());
-        payload.put("userId", record.getUserId());
-        payload.put("simulated", record.getSimulated() != null && record.getSimulated() == 1);
-        if (EventCodes.REWARD_FULFILL_ARRIVED.equals(eventCode)) {
-            payload.put("fulfillmentRef", record.getFulfillmentRef());
-        } else {
-            payload.put("fulfillFailReason", record.getFulfillFailReason());
-        }
-        events.append(eventCode, "rwd_grant_record", String.valueOf(record.getId()), payload);
     }
 }
