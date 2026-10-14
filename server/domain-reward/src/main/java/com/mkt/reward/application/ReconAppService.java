@@ -18,10 +18,8 @@ import com.mkt.reward.domain.ReconGates;
 import com.mkt.reward.domain.ReconResults;
 import com.mkt.reward.domain.ReconReviewStatuses;
 import com.mkt.reward.entity.GrantRecordEntity;
-import com.mkt.reward.entity.PrizeEntity;
 import com.mkt.reward.entity.ReconBatchEntity;
 import com.mkt.reward.entity.ReconItemEntity;
-import com.mkt.reward.response.ManualGrantResponse;
 import com.mkt.reward.response.ReconActionResponse;
 import com.mkt.reward.response.ReconBatchResponse;
 import com.mkt.reward.response.ReconItemView;
@@ -54,36 +52,33 @@ public class ReconAppService {
     private final ReconBatchStore batches;
     private final ReconItemStore items;
     private final GrantRecordStore grants;
-    private final PrizeStore prizes;
     private final PrizeCategoryStore categories;
-    private final GrantAppService grantApp;
     private final FulfillmentService fulfillment;
     private final Clock clock;
     private final ReconViews views;
     private final ReconMatchSupport matchSupport;
+    private final ReconActionOps actionOps;
 
     @Autowired
     public ReconAppService(
             ReconBatchStore batches,
             ReconItemStore items,
             GrantRecordStore grants,
-            PrizeStore prizes,
             PrizeCategoryStore categories,
-            GrantAppService grantApp,
             FulfillmentService fulfillment,
             Clock clock,
             ReconViews views,
-            ReconMatchSupport matchSupport) {
+            ReconMatchSupport matchSupport,
+            ReconActionOps actionOps) {
         this.batches = batches;
         this.items = items;
         this.grants = grants;
-        this.prizes = prizes;
         this.categories = categories;
-        this.grantApp = grantApp;
         this.fulfillment = fulfillment;
         this.clock = clock;
         this.views = views;
         this.matchSupport = matchSupport;
+        this.actionOps = actionOps;
     }
 
     public ReconAppService(
@@ -100,13 +95,12 @@ public class ReconAppService {
                 batches,
                 items,
                 grants,
-                prizes,
                 categories,
-                grantApp,
                 fulfillment,
                 clock,
                 new ReconViews(batches, grants, prizes, categories),
-                new ReconMatchSupport(items, grants, prizes, categories, settings, clock));
+                new ReconMatchSupport(items, grants, prizes, categories, settings, clock),
+                new ReconActionOps(grants, prizes, grantApp, clock));
     }
 
     public PageData<ReconBatchResponse> page(String categoryCode, LocalDate billDate, String status, PageQuery page) {
@@ -323,9 +317,9 @@ public class ReconAppService {
             this.fulfillment.retry(grant.getId());
             actionRef = String.valueOf(grant.getId());
         } else if (ReconActions.MANUAL_GRANT.equals(action)) {
-            actionRef = doManualGrant(item, grant, command);
+            actionRef = actionOps.doManualGrant(item, grant, command);
         } else if (ReconActions.LEDGER_ONLY.equals(action)) {
-            actionRef = doLedgerOnly(item, command, now);
+            actionRef = actionOps.doLedgerOnly(item, command, now);
         } else {
             throw new BusinessException(RewardErrorCodes.RECON_ACTION_FORBIDDEN);
         }
@@ -337,50 +331,6 @@ public class ReconAppService {
             throw new BusinessException(RewardErrorCodes.RECON_ACTION_DONE);
         }
         return new ReconActionResponse(action, actionRef);
-    }
-
-    private String doManualGrant(ReconItemEntity item, GrantRecordEntity original, ReconActionCommand command) {
-        if (command.userId() == null || command.prizeId() == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
-        }
-        String sourceId = "recon:" + item.getId();
-        String reason = command.reason() == null || command.reason().isBlank() ? "对账补发" : command.reason();
-        ManualGrantResponse created = grantApp.reconManualGrant(command.userId(), command.prizeId(), reason, sourceId);
-        if (original != null) {
-            grants.closeAsManual(original.getId(), RewardTime.toUtc(clock.instant()));
-        }
-        return String.valueOf(created.recordId());
-    }
-
-    private String doLedgerOnly(ReconItemEntity item, ReconActionCommand command, LocalDateTime now) {
-        if (command.userId() == null || command.prizeId() == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
-        }
-        PrizeEntity prize = prizes.getById(command.prizeId());
-        if (prize == null) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        GrantRecordEntity row = new GrantRecordEntity();
-        row.setPrizeId(prize.getId());
-        row.setPrizeCode(prize.getCode());
-        row.setCategoryCode(prize.getCategoryCode());
-        row.setCostFen(item.getChannelAmountFen() == null ? 0 : item.getChannelAmountFen());
-        row.setFaceFen(null);
-        row.setReconStatus(GrantRecordStatuses.RECON_MATCHED);
-        row.setUserId(command.userId());
-        row.setGrantSource("MANUAL_GRANT");
-        row.setSourceId("ledger:" + item.getId());
-        row.setStatus(GrantRecordStatuses.GRANTED);
-        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_ARRIVED);
-        row.setFulfillmentRef(item.getFulfillmentRef());
-        row.setRetryCount(0);
-        row.setSimulated(0);
-        row.setGrantedAt(now);
-        row.setFulfilledAt(now);
-        row.setCreatedAt(now);
-        row.setUpdatedAt(now);
-        grants.insert(row);
-        return String.valueOf(row.getId());
     }
 
     private ReconBatchEntity requireDraft(long batchId) {
