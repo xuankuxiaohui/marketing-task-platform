@@ -192,7 +192,7 @@ public class TaskClaimAppService {
                 settings,
                 rewardOps,
                 cascadeOps,
-                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+                new StepEngineAdvance(instances, clock, cascadeOps));
     }
 
     private TaskClaimAppService(

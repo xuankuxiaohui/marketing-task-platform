@@ -174,7 +174,7 @@ public class TaskStepAppService {
                 guards,
                 rewardOps,
                 cascadeOps,
-                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+                new StepEngineAdvance(instances, clock, cascadeOps));
     }
 
     private TaskStepAppService(
