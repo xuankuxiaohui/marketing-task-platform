@@ -9,14 +9,7 @@ import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
-import com.mkt.kernel.json.JsonUtil;
-import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.convert.SnapshotContent;
-import com.mkt.task.convert.SnapshotViews;
-import com.mkt.task.convert.TaskTime;
-import com.mkt.task.domain.CycleKeyResolver;
-import com.mkt.task.domain.StepStatuses;
-import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
 import com.mkt.task.engine.ClaimEnterEngine;
 import com.mkt.task.engine.StepEngineAdvance;
@@ -26,17 +19,12 @@ import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.engine.StepEngineViews;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
-import com.mkt.task.entity.TaskInstanceStepEntity;
-import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.CrowdResolver;
-import com.mkt.task.expression.EvalContexts;
-import com.mkt.task.response.CurrentStepView;
 import com.mkt.task.response.TaskStartResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskClaimAppService {
 
     private final TaskDefinitionStore definitions;
-    private final TaskVersionSnapshotStore snapshots;
     private final TaskInstanceStore instances;
     private final TaskCrowdStore crowds;
     private final UserAttributePort users;
@@ -56,12 +43,12 @@ public class TaskClaimAppService {
     private final Clock clock;
     private final ClaimChecks checks;
     private final ClaimInsert insert;
+    private final ClaimViews views;
     private final ClaimEnterEngine enter;
 
     @Autowired
     public TaskClaimAppService(
             TaskDefinitionStore definitions,
-            TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
             ObjectProvider<UserAttributePort> users,
@@ -70,6 +57,7 @@ public class TaskClaimAppService {
             TaskSettings settings,
             ClaimChecks checks,
             ClaimInsert insert,
+            ClaimViews views,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
@@ -77,7 +65,6 @@ public class TaskClaimAppService {
             StepEngineExpire expireOps) {
         this(
                 definitions,
-                snapshots,
                 instances,
                 crowds,
                 users.getIfAvailable(),
@@ -86,6 +73,7 @@ public class TaskClaimAppService {
                 settings,
                 checks,
                 insert,
+                views,
                 rewardOps,
                 cascadeOps,
                 advanceOps,
@@ -121,7 +109,6 @@ public class TaskClaimAppService {
             TaskSettings settings) {
         this(
                 definitions,
-                snapshots,
                 instances,
                 crowds,
                 users,
@@ -130,12 +117,12 @@ public class TaskClaimAppService {
                 settings,
                 new ClaimChecks(mutexGroups, instances, risk, settings),
                 new ClaimInsert(snapshots, instances, settings),
+                new ClaimViews(snapshots, instances, crowds, users),
                 new StepEngineReward(instances, events, clock, rewards));
     }
 
     private TaskClaimAppService(
             TaskDefinitionStore definitions,
-            TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
             UserAttributePort users,
@@ -144,10 +131,10 @@ public class TaskClaimAppService {
             TaskSettings settings,
             ClaimChecks checks,
             ClaimInsert insert,
+            ClaimViews views,
             StepEngineReward rewardOps) {
         this(
                 definitions,
-                snapshots,
                 instances,
                 crowds,
                 users,
@@ -156,13 +143,13 @@ public class TaskClaimAppService {
                 settings,
                 checks,
                 insert,
+                views,
                 rewardOps,
                 new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
 
     private TaskClaimAppService(
             TaskDefinitionStore definitions,
-            TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
             UserAttributePort users,
@@ -171,11 +158,11 @@ public class TaskClaimAppService {
             TaskSettings settings,
             ClaimChecks checks,
             ClaimInsert insert,
+            ClaimViews views,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps) {
         this(
                 definitions,
-                snapshots,
                 instances,
                 crowds,
                 users,
@@ -184,6 +171,7 @@ public class TaskClaimAppService {
                 settings,
                 checks,
                 insert,
+                views,
                 rewardOps,
                 cascadeOps,
                 new StepEngineAdvance(instances, clock, cascadeOps));
@@ -191,7 +179,6 @@ public class TaskClaimAppService {
 
     private TaskClaimAppService(
             TaskDefinitionStore definitions,
-            TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
             UserAttributePort users,
@@ -200,12 +187,12 @@ public class TaskClaimAppService {
             TaskSettings settings,
             ClaimChecks checks,
             ClaimInsert insert,
+            ClaimViews views,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps) {
         this(
                 definitions,
-                snapshots,
                 instances,
                 crowds,
                 users,
@@ -214,6 +201,7 @@ public class TaskClaimAppService {
                 settings,
                 checks,
                 insert,
+                views,
                 rewardOps,
                 cascadeOps,
                 advanceOps,
@@ -223,7 +211,6 @@ public class TaskClaimAppService {
 
     private TaskClaimAppService(
             TaskDefinitionStore definitions,
-            TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
             UserAttributePort users,
@@ -232,13 +219,13 @@ public class TaskClaimAppService {
             TaskSettings settings,
             ClaimChecks checks,
             ClaimInsert insert,
+            ClaimViews views,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
             StepEngineViews engineViews,
             StepEngineExpire expireOps) {
         this.definitions = definitions;
-        this.snapshots = snapshots;
         this.instances = instances;
         this.crowds = crowds;
         this.users = users;
@@ -246,6 +233,7 @@ public class TaskClaimAppService {
         this.clock = clock;
         this.checks = checks;
         this.insert = insert;
+        this.views = views;
         this.enter = new ClaimEnterEngine(
                 instances, events, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
     }
@@ -272,20 +260,20 @@ public class TaskClaimAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         Instant now = clock.instant();
-        SnapshotContent snapshot = snapshotOf(definition);
-        String cycleKey = cycleKeyOf(snapshot, definition, now);
+        SnapshotContent snapshot = views.snapshotOf(definition);
+        String cycleKey = views.cycleKeyOf(snapshot, definition, now);
         TaskInstanceEntity existing = instances.getByUserTaskCycle(userId, taskId, cycleKey);
         if (existing != null) {
             boolean existingSimulated = existing.getSimulated() != null && existing.getSimulated() == 1;
             if (simulated && !existingSimulated) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
             }
-            return toStart(existing, platform);
+            return views.toStart(existing, platform);
         }
         if (snapshot == null) {
             throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
         }
-        VisibilityResult visibility = visibility(definition, snapshot, userId, attrs, now);
+        VisibilityResult visibility = views.visibility(definition, snapshot, userId, attrs, now);
         if (!visibility.visible()) {
             throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
         }
@@ -294,7 +282,7 @@ public class TaskClaimAppService {
         checks.checkDailyLimit(userId, now);
         ClaimInsert.Inserted inserted = insert.insertInstance(definition, snapshot, userId, cycleKey, now, simulated);
         if (!inserted.created()) {
-            return toStart(inserted.row(), platform);
+            return views.toStart(inserted.row(), platform);
         }
         CrowdResolver resolver = new StoreCrowdResolver(crowds, users, userId);
         enter.enter(inserted.row(), snapshot, attrs, resolver, ip, deviceId);
@@ -310,100 +298,6 @@ public class TaskClaimAppService {
                             "simulated", simulated));
         }
         TaskInstanceEntity fresh = instances.getById(inserted.row().getId());
-        return toStart(fresh == null ? inserted.row() : fresh, platform);
-    }
-
-    private VisibilityResult visibility(
-            TaskDefinitionEntity definition,
-            SnapshotContent snapshot,
-            long userId,
-            UserAttributes attrs,
-            Instant now) {
-        StoreCrowdMembership membership = new StoreCrowdMembership(crowds);
-        CrowdResolver resolver = new StoreCrowdResolver(crowds, users, userId);
-        return VisibilityEvaluator.evaluate(
-                definition.getStatus(),
-                snapshot.startTime(),
-                snapshot.endTime(),
-                snapshot.gray(),
-                snapshot.filter(),
-                definition.getId(),
-                userId,
-                attrs,
-                now,
-                membership,
-                EvalContexts.filter(attrs, now, resolver));
-    }
-
-    private SnapshotContent snapshotOf(TaskDefinitionEntity definition) {
-        if (definition.getVersion() == null || definition.getVersion() < 1) {
-            return null;
-        }
-        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(definition.getId(), definition.getVersion());
-        if (snap == null || snap.getContent() == null) {
-            return null;
-        }
-        return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-    }
-
-    private static String cycleKeyOf(SnapshotContent snapshot, TaskDefinitionEntity definition, Instant now) {
-        if (snapshot != null) {
-            return CycleKeyResolver.resolve(
-                    snapshot.cycleType(), snapshot.cronExpr(), snapshot.specialStart(), snapshot.specialEnd(), now);
-        }
-        return CycleKeyResolver.resolve(
-                definition.getCycleType(),
-                definition.getCronExpr(),
-                TaskTime.toInstant(definition.getSpecialStart()),
-                TaskTime.toInstant(definition.getSpecialEnd()),
-                now);
-    }
-
-    private TaskStartResponse toStart(TaskInstanceEntity instance, String platform) {
-        SnapshotContent snapshot = snapshotOf(instance);
-        CurrentStepView current = currentStep(instance.getId(), snapshot, platform);
-        return new TaskStartResponse(instance.getId(), instance.getStatus(), current);
-    }
-
-    private SnapshotContent snapshotOf(TaskInstanceEntity instance) {
-        TaskVersionSnapshotEntity snap = snapshots.getById(instance.getSnapshotId());
-        if (snap == null || snap.getContent() == null) {
-            return null;
-        }
-        return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-    }
-
-    private CurrentStepView currentStep(long instanceId, SnapshotContent snapshot, String platform) {
-        List<TaskInstanceStepEntity> steps = instances.listSteps(instanceId);
-        TaskInstanceStepEntity current = null;
-        if (steps != null) {
-            for (TaskInstanceStepEntity step : steps) {
-                if (StepStatuses.ACTIVE.equals(step.getStatus())) {
-                    current = step;
-                    break;
-                }
-            }
-            if (current == null) {
-                for (int i = steps.size() - 1; i >= 0; i--) {
-                    if (StepStatuses.COMPLETED.equals(steps.get(i).getStatus())) {
-                        current = steps.get(i);
-                        break;
-                    }
-                }
-            }
-        }
-        if (current == null) {
-            return null;
-        }
-        TaskStepCommand def = SnapshotViews.step(snapshot, current.getStepCode());
-        String name = def == null ? current.getStepCode() : def.name();
-        Integer target = def == null ? null : def.progressTarget();
-        return new CurrentStepView(
-                current.getStepCode(),
-                name,
-                current.getType(),
-                current.getProgressCurrent(),
-                target,
-                SnapshotViews.action(snapshot, current.getStepCode(), platform));
+        return views.toStart(fresh == null ? inserted.row() : fresh, platform);
     }
 }
