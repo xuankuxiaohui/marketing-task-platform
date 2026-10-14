@@ -2,7 +2,6 @@ package com.mkt.reward.application;
 
 import com.mkt.contract.AccountStatus;
 import com.mkt.contract.BypassRule;
-import com.mkt.contract.FulfillmentStatus;
 import com.mkt.contract.GrantContext;
 import com.mkt.contract.GrantResult;
 import com.mkt.contract.GrantSource;
@@ -14,7 +13,6 @@ import com.mkt.contract.RetryableGrantReason;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
-import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
@@ -40,7 +38,6 @@ import com.mkt.reward.support.RewardOperator;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -60,7 +57,6 @@ public class GrantAppService {
     private final PrizeCategoryStore categories;
     private final GrantRecordStore grants;
     private final UserAttributePort users;
-    private final EventPublisher events;
     private final GrantFailureLedger failures;
     private final FulfillmentService fulfillment;
     private final ObjectProvider<GrantStepResumer> resumerProvider;
@@ -68,6 +64,7 @@ public class GrantAppService {
     private final Clock clock;
     private final GrantChecks checks;
     private final GrantStockLogs stockLogs;
+    private final GrantResultAssembly assembly;
 
     @Autowired
     public GrantAppService(
@@ -75,18 +72,17 @@ public class GrantAppService {
             PrizeCategoryStore categories,
             GrantRecordStore grants,
             ObjectProvider<UserAttributePort> users,
-            ObjectProvider<EventPublisher> events,
             GrantFailureLedger failures,
             FulfillmentService fulfillment,
             ObjectProvider<GrantStepResumer> resumer,
             Clock clock,
             GrantChecks checks,
-            GrantStockLogs stockLogs) {
+            GrantStockLogs stockLogs,
+            GrantResultAssembly assembly) {
         this.prizes = prizes;
         this.categories = categories;
         this.grants = grants;
         this.users = users.getIfAvailable();
-        this.events = events.getIfAvailable();
         this.failures = failures;
         this.fulfillment = fulfillment;
         this.resumerProvider = resumer;
@@ -94,6 +90,7 @@ public class GrantAppService {
         this.clock = clock;
         this.checks = checks;
         this.stockLogs = stockLogs;
+        this.assembly = assembly;
     }
 
     public GrantAppService(
@@ -112,7 +109,6 @@ public class GrantAppService {
         this.categories = categories;
         this.grants = grants;
         this.users = users;
-        this.events = events;
         this.failures = failures;
         this.fulfillment = fulfillment;
         this.resumerProvider = null;
@@ -120,6 +116,7 @@ public class GrantAppService {
         this.clock = clock;
         this.checks = new GrantChecks(grants, risk, clock);
         this.stockLogs = new GrantStockLogs(stockLogs, clock);
+        this.assembly = new GrantResultAssembly(events, prizes);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = PermanentGrantException.class)
@@ -143,7 +140,7 @@ public class GrantAppService {
         if (existing != null
                 && !GrantRecordStatuses.RETRY_PENDING.equals(existing.getStatus())
                 && !(retryPermanent && GrantRecordStatuses.PERMANENT_FAILED.equals(existing.getStatus()))) {
-            return toResult(existing, true);
+            return assembly.toResult(existing, true);
         }
         if (retryPermanent
                 && existing != null
@@ -154,7 +151,7 @@ public class GrantAppService {
         try {
             return execute(prizeId, userId, grantSource, sourceId, context, existing);
         } catch (IdempotentHit hit) {
-            return toResult(hit.winner, true);
+            return assembly.toResult(hit.winner, true);
         } catch (RetryableGrantException ex) {
             leaveRetry(prizeId, userId, grantSource, sourceId, context, existing, ex.reason().name());
             throw ex;
@@ -350,7 +347,7 @@ public class GrantAppService {
         LocalDateTime now = RewardTime.toUtc(clock.instant());
         GrantRecordEntity record = existing != null ? existing : (raced != null ? raced : new GrantRecordEntity());
         String fromStatus = record.getStatus();
-        fillBase(record, prizeId, prize, userId, grantSource, sourceId, cost, ctx, now);
+        assembly.fillBase(record, prizeId, prize, userId, grantSource, sourceId, cost, ctx, now);
         boolean auto = ClaimModes.AUTO.equals(prize.getClaimMode());
         if (auto) {
             record.setStatus(GrantRecordStatuses.GRANTED);
@@ -381,8 +378,8 @@ public class GrantAppService {
                 grantSource.name(),
                 String.valueOf(record.getId()),
                 ctx.operatorId());
-        appendSuccess(record, grantSource);
-        return toResult(record, false);
+        assembly.appendSuccess(record, grantSource);
+        return assembly.toResult(record, false);
     }
 
     private void persistSuccess(GrantRecordEntity record, String fromStatus) {
@@ -429,7 +426,7 @@ public class GrantAppService {
             String failReason) {
         GrantRecordEntity draft = existing == null ? new GrantRecordEntity() : existing;
         PrizeEntity prize = prizes.getByIdIncludingDeleted(prizeId);
-        fillBase(
+        assembly.fillBase(
                 draft,
                 prizeId,
                 prize,
@@ -454,7 +451,7 @@ public class GrantAppService {
             String failReason) {
         GrantRecordEntity draft = existing == null ? new GrantRecordEntity() : existing;
         PrizeEntity prize = prizes.getByIdIncludingDeleted(prizeId);
-        fillBase(
+        assembly.fillBase(
                 draft,
                 prizeId,
                 prize,
@@ -466,54 +463,6 @@ public class GrantAppService {
                 RewardTime.toUtc(clock.instant()));
         draft.setFailReason(failReason);
         failures.markPermanent(draft);
-    }
-
-    private void fillBase(
-            GrantRecordEntity record,
-            long prizeId,
-            PrizeEntity prize,
-            long userId,
-            GrantSource grantSource,
-            String sourceId,
-            PrizeCost cost,
-            GrantContext ctx,
-            LocalDateTime now) {
-        record.setPrizeId(prize != null && prize.getId() != null ? prize.getId() : prizeId);
-        record.setPrizeCode(prize == null ? "missing" : prize.getCode());
-        record.setCategoryCode(prize == null ? "MISSING" : prize.getCategoryCode());
-        record.setFaceFen(cost.faceFen());
-        record.setCostFen(cost.costFen());
-        record.setReconStatus(GrantRecordStatuses.RECON_NONE);
-        record.setUserId(userId);
-        record.setGrantSource(grantSource.name());
-        record.setSourceId(sourceId);
-        if (record.getFulfillmentStatus() == null) {
-            record.setFulfillmentStatus(GrantRecordStatuses.FULFILL_NONE);
-        }
-        if (record.getRetryCount() == null) {
-            record.setRetryCount(0);
-        }
-        record.setSimulated(ctx != null && ctx.simulated() ? 1 : 0);
-        if (record.getCreatedAt() == null) {
-            record.setCreatedAt(now);
-        }
-        record.setUpdatedAt(now);
-    }
-
-    private void appendSuccess(GrantRecordEntity record, GrantSource source) {
-        if (events == null) {
-            return;
-        }
-        events.append(
-                EventCodes.REWARD_GRANT_SUCCESS,
-                "rwd_grant_record",
-                String.valueOf(record.getId()),
-                Map.of(
-                        "recordId", record.getId(),
-                        "prizeId", record.getPrizeId(),
-                        "grantSource", source.name(),
-                        "userId", record.getUserId(),
-                        "simulated", simulated(record)));
     }
 
     private void resume(GrantSource source, String sourceId) {
@@ -544,18 +493,6 @@ public class GrantAppService {
 
     private static boolean simulated(GrantRecordEntity row) {
         return row.getSimulated() != null && row.getSimulated() == 1;
-    }
-
-    private GrantResult toResult(GrantRecordEntity row, boolean hitIdempotent) {
-        PrizeEntity prize = prizes.getByIdIncludingDeleted(row.getPrizeId());
-        String prizeName = prize != null ? prize.getName() : row.getPrizeCode();
-        return new GrantResult(
-                row.getId() == null ? 0L : row.getId(),
-                GrantStatus.valueOf(row.getStatus()),
-                FulfillmentStatus.valueOf(row.getFulfillmentStatus()),
-                row.getPrizeId(),
-                hitIdempotent,
-                prizeName);
     }
 
     private static final class IdempotentHit extends RuntimeException {
