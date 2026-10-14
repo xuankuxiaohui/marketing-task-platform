@@ -28,6 +28,20 @@ class AdSelectorTest {
         assertThat(image).extracting(AdCandidate::materialId).containsExactly(2L);
     }
 
+    @Test
+    void emptyInputStaysEmptyAndCarouselCapFloorsAtOne() {
+        assertThat(AdSelector.rank(null)).isEmpty();
+        assertThat(AdSelector.rank(List.of())).isEmpty();
+        assertThat(AdSelector.take(AdForms.CAROUSEL, null, 5)).isEmpty();
+        assertThat(AdSelector.take(AdForms.CAROUSEL, List.of(), 5)).isEmpty();
+        List<AdCandidate> floored =
+                AdSelector.take(AdForms.CAROUSEL, List.of(candidate(2, 1), candidate(1, 9)), 0);
+        assertThat(floored).extracting(AdCandidate::materialId).containsExactly(1L);
+        List<AdCandidate> unknownForm =
+                AdSelector.take("banner", List.of(candidate(3, 1), candidate(4, 8)), 5);
+        assertThat(unknownForm).extracting(AdCandidate::materialId).containsExactly(4L);
+    }
+
     private static AdCandidate candidate(long id, int weight) {
         Instant start = Instant.parse("2026-08-01T00:00:00Z");
         Instant end = Instant.parse("2026-08-31T00:00:00Z");
