@@ -21,21 +21,14 @@ import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.CycleKeyResolver;
 import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.domain.ExpireAtCalculator;
-import com.mkt.task.domain.GraphEdge;
-import com.mkt.task.domain.GraphStep;
 import com.mkt.task.domain.InstanceStatuses;
-import com.mkt.task.domain.StepTypes;
-import com.mkt.task.domain.TaskGraphValidator;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskMutexGroupEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
-import com.mkt.task.expression.ExpressionCompileException;
-import com.mkt.task.expression.ExpressionEngine;
 import com.mkt.task.response.BatchItemResponse;
 import com.mkt.task.response.DiffEntry;
 import com.mkt.task.response.PublishCheckError;
-import com.mkt.task.response.PublishCheckResponse;
 import com.mkt.task.response.PublishResponse;
 import com.mkt.task.response.ScheduleFailureView;
 import com.mkt.task.response.TaskDefinitionAggregateResponse;
@@ -96,6 +89,7 @@ public class TaskPublishAppService {
     private final AlertWebhook alertsDirect;
     private final JdbcTemplate jdbcDirect;
     private final TransactionTemplate txDirect;
+    private final TaskPublishChecks publishChecks;
 
     @Autowired
     public TaskPublishAppService(
@@ -111,7 +105,8 @@ public class TaskPublishAppService {
             ObjectProvider<TaskAuditAppender> audits,
             ObjectProvider<AlertWebhook> alerts,
             ObjectProvider<JdbcTemplate> jdbc,
-            ObjectProvider<PlatformTransactionManager> txm) {
+            ObjectProvider<PlatformTransactionManager> txm,
+            TaskPublishChecks publishChecks) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -130,6 +125,7 @@ public class TaskPublishAppService {
         this.alertsDirect = null;
         this.jdbcDirect = null;
         this.txDirect = null;
+        this.publishChecks = publishChecks;
     }
 
     public TaskPublishAppService(
@@ -164,6 +160,7 @@ public class TaskPublishAppService {
         this.alertsDirect = alerts;
         this.jdbcDirect = jdbc;
         this.txDirect = tx;
+        this.publishChecks = new TaskPublishChecks(definitions, definitionsApp, prizes);
     }
 
     @Transactional
@@ -180,11 +177,11 @@ public class TaskPublishAppService {
         }
         String status = entity.getStatus();
         if (DefinitionStatuses.DRAFT.equals(status)) {
-            rejectIfInvalid(entity);
+            publishChecks.rejectIfInvalid(entity);
             requireCas(freezeToPublished(entity, false));
         } else if (DefinitionStatuses.SCHEDULED.equals(status)) {
             if (cmd.earlyTrue()) {
-                rejectIfInvalid(entity);
+                publishChecks.rejectIfInvalid(entity);
                 requireCas(freezeToPublished(entity, false));
             } else {
                 entity.setPendingRevision(0);
@@ -195,7 +192,7 @@ public class TaskPublishAppService {
             if (!pending(entity)) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "无待发布修订");
             }
-            rejectIfInvalid(entity);
+            publishChecks.rejectIfInvalid(entity);
             requireCas(freezeToPublished(entity, true));
         } else {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "当前状态不可发布");
@@ -214,10 +211,10 @@ public class TaskPublishAppService {
         }
         LocalDateTime publishAt = TaskTime.toUtc(command.publishAt());
         if (!publishAt.isAfter(nowUtc())) {
-            throw validateFailed(List.of(new PublishCheckError("schedule", "定时发布时间必须晚于当前时间")));
+            throw publishChecks.validateFailed(List.of(new PublishCheckError("schedule", "定时发布时间必须晚于当前时间")));
         }
         entity.setSchedulePublishAt(publishAt);
-        rejectIfInvalid(entity);
+        publishChecks.rejectIfInvalid(entity);
         entity.setStatus(DefinitionStatuses.SCHEDULED);
         entity.setPendingRevision(0);
         entity.setUpdatedAt(nowUtc());
@@ -400,7 +397,7 @@ public class TaskPublishAppService {
                     published++;
                 }
             } catch (BusinessException ex) {
-                recordScheduleFailure(row, ex.getMessage(), checkErrorsOf(ex.data()));
+                recordScheduleFailure(row, ex.getMessage(), TaskPublishChecks.checkErrorsOf(ex.data()));
             } catch (RuntimeException ex) {
                 log.error("sched:publish-scan failed, taskId={}", row.getId(), ex);
                 recordScheduleFailure(
@@ -425,7 +422,7 @@ public class TaskPublishAppService {
         if (entity.getSchedulePublishAt() == null || entity.getSchedulePublishAt().isAfter(now)) {
             return false;
         }
-        rejectIfInvalid(entity);
+        publishChecks.rejectIfInvalid(entity);
         return freezeToPublished(entity, false);
     }
 
@@ -487,80 +484,6 @@ public class TaskPublishAppService {
         }
     }
 
-    private void rejectIfInvalid(TaskDefinitionEntity entity) {
-        List<PublishCheckError> errors = checkPublish(entity);
-        if (!errors.isEmpty()) {
-            throw validateFailed(errors);
-        }
-    }
-
-    private List<PublishCheckError> checkPublish(TaskDefinitionEntity entity) {
-        List<PublishCheckError> errors = new ArrayList<>();
-        TaskDefinitionAggregateResponse view = definitionsApp.get(entity.getId());
-        List<TaskStepCommand> steps = view.steps() == null ? List.of() : view.steps();
-        List<TaskTransitionCommand> edges = view.transitions() == null ? List.of() : view.transitions();
-        if (steps.isEmpty()) {
-            errors.add(new PublishCheckError("steps", "至少需要一个步骤"));
-        } else {
-            List<GraphStep> graphSteps = steps.stream().map(s -> new GraphStep(s.code(), s.seq())).toList();
-            List<GraphEdge> graphEdges = edges.stream()
-                    .map(e -> new GraphEdge(e.fromStepCode(), e.toStepCode()))
-                    .toList();
-            if (!TaskGraphValidator.reachableAndOpen(graphSteps, graphEdges)) {
-                errors.add(new PublishCheckError("reachability", "存在不可达或死锁步骤"));
-            }
-        }
-        for (TaskStepCommand step : steps) {
-            if (StepTypes.REWARD.equals(step.type())) {
-                if (step.prizeId() == null || !prizes.enabled(step.prizeId())) {
-                    errors.add(new PublishCheckError("reward:" + step.code(), "未引用启用奖品"));
-                }
-            }
-        }
-        if (view.filter() != null && view.filter().expr() != null && !view.filter().expr().isBlank()) {
-            try {
-                ExpressionEngine.requireValid(view.filter().expr());
-            } catch (ExpressionCompileException ex) {
-                errors.add(new PublishCheckError("expression", ex.detail().reason()));
-            }
-        }
-        for (TaskTransitionCommand edge : edges) {
-            if (edge.conditionExpr() == null || edge.conditionExpr().isBlank()) {
-                continue;
-            }
-            try {
-                ExpressionEngine.requireValid(edge.conditionExpr());
-            } catch (ExpressionCompileException ex) {
-                errors.add(new PublishCheckError("expression", ex.detail().reason()));
-            }
-        }
-        if (entity.getStartTime() != null
-                && entity.getEndTime() != null
-                && !entity.getStartTime().isBefore(entity.getEndTime())) {
-            errors.add(new PublishCheckError("time-window", "开始必须早于结束"));
-        }
-        if (entity.getSchedulePublishAt() != null
-                && entity.getEndTime() != null
-                && !entity.getSchedulePublishAt().isBefore(entity.getEndTime())) {
-            errors.add(new PublishCheckError("schedule", "定时发布时间必须早于时间窗结束"));
-        }
-        if (entity.getMutexGroupId() != null) {
-            List<String> types = definitions.cycleTypesInMutexGroup(entity.getMutexGroupId(), null);
-            long distinct = types.stream().distinct().count();
-            if (distinct > 1) {
-                errors.add(new PublishCheckError("mutex", "互斥组内周期类型不一致"));
-            }
-        }
-        return errors;
-    }
-
-    private BusinessException validateFailed(List<PublishCheckError> errors) {
-        return new BusinessException(
-                TaskErrorCodes.PUBLISH_VALIDATE_FAILED,
-                TaskErrorCodes.PUBLISH_VALIDATE_FAILED.message(),
-                new PublishCheckResponse(List.copyOf(errors)));
-    }
-
     private List<BatchItemResponse> batch(List<Long> ids, IdAction action) {
         if (ids == null || ids.isEmpty()) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "ids 不能为空");
@@ -608,13 +531,6 @@ public class TaskPublishAppService {
         if (webhook != null) {
             webhook.notifySchedulePublishFailure(row.getId(), row.getCode(), failureAuditText(message, checkErrors));
         }
-    }
-
-    private static List<PublishCheckError> checkErrorsOf(Object data) {
-        if (data instanceof PublishCheckResponse check && check.checkErrors() != null) {
-            return List.copyOf(check.checkErrors());
-        }
-        return List.of();
     }
 
     private static String failureAuditText(String reason, List<PublishCheckError> checkErrors) {
