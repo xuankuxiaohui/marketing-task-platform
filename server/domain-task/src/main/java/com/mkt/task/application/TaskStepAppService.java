@@ -1,11 +1,9 @@
 package com.mkt.task.application;
 
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskListType;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
-import com.mkt.contract.UserRiskSummary;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
@@ -43,11 +41,11 @@ public class TaskStepAppService {
     private final TaskInstanceStore instances;
     private final TaskCrowdStore crowds;
     private final UserAttributePort users;
-    private final RiskCheckPort risk;
     private final StepEngine engine;
     private final Clock clock;
     private final TaskStepPreload preload;
     private final TaskStepViews views;
+    private final TaskStepGuards guards;
 
     @Autowired
     public TaskStepAppService(
@@ -57,13 +55,13 @@ public class TaskStepAppService {
             TaskCrowdStore crowds,
             TaskProgressReportStore reports,
             ObjectProvider<UserAttributePort> users,
-            ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<EventPublisher> events,
             ObjectProvider<RewardPort> rewards,
             Clock clock,
             TaskSettings settings,
             TaskStepPreload preload,
-            TaskStepViews views) {
+            TaskStepViews views,
+            TaskStepGuards guards) {
         this(
                 definitions,
                 snapshots,
@@ -71,13 +69,13 @@ public class TaskStepAppService {
                 crowds,
                 reports,
                 users.getIfAvailable(),
-                risk.getIfAvailable(),
                 events.getIfAvailable(),
                 rewards.getIfAvailable(),
                 clock,
                 settings,
                 preload,
-                views);
+                views,
+                guards);
     }
 
     public TaskStepAppService(
@@ -99,13 +97,13 @@ public class TaskStepAppService {
                 crowds,
                 reports,
                 users,
-                risk,
                 events,
                 rewards,
                 clock,
                 settings,
                 new TaskStepPreload(definitions, snapshots, instances, users),
-                new TaskStepViews(snapshots, instances));
+                new TaskStepViews(snapshots, instances),
+                new TaskStepGuards(instances, risk));
     }
 
     private TaskStepAppService(
@@ -115,22 +113,22 @@ public class TaskStepAppService {
             TaskCrowdStore crowds,
             TaskProgressReportStore reports,
             UserAttributePort users,
-            RiskCheckPort risk,
             EventPublisher events,
             RewardPort rewards,
             Clock clock,
             TaskSettings settings,
             TaskStepPreload preload,
-            TaskStepViews views) {
+            TaskStepViews views,
+            TaskStepGuards guards) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
         this.crowds = crowds;
         this.users = users;
-        this.risk = risk;
         this.clock = clock;
         this.preload = preload;
         this.views = views;
+        this.guards = guards;
         this.engine = new StepEngine(instances, reports, events, clock, settings, rewards);
     }
 
@@ -141,8 +139,8 @@ public class TaskStepAppService {
         if (instance == null || instance.getUserId() == null || instance.getUserId() != userId) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
-        rejectIfFrozen(userId, TaskErrorCodes.INSTANCE_FROZEN);
-        TaskInstanceStepEntity step = requireStep(instanceId, stepCode);
+        guards.rejectIfFrozen(userId, TaskErrorCodes.INSTANCE_FROZEN);
+        TaskInstanceStepEntity step = guards.requireStep(instanceId, stepCode);
         StepAdvanceResult result =
                 engine.click(instance, step, snapshotOf(instance), attrs(userId), crowds(userId), ip, deviceId);
         return views.toClick(result, platform);
@@ -153,12 +151,12 @@ public class TaskStepAppService {
         // Hold-lock knife: attrs/crowds/snapshot (+ frozen check) BEFORE getByIdForUpdate.
         // Lock window: CAS + report/outbox same-TX only (DEC-002 unchanged; no sync evt wait).
         TaskInstanceEntity soft = preload.locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
-        rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
+        guards.rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
         SnapshotContent snapshot = preload.cachedSnapshot(soft);
         UserAttributes userAttrs = preload.cachedAttrs(soft.getUserId());
         CrowdResolver crowdResolver = crowds(soft.getUserId());
         TaskInstanceEntity instance = preload.lockInstance(soft);
-        TaskInstanceStepEntity step = requireStep(instance.getId(), command.stepCode());
+        TaskInstanceStepEntity step = guards.requireStep(instance.getId(), command.stepCode());
         StepAdvanceResult result =
                 engine.callback(instance, step, snapshot, userAttrs, crowdResolver, command.bizNo());
         TaskInstanceEntity fresh = result.instance();
@@ -176,12 +174,12 @@ public class TaskStepAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
         TaskInstanceEntity soft = preload.locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
-        rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
+        guards.rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
         SnapshotContent snapshot = preload.cachedSnapshot(soft);
         UserAttributes userAttrs = preload.cachedAttrs(soft.getUserId());
         CrowdResolver crowdResolver = crowds(soft.getUserId());
         TaskInstanceEntity instance = preload.lockInstance(soft);
-        TaskInstanceStepEntity step = requireStep(instance.getId(), command.stepCode());
+        TaskInstanceStepEntity step = guards.requireStep(instance.getId(), command.stepCode());
         StepAdvanceResult result = engine.progress(
                 instance,
                 step,
@@ -250,31 +248,6 @@ public class TaskStepAppService {
         }
         engine.resumeFromReward(
                 instance, step, snapshotOf(instance), attrs(instance.getUserId()), crowds(instance.getUserId()));
-    }
-
-    private TaskInstanceStepEntity requireStep(long instanceId, String stepCode) {
-        if (stepCode == null || stepCode.isBlank()) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
-        }
-        TaskInstanceStepEntity step = instances.getStep(instanceId, stepCode.trim());
-        if (step == null) {
-            throw new BusinessException(TaskErrorCodes.STEP_NOT_FOUND);
-        }
-        return step;
-    }
-
-    private void rejectIfFrozen(long userId, TaskErrorCodes code) {
-        if (blacklisted(userId)) {
-            throw new BusinessException(code);
-        }
-    }
-
-    private boolean blacklisted(long userId) {
-        if (risk == null) {
-            return false;
-        }
-        UserRiskSummary summary = risk.userSummary(userId);
-        return summary != null && summary.listStatus().contains(RiskListType.BLACK);
     }
 
     private SnapshotContent snapshotOf(TaskInstanceEntity instance) {
