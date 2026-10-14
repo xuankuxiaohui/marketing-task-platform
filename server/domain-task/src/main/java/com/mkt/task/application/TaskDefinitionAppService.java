@@ -11,7 +11,6 @@ import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.domain.TaskCodes;
 import com.mkt.task.entity.TaskDefinitionEntity;
-import com.mkt.task.entity.TaskStepEntity;
 import com.mkt.task.query.TaskDefinitionQuery;
 import com.mkt.task.response.TaskDefinitionAggregateResponse;
 import com.mkt.task.response.TaskDefinitionSaveResponse;
@@ -30,23 +29,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskDefinitionAppService {
 
     private final TaskDefinitionStore definitions;
-    private final TaskChildStore children;
     private final Clock clock;
     private final TaskDefinitionValidate validate;
     private final TaskDefinitionPersist persist;
+    private final TaskDefinitionRead read;
 
     @Autowired
     public TaskDefinitionAppService(
             TaskDefinitionStore definitions,
-            TaskChildStore children,
             Clock clock,
             TaskDefinitionValidate validate,
-            TaskDefinitionPersist persist) {
+            TaskDefinitionPersist persist,
+            TaskDefinitionRead read) {
         this.definitions = definitions;
-        this.children = children;
         this.clock = clock;
         this.validate = validate;
         this.persist = persist;
+        this.read = read;
     }
 
     public TaskDefinitionAppService(
@@ -58,15 +57,15 @@ public class TaskDefinitionAppService {
             Clock clock) {
         this(
                 definitions,
-                children,
                 clock,
                 new TaskDefinitionValidate(definitions, mutexGroups, crowds, settings),
-                new TaskDefinitionPersist(definitions, children, clock));
+                new TaskDefinitionPersist(definitions, children, clock),
+                new TaskDefinitionRead(definitions, children));
     }
 
     public TaskDefinitionAggregateResponse get(long id) {
-        TaskDefinitionEntity entity = requireLive(id);
-        return toAggregate(entity);
+        TaskDefinitionEntity entity = read.requireLive(id);
+        return read.toAggregate(entity);
     }
 
     public PageData<TaskDefinitionView> page(TaskDefinitionQuery query) {
@@ -97,8 +96,8 @@ public class TaskDefinitionAppService {
         if (!TaskCodes.valid(command.code())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 格式非法");
         }
-        TaskDefinitionEntity source = requireLive(id);
-        TaskDefinitionAggregateResponse view = toAggregate(source);
+        TaskDefinitionEntity source = read.requireLive(id);
+        TaskDefinitionAggregateResponse view = read.toAggregate(source);
         TaskDefinitionSaveCommand copy = new TaskDefinitionSaveCommand(
                 null,
                 command.code().trim(),
@@ -146,31 +145,12 @@ public class TaskDefinitionAppService {
         definitions.update(existing);
     }
 
-    private TaskDefinitionEntity requireLive(long id) {
-        TaskDefinitionEntity existing = definitions.getById(id);
-        if (existing == null || existing.deletedFlag()) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        return existing;
-    }
-
     private TaskDefinitionEntity requireLockedLive(long id) {
         TaskDefinitionEntity existing = definitions.getByIdForUpdate(id);
         if (existing == null || existing.deletedFlag()) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return existing;
-    }
-
-    private TaskDefinitionAggregateResponse toAggregate(TaskDefinitionEntity entity) {
-        List<TaskStepEntity> steps = children.listSteps(entity.getId());
-        List<Long> stepIds = steps.stream().map(TaskStepEntity::getId).toList();
-        return TaskDefinitionConvert.toAggregate(
-                entity,
-                steps,
-                children.listTransitions(entity.getId()),
-                children.listTaskActions(entity.getId()),
-                children.listStepActions(stepIds));
     }
 
     private static String blankToNull(String value) {
