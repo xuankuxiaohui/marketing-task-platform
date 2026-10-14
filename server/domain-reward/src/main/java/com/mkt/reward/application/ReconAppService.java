@@ -15,11 +15,9 @@ import com.mkt.reward.domain.GrantRecordStatuses;
 import com.mkt.reward.domain.ReconActions;
 import com.mkt.reward.domain.ReconBatchStatuses;
 import com.mkt.reward.domain.ReconGates;
-import com.mkt.reward.domain.ReconPolicies;
 import com.mkt.reward.domain.ReconResults;
 import com.mkt.reward.domain.ReconReviewStatuses;
 import com.mkt.reward.entity.GrantRecordEntity;
-import com.mkt.reward.entity.PrizeCategoryEntity;
 import com.mkt.reward.entity.PrizeEntity;
 import com.mkt.reward.entity.ReconBatchEntity;
 import com.mkt.reward.entity.ReconItemEntity;
@@ -60,9 +58,9 @@ public class ReconAppService {
     private final PrizeCategoryStore categories;
     private final GrantAppService grantApp;
     private final FulfillmentService fulfillment;
-    private final RewardRuntimeSettings settings;
     private final Clock clock;
     private final ReconViews views;
+    private final ReconMatchSupport matchSupport;
 
     @Autowired
     public ReconAppService(
@@ -73,9 +71,9 @@ public class ReconAppService {
             PrizeCategoryStore categories,
             GrantAppService grantApp,
             FulfillmentService fulfillment,
-            RewardRuntimeSettings settings,
             Clock clock,
-            ReconViews views) {
+            ReconViews views,
+            ReconMatchSupport matchSupport) {
         this.batches = batches;
         this.items = items;
         this.grants = grants;
@@ -83,9 +81,9 @@ public class ReconAppService {
         this.categories = categories;
         this.grantApp = grantApp;
         this.fulfillment = fulfillment;
-        this.settings = settings;
         this.clock = clock;
         this.views = views;
+        this.matchSupport = matchSupport;
     }
 
     public ReconAppService(
@@ -106,9 +104,9 @@ public class ReconAppService {
                 categories,
                 grantApp,
                 fulfillment,
-                settings,
                 clock,
-                new ReconViews(batches, grants, prizes, categories));
+                new ReconViews(batches, grants, prizes, categories),
+                new ReconMatchSupport(items, grants, prizes, categories, settings, clock));
     }
 
     public PageData<ReconBatchResponse> page(String categoryCode, LocalDate billDate, String status, PageQuery page) {
@@ -204,7 +202,7 @@ public class ReconAppService {
             String ref = grant.getFulfillmentRef();
             ReconItemEntity hit = ref == null ? null : byRef.remove(ref);
             if (hit == null) {
-                insertPlatformOnly(batch.getId(), grant, now);
+                matchSupport.insertPlatformOnly(batch.getId(), grant, now);
                 platformOnly++;
                 continue;
             }
@@ -234,7 +232,7 @@ public class ReconAppService {
             leftover.setUpdatedAt(now);
             items.update(leftover);
         }
-        applyReviewFlags(batch.getId());
+        matchSupport.applyReviewFlags(batch.getId());
         batch.setPlatformCount(platform.size());
         batch.setChannelCount(channel.size());
         batch.setMatchedCount(matched);
@@ -244,7 +242,7 @@ public class ReconAppService {
         batch.setStatus(ReconBatchStatuses.DONE);
         batch.setUpdatedAt(now);
         batches.update(batch);
-        List<Long> autoIds = autoRefulfillIds(batch.getId());
+        List<Long> autoIds = matchSupport.autoRefulfillIds(batch.getId());
         afterCommit(() -> {
             for (Long id : autoIds) {
                 try {
@@ -383,69 +381,6 @@ public class ReconAppService {
         row.setUpdatedAt(now);
         grants.insert(row);
         return String.valueOf(row.getId());
-    }
-
-    private void insertPlatformOnly(long batchId, GrantRecordEntity grant, LocalDateTime now) {
-        ReconItemEntity item = new ReconItemEntity();
-        item.setBatchId(batchId);
-        item.setGrantRecordId(grant.getId());
-        item.setFulfillmentRef(grant.getFulfillmentRef());
-        item.setPlatformCostFen(grant.getCostFen());
-        item.setResult(ReconResults.PLATFORM_ONLY);
-        item.setAction(ReconActions.NONE);
-        item.setReviewStatus(ReconReviewStatuses.NONE);
-        item.setCreatedAt(now);
-        item.setUpdatedAt(now);
-        items.insert(item);
-        grant.setReconStatus(GrantRecordStatuses.RECON_DIFF);
-        grants.update(grant);
-    }
-
-    private void applyReviewFlags(long batchId) {
-        for (ReconItemEntity item : items.listAll(batchId)) {
-            GrantRecordEntity grant = item.getGrantRecordId() == null ? null : grants.getById(item.getGrantRecordId());
-            String fulfillment = grant == null ? null : grant.getFulfillmentStatus();
-            String failReason = grant == null ? null : grant.getFulfillFailReason();
-            if (ReconGates.needsChannelReview(item.getResult(), fulfillment, failReason)) {
-                item.setReviewStatus(ReconReviewStatuses.PENDING_REVIEW);
-                items.update(item);
-            }
-        }
-    }
-
-    private List<Long> autoRefulfillIds(long batchId) {
-        List<Long> ids = new ArrayList<>();
-        LocalDateTime now = RewardTime.toUtc(clock.instant());
-        for (ReconItemEntity item : items.listAll(batchId)) {
-            GrantRecordEntity grant = item.getGrantRecordId() == null ? null : grants.getById(item.getGrantRecordId());
-            if (grant == null) {
-                continue;
-            }
-            String policy = effectivePolicy(grant);
-            if (!ReconGates.autoRefulfillEligible(
-                    settings.autoRefulfillEnabled(),
-                    policy,
-                    item.getResult(),
-                    grant.getFulfillmentStatus(),
-                    grant.getFulfillFailReason())) {
-                continue;
-            }
-            item.setAction(ReconActions.REFULFILL);
-            item.setActionRef(String.valueOf(grant.getId()));
-            item.setUpdatedAt(now);
-            if (items.casAction(item) == 1) {
-                ids.add(grant.getId());
-            }
-        }
-        return ids;
-    }
-
-    private String effectivePolicy(GrantRecordEntity grant) {
-        PrizeEntity prize = prizes.getByIdIncludingDeleted(grant.getPrizeId());
-        PrizeCategoryEntity category = prize == null ? null : categories.getByCode(prize.getCategoryCode());
-        String prizePolicy = prize == null ? null : prize.getReconActionPolicy();
-        String categoryPolicy = category == null ? ReconPolicies.REVIEW : category.getReconActionPolicy();
-        return ReconPolicies.effective(prizePolicy, categoryPolicy);
     }
 
     private ReconBatchEntity requireDraft(long batchId) {
