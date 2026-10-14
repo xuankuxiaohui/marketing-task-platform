@@ -579,8 +579,9 @@ class GrantAppServiceTest {
         when(eventsOp.getIfAvailable()).thenReturn(events);
         when(resumerOp.getIfAvailable()).thenReturn(resumer);
 
+        GrantChecks checks = new GrantChecks(grants, riskOp, clock);
         grant = new GrantAppService(
-                prizes, categories, grants, logs, usersOp, riskOp, eventsOp, ledger, fulfillment, resumerOp, clock);
+                prizes, categories, grants, logs, usersOp, eventsOp, ledger, fulfillment, resumerOp, clock, checks);
 
         long prizeId = enableAlipay("red_op", 1);
         prizes.getById(prizeId).setRemainingStock(0);

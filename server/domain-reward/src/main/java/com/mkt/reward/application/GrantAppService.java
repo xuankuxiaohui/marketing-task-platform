@@ -11,11 +11,7 @@ import com.mkt.contract.PermanentGrantException;
 import com.mkt.contract.PermanentGrantReason;
 import com.mkt.contract.RetryableGrantException;
 import com.mkt.contract.RetryableGrantReason;
-import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskScene;
-import com.mkt.contract.RiskSubject;
-import com.mkt.contract.RiskVerdict;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
 import com.mkt.contract.event.EventCodes;
@@ -26,7 +22,6 @@ import com.mkt.reward.command.ManualGrantCommand;
 import com.mkt.reward.convert.RewardJson;
 import com.mkt.reward.convert.RewardTime;
 import com.mkt.reward.domain.ClaimModes;
-import com.mkt.reward.domain.ClaimWindows;
 import com.mkt.reward.domain.FailReasons;
 import com.mkt.reward.domain.GrantLimits;
 import com.mkt.reward.domain.GrantRecordStatuses;
@@ -45,7 +40,6 @@ import com.mkt.reward.support.RewardErrorCodes;
 import com.mkt.reward.support.RewardOperator;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
@@ -68,13 +62,13 @@ public class GrantAppService {
     private final GrantRecordStore grants;
     private final StockLogStore stockLogs;
     private final UserAttributePort users;
-    private final RiskCheckPort risk;
     private final EventPublisher events;
     private final GrantFailureLedger failures;
     private final FulfillmentService fulfillment;
     private final ObjectProvider<GrantStepResumer> resumerProvider;
     private final GrantStepResumer resumerDirect;
     private final Clock clock;
+    private final GrantChecks checks;
 
     @Autowired
     public GrantAppService(
@@ -83,24 +77,24 @@ public class GrantAppService {
             GrantRecordStore grants,
             StockLogStore stockLogs,
             ObjectProvider<UserAttributePort> users,
-            ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<EventPublisher> events,
             GrantFailureLedger failures,
             FulfillmentService fulfillment,
             ObjectProvider<GrantStepResumer> resumer,
-            Clock clock) {
+            Clock clock,
+            GrantChecks checks) {
         this.prizes = prizes;
         this.categories = categories;
         this.grants = grants;
         this.stockLogs = stockLogs;
         this.users = users.getIfAvailable();
-        this.risk = risk.getIfAvailable();
         this.events = events.getIfAvailable();
         this.failures = failures;
         this.fulfillment = fulfillment;
         this.resumerProvider = resumer;
         this.resumerDirect = null;
         this.clock = clock;
+        this.checks = checks;
     }
 
     public GrantAppService(
@@ -120,13 +114,13 @@ public class GrantAppService {
         this.grants = grants;
         this.stockLogs = stockLogs;
         this.users = users;
-        this.risk = risk;
         this.events = events;
         this.failures = failures;
         this.fulfillment = fulfillment;
         this.resumerProvider = null;
         this.resumerDirect = resumer;
         this.clock = clock;
+        this.checks = new GrantChecks(grants, risk, clock);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = PermanentGrantException.class)
@@ -233,7 +227,7 @@ public class GrantAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "补发原因必填");
         }
         long operatorId = RewardOperator.requireUserId();
-        List<BypassRule> bypass = parseBypass(command.bypassRules());
+        List<BypassRule> bypass = checks.parseBypass(command.bypassRules());
         GrantContext ctx = new GrantContext(command.reason().trim(), bypass, operatorId, false, null);
         String sourceId = GrantSourceIds.nextManual(clock);
         try {
@@ -342,14 +336,14 @@ public class GrantAppService {
         PrizeEntity after = prizes.getById(prizeId);
         int remaining = after.getRemainingStock();
         int before = remaining + 1;
-        assertClaimLimits(prize, userId, existing);
-        GrantContext effective = GrantLimits.allowBypass(grantSource) ? ctx : stripBypass(ctx);
+        checks.assertClaimLimits(prize, userId, existing);
+        GrantContext effective = GrantLimits.allowBypass(grantSource) ? ctx : checks.stripBypass(ctx);
         if (!GrantLimits.regionOk(prize, attrs, effective)
                 || !GrantLimits.levelOk(prize, attrs, effective)
                 || !GrantLimits.tagOk(prize, attrs, effective)) {
             throw new BusinessException(RewardErrorCodes.GRANT_COMBO_INVALID);
         }
-        checkRisk(userId, grantSource, ctx);
+        checks.checkRisk(userId, grantSource, ctx);
         PrizeCost cost = PrizeCosts.snapshot(
                 category == null ? null : category.getCostMode(),
                 prize.getUnitCostFen(),
@@ -507,57 +501,6 @@ public class GrantAppService {
         record.setUpdatedAt(now);
     }
 
-    private void assertClaimLimits(PrizeEntity prize, long userId, GrantRecordEntity existing) {
-        int daily = prize.getDailyClaimLimit() == null ? 0 : prize.getDailyClaimLimit();
-        int total = prize.getTotalClaimLimit() == null ? 0 : prize.getTotalClaimLimit();
-        long self = occupyingSlot(existing) ? 1 : 0;
-        if (daily > 0) {
-            long used = grants.countActive(userId, prize.getId(), ClaimWindows.dailyStartUtc(clock)) - self;
-            if (used >= daily) {
-                throw new BusinessException(RewardErrorCodes.CLAIM_LIMIT_EXCEEDED, "当日限领已达上限");
-            }
-        }
-        if (total > 0) {
-            long used = grants.countActive(userId, prize.getId(), null) - self;
-            if (used >= total) {
-                throw new BusinessException(RewardErrorCodes.CLAIM_LIMIT_EXCEEDED, "累计限领已达上限");
-            }
-        }
-    }
-
-    private static boolean occupyingSlot(GrantRecordEntity existing) {
-        return existing != null && GrantRecordStatuses.LIMIT_COUNT.contains(existing.getStatus());
-    }
-
-    private void checkRisk(long userId, GrantSource grantSource, GrantContext ctx) {
-        if (risk == null) {
-            return;
-        }
-        Long elapsed = ctx.simulated() || grantSource != GrantSource.TASK_STEP ? null : ctx.elapsedSeconds();
-        RiskVerdict verdict = risk.check(
-                RiskScene.GRANT,
-                new RiskSubject(userId, clientIp(ctx), clientDevice(ctx), elapsed, ctx.simulated()));
-        if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
-            if (grantSource == GrantSource.MANUAL_GRANT) {
-                throw new BusinessException(RewardErrorCodes.RISK_BLOCKED_ACCOUNT);
-            }
-            throw new BusinessException(RewardErrorCodes.RISK_BLOCKED_GENERIC);
-        }
-    }
-
-    private static String clientIp(GrantContext ctx) {
-        String ip = ctx.ip();
-        if (ip == null || ip.isBlank() || "0.0.0.0".equals(ip)) {
-            return null;
-        }
-        return ip;
-    }
-
-    private static String clientDevice(GrantContext ctx) {
-        String device = ctx.deviceId();
-        return device == null || device.isBlank() ? null : device;
-    }
-
     private void appendStockLog(
             long prizeId,
             String changeType,
@@ -620,35 +563,6 @@ public class GrantAppService {
             return new BusinessException(RewardErrorCodes.STOCK_INSUFFICIENT);
         }
         return new BusinessException(CommonErrorCodes.SERVER_ERROR);
-    }
-
-    private static GrantContext stripBypass(GrantContext ctx) {
-        return new GrantContext(
-                ctx.reason(),
-                List.of(),
-                ctx.operatorId(),
-                ctx.simulated(),
-                ctx.elapsedSeconds(),
-                ctx.ip(),
-                ctx.deviceId());
-    }
-
-    private static List<BypassRule> parseBypass(List<String> raw) {
-        if (raw == null || raw.isEmpty()) {
-            return List.of();
-        }
-        List<BypassRule> rules = new ArrayList<>();
-        for (String item : raw) {
-            if (item == null) {
-                continue;
-            }
-            try {
-                rules.add(BypassRule.valueOf(item.trim()));
-            } catch (IllegalArgumentException ignored) {
-                // only REGION/LEVEL/TAG are defined
-            }
-        }
-        return List.copyOf(rules);
     }
 
     private static boolean simulated(GrantRecordEntity row) {
