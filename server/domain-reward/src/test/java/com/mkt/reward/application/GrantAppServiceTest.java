@@ -580,8 +580,19 @@ class GrantAppServiceTest {
         when(resumerOp.getIfAvailable()).thenReturn(resumer);
 
         GrantChecks checks = new GrantChecks(grants, riskOp, clock);
+        GrantStockLogs stockLogs = new GrantStockLogs(logs, clock);
         grant = new GrantAppService(
-                prizes, categories, grants, logs, usersOp, eventsOp, ledger, fulfillment, resumerOp, clock, checks);
+                prizes,
+                categories,
+                grants,
+                usersOp,
+                eventsOp,
+                ledger,
+                fulfillment,
+                resumerOp,
+                clock,
+                checks,
+                stockLogs);
 
         long prizeId = enableAlipay("red_op", 1);
         prizes.getById(prizeId).setRemainingStock(0);
