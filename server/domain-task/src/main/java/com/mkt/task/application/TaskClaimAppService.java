@@ -1,11 +1,7 @@
 package com.mkt.task.application;
 
 import com.mkt.contract.AccountStatus;
-import com.mkt.contract.RiskAction;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskScene;
-import com.mkt.contract.RiskSubject;
-import com.mkt.contract.RiskVerdict;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
@@ -33,7 +29,6 @@ import com.mkt.task.engine.StepEngineViews;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
-import com.mkt.task.entity.TaskMutexGroupEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.CrowdResolver;
 import com.mkt.task.expression.EvalContexts;
@@ -44,8 +39,6 @@ import com.mkt.task.support.TaskSettings;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
@@ -62,12 +55,11 @@ public class TaskClaimAppService {
     private final TaskVersionSnapshotStore snapshots;
     private final TaskInstanceStore instances;
     private final TaskCrowdStore crowds;
-    private final TaskMutexGroupStore mutexGroups;
     private final UserAttributePort users;
-    private final RiskCheckPort risk;
     private final EventPublisher events;
     private final Clock clock;
     private final TaskSettings settings;
+    private final ClaimChecks checks;
     private final ClaimEnterEngine enter;
 
     @Autowired
@@ -76,12 +68,11 @@ public class TaskClaimAppService {
             TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
-            TaskMutexGroupStore mutexGroups,
             ObjectProvider<UserAttributePort> users,
-            ObjectProvider<RiskCheckPort> risk,
             ObjectProvider<EventPublisher> events,
             Clock clock,
             TaskSettings settings,
+            ClaimChecks checks,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
@@ -92,12 +83,11 @@ public class TaskClaimAppService {
                 snapshots,
                 instances,
                 crowds,
-                mutexGroups,
                 users.getIfAvailable(),
-                risk.getIfAvailable(),
                 events.getIfAvailable(),
                 clock,
                 settings,
+                checks,
                 rewardOps,
                 cascadeOps,
                 advanceOps,
@@ -136,12 +126,11 @@ public class TaskClaimAppService {
                 snapshots,
                 instances,
                 crowds,
-                mutexGroups,
                 users,
-                risk,
                 events,
                 clock,
                 settings,
+                new ClaimChecks(mutexGroups, instances, risk, settings),
                 new StepEngineReward(instances, events, clock, rewards));
     }
 
@@ -150,24 +139,22 @@ public class TaskClaimAppService {
             TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
-            TaskMutexGroupStore mutexGroups,
             UserAttributePort users,
-            RiskCheckPort risk,
             EventPublisher events,
             Clock clock,
             TaskSettings settings,
+            ClaimChecks checks,
             StepEngineReward rewardOps) {
         this(
                 definitions,
                 snapshots,
                 instances,
                 crowds,
-                mutexGroups,
                 users,
-                risk,
                 events,
                 clock,
                 settings,
+                checks,
                 rewardOps,
                 new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
@@ -177,12 +164,11 @@ public class TaskClaimAppService {
             TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
-            TaskMutexGroupStore mutexGroups,
             UserAttributePort users,
-            RiskCheckPort risk,
             EventPublisher events,
             Clock clock,
             TaskSettings settings,
+            ClaimChecks checks,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps) {
         this(
@@ -190,12 +176,11 @@ public class TaskClaimAppService {
                 snapshots,
                 instances,
                 crowds,
-                mutexGroups,
                 users,
-                risk,
                 events,
                 clock,
                 settings,
+                checks,
                 rewardOps,
                 cascadeOps,
                 new StepEngineAdvance(instances, clock, cascadeOps));
@@ -206,12 +191,11 @@ public class TaskClaimAppService {
             TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
-            TaskMutexGroupStore mutexGroups,
             UserAttributePort users,
-            RiskCheckPort risk,
             EventPublisher events,
             Clock clock,
             TaskSettings settings,
+            ClaimChecks checks,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps) {
@@ -220,12 +204,11 @@ public class TaskClaimAppService {
                 snapshots,
                 instances,
                 crowds,
-                mutexGroups,
                 users,
-                risk,
                 events,
                 clock,
                 settings,
+                checks,
                 rewardOps,
                 cascadeOps,
                 advanceOps,
@@ -238,12 +221,11 @@ public class TaskClaimAppService {
             TaskVersionSnapshotStore snapshots,
             TaskInstanceStore instances,
             TaskCrowdStore crowds,
-            TaskMutexGroupStore mutexGroups,
             UserAttributePort users,
-            RiskCheckPort risk,
             EventPublisher events,
             Clock clock,
             TaskSettings settings,
+            ClaimChecks checks,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
@@ -253,12 +235,11 @@ public class TaskClaimAppService {
         this.snapshots = snapshots;
         this.instances = instances;
         this.crowds = crowds;
-        this.mutexGroups = mutexGroups;
         this.users = users;
-        this.risk = risk;
         this.events = events;
         this.clock = clock;
         this.settings = settings;
+        this.checks = checks;
         this.enter = new ClaimEnterEngine(
                 instances, events, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
     }
@@ -302,9 +283,9 @@ public class TaskClaimAppService {
         if (!visibility.visible()) {
             throw new BusinessException(TaskErrorCodes.CLAIM_NOT_VISIBLE);
         }
-        checkRisk(userId, ip, deviceId, simulated);
-        checkMutex(snapshot, userId, cycleKey);
-        checkDailyLimit(userId, now);
+        checks.checkRisk(userId, ip, deviceId, simulated);
+        checks.checkMutex(snapshot, userId, cycleKey);
+        checks.checkDailyLimit(userId, now);
         Inserted inserted = insertInstance(definition, snapshot, userId, cycleKey, now, simulated);
         if (!inserted.created()) {
             return toStart(inserted.row(), platform);
@@ -384,44 +365,6 @@ public class TaskClaimAppService {
     }
 
     private record Inserted(TaskInstanceEntity row, boolean created) {}
-
-    private void checkRisk(long userId, String ip, String deviceId, boolean simulated) {
-        if (risk == null) {
-            return;
-        }
-        String resolvedIp = ip == null || ip.isBlank() || "0.0.0.0".equals(ip) ? null : ip;
-        RiskVerdict verdict =
-                risk.check(RiskScene.CLAIM, new RiskSubject(userId, resolvedIp, deviceId, null, simulated));
-        if (verdict.action() == RiskAction.REJECT || verdict.action() == RiskAction.SILENT_REJECT) {
-            throw new BusinessException(TaskErrorCodes.RISK_BLOCKED_GENERIC);
-        }
-    }
-
-    private void checkMutex(SnapshotContent snapshot, long userId, String cycleKey) {
-        String mutexCode = snapshot.mutexGroupCode();
-        if (mutexCode == null || mutexCode.isBlank()) {
-            return;
-        }
-        TaskMutexGroupEntity group = mutexGroups.getByCode(mutexCode);
-        if (group == null) {
-            return;
-        }
-        String matchCycle = group.crossCycleFlag() ? null : cycleKey;
-        if (instances.existsMutexInProgress(userId, mutexCode, matchCycle)) {
-            throw new BusinessException(TaskErrorCodes.CLAIM_MUTEX_BLOCKED);
-        }
-    }
-
-    private void checkDailyLimit(long userId, Instant now) {
-        ZonedDateTime zoned = now.atZone(CycleKeyResolver.ZONE);
-        LocalDateTime from = TaskTime.toUtc(zoned.toLocalDate().atStartOfDay(CycleKeyResolver.ZONE).toInstant());
-        LocalDateTime to = TaskTime.toUtc(
-                zoned.toLocalDate().plusDays(1).atStartOfDay(CycleKeyResolver.ZONE).toInstant());
-        int today = instances.countToday(userId, from, to);
-        if (today >= settings.dailyLimitPerUser()) {
-            throw new BusinessException(TaskErrorCodes.CLAIM_DAILY_LIMIT);
-        }
-    }
 
     private VisibilityResult visibility(
             TaskDefinitionEntity definition,
