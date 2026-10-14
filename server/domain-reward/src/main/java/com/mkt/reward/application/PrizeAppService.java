@@ -8,7 +8,6 @@ import com.mkt.reward.command.PrizeConfirmCommand;
 import com.mkt.reward.command.PrizeSaveCommand;
 import com.mkt.reward.command.StockReplenishCommand;
 import com.mkt.reward.convert.RewardJson;
-import com.mkt.reward.convert.RewardTime;
 import com.mkt.reward.domain.PrizeParamRules;
 import com.mkt.reward.domain.PrizeStatuses;
 import com.mkt.reward.domain.StockChangeTypes;
@@ -40,6 +39,7 @@ public class PrizeAppService {
     private final Clock clock;
     private final PrizeValidate validate;
     private final PrizeApply apply;
+    private final PrizeViews views;
 
     @Autowired
     public PrizeAppService(
@@ -48,13 +48,15 @@ public class PrizeAppService {
             SnapshotPrizeLookup snapshots,
             Clock clock,
             PrizeValidate validate,
-            PrizeApply apply) {
+            PrizeApply apply,
+            PrizeViews views) {
         this.prizes = prizes;
         this.stockLogs = stockLogs;
         this.snapshots = snapshots;
         this.clock = clock;
         this.validate = validate;
         this.apply = apply;
+        this.views = views;
     }
 
     public PrizeAppService(
@@ -63,11 +65,11 @@ public class PrizeAppService {
             StockLogStore stockLogs,
             SnapshotPrizeLookup snapshots,
             Clock clock) {
-        this(prizes, stockLogs, snapshots, clock, new PrizeValidate(categories), new PrizeApply());
+        this(prizes, stockLogs, snapshots, clock, new PrizeValidate(categories), new PrizeApply(), new PrizeViews());
     }
 
     public PrizeResponse get(long id) {
-        return toResponse(require(id));
+        return views.toResponse(require(id));
     }
 
     public PageData<PrizeResponse> page(PrizeQuery query) {
@@ -81,7 +83,7 @@ public class PrizeAppService {
                 query.groupId(),
                 page.offset(),
                 page.pageSize());
-        return new PageData<>(total, rows.stream().map(PrizeAppService::toResponse).toList());
+        return new PageData<>(total, rows.stream().map(views::toResponse).toList());
     }
 
     @Transactional
@@ -111,7 +113,7 @@ public class PrizeAppService {
         } catch (DuplicateKeyException ex) {
             throw new BusinessException(RewardErrorCodes.PRIZE_DUPLICATE_CODE, ex);
         }
-        return toResponse(entity);
+        return views.toResponse(entity);
     }
 
     @Transactional
@@ -149,7 +151,7 @@ public class PrizeAppService {
             prizes.resetDraftStock(id);
             existing.setRemainingStock(normalized.totalStock());
         }
-        return toResponse(existing);
+        return views.toResponse(existing);
     }
 
     @Transactional
@@ -242,7 +244,7 @@ public class PrizeAppService {
         require(id);
         long total = stockLogs.countByPrize(id);
         List<StockLogEntity> rows = stockLogs.listByPrize(id, page.offset(), page.pageSize());
-        return new PageData<>(total, rows.stream().map(PrizeAppService::toLogView).toList());
+        return new PageData<>(total, rows.stream().map(views::toLogView).toList());
     }
 
     private PrizeEntity require(long id) {
@@ -273,47 +275,5 @@ public class PrizeAppService {
         log.setOperatorId(operatorId);
         log.setCreatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         stockLogs.insert(log);
-    }
-
-    private static PrizeResponse toResponse(PrizeEntity entity) {
-        return new PrizeResponse(
-                entity.getId(),
-                entity.getCode(),
-                entity.getName(),
-                entity.getImageUrl(),
-                entity.getDescription(),
-                entity.getCategoryCode(),
-                RewardJson.map(entity.getTypeParams()),
-                entity.getRewardTarget(),
-                entity.getFulfillmentMode(),
-                entity.getUnitCostFen(),
-                entity.getTotalStock(),
-                entity.getRemainingStock(),
-                entity.getDailyClaimLimit(),
-                entity.getTotalClaimLimit(),
-                RewardJson.strings(entity.getRegionLimit()),
-                RewardJson.strings(entity.getLevelLimit()),
-                RewardJson.strings(entity.getTagLimit()),
-                entity.getClaimMode(),
-                entity.getReconActionPolicy(),
-                entity.getExpireHours(),
-                entity.getGroupId(),
-                entity.getStatus(),
-                RewardJson.map(entity.getExtConfig()),
-                RewardTime.toInstant(entity.getCreatedAt()));
-    }
-
-    private static StockLogView toLogView(StockLogEntity entity) {
-        return new StockLogView(
-                entity.getId(),
-                entity.getPrizeId(),
-                entity.getChangeType(),
-                entity.getAmount(),
-                entity.getBeforeValue(),
-                entity.getAfterValue(),
-                entity.getBizSource(),
-                entity.getBizId(),
-                entity.getOperatorId(),
-                RewardTime.toInstant(entity.getCreatedAt()));
     }
 }
