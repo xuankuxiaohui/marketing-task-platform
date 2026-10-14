@@ -59,7 +59,7 @@ SEED_SCALE=p1 DURATION=5m bash perf/run-full.sh
 
 每次报告至少记录：提交/脏工作区情况、日期、机器及容器资源、节点数、数据库/Redis 拓扑、数据量、冷热缓存、加压时长、实际有效吞吐、P95、业务错误、丢弃/未调度量、锁等待和 Outbox 积压。恢复场景另记录停机期间积压及恢复后的排空过程。拓扑须为 **portal×2 + admin×1 经 nginx**，不得用单实例结果外推。
 
-历史 Aviator 记录来自 [AviatorSmokeTest.cachedEvalP99UnderOneMs](../spike/6-aviator/src/test/java/com/mkt/spike/aviator/AviatorSmokeTest.java)：缓存编译表达式 `province() == 'GD' && userLevel() >= 3`，采样 10,000 次，断言 P99 < 1ms。旧文档曾记“通过”，但本轮没有核验其执行环境和原始报告；它既不是当前测试通过证明，也不代表带 IO 的业务规则延迟。
+历史 Aviator 记录来自 [AviatorSmokeTest.cachedEvalP99UnderOneMs](../docs/archive/spike/6-aviator/src/test/java/com/mkt/spike/aviator/AviatorSmokeTest.java)：缓存编译表达式 `province() == 'GD' && userLevel() >= 3`，采样 10,000 次，断言 P99 < 1ms。旧文档曾记“通过”，但本轮没有核验其执行环境和原始报告；它既不是当前测试通过证明，也不代表带 IO 的业务规则延迟。
 
 完成性能验证后，将报告引用填入[首次上线清单](../deploy/R31-go-live-checklist.md)。
 - 2026-10-12 list alloc/response hygiene FAIL: perf/reports/2026-10-12/list-alloc-hygiene.json

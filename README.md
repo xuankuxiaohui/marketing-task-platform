@@ -27,7 +27,7 @@
 | `web/packages/shared/` | 两端共享的契约类型与纯工具 |
 | `docs/` | 导航、功能盘点、重构计划、决策与验证记录 |
 | `scripts/`、`deploy/`、`ci/`、`perf/` | 本地开发、部署模板、CI、性能验证 |
-| `spike/` | 历史组件验证实验，不是正式业务实现 |
+| `spike/` | 历史组件验证实验已归档 → [`docs/archive/spike/`](docs/archive/spike/)；根目录仅留指针 |
 
 后端采用模块化单体内核，部署为 `admin-app` 与 `portal-app`。管理应用处理 `/admin/**`；门户应用处理 `/api/**` 和内部回调 `/internal/**`。内部回调及监控端点不向公网开放。任务推进与奖励发放保持同进程、同数据库事务。
 

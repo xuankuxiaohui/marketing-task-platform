@@ -39,7 +39,7 @@
 |---|---|---|---|---|
 | D1 | 服务端未发现「类名零引用」的 main 类（排除 Controller/Config/Listener/Job 等框架入口后） | 全量类名 grep | — | — |
 | D2 | 前端 client/admin/shared 未发现零引用源文件 | 文件名 import grep | — | — |
-| D3 | 根目录 `spike/`（8 个技术验证子目录，46 个跟踪文件）自 2026-08-19 后未动，不参与构建 | `git log -- spike` | P3 | S（归档或删） |
+| D3 | 根目录 `spike/`（8 个技术验证子目录，46 个跟踪文件）自 2026-08-19 后未动，不参与构建 | `git log -- spike` | P3 | S | **done 2026-10-14** → `docs/archive/spike/`；根留 `spike/README.md` 指针 |
 | D4 | 根目录 `com/` 里有本地编译残留 `.class`（未跟踪，已被 `*.class` 忽略） | 仅本机杂物，不进仓库 | P3 | S |
 | D5 | `docs/capacity`(35) + `deploy/drills`(56) 共 90+ 份容量/演练 md，多为 FAIL 证据 | **2026-10-13 Top4 已归档** → `docs/archive/`；活页 `docs/capacity/STATUS.md` + `ARCHIVE-INDEX.md` | P2 | M（归档，非删） **done** |
 
