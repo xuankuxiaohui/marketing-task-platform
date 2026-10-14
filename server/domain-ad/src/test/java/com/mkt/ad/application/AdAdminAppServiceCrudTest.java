@@ -370,8 +370,8 @@ class AdAdminAppServiceCrudTest {
         AdPlacementView open = placementView(null, END);
         AdPlacementView touching = placementView(END, END.plusSeconds(60));
         AdPlacementView overlapping = placementView(END.minusSeconds(1), END.plusSeconds(60));
-        assertThat(AdAdminAppService.overlapCount(List.of(open, touching))).isZero();
-        assertThat(AdAdminAppService.overlapCount(List.of(open, overlapping, touching))).isEqualTo(1);
+        assertThat(AdAdminViews.overlapCount(List.of(open, touching))).isZero();
+        assertThat(AdAdminViews.overlapCount(List.of(open, overlapping, touching))).isEqualTo(1);
     }
 
     @Test

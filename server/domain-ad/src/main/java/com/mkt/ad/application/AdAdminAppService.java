@@ -5,7 +5,6 @@ import com.mkt.ad.command.AdPlacementSaveCommand;
 import com.mkt.ad.command.AdPositionSaveCommand;
 import com.mkt.ad.convert.AdFieldCodec;
 import com.mkt.ad.domain.AdCodes;
-import com.mkt.ad.domain.AdDates;
 import com.mkt.ad.domain.AdForms;
 import com.mkt.ad.domain.AdPlatforms;
 import com.mkt.ad.domain.AdStatuses;
@@ -15,7 +14,6 @@ import com.mkt.ad.entity.AdPositionMaterialEntity;
 import com.mkt.ad.query.AdMaterialQuery;
 import com.mkt.ad.query.AdPositionQuery;
 import com.mkt.ad.response.AdMaterialView;
-import com.mkt.ad.response.AdPlacementView;
 import com.mkt.ad.response.AdPositionView;
 import com.mkt.ad.response.AdSaveResponse;
 import com.mkt.ad.response.OkResponse;
@@ -27,8 +25,6 @@ import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +41,7 @@ public class AdAdminAppService {
     private final PlatformCache cache;
     private final AdAdminValidate validate;
     private final AdAdminApply apply;
+    private final AdAdminViews views;
 
     @Autowired
     public AdAdminAppService(
@@ -53,13 +50,15 @@ public class AdAdminAppService {
             AdPlacementStore placements,
             PlatformCache cache,
             AdAdminValidate validate,
-            AdAdminApply apply) {
+            AdAdminApply apply,
+            AdAdminViews views) {
         this.positions = positions;
         this.materials = materials;
         this.placements = placements;
         this.cache = cache;
         this.validate = validate;
         this.apply = apply;
+        this.views = views;
     }
 
     public AdAdminAppService(
@@ -67,7 +66,14 @@ public class AdAdminAppService {
             AdMaterialStore materials,
             AdPlacementStore placements,
             PlatformCache cache) {
-        this(positions, materials, placements, cache, new AdAdminValidate(), new AdAdminApply());
+        this(
+                positions,
+                materials,
+                placements,
+                cache,
+                new AdAdminValidate(),
+                new AdAdminApply(),
+                new AdAdminViews(materials, placements));
     }
 
     public PageData<AdPositionView> pagePositions(AdPositionQuery query) {
@@ -76,13 +82,13 @@ public class AdAdminAppService {
         List<AdPositionView> rows = positions
                 .listByQuery(query.code(), query.form(), query.status(), page.offset(), page.pageSize())
                 .stream()
-                .map(this::toPositionView)
+                .map(views::toPositionView)
                 .toList();
         return new PageData<>(total, rows);
     }
 
     public AdPositionView getPosition(long id) {
-        return toPositionView(requirePosition(id));
+        return views.toPositionView(requirePosition(id));
     }
 
     @Transactional
@@ -151,13 +157,13 @@ public class AdAdminAppService {
         List<AdMaterialView> rows = materials
                 .listByQuery(query.title(), query.status(), page.offset(), page.pageSize())
                 .stream()
-                .map(this::toMaterialView)
+                .map(views::toMaterialView)
                 .toList();
         return new PageData<>(total, rows);
     }
 
     public AdMaterialView getMaterial(long id) {
-        return toMaterialView(requireMaterial(id));
+        return views.toMaterialView(requireMaterial(id));
     }
 
     @Transactional
@@ -238,73 +244,6 @@ public class AdAdminAppService {
             throw new BusinessException(AdErrorCodes.MATERIAL_NOT_FOUND);
         }
         return entity;
-    }
-
-    private AdPositionView toPositionView(AdPositionEntity entity) {
-        List<AdPositionMaterialEntity> rels = placements.listByPositionId(entity.getId());
-        List<Long> ids = rels.stream().map(AdPositionMaterialEntity::getMaterialId).toList();
-        Map<Long, AdMaterialEntity> byId = new HashMap<>();
-        for (AdMaterialEntity material : materials.listByIds(ids)) {
-            byId.put(material.getId(), material);
-        }
-        List<AdPlacementView> views = new ArrayList<>();
-        for (AdPositionMaterialEntity rel : rels) {
-            AdMaterialEntity material = byId.get(rel.getMaterialId());
-            views.add(toPlacementView(rel, material));
-        }
-        return new AdPositionView(
-                entity.getId(),
-                entity.getCode(),
-                entity.getName(),
-                entity.getForm(),
-                AdFieldCodec.strings(entity.getPlatforms()),
-                entity.getStatus(),
-                views,
-                overlapCount(views));
-    }
-
-    private AdPlacementView toPlacementView(AdPositionMaterialEntity rel, AdMaterialEntity material) {
-        return new AdPlacementView(
-                rel.getId(),
-                rel.getPositionId(),
-                rel.getMaterialId(),
-                rel.weightOrZero(),
-                AdDates.toInstant(rel.getStartTime()),
-                AdDates.toInstant(rel.getEndTime()),
-                AdFieldCodec.strings(rel.getPlatforms()),
-                rel.getGrayType(),
-                rel.getGrayRatio(),
-                rel.getCrowdId(),
-                rel.getStatus(),
-                material == null ? null : toMaterialView(material));
-    }
-
-    private AdMaterialView toMaterialView(AdMaterialEntity entity) {
-        return new AdMaterialView(
-                entity.getId(),
-                entity.getTitle(),
-                entity.getSubtitle(),
-                entity.getImageUrl(),
-                entity.getJumpType(),
-                AdFieldCodec.map(entity.getJumpParams()),
-                entity.weightOrZero(),
-                AdDates.toInstant(entity.getStartTime()),
-                AdDates.toInstant(entity.getEndTime()),
-                entity.getStatus());
-    }
-
-    static int overlapCount(List<AdPlacementView> views) {
-        int count = 0;
-        for (int i = 0; i < views.size(); i++) {
-            for (int j = i + 1; j < views.size(); j++) {
-                AdPlacementView a = views.get(i);
-                AdPlacementView b = views.get(j);
-                if (AdDates.overlap(a.startTime(), a.endTime(), b.startTime(), b.endTime())) {
-                    count++;
-                }
-            }
-        }
-        return count;
     }
 
     private void evictPlacementsOf(long materialId) {
