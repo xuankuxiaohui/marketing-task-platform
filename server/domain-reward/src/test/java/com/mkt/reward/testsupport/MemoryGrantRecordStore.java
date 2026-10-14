@@ -22,6 +22,8 @@ public final class MemoryGrantRecordStore implements GrantRecordStore {
     private final ConcurrentHashMap<Long, String> persistedStatus = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, String> persistedFulfillment = new ConcurrentHashMap<>();
     private final AtomicLong seq = new AtomicLong(1);
+    /** One-shot CAS-lose: install this fresh row instance and return 0 from the next matching updateIfFulfillment. */
+    private volatile GrantRecordEntity failNextUpdateIfWith;
 
     @Override
     public GrantRecordEntity getById(long id) {
@@ -208,9 +210,22 @@ public final class MemoryGrantRecordStore implements GrantRecordStore {
                 .orElse(null);
     }
 
+    /** Test hook: next {@link #updateIfFulfillment} for this id installs {@code concurrent} and returns 0. */
+    public void failNextUpdateIfFulfillmentWith(GrantRecordEntity concurrent) {
+        this.failNextUpdateIfWith = concurrent;
+    }
+
     @Override
     public int updateIfFulfillment(GrantRecordEntity entity, String expectedFulfillment) {
         if (entity.getId() == null || !rows.containsKey(entity.getId())) {
+            return 0;
+        }
+        GrantRecordEntity staged = failNextUpdateIfWith;
+        if (staged != null && entity.getId().equals(staged.getId())) {
+            failNextUpdateIfWith = null;
+            rows.put(staged.getId(), staged);
+            persistedFulfillment.put(staged.getId(), staged.getFulfillmentStatus());
+            persistedStatus.put(staged.getId(), staged.getStatus());
             return 0;
         }
         boolean replaced =
