@@ -369,6 +369,21 @@ class GrantAppServiceTest {
     }
 
     @Test
+    void retryPermanentFailedKeepsRowWhenPrizeEnabledAgain() {
+        long prizeId = enableAlipay("red_retry_perm_hit", 1);
+        prizes.getById(prizeId).setStatus(com.mkt.reward.domain.PrizeStatuses.DISABLED);
+        assertThatThrownBy(() -> grant.grant(prizeId, 9L, GrantSource.TASK_STEP, "s-rp-hit", GrantContext.defaults()))
+                .isInstanceOf(PermanentGrantException.class);
+        GrantRecordEntity failed = grants.getByIdempotent("TASK_STEP", "s-rp-hit", prizeId);
+        prizes.getById(prizeId).setStatus(com.mkt.reward.domain.PrizeStatuses.ENABLED);
+
+        GrantRetryResponse response = grant.retry(failed.getId());
+        assertThat(response.status()).isEqualTo(GrantRecordStatuses.PERMANENT_FAILED);
+        assertThat(grants.getById(failed.getId()).getStatus()).isEqualTo(GrantRecordStatuses.PERMANENT_FAILED);
+        assertThat(prizes.getById(prizeId).getRemainingStock()).isEqualTo(1);
+    }
+
+    @Test
     void retryDueAndListDueRetry() {
         long prizeId = enableAlipay("red_due", 2);
         prizes.getById(prizeId).setRemainingStock(0);
