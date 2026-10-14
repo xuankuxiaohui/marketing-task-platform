@@ -42,7 +42,6 @@ public final class StepEngine {
     private final TaskInstanceStore instances;
     private final TaskProgressReportStore reports;
     private final Clock clock;
-    private final TaskSettings settings;
     private final StepEngineReward rewardOps;
     private final StepEngineCascadeSupport cascadeOps;
     private final StepEngineAdvance advanceOps;
@@ -54,13 +53,7 @@ public final class StepEngine {
             Clock clock,
             TaskSettings settings,
             RewardPort rewards) {
-        this(
-                instances,
-                reports,
-                clock,
-                settings,
-                new StepEngineReward(instances, events, clock, rewards),
-                new StepEngineCascadeSupport(instances, events, clock));
+        this(instances, reports, events, clock, settings, new StepEngineReward(instances, events, clock, rewards));
     }
 
     public StepEngine(
@@ -76,7 +69,7 @@ public final class StepEngine {
                 clock,
                 settings,
                 rewardOps,
-                new StepEngineCascadeSupport(instances, events, clock));
+                new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
 
     public StepEngine(
@@ -107,7 +100,6 @@ public final class StepEngine {
         this.instances = instances;
         this.reports = reports;
         this.clock = clock;
-        this.settings = settings;
         this.rewardOps = rewardOps;
         this.cascadeOps = cascadeOps;
         this.advanceOps = advanceOps;
@@ -144,7 +136,7 @@ public final class StepEngine {
             row.setCreatedAt(utc);
             instances.insertStep(row);
         }
-        cascade(instance, snapshot, attrs, crowds, 0, true, new ArrayList<>(), ip, deviceId);
+        cascadeOps.cascade(instance, snapshot, attrs, crowds, 0, true, new ArrayList<>(), ip, deviceId);
     }
 
     public StepAdvanceResult click(
@@ -243,49 +235,6 @@ public final class StepEngine {
         }
     }
 
-    private void cascade(
-            TaskInstanceEntity instance,
-            SnapshotContent snapshot,
-            UserAttributes attrs,
-            CrowdResolver crowds,
-            int fromSeq,
-            boolean sameRequestInsert,
-            List<RewardFeedbackView> feedback,
-            String ip,
-            String deviceId) {
-        int max = settings.stepMaxCount();
-        int seq = fromSeq;
-        for (int i = 0; i < max; i++) {
-            TaskInstanceStepEntity next = cascadeOps.resolveNext(instance.getId(), snapshot, attrs, crowds, seq);
-            if (next == null) {
-                cascadeOps.completeInstance(instance);
-                return;
-            }
-            Instant now = clock.instant();
-            rejectIfExpired(instance, now);
-            if (instances.activateStep(next.getId(), TaskTime.toUtc(now)) != 1) {
-                return;
-            }
-            next.setStatus(StepStatuses.ACTIVE);
-            next.setActivatedAt(TaskTime.toUtc(now));
-            if (StepTypes.PASSIVE.equals(next.getType())) {
-                if (!rewardOps.holdComplete(instance, next)) {
-                    return;
-                }
-                seq = seqOf(next);
-                continue;
-            }
-            if (StepTypes.REWARD.equals(next.getType())) {
-                if (!rewardOps.grantReward(instance, next, snapshot, sameRequestInsert, now, feedback, ip, deviceId)) {
-                    return;
-                }
-                seq = seqOf(next);
-                continue;
-            }
-            return;
-        }
-    }
-
     /**
      * Retry/scheduler path: CAS-complete an ACTIVE REWARD step and continue cascade.
      * Terminal instances keep the grant but are not revived (R14.10).
@@ -313,7 +262,7 @@ public final class StepEngine {
             if (!rewardOps.holdComplete(instance, step)) {
                 return;
             }
-            cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>(), null, null);
+            cascadeOps.cascade(instance, snapshot, attrs, crowds, seqOf(step), false, new ArrayList<>(), null, null);
         } catch (BusinessException ex) {
             if (ex.errorCode() != TaskErrorCodes.INSTANCE_EXPIRED) {
                 throw ex;

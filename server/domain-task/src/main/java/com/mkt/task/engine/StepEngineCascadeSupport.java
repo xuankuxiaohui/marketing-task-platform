@@ -11,6 +11,7 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
+import com.mkt.task.domain.StepTypes;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.expression.CompiledExpression;
@@ -19,7 +20,9 @@ import com.mkt.task.expression.EvalContext;
 import com.mkt.task.expression.EvalContexts;
 import com.mkt.task.expression.ExpressionCompileException;
 import com.mkt.task.expression.ExpressionEngine;
+import com.mkt.task.response.RewardFeedbackView;
 import com.mkt.task.support.TaskErrorCodes;
+import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,8 +35,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Cascade helpers extracted from {@link StepEngine} (R9-2).
- * Move-only: resolveNext / completeInstance / appendStepComplete semantics unchanged.
+ * Cascade helpers extracted from {@link StepEngine} (R9-2, R9-4).
+ * Move-only: cascade / resolveNext / completeInstance / appendStepComplete semantics unchanged.
+ * {@code cascade} stays verbatim, including {@code cascadeOps.*} calls on this collaborator.
  * {@code progressTarget}, {@code rejectIfExpired}, {@code eval} (and the helpers they call)
  * are copied so the moved bodies stay verbatim.
  */
@@ -43,17 +47,75 @@ public class StepEngineCascadeSupport {
     private final TaskInstanceStore instances;
     private final EventPublisher events;
     private final Clock clock;
+    private final TaskSettings settings;
+    private final StepEngineReward rewardOps;
+    private final StepEngineCascadeSupport cascadeOps;
 
     @Autowired
     public StepEngineCascadeSupport(
-            TaskInstanceStore instances, ObjectProvider<EventPublisher> events, Clock clock) {
-        this(instances, events.getIfAvailable(), clock);
+            TaskInstanceStore instances,
+            ObjectProvider<EventPublisher> events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps) {
+        this(instances, events.getIfAvailable(), clock, settings, rewardOps);
     }
 
-    public StepEngineCascadeSupport(TaskInstanceStore instances, EventPublisher events, Clock clock) {
+    public StepEngineCascadeSupport(
+            TaskInstanceStore instances,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps) {
         this.instances = instances;
         this.events = events;
         this.clock = clock;
+        this.settings = settings;
+        this.rewardOps = rewardOps;
+        this.cascadeOps = this;
+    }
+
+    void cascade(
+            TaskInstanceEntity instance,
+            SnapshotContent snapshot,
+            UserAttributes attrs,
+            CrowdResolver crowds,
+            int fromSeq,
+            boolean sameRequestInsert,
+            List<RewardFeedbackView> feedback,
+            String ip,
+            String deviceId) {
+        int max = settings.stepMaxCount();
+        int seq = fromSeq;
+        for (int i = 0; i < max; i++) {
+            TaskInstanceStepEntity next = cascadeOps.resolveNext(instance.getId(), snapshot, attrs, crowds, seq);
+            if (next == null) {
+                cascadeOps.completeInstance(instance);
+                return;
+            }
+            Instant now = clock.instant();
+            rejectIfExpired(instance, now);
+            if (instances.activateStep(next.getId(), TaskTime.toUtc(now)) != 1) {
+                return;
+            }
+            next.setStatus(StepStatuses.ACTIVE);
+            next.setActivatedAt(TaskTime.toUtc(now));
+            if (StepTypes.PASSIVE.equals(next.getType())) {
+                if (!rewardOps.holdComplete(instance, next)) {
+                    return;
+                }
+                seq = seqOf(next);
+                continue;
+            }
+            if (StepTypes.REWARD.equals(next.getType())) {
+                if (!rewardOps.grantReward(instance, next, snapshot, sameRequestInsert, now, feedback, ip, deviceId)) {
+                    return;
+                }
+                seq = seqOf(next);
+                continue;
+            }
+            return;
+        }
     }
 
     TaskInstanceStepEntity resolveNext(

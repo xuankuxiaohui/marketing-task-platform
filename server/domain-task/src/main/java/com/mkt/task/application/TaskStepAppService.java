@@ -110,8 +110,38 @@ public class TaskStepAppService {
                 new TaskStepPreload(definitions, snapshots, instances, users),
                 new TaskStepViews(snapshots, instances),
                 new TaskStepGuards(instances, risk),
-                new StepEngineReward(instances, events, clock, rewards),
-                new StepEngineCascadeSupport(instances, events, clock));
+                new StepEngineReward(instances, events, clock, rewards));
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload,
+            TaskStepViews views,
+            TaskStepGuards guards,
+            StepEngineReward rewardOps) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                events,
+                clock,
+                settings,
+                preload,
+                views,
+                guards,
+                rewardOps,
+                new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
 
     private TaskStepAppService(
