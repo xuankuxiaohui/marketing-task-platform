@@ -136,8 +136,34 @@ public class TaskClaimAppService {
                 events,
                 clock,
                 settings,
-                new StepEngineReward(instances, events, clock, rewards),
-                new StepEngineCascadeSupport(instances, events, clock));
+                new StepEngineReward(instances, events, clock, rewards));
+    }
+
+    private TaskClaimAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskMutexGroupStore mutexGroups,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                mutexGroups,
+                users,
+                risk,
+                events,
+                clock,
+                settings,
+                rewardOps,
+                new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
 
     private TaskClaimAppService(

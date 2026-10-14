@@ -26,13 +26,7 @@ public final class ClaimEnterEngine {
             Clock clock,
             TaskSettings settings,
             RewardPort rewards) {
-        this(
-                instances,
-                events,
-                clock,
-                settings,
-                new StepEngineReward(instances, events, clock, rewards),
-                new StepEngineCascadeSupport(instances, events, clock));
+        this(instances, events, clock, settings, new StepEngineReward(instances, events, clock, rewards));
     }
 
     public ClaimEnterEngine(
@@ -47,7 +41,7 @@ public final class ClaimEnterEngine {
                 clock,
                 settings,
                 rewardOps,
-                new StepEngineCascadeSupport(instances, events, clock));
+                new StepEngineCascadeSupport(instances, events, clock, settings, rewardOps));
     }
 
     public ClaimEnterEngine(
