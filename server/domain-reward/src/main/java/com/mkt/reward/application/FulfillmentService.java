@@ -69,7 +69,7 @@ public class FulfillmentService {
     }
 
     public FulfillmentService(PointsPort points, GrantRecordStore grants, EventPublisher events, Clock clock) {
-        this(points, grants, null, null, events, new RewardRuntimeSettings(), clock);
+        this(points, grants, (PrizeStore) null, (PrizeCategoryStore) null, events, new RewardRuntimeSettings(), clock);
     }
 
     public FulfillmentService(
