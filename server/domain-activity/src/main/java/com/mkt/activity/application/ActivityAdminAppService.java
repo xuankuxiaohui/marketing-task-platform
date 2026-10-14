@@ -9,11 +9,8 @@ import com.mkt.activity.convert.ActivityDraftContent;
 import com.mkt.activity.convert.ActivityFieldCodec;
 import com.mkt.activity.domain.ActivityCodes;
 import com.mkt.activity.domain.ActivityDates;
-import com.mkt.activity.domain.ActivityHtmlSanitizer;
 import com.mkt.activity.domain.ActivityStatuses;
 import com.mkt.activity.domain.ContentHasher;
-import com.mkt.activity.domain.GrayTypes;
-import com.mkt.activity.domain.SubmoduleTypes;
 import com.mkt.activity.entity.ActActivityEntity;
 import com.mkt.activity.entity.ActParticipationEntity;
 import com.mkt.activity.query.ActivityQuery;
@@ -40,11 +37,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,8 +49,22 @@ public class ActivityAdminAppService {
     private final ActivityActivityStore activities;
     private final ActivityParticipationStore participations;
     private final RewardPort rewards;
-    private final ActivitySettings settings;
     private final Clock clock;
+    private final ActivityAdminNormalize normalize;
+
+    @Autowired
+    public ActivityAdminAppService(
+            ActivityActivityStore activities,
+            ActivityParticipationStore participations,
+            RewardPort rewards,
+            Clock clock,
+            ActivityAdminNormalize normalize) {
+        this.activities = activities;
+        this.participations = participations;
+        this.rewards = rewards;
+        this.clock = clock;
+        this.normalize = normalize;
+    }
 
     public ActivityAdminAppService(
             ActivityActivityStore activities,
@@ -64,11 +72,7 @@ public class ActivityAdminAppService {
             RewardPort rewards,
             ActivitySettings settings,
             Clock clock) {
-        this.activities = activities;
-        this.participations = participations;
-        this.rewards = rewards;
-        this.settings = settings;
-        this.clock = clock;
+        this(activities, participations, rewards, clock, new ActivityAdminNormalize(settings));
     }
 
     public PageData<ActivityView> page(ActivityQuery query) {
@@ -88,17 +92,18 @@ public class ActivityAdminAppService {
 
     @Transactional
     public ActivitySaveResponse save(ActivitySaveCommand command) {
-        String html = sanitizeHtml(command.richText());
-        ActivityGrayCommand gray = normalizeGray(command.gray());
-        List<ActivitySubmoduleCommand> submodules = normalizeSubmodules(command.submodules());
+        String html = normalize.sanitizeHtml(command.richText());
+        ActivityGrayCommand gray = normalize.normalizeGray(command.gray());
+        List<ActivitySubmoduleCommand> submodules = normalize.normalizeSubmodules(command.submodules());
         if (!ActivityCodes.valid(command.code())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "活动编码格式不正确");
         }
         if (!command.startTime().isBefore(command.endTime())) {
             throw new BusinessException(ActivityErrorCodes.TIME_WINDOW_INVALID);
         }
-        int newUserDays = normalizeNewUserDays(command.newUserDays());
-        validateLimits(command.userDailyLimit(), command.userTotalLimit(), command.globalDailyLimit());
+        int newUserDays = normalize.normalizeNewUserDays(command.newUserDays());
+        ActivityAdminNormalize.validateLimits(
+                command.userDailyLimit(), command.userTotalLimit(), command.globalDailyLimit());
         if (command.participationPrizeId() != null && !rewards.prizeEnabled(command.participationPrizeId())) {
             throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
         }
@@ -317,7 +322,7 @@ public class ActivityAdminAppService {
         if (draft == null) {
             throw new BusinessException(ActivityErrorCodes.HTML_EMPTY);
         }
-        String html = sanitizeHtml(draft.richText());
+        String html = normalize.sanitizeHtml(draft.richText());
         if (draft.participationPrizeId() != null && !rewards.prizeEnabled(draft.participationPrizeId())) {
             throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
         }
@@ -335,7 +340,7 @@ public class ActivityAdminAppService {
         if (draft == null) {
             throw new BusinessException(ActivityErrorCodes.HTML_EMPTY);
         }
-        sanitizeHtml(draft.richText());
+        normalize.sanitizeHtml(draft.richText());
         if (draft.participationPrizeId() != null && !rewards.prizeEnabled(draft.participationPrizeId())) {
             throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
         }
@@ -370,90 +375,19 @@ public class ActivityAdminAppService {
         entity.setEndTime(ActivityDates.toUtc(draft.endTime()));
         entity.setRichText(draft.richText());
         entity.setContentHash(ContentHasher.sha256(draft.richText()));
-        ActivityGrayCommand gray = normalizeGray(draft.gray());
+        ActivityGrayCommand gray = normalize.normalizeGray(draft.gray());
         entity.setGrayType(gray.type());
         entity.setGrayRatio(gray.ratio());
-        entity.setSubmodules(ActivityFieldCodec.json(normalizeSubmodules(draft.submodules())));
+        entity.setSubmodules(ActivityFieldCodec.json(normalize.normalizeSubmodules(draft.submodules())));
         entity.setParticipationPrizeId(draft.participationPrizeId());
         entity.setAllowUserIds(ActivityFieldCodec.json(draft.allowUserIds()));
         entity.setAllowCrowdCodes(ActivityFieldCodec.json(draft.allowCrowdCodes()));
         entity.setNewUserOnly(Boolean.TRUE.equals(draft.newUserOnly()) ? 1 : 0);
-        entity.setNewUserDays(normalizeNewUserDays(draft.newUserDays()));
+        entity.setNewUserDays(normalize.normalizeNewUserDays(draft.newUserDays()));
         entity.setUserDailyLimit(draft.userDailyLimit());
         entity.setUserTotalLimit(draft.userTotalLimit());
         entity.setGlobalDailyLimit(draft.globalDailyLimit());
         entity.setRegions(ActivityFieldCodec.json(draft.regions()));
-    }
-
-    private String sanitizeHtml(String raw) {
-        String html = ActivityHtmlSanitizer.sanitize(raw);
-        if (html.isBlank()) {
-            throw new BusinessException(ActivityErrorCodes.HTML_EMPTY);
-        }
-        if (html.length() > ActivityHtmlSanitizer.MAX_LENGTH) {
-            throw new BusinessException(ActivityErrorCodes.HTML_TOO_LONG);
-        }
-        return html;
-    }
-
-    private ActivityGrayCommand normalizeGray(ActivityGrayCommand gray) {
-        String type = gray == null || gray.type() == null || gray.type().isBlank()
-                ? GrayTypes.NONE
-                : gray.type().trim().toUpperCase(Locale.ROOT);
-        if (!GrayTypes.valid(type)) {
-            throw new BusinessException(ActivityErrorCodes.GRAY_INVALID);
-        }
-        Integer ratio = gray == null ? null : gray.ratio();
-        if (GrayTypes.RATIO.equals(type)) {
-            if (ratio == null || ratio < 0 || ratio > 100) {
-                throw new BusinessException(ActivityErrorCodes.GRAY_INVALID);
-            }
-        } else {
-            ratio = null;
-        }
-        return new ActivityGrayCommand(type, ratio);
-    }
-
-    private List<ActivitySubmoduleCommand> normalizeSubmodules(List<ActivitySubmoduleCommand> raw) {
-        if (raw == null || raw.isEmpty()) {
-            return List.of();
-        }
-        List<ActivitySubmoduleCommand> sorted = new ArrayList<>(raw);
-        sorted.sort(Comparator.comparingInt(row -> row.sort() == null ? 0 : row.sort()));
-        Set<String> keys = new HashSet<>();
-        List<ActivitySubmoduleCommand> out = new ArrayList<>();
-        int i = 0;
-        for (ActivitySubmoduleCommand row : sorted) {
-            if (row.type() == null || !SubmoduleTypes.valid(row.type()) || row.refId() == null || row.refId() < 1) {
-                throw new BusinessException(ActivityErrorCodes.SUBMODULE_INVALID);
-            }
-            String key = row.type() + ":" + row.refId();
-            if (!keys.add(key)) {
-                throw new BusinessException(ActivityErrorCodes.SUBMODULE_INVALID);
-            }
-            int sort = row.sort() == null ? i : row.sort();
-            out.add(new ActivitySubmoduleCommand(row.type(), row.refId(), sort));
-            i++;
-        }
-        return List.copyOf(out);
-    }
-
-    private int normalizeNewUserDays(Integer value) {
-        int days = value == null ? settings.newUserDays() : value;
-        if (days < 1 || days > 365) {
-            throw new BusinessException(ActivityErrorCodes.RULE_INVALID);
-        }
-        return days;
-    }
-
-    private static void validateLimits(Integer daily, Integer total, Integer global) {
-        if (invalidLimit(daily) || invalidLimit(total) || invalidLimit(global)) {
-            throw new BusinessException(ActivityErrorCodes.RULE_INVALID);
-        }
-    }
-
-    private static boolean invalidLimit(Integer value) {
-        return value != null && value < 0;
     }
 
     private ActivityView toView(ActActivityEntity entity) {
