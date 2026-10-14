@@ -44,6 +44,7 @@ public class FulfillmentService {
     private final PointsPort points;
     private final GrantRecordStore grants;
     private final FulfillmentLookups lookups;
+    private final FulfillmentSettleOps settleOps;
     private final EventPublisher events;
     private final RewardRuntimeSettings settings;
     private final Clock clock;
@@ -53,6 +54,7 @@ public class FulfillmentService {
             ObjectProvider<PointsPort> points,
             GrantRecordStore grants,
             FulfillmentLookups lookups,
+            FulfillmentSettleOps settleOps,
             ObjectProvider<EventPublisher> events,
             ObjectProvider<RewardRuntimeSettings> settings,
             Clock clock) {
@@ -60,13 +62,14 @@ public class FulfillmentService {
                 points.getIfAvailable(),
                 grants,
                 lookups,
+                settleOps,
                 events.getIfAvailable(),
                 settings.getIfAvailable() == null ? new RewardRuntimeSettings() : settings.getIfAvailable(),
                 clock);
     }
 
     public FulfillmentService(PointsPort points, GrantRecordStore grants, EventPublisher events, Clock clock) {
-        this(points, grants, null, null, events, new RewardRuntimeSettings(), clock);
+        this(points, grants, (PrizeStore) null, (PrizeCategoryStore) null, events, new RewardRuntimeSettings(), clock);
     }
 
     public FulfillmentService(
@@ -87,12 +90,32 @@ public class FulfillmentService {
             EventPublisher events,
             RewardRuntimeSettings settings,
             Clock clock) {
+        this(
+                points,
+                grants,
+                lookups,
+                new FulfillmentSettleOps(grants, lookups, clock),
+                events,
+                settings,
+                clock);
+    }
+
+    private FulfillmentService(
+            PointsPort points,
+            GrantRecordStore grants,
+            FulfillmentLookups lookups,
+            FulfillmentSettleOps settleOps,
+            EventPublisher events,
+            RewardRuntimeSettings settings,
+            Clock clock) {
         this.points = points;
         this.grants = grants;
         this.lookups = lookups;
+        this.settleOps = settleOps;
         this.events = events;
         this.settings = settings == null ? new RewardRuntimeSettings() : settings;
         this.clock = clock;
+        settleOps.bind(this, this.settings);
     }
 
     public void start(GrantRecordEntity record, PrizeEntity prize, PrizeCategoryEntity category) {
@@ -131,7 +154,7 @@ public class FulfillmentService {
         if (row == null) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
-        return settleSending(row, true, null);
+        return settleOps.settleSending(row, true, null);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -144,10 +167,10 @@ public class FulfillmentService {
             throw new BusinessException(RewardErrorCodes.FULFILL_NOT_FOUND);
         }
         if ("SUCCESS".equals(result)) {
-            return settleSending(row, true, null);
+            return settleOps.settleSending(row, true, null);
         }
         if ("FAILED".equals(result)) {
-            return settleSending(row, false, failReason);
+            return settleOps.settleSending(row, false, failReason);
         }
         throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
     }
@@ -208,7 +231,7 @@ public class FulfillmentService {
         LocalDateTime cutoff = now.minusHours(settings.sendingTimeoutHours());
         int ran = 0;
         for (GrantRecordEntity row : grants.listSendingTimeout(cutoff, BATCH)) {
-            failTimeout(row, now);
+            settleOps.failTimeout(row, now);
             ran++;
         }
         return ran;
@@ -224,82 +247,6 @@ public class FulfillmentService {
             }
         }
         return ran;
-    }
-
-    private FulfillmentCallbackResponse settleSending(GrantRecordEntity row, boolean success, String failReason) {
-        if (GrantRecordStatuses.FULFILL_ARRIVED.equals(row.getFulfillmentStatus())) {
-            return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_ARRIVED, false);
-        }
-        if (GrantRecordStatuses.FULFILL_FAILED.equals(row.getFulfillmentStatus())
-                && FulfillFailReasons.MANUAL.equals(row.getFulfillFailReason())) {
-            return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_FAILED, true);
-        }
-        if (!GrantRecordStatuses.GRANTED.equals(row.getStatus())
-                || !GrantRecordStatuses.FULFILL_SENDING.equals(row.getFulfillmentStatus())) {
-            throw new BusinessException(RewardErrorCodes.FULFILL_NOT_SENDING);
-        }
-        LocalDateTime now = RewardTime.toUtc(clock.instant());
-        if (success) {
-            arrive(row, now);
-            int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
-            if (affected != 1) {
-                GrantRecordEntity fresh = grants.getById(row.getId());
-                return settleSending(fresh, true, null);
-            }
-            emitArrived(row);
-            return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_ARRIVED, false);
-        }
-        return failAttempt(row, now, failReason);
-    }
-
-    private FulfillmentCallbackResponse failAttempt(GrantRecordEntity row, LocalDateTime now, String failReason) {
-        String reason = lookups.mappedFailReason(failReason);
-        int retry = row.getRetryCount() == null ? 0 : row.getRetryCount();
-        retry = retry + 1;
-        row.setRetryCount(retry);
-        row.setUpdatedAt(now);
-        if (retry >= settings.fulfillRetryMax()) {
-            row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_FAILED);
-            row.setFulfillFailReason(reason);
-            if (lookups.reconRequired(row)) {
-                row.setReconStatus(GrantRecordStatuses.RECON_PENDING);
-            }
-            int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
-            if (affected != 1) {
-                return settleSending(grants.getById(row.getId()), false, failReason);
-            }
-            append(EventCodes.REWARD_FULFILL_FAILED, row);
-            return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_FAILED, false);
-        }
-        row.setNextFulfillRetryAt(now.plusSeconds(settings.fulfillRetryIntervalSeconds()));
-        int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
-        if (affected != 1) {
-            return settleSending(grants.getById(row.getId()), false, failReason);
-        }
-        return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_SENDING, false);
-    }
-
-    private void failTimeout(GrantRecordEntity row, LocalDateTime now) {
-        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_FAILED);
-        row.setFulfillFailReason(FulfillFailReasons.TIMEOUT);
-        row.setUpdatedAt(now);
-        if (lookups.reconRequired(row)) {
-            row.setReconStatus(GrantRecordStatuses.RECON_PENDING);
-        }
-        int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
-        if (affected == 1) {
-            append(EventCodes.REWARD_FULFILL_FAILED, row);
-        }
-    }
-
-    private void arrive(GrantRecordEntity row, LocalDateTime now) {
-        row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_ARRIVED);
-        row.setFulfilledAt(now);
-        row.setFulfillFailReason(null);
-        row.setUpdatedAt(now);
-        if (lookups.reconRequired(row)) {
-            row.setReconStatus(GrantRecordStatuses.RECON_PENDING);
-        }
     }
 
     private void earnPoints(GrantRecordEntity record, PrizeEntity prize, Instant now) {
@@ -355,7 +302,7 @@ public class FulfillmentService {
         }
     }
 
-    private void append(String eventCode, GrantRecordEntity record) {
+    void append(String eventCode, GrantRecordEntity record) {
         if (events == null) {
             return;
         }
