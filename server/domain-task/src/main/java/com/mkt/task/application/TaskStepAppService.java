@@ -33,10 +33,6 @@ import com.mkt.task.response.TaskProgressResponse;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
-import java.util.Objects;
-import java.time.Duration;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.Cache;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,17 +51,7 @@ public class TaskStepAppService {
     private final RiskCheckPort risk;
     private final StepEngine engine;
     private final Clock clock;
-
-    /**
-     * Architect 2026-10-12 hold-lock knife: TTL 3s (2–5s band) caches for snapshot/attrs
-     * loaded BEFORE {@code getByIdForUpdate} on progress/callback.
-     */
-    private static final Duration PRELOAD_TTL = Duration.ofSeconds(3);
-
-    private final Cache<Long, SnapshotContent> snapshotById =
-            Caffeine.newBuilder().expireAfterWrite(PRELOAD_TTL).maximumSize(4_096).build();
-    private final Cache<Long, UserAttributes> attrsByUser =
-            Caffeine.newBuilder().expireAfterWrite(PRELOAD_TTL).maximumSize(8_192).build();
+    private final TaskStepPreload preload;
 
     @Autowired
     public TaskStepAppService(
@@ -79,7 +65,8 @@ public class TaskStepAppService {
             ObjectProvider<EventPublisher> events,
             ObjectProvider<RewardPort> rewards,
             Clock clock,
-            TaskSettings settings) {
+            TaskSettings settings,
+            TaskStepPreload preload) {
         this(
                 definitions,
                 snapshots,
@@ -91,7 +78,8 @@ public class TaskStepAppService {
                 events.getIfAvailable(),
                 rewards.getIfAvailable(),
                 clock,
-                settings);
+                settings,
+                preload);
     }
 
     public TaskStepAppService(
@@ -106,6 +94,34 @@ public class TaskStepAppService {
             RewardPort rewards,
             Clock clock,
             TaskSettings settings) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                risk,
+                events,
+                rewards,
+                clock,
+                settings,
+                new TaskStepPreload(definitions, snapshots, instances, users));
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            EventPublisher events,
+            RewardPort rewards,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -113,6 +129,7 @@ public class TaskStepAppService {
         this.users = users;
         this.risk = risk;
         this.clock = clock;
+        this.preload = preload;
         this.engine = new StepEngine(instances, reports, events, clock, settings, rewards);
     }
 
@@ -134,12 +151,12 @@ public class TaskStepAppService {
     public TaskCallbackResponse callback(InternalCallbackCommand command) {
         // Hold-lock knife: attrs/crowds/snapshot (+ frozen check) BEFORE getByIdForUpdate.
         // Lock window: CAS + report/outbox same-TX only (DEC-002 unchanged; no sync evt wait).
-        TaskInstanceEntity soft = locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
+        TaskInstanceEntity soft = preload.locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
         rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
-        SnapshotContent snapshot = cachedSnapshot(soft);
-        UserAttributes userAttrs = cachedAttrs(soft.getUserId());
+        SnapshotContent snapshot = preload.cachedSnapshot(soft);
+        UserAttributes userAttrs = preload.cachedAttrs(soft.getUserId());
         CrowdResolver crowdResolver = crowds(soft.getUserId());
-        TaskInstanceEntity instance = lockInstance(soft);
+        TaskInstanceEntity instance = preload.lockInstance(soft);
         TaskInstanceStepEntity step = requireStep(instance.getId(), command.stepCode());
         StepAdvanceResult result =
                 engine.callback(instance, step, snapshot, userAttrs, crowdResolver, command.bizNo());
@@ -157,12 +174,12 @@ public class TaskStepAppService {
         if (command.value() == null) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
-        TaskInstanceEntity soft = locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
+        TaskInstanceEntity soft = preload.locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
         rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
-        SnapshotContent snapshot = cachedSnapshot(soft);
-        UserAttributes userAttrs = cachedAttrs(soft.getUserId());
+        SnapshotContent snapshot = preload.cachedSnapshot(soft);
+        UserAttributes userAttrs = preload.cachedAttrs(soft.getUserId());
         CrowdResolver crowdResolver = crowds(soft.getUserId());
-        TaskInstanceEntity instance = lockInstance(soft);
+        TaskInstanceEntity instance = preload.lockInstance(soft);
         TaskInstanceStepEntity step = requireStep(instance.getId(), command.stepCode());
         StepAdvanceResult result = engine.progress(
                 instance,
@@ -176,43 +193,6 @@ public class TaskStepAppService {
         int current = after.getProgressCurrent() == null ? 0 : after.getProgressCurrent();
         return new TaskProgressResponse(
                 result.instance().getId(), after.getStepCode(), current, result.progressTarget(), after.getStatus());
-    }
-
-    /** Non-locking resolve for preload (progress/callback hold-lock knife). */
-    private TaskInstanceEntity locateSoft(Long instanceId, Long userId, String taskCode, String cycleKey) {
-        if (instanceId != null) {
-            TaskInstanceEntity row = instances.getById(instanceId);
-            if (row == null) {
-                throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-            }
-            return row;
-        }
-        if (userId == null || taskCode == null || taskCode.isBlank() || cycleKey == null || cycleKey.isBlank()) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
-        }
-        TaskDefinitionEntity definition = definitions.getByCode(taskCode.trim());
-        if (definition == null) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-        }
-        TaskInstanceEntity row = instances.getByUserTaskCycle(userId, definition.getId(), cycleKey.trim());
-        if (row == null) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-        }
-        return row;
-    }
-
-    /** Take instance row lock only after preload; re-check identity. */
-    private TaskInstanceEntity lockInstance(TaskInstanceEntity soft) {
-        TaskInstanceEntity locked = instances.getByIdForUpdate(soft.getId());
-        if (locked == null) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-        }
-        if (!Objects.equals(locked.getUserId(), soft.getUserId())
-                || !Objects.equals(locked.getSnapshotId(), soft.getSnapshotId())) {
-            // rare race: fall back to fresh snapshot under lock (attrs/crowds still preloaded by userId)
-            return locked;
-        }
-        return locked;
     }
 
     /** Legacy locate with FOR UPDATE — used by click/resume paths unchanged. */
@@ -240,24 +220,6 @@ public class TaskStepAppService {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
         return locked;
-    }
-
-    private SnapshotContent cachedSnapshot(TaskInstanceEntity instance) {
-        Long snapshotId = instance.getSnapshotId();
-        if (snapshotId == null) {
-            throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
-        }
-        return snapshotById.get(snapshotId, id -> {
-            TaskVersionSnapshotEntity snap = snapshots.getById(id);
-            if (snap == null || snap.getContent() == null) {
-                throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
-            }
-            return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-        });
-    }
-
-    private UserAttributes cachedAttrs(long userId) {
-        return attrsByUser.get(userId, this::attrs);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
