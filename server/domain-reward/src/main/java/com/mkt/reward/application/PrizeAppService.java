@@ -39,6 +39,7 @@ public class PrizeAppService {
     private final SnapshotPrizeLookup snapshots;
     private final Clock clock;
     private final PrizeValidate validate;
+    private final PrizeApply apply;
 
     @Autowired
     public PrizeAppService(
@@ -46,12 +47,14 @@ public class PrizeAppService {
             StockLogStore stockLogs,
             SnapshotPrizeLookup snapshots,
             Clock clock,
-            PrizeValidate validate) {
+            PrizeValidate validate,
+            PrizeApply apply) {
         this.prizes = prizes;
         this.stockLogs = stockLogs;
         this.snapshots = snapshots;
         this.clock = clock;
         this.validate = validate;
+        this.apply = apply;
     }
 
     public PrizeAppService(
@@ -60,7 +63,7 @@ public class PrizeAppService {
             StockLogStore stockLogs,
             SnapshotPrizeLookup snapshots,
             Clock clock) {
-        this(prizes, stockLogs, snapshots, clock, new PrizeValidate(categories));
+        this(prizes, stockLogs, snapshots, clock, new PrizeValidate(categories), new PrizeApply());
     }
 
     public PrizeResponse get(long id) {
@@ -96,7 +99,7 @@ public class PrizeAppService {
             throw new BusinessException(RewardErrorCodes.PRIZE_DUPLICATE_CODE);
         }
         PrizeEntity entity = new PrizeEntity();
-        applyWritable(entity, normalized, category, true);
+        apply.applyWritable(entity, normalized, category, true);
         entity.setStatus(PrizeStatuses.DRAFT);
         entity.setDeleted(0);
         entity.setRemainingStock(normalized.totalStock());
@@ -136,7 +139,7 @@ public class PrizeAppService {
                 category.getAdapterCode(),
                 frozen ? existing.getUnitCostFen() : normalized.unitCostFen(),
                 frozen ? RewardJson.map(existing.getTypeParams()) : normalized.typeParams());
-        applyWritable(existing, normalized, category, !frozen);
+        apply.applyWritable(existing, normalized, category, !frozen);
         if (!frozen) {
             existing.setTotalStock(normalized.totalStock());
         }
@@ -250,32 +253,6 @@ public class PrizeAppService {
         return existing;
     }
 
-    private static void applyWritable(
-            PrizeEntity entity, PrizeSaveCommand command, PrizeCategoryEntity category, boolean copyCategory) {
-        entity.setCode(command.code());
-        entity.setName(command.name());
-        entity.setImageUrl(command.imageUrl());
-        entity.setDescription(command.description());
-        entity.setDailyClaimLimit(command.dailyClaimLimit());
-        entity.setTotalClaimLimit(command.totalClaimLimit());
-        entity.setRegionLimit(emptyToNullJson(command.regionLimit()));
-        entity.setLevelLimit(emptyToNullJson(command.levelLimit()));
-        entity.setTagLimit(emptyToNullJson(command.tagLimit()));
-        entity.setClaimMode(command.claimMode());
-        entity.setReconActionPolicy(command.reconActionPolicy());
-        entity.setExpireHours(command.expireHours());
-        entity.setGroupId(command.groupId());
-        entity.setExtConfig(RewardJson.map(command.extConfig()));
-        if (copyCategory) {
-            entity.setCategoryCode(category.getCode());
-            entity.setRewardTarget(category.getRewardTarget());
-            entity.setFulfillmentMode(category.getFulfillmentMode());
-            entity.setTypeParams(RewardJson.map(command.typeParams()));
-            entity.setUnitCostFen(command.unitCostFen());
-            entity.setTotalStock(command.totalStock());
-        }
-    }
-
     private void appendLog(
             long prizeId,
             String changeType,
@@ -338,12 +315,5 @@ public class PrizeAppService {
                 entity.getBizId(),
                 entity.getOperatorId(),
                 RewardTime.toInstant(entity.getCreatedAt()));
-    }
-
-    private static String emptyToNullJson(List<String> values) {
-        if (values == null || values.isEmpty()) {
-            return null;
-        }
-        return RewardJson.strings(values);
     }
 }
