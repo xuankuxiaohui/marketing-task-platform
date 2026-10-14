@@ -36,14 +36,12 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 public class FulfillmentService {
 
-    static final int BATCH = 100;
-
     private final PointsPort points;
     private final GrantRecordStore grants;
     private final FulfillmentLookups lookups;
     private final FulfillmentSettleOps settleOps;
     private final FulfillmentEvents fulfillmentEvents;
-    private final RewardRuntimeSettings settings;
+    private final FulfillmentTickOps tickOps;
     private final Clock clock;
 
     @Autowired
@@ -53,7 +51,7 @@ public class FulfillmentService {
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
             FulfillmentEvents fulfillmentEvents,
-            ObjectProvider<RewardRuntimeSettings> settings,
+            FulfillmentTickOps tickOps,
             Clock clock) {
         this(
                 points.getIfAvailable(),
@@ -61,7 +59,7 @@ public class FulfillmentService {
                 lookups,
                 settleOps,
                 fulfillmentEvents,
-                settings.getIfAvailable() == null ? new RewardRuntimeSettings() : settings.getIfAvailable(),
+                tickOps,
                 clock);
     }
 
@@ -89,14 +87,10 @@ public class FulfillmentService {
             Clock clock) {
         FulfillmentEvents fulfillmentEvents = new FulfillmentEvents(events);
         RewardRuntimeSettings resolved = settings == null ? new RewardRuntimeSettings() : settings;
-        this(
-                points,
-                grants,
-                lookups,
-                new FulfillmentSettleOps(grants, lookups, fulfillmentEvents, resolved, clock),
-                fulfillmentEvents,
-                resolved,
-                clock);
+        FulfillmentSettleOps settleOps =
+                new FulfillmentSettleOps(grants, lookups, fulfillmentEvents, resolved, clock);
+        FulfillmentTickOps tickOps = new FulfillmentTickOps(grants, lookups, settleOps, resolved, clock);
+        this(points, grants, lookups, settleOps, fulfillmentEvents, tickOps, clock);
     }
 
     private FulfillmentService(
@@ -105,15 +99,16 @@ public class FulfillmentService {
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
             FulfillmentEvents fulfillmentEvents,
-            RewardRuntimeSettings settings,
+            FulfillmentTickOps tickOps,
             Clock clock) {
         this.points = points;
         this.grants = grants;
         this.lookups = lookups;
         this.settleOps = settleOps;
         this.fulfillmentEvents = fulfillmentEvents;
-        this.settings = settings == null ? new RewardRuntimeSettings() : settings;
+        this.tickOps = tickOps;
         this.clock = clock;
+        tickOps.bind(this);
     }
 
     public void start(GrantRecordEntity record, PrizeEntity prize, PrizeCategoryEntity category) {
@@ -204,44 +199,9 @@ public class FulfillmentService {
     public int tick() {
         LocalDateTime now = RewardTime.toUtc(clock.instant());
         int ran = 0;
-        ran += retryDue(now);
-        ran += timeoutDue(now);
-        ran += crossDayPending(now);
-        return ran;
-    }
-
-    private int retryDue(LocalDateTime now) {
-        int ran = 0;
-        for (GrantRecordEntity row : grants.listFulfillRetryDue(now, BATCH)) {
-            PrizeEntity prize = lookups.prizeOf(row);
-            PrizeCategoryEntity category = lookups.categoryOf(prize);
-            if (prize != null) {
-                armThirdPartyStub(row, prize, category);
-            }
-            ran++;
-        }
-        return ran;
-    }
-
-    private int timeoutDue(LocalDateTime now) {
-        LocalDateTime cutoff = now.minusHours(settings.sendingTimeoutHours());
-        int ran = 0;
-        for (GrantRecordEntity row : grants.listSendingTimeout(cutoff, BATCH)) {
-            settleOps.failTimeout(row, now);
-            ran++;
-        }
-        return ran;
-    }
-
-    private int crossDayPending(LocalDateTime now) {
-        LocalDateTime dayStart = com.mkt.reward.domain.ClaimWindows.dailyStartUtc(clock);
-        int ran = 0;
-        for (GrantRecordEntity row : grants.listCrossDaySending(dayStart, BATCH)) {
-            if (lookups.reconRequired(row)) {
-                grants.markReconPending(row.getId(), now);
-                ran++;
-            }
-        }
+        ran += tickOps.retryDue(now);
+        ran += tickOps.timeoutDue(now);
+        ran += tickOps.crossDayPending(now);
         return ran;
     }
 
