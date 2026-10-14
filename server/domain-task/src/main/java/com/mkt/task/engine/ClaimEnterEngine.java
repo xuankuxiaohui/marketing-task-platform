@@ -57,7 +57,25 @@ public final class ClaimEnterEngine {
             TaskSettings settings,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps) {
-        this.engine = new StepEngine(instances, null, clock, settings, rewardOps, cascadeOps);
+        this(
+                instances,
+                events,
+                clock,
+                settings,
+                rewardOps,
+                cascadeOps,
+                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+    }
+
+    public ClaimEnterEngine(
+            TaskInstanceStore instances,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps) {
+        this.engine = new StepEngine(instances, null, clock, settings, rewardOps, cascadeOps, advanceOps);
     }
 
     public void enter(

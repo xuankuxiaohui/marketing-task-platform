@@ -39,14 +39,13 @@ public final class StepEngine {
         PROGRESS
     }
 
-    static final int CAS_ATTEMPTS = 3;
-
     private final TaskInstanceStore instances;
     private final TaskProgressReportStore reports;
     private final Clock clock;
     private final TaskSettings settings;
     private final StepEngineReward rewardOps;
     private final StepEngineCascadeSupport cascadeOps;
+    private final StepEngineAdvance advanceOps;
 
     public StepEngine(
             TaskInstanceStore instances,
@@ -87,12 +86,31 @@ public final class StepEngine {
             TaskSettings settings,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps) {
+        this(
+                instances,
+                reports,
+                clock,
+                settings,
+                rewardOps,
+                cascadeOps,
+                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+    }
+
+    public StepEngine(
+            TaskInstanceStore instances,
+            TaskProgressReportStore reports,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps) {
         this.instances = instances;
         this.reports = reports;
         this.clock = clock;
         this.settings = settings;
         this.rewardOps = rewardOps;
         this.cascadeOps = cascadeOps;
+        this.advanceOps = advanceOps;
     }
 
     public void enter(
@@ -146,7 +164,7 @@ public final class StepEngine {
             CrowdResolver crowds,
             String ip,
             String deviceId) {
-        return completeExternal(Entry.CLICK, instance, step, snapshot, attrs, crowds, null, ip, deviceId);
+        return advanceOps.completeExternal(Entry.CLICK, instance, step, snapshot, attrs, crowds, null, ip, deviceId);
     }
 
     public StepAdvanceResult callback(
@@ -174,7 +192,7 @@ public final class StepEngine {
             instances.updateLastBizNo(step.getId(), bizNo.trim());
             step.setLastBizNo(bizNo.trim());
         }
-        return completeExternal(Entry.CALLBACK, instance, step, snapshot, attrs, crowds, null, ip, deviceId);
+        return advanceOps.completeExternal(Entry.CALLBACK, instance, step, snapshot, attrs, crowds, null, ip, deviceId);
     }
 
     public StepAdvanceResult progress(
@@ -203,142 +221,14 @@ public final class StepEngine {
             TaskInstanceStepEntity fresh = reloadStep(instance.getId(), step.getStepCode());
             return snapshotOf(instance, fresh == null ? step : fresh, snapshot, List.of(), true);
         }
-        StepAdvanceResult blocked = precheck(Entry.PROGRESS, instance, step, snapshot);
+        StepAdvanceResult blocked = advanceOps.precheck(Entry.PROGRESS, instance, step, snapshot);
         if (blocked != null) {
             return blocked;
         }
         if (value < 1 || value > 1000) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
-        return accumulate(instance, step, snapshot, attrs, crowds, value, null, null);
-    }
-
-    private StepAdvanceResult completeExternal(
-            Entry entry,
-            TaskInstanceEntity instance,
-            TaskInstanceStepEntity step,
-            SnapshotContent snapshot,
-            UserAttributes attrs,
-            CrowdResolver crowds,
-            Integer progressCurrent,
-            String ip,
-            String deviceId) {
-        StepAdvanceResult blocked = precheck(entry, instance, step, snapshot);
-        if (blocked != null) {
-            return blocked;
-        }
-        for (int attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
-            rejectIfExpired(instance, clock.instant());
-            TaskInstanceStepEntity current = reloadStep(instance.getId(), step.getStepCode());
-            if (current == null) {
-                throw new BusinessException(TaskErrorCodes.STEP_NOT_FOUND);
-            }
-            rejectIfExpired(instance, clock.instant());
-            if (done(current.getStatus())) {
-                return snapshotOf(instance, current, snapshot, List.of(), true);
-            }
-            if (!StepStatuses.ACTIVE.equals(current.getStatus())) {
-                throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-            }
-            Instant now = clock.instant();
-            rejectIfExpired(instance, now);
-            int version = current.getVersion() == null ? 0 : current.getVersion();
-            int affected = instances.completeStepCas(current.getId(), version, TaskTime.toUtc(now), progressCurrent);
-            if (affected == 1) {
-                current.setStatus(StepStatuses.COMPLETED);
-                current.setCompletedAt(TaskTime.toUtc(now));
-                current.setVersion(version + 1);
-                if (progressCurrent != null) {
-                    current.setProgressCurrent(progressCurrent);
-                }
-                cascadeOps.appendStepComplete(instance, current);
-                List<RewardFeedbackView> feedback = new ArrayList<>();
-                cascade(instance, snapshot, attrs, crowds, seqOf(current), false, feedback, ip, deviceId);
-                TaskInstanceEntity fresh = instances.getById(instance.getId());
-                TaskInstanceStepEntity after = reloadStep(instance.getId(), current.getStepCode());
-                return snapshotOf(fresh == null ? instance : fresh, after == null ? current : after, snapshot, feedback, false);
-            }
-        }
-        TaskInstanceStepEntity again = reloadStep(instance.getId(), step.getStepCode());
-        rejectIfExpired(instance, clock.instant());
-        if (again != null && done(again.getStatus())) {
-            return snapshotOf(instance, again, snapshot, List.of(), true);
-        }
-        throw new BusinessException(
-                entry == Entry.PROGRESS ? TaskErrorCodes.PROGRESS_PROCESSING : TaskErrorCodes.STEP_PROCESSING);
-    }
-
-    private StepAdvanceResult accumulate(
-            TaskInstanceEntity instance,
-            TaskInstanceStepEntity step,
-            SnapshotContent snapshot,
-            UserAttributes attrs,
-            CrowdResolver crowds,
-            int value,
-            String ip,
-            String deviceId) {
-        Integer target = progressTarget(snapshot, step.getStepCode());
-        int goal = target == null ? Integer.MAX_VALUE : target;
-        for (int attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
-            rejectIfExpired(instance, clock.instant());
-            TaskInstanceStepEntity current = reloadStep(instance.getId(), step.getStepCode());
-            if (current == null) {
-                throw new BusinessException(TaskErrorCodes.STEP_NOT_FOUND);
-            }
-            rejectIfExpired(instance, clock.instant());
-            if (done(current.getStatus())) {
-                throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-            }
-            if (!StepStatuses.ACTIVE.equals(current.getStatus())) {
-                throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-            }
-            int newCur = (current.getProgressCurrent() == null ? 0 : current.getProgressCurrent()) + value;
-            if (newCur >= goal) {
-                return completeExternal(
-                        Entry.PROGRESS, instance, current, snapshot, attrs, crowds, newCur, ip, deviceId);
-            }
-            int version = current.getVersion() == null ? 0 : current.getVersion();
-            rejectIfExpired(instance, clock.instant());
-            int affected = instances.addProgressCas(current.getId(), version, newCur);
-            if (affected == 1) {
-                current.setProgressCurrent(newCur);
-                current.setVersion(version + 1);
-                return snapshotOf(instance, current, snapshot, List.of(), false);
-            }
-        }
-        rejectIfExpired(instance, clock.instant());
-        throw new BusinessException(TaskErrorCodes.PROGRESS_PROCESSING);
-    }
-
-    StepAdvanceResult precheck(
-            Entry entry, TaskInstanceEntity instance, TaskInstanceStepEntity step, SnapshotContent snapshot) {
-        Instant now = clock.instant();
-        if (expired(instance, now)) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
-        }
-        if (InstanceStatuses.ABANDONED.equals(instance.getStatus()) && !done(step.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        if (StepStatuses.SKIPPED.equals(step.getStatus()) || StepStatuses.INACTIVE.equals(step.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        requireEntryType(entry, step);
-        if (StepStatuses.COMPLETED.equals(step.getStatus())) {
-            if (entry == Entry.PROGRESS) {
-                throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-            }
-            return snapshotOf(instance, step, snapshot, List.of(), true);
-        }
-        if (InstanceStatuses.COMPLETED.equals(instance.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        if (!InstanceStatuses.IN_PROGRESS.equals(instance.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        if (!StepStatuses.ACTIVE.equals(step.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        return null;
+        return advanceOps.accumulate(instance, step, snapshot, attrs, crowds, value, null, null);
     }
 
     private static void requireEntryType(Entry entry, TaskInstanceStepEntity step) {
@@ -463,10 +353,6 @@ public final class StepEngine {
         if (expired(instance, now)) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
         }
-    }
-
-    private static boolean done(String status) {
-        return StepStatuses.COMPLETED.equals(status) || StepStatuses.SKIPPED.equals(status);
     }
 
     private static int seqOf(TaskInstanceStepEntity step) {

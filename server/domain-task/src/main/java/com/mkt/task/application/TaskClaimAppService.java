@@ -25,6 +25,7 @@ import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
 import com.mkt.task.engine.ClaimEnterEngine;
+import com.mkt.task.engine.StepEngineAdvance;
 import com.mkt.task.engine.StepEngineCascadeSupport;
 import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.entity.TaskDefinitionEntity;
@@ -80,7 +81,8 @@ public class TaskClaimAppService {
             Clock clock,
             TaskSettings settings,
             StepEngineReward rewardOps,
-            StepEngineCascadeSupport cascadeOps) {
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps) {
         this(
                 definitions,
                 snapshots,
@@ -93,7 +95,8 @@ public class TaskClaimAppService {
                 clock,
                 settings,
                 rewardOps,
-                cascadeOps);
+                cascadeOps,
+                advanceOps);
     }
 
     public TaskClaimAppService(
@@ -150,6 +153,36 @@ public class TaskClaimAppService {
             TaskSettings settings,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                mutexGroups,
+                users,
+                risk,
+                events,
+                clock,
+                settings,
+                rewardOps,
+                cascadeOps,
+                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+    }
+
+    private TaskClaimAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskMutexGroupStore mutexGroups,
+            UserAttributePort users,
+            RiskCheckPort risk,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -160,7 +193,7 @@ public class TaskClaimAppService {
         this.events = events;
         this.clock = clock;
         this.settings = settings;
-        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewardOps, cascadeOps);
+        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewardOps, cascadeOps, advanceOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
