@@ -3,7 +3,6 @@ package com.mkt.task.application;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.PageData;
@@ -29,7 +28,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,8 +44,8 @@ public class TaskInstanceAppService {
     private final InstanceEventStore events;
     private final InstanceGuards guards;
     private final InstanceAbandonOps abandonOps;
+    private final InstanceExpireOps expireOps;
     private final Clock clock;
-    private final TransactionTemplate tx;
 
     /**
      * Architect 2026-10-12: admin-list instances 减压 — COUNT(*) on ~500k rows avg≈493ms
@@ -68,18 +66,18 @@ public class TaskInstanceAppService {
             TaskInstanceStore instances,
             ObjectProvider<InstanceEventStore> events,
             Clock clock,
-            ObjectProvider<TransactionTemplate> tx,
             InstanceViews views,
             InstanceGuards guards,
-            InstanceAbandonOps abandonOps) {
+            InstanceAbandonOps abandonOps,
+            InstanceExpireOps expireOps) {
         this(
                 instances,
                 views,
                 events.getIfAvailable(),
                 guards,
                 abandonOps,
-                clock,
-                tx.getIfAvailable());
+                expireOps,
+                clock);
     }
 
     public TaskInstanceAppService(
@@ -90,14 +88,15 @@ public class TaskInstanceAppService {
             RiskCheckPort risk,
             Clock clock,
             TransactionTemplate tx) {
+        InstanceAbandonOps abandonOps = new InstanceAbandonOps(instances, publisher, clock);
         this(
                 instances,
                 new InstanceViews(snapshots),
                 events,
                 new InstanceGuards(risk),
-                new InstanceAbandonOps(instances, publisher, clock),
-                clock,
-                tx);
+                abandonOps,
+                new InstanceExpireOps(instances, abandonOps, tx),
+                clock);
     }
 
     private TaskInstanceAppService(
@@ -106,15 +105,15 @@ public class TaskInstanceAppService {
             InstanceEventStore events,
             InstanceGuards guards,
             InstanceAbandonOps abandonOps,
-            Clock clock,
-            TransactionTemplate tx) {
+            InstanceExpireOps expireOps,
+            Clock clock) {
         this.instances = instances;
         this.views = views;
         this.events = events;
         this.guards = guards;
         this.abandonOps = abandonOps;
+        this.expireOps = expireOps;
         this.clock = clock;
-        this.tx = tx;
     }
 
     public PageData<AdminInstanceView> page(InstanceQuery query) {
@@ -199,54 +198,13 @@ public class TaskInstanceAppService {
         do {
             due = instances.listDueToExpire(nowUtc, EXPIRE_BATCH);
             for (TaskInstanceEntity row : due) {
-                boolean flipped = runInTx(() -> expireOne(row.getId(), now));
+                boolean flipped = expireOps.runInTx(() -> expireOps.expireOne(row.getId(), now));
                 if (flipped) {
                     total++;
                 }
             }
         } while (due.size() == EXPIRE_BATCH);
         return total;
-    }
-
-    boolean expireOne(long id, Instant now) {
-        TaskInstanceEntity row = instances.getByIdForUpdate(id);
-        if (row == null || !InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
-            return false;
-        }
-        if (row.getExpireAt() == null) {
-            return false;
-        }
-        Instant expireAt = TaskTime.toInstant(row.getExpireAt());
-        if (expireAt == null || now.isBefore(expireAt)) {
-            return false;
-        }
-        int cost = costSeconds(row, now);
-        int affected = instances.expireCas(id, TaskTime.toUtc(now), cost);
-        if (affected != 1) {
-            return false;
-        }
-        abandonOps.append(EventCodes.TASK_INSTANCE_EXPIRE, row, Map.of(
-                "instanceId", row.getId(),
-                "taskId", row.getTaskId(),
-                "userId", row.getUserId(),
-                "costSeconds", cost));
-        return true;
-    }
-
-    private static int costSeconds(TaskInstanceEntity row, Instant now) {
-        Instant started = TaskTime.toInstant(row.getStartedAt());
-        if (started == null) {
-            return 0;
-        }
-        return (int) Math.max(0, Duration.between(started, now).toSeconds());
-    }
-
-    private boolean runInTx(java.util.function.BooleanSupplier action) {
-        if (tx != null) {
-            Boolean result = tx.execute(status -> action.getAsBoolean());
-            return Boolean.TRUE.equals(result);
-        }
-        return action.getAsBoolean();
     }
 
     private static String blankToNull(String value) {
