@@ -25,6 +25,7 @@ import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
 import com.mkt.task.engine.ClaimEnterEngine;
+import com.mkt.task.engine.StepEngineCascadeSupport;
 import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
@@ -78,7 +79,8 @@ public class TaskClaimAppService {
             ObjectProvider<EventPublisher> events,
             Clock clock,
             TaskSettings settings,
-            StepEngineReward rewardOps) {
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps) {
         this(
                 definitions,
                 snapshots,
@@ -90,7 +92,8 @@ public class TaskClaimAppService {
                 events.getIfAvailable(),
                 clock,
                 settings,
-                rewardOps);
+                rewardOps,
+                cascadeOps);
     }
 
     public TaskClaimAppService(
@@ -130,7 +133,8 @@ public class TaskClaimAppService {
                 events,
                 clock,
                 settings,
-                new StepEngineReward(instances, events, clock, rewards));
+                new StepEngineReward(instances, events, clock, rewards),
+                new StepEngineCascadeSupport(instances, events, clock));
     }
 
     private TaskClaimAppService(
@@ -144,7 +148,8 @@ public class TaskClaimAppService {
             EventPublisher events,
             Clock clock,
             TaskSettings settings,
-            StepEngineReward rewardOps) {
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -155,7 +160,7 @@ public class TaskClaimAppService {
         this.events = events;
         this.clock = clock;
         this.settings = settings;
-        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewardOps);
+        this.enter = new ClaimEnterEngine(instances, events, clock, settings, rewardOps, cascadeOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
