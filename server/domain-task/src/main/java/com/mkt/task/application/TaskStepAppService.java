@@ -19,6 +19,7 @@ import com.mkt.task.engine.StepEngine;
 import com.mkt.task.engine.StepEngineAdvance;
 import com.mkt.task.engine.StepEngineCascadeSupport;
 import com.mkt.task.engine.StepEngineReward;
+import com.mkt.task.engine.StepEngineViews;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
@@ -66,7 +67,8 @@ public class TaskStepAppService {
             TaskStepGuards guards,
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
-            StepEngineAdvance advanceOps) {
+            StepEngineAdvance advanceOps,
+            StepEngineViews engineViews) {
         this(
                 definitions,
                 snapshots,
@@ -82,7 +84,8 @@ public class TaskStepAppService {
                 guards,
                 rewardOps,
                 cascadeOps,
-                advanceOps);
+                advanceOps,
+                engineViews);
     }
 
     public TaskStepAppService(
@@ -193,6 +196,42 @@ public class TaskStepAppService {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                events,
+                clock,
+                settings,
+                preload,
+                views,
+                guards,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                new StepEngineViews(instances));
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload,
+            TaskStepViews views,
+            TaskStepGuards guards,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews engineViews) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -202,7 +241,8 @@ public class TaskStepAppService {
         this.preload = preload;
         this.views = views;
         this.guards = guards;
-        this.engine = new StepEngine(instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps);
+        this.engine = new StepEngine(
+                instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

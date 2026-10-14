@@ -17,7 +17,6 @@ import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.entity.TaskProgressReportEntity;
 import com.mkt.task.expression.CrowdResolver;
-import com.mkt.task.response.RewardFeedbackView;
 import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
@@ -45,6 +44,7 @@ public final class StepEngine {
     private final StepEngineReward rewardOps;
     private final StepEngineCascadeSupport cascadeOps;
     private final StepEngineAdvance advanceOps;
+    private final StepEngineViews views;
 
     public StepEngine(
             TaskInstanceStore instances,
@@ -97,12 +97,33 @@ public final class StepEngine {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps) {
+        this(
+                instances,
+                reports,
+                clock,
+                settings,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                new StepEngineViews(instances));
+    }
+
+    public StepEngine(
+            TaskInstanceStore instances,
+            TaskProgressReportStore reports,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews views) {
         this.instances = instances;
         this.reports = reports;
         this.clock = clock;
         this.rewardOps = rewardOps;
         this.cascadeOps = cascadeOps;
         this.advanceOps = advanceOps;
+        this.views = views;
     }
 
     public void enter(
@@ -179,7 +200,7 @@ public final class StepEngine {
             String ip,
             String deviceId) {
         rejectIfExpired(instance, clock.instant());
-        requireEntryType(Entry.CALLBACK, step);
+        views.requireEntryType(Entry.CALLBACK, step);
         if (bizNo != null && !bizNo.isBlank()) {
             instances.updateLastBizNo(step.getId(), bizNo.trim());
             step.setLastBizNo(bizNo.trim());
@@ -196,7 +217,7 @@ public final class StepEngine {
             int value,
             String reportId) {
         rejectIfExpired(instance, clock.instant());
-        requireEntryType(Entry.PROGRESS, step);
+        views.requireEntryType(Entry.PROGRESS, step);
         if (reports == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
         }
@@ -210,8 +231,8 @@ public final class StepEngine {
             reports.insert(report);
         } catch (DuplicateKeyException ex) {
             rejectIfExpired(instance, clock.instant());
-            TaskInstanceStepEntity fresh = reloadStep(instance.getId(), step.getStepCode());
-            return snapshotOf(instance, fresh == null ? step : fresh, snapshot, List.of(), true);
+            TaskInstanceStepEntity fresh = views.reloadStep(instance.getId(), step.getStepCode());
+            return views.snapshotOf(instance, fresh == null ? step : fresh, snapshot, List.of(), true);
         }
         StepAdvanceResult blocked = advanceOps.precheck(Entry.PROGRESS, instance, step, snapshot);
         if (blocked != null) {
@@ -221,18 +242,6 @@ public final class StepEngine {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
         return advanceOps.accumulate(instance, step, snapshot, attrs, crowds, value, null, null);
-    }
-
-    private static void requireEntryType(Entry entry, TaskInstanceStepEntity step) {
-        String expected = switch (entry) {
-            case CLICK -> StepTypes.CLICK;
-            case CALLBACK -> StepTypes.CALLBACK;
-            case PROGRESS -> StepTypes.PROGRESS;
-            case ENTER -> null;
-        };
-        if (expected != null && !expected.equals(step.getType())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
     }
 
     /**
@@ -272,21 +281,6 @@ public final class StepEngine {
         }
     }
 
-    private StepAdvanceResult snapshotOf(
-            TaskInstanceEntity instance,
-            TaskInstanceStepEntity step,
-            SnapshotContent snapshot,
-            List<RewardFeedbackView> feedback,
-            boolean idempotent) {
-        TaskInstanceEntity fresh = instances.getById(instance.getId());
-        TaskInstanceEntity row = fresh == null ? instance : fresh;
-        return new StepAdvanceResult(row, step, progressTarget(snapshot, step.getStepCode()), feedback, idempotent);
-    }
-
-    private TaskInstanceStepEntity reloadStep(long instanceId, String stepCode) {
-        return instances.getStep(instanceId, stepCode);
-    }
-
     public static boolean expired(TaskInstanceEntity instance, Instant now) {
         if (InstanceStatuses.EXPIRED.equals(instance.getStatus())) {
             return true;
@@ -306,22 +300,5 @@ public final class StepEngine {
 
     private static int seqOf(TaskInstanceStepEntity step) {
         return step.getSeq() == null ? 0 : step.getSeq();
-    }
-
-    private static Integer progressTarget(SnapshotContent snapshot, String stepCode) {
-        TaskStepCommand def = stepDef(snapshot, stepCode);
-        return def == null ? null : def.progressTarget();
-    }
-
-    private static TaskStepCommand stepDef(SnapshotContent snapshot, String stepCode) {
-        if (snapshot == null || snapshot.steps() == null || stepCode == null) {
-            return null;
-        }
-        for (TaskStepCommand step : snapshot.steps()) {
-            if (stepCode.equals(step.code())) {
-                return step;
-            }
-        }
-        return null;
     }
 }
