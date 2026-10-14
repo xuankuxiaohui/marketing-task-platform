@@ -32,7 +32,6 @@ import com.mkt.reward.domain.StockChangeTypes;
 import com.mkt.reward.entity.GrantRecordEntity;
 import com.mkt.reward.entity.PrizeCategoryEntity;
 import com.mkt.reward.entity.PrizeEntity;
-import com.mkt.reward.entity.StockLogEntity;
 import com.mkt.reward.response.GrantRetryResponse;
 import com.mkt.reward.response.ManualGrantResponse;
 import com.mkt.reward.support.GrantSourceIds;
@@ -60,7 +59,6 @@ public class GrantAppService {
     private final PrizeStore prizes;
     private final PrizeCategoryStore categories;
     private final GrantRecordStore grants;
-    private final StockLogStore stockLogs;
     private final UserAttributePort users;
     private final EventPublisher events;
     private final GrantFailureLedger failures;
@@ -69,24 +67,24 @@ public class GrantAppService {
     private final GrantStepResumer resumerDirect;
     private final Clock clock;
     private final GrantChecks checks;
+    private final GrantStockLogs stockLogs;
 
     @Autowired
     public GrantAppService(
             PrizeStore prizes,
             PrizeCategoryStore categories,
             GrantRecordStore grants,
-            StockLogStore stockLogs,
             ObjectProvider<UserAttributePort> users,
             ObjectProvider<EventPublisher> events,
             GrantFailureLedger failures,
             FulfillmentService fulfillment,
             ObjectProvider<GrantStepResumer> resumer,
             Clock clock,
-            GrantChecks checks) {
+            GrantChecks checks,
+            GrantStockLogs stockLogs) {
         this.prizes = prizes;
         this.categories = categories;
         this.grants = grants;
-        this.stockLogs = stockLogs;
         this.users = users.getIfAvailable();
         this.events = events.getIfAvailable();
         this.failures = failures;
@@ -95,6 +93,7 @@ public class GrantAppService {
         this.resumerDirect = null;
         this.clock = clock;
         this.checks = checks;
+        this.stockLogs = stockLogs;
     }
 
     public GrantAppService(
@@ -112,7 +111,6 @@ public class GrantAppService {
         this.prizes = prizes;
         this.categories = categories;
         this.grants = grants;
-        this.stockLogs = stockLogs;
         this.users = users;
         this.events = events;
         this.failures = failures;
@@ -121,6 +119,7 @@ public class GrantAppService {
         this.resumerDirect = resumer;
         this.clock = clock;
         this.checks = new GrantChecks(grants, risk, clock);
+        this.stockLogs = new GrantStockLogs(stockLogs, clock);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = PermanentGrantException.class)
@@ -373,7 +372,7 @@ public class GrantAppService {
             fulfillment.emitArrived(record);
             fulfillment.armThirdPartyStub(record, prize, category);
         }
-        appendStockLog(
+        stockLogs.appendStockLog(
                 prizeId,
                 grantSource == GrantSource.MANUAL_GRANT ? StockChangeTypes.MANUAL_GRANT : StockChangeTypes.GRANT,
                 -1,
@@ -499,28 +498,6 @@ public class GrantAppService {
             record.setCreatedAt(now);
         }
         record.setUpdatedAt(now);
-    }
-
-    private void appendStockLog(
-            long prizeId,
-            String changeType,
-            int amount,
-            int before,
-            int after,
-            String bizSource,
-            String bizId,
-            Long operatorId) {
-        StockLogEntity log = new StockLogEntity();
-        log.setPrizeId(prizeId);
-        log.setChangeType(changeType);
-        log.setAmount(amount);
-        log.setBeforeValue(before);
-        log.setAfterValue(after);
-        log.setBizSource(bizSource);
-        log.setBizId(bizId);
-        log.setOperatorId(operatorId);
-        log.setCreatedAt(RewardTime.toUtc(clock.instant()));
-        stockLogs.insert(log);
     }
 
     private void appendSuccess(GrantRecordEntity record, GrantSource source) {
