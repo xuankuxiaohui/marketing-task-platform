@@ -3,8 +3,6 @@ package com.mkt.task.application;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskListType;
-import com.mkt.contract.UserRiskSummary;
 import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
@@ -47,7 +45,7 @@ public class TaskInstanceAppService {
     private final InstanceViews views;
     private final InstanceEventStore events;
     private final EventPublisher publisher;
-    private final RiskCheckPort risk;
+    private final InstanceGuards guards;
     private final Clock clock;
     private final TransactionTemplate tx;
 
@@ -70,16 +68,16 @@ public class TaskInstanceAppService {
             TaskInstanceStore instances,
             ObjectProvider<InstanceEventStore> events,
             ObjectProvider<EventPublisher> publisher,
-            ObjectProvider<RiskCheckPort> risk,
             Clock clock,
             ObjectProvider<TransactionTemplate> tx,
-            InstanceViews views) {
+            InstanceViews views,
+            InstanceGuards guards) {
         this(
                 instances,
                 views,
                 events.getIfAvailable(),
                 publisher.getIfAvailable(),
-                risk.getIfAvailable(),
+                guards,
                 clock,
                 tx.getIfAvailable());
     }
@@ -92,7 +90,7 @@ public class TaskInstanceAppService {
             RiskCheckPort risk,
             Clock clock,
             TransactionTemplate tx) {
-        this(instances, new InstanceViews(snapshots), events, publisher, risk, clock, tx);
+        this(instances, new InstanceViews(snapshots), events, publisher, new InstanceGuards(risk), clock, tx);
     }
 
     private TaskInstanceAppService(
@@ -100,14 +98,14 @@ public class TaskInstanceAppService {
             InstanceViews views,
             InstanceEventStore events,
             EventPublisher publisher,
-            RiskCheckPort risk,
+            InstanceGuards guards,
             Clock clock,
             TransactionTemplate tx) {
         this.instances = instances;
         this.views = views;
         this.events = events;
         this.publisher = publisher;
-        this.risk = risk;
+        this.guards = guards;
         this.clock = clock;
         this.tx = tx;
     }
@@ -173,7 +171,7 @@ public class TaskInstanceAppService {
         if (row == null || row.getUserId() == null || row.getUserId() != userId) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
-        rejectIfFrozen(userId);
+        guards.rejectIfFrozen(userId);
         if (StepEngineExpire.expired(row, clock.instant())) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
         }
@@ -255,20 +253,6 @@ public class TaskInstanceAppService {
             return;
         }
         publisher.append(eventCode, "task_instance", String.valueOf(row.getId()), payload);
-    }
-
-    private void rejectIfFrozen(long userId) {
-        if (blacklisted(userId)) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_FROZEN);
-        }
-    }
-
-    private boolean blacklisted(long userId) {
-        if (risk == null) {
-            return false;
-        }
-        UserRiskSummary summary = risk.userSummary(userId);
-        return summary != null && summary.listStatus().contains(RiskListType.BLACK);
     }
 
     private static int costSeconds(TaskInstanceEntity row, Instant now) {
