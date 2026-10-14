@@ -27,6 +27,7 @@ import com.mkt.task.domain.VisibilityResult;
 import com.mkt.task.engine.ClaimEnterEngine;
 import com.mkt.task.engine.StepEngineAdvance;
 import com.mkt.task.engine.StepEngineCascadeSupport;
+import com.mkt.task.engine.StepEngineExpire;
 import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.engine.StepEngineViews;
 import com.mkt.task.entity.TaskDefinitionEntity;
@@ -84,7 +85,8 @@ public class TaskClaimAppService {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
-            StepEngineViews engineViews) {
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps) {
         this(
                 definitions,
                 snapshots,
@@ -99,7 +101,8 @@ public class TaskClaimAppService {
                 rewardOps,
                 cascadeOps,
                 advanceOps,
-                engineViews);
+                engineViews,
+                expireOps);
     }
 
     public TaskClaimAppService(
@@ -226,7 +229,8 @@ public class TaskClaimAppService {
                 rewardOps,
                 cascadeOps,
                 advanceOps,
-                new StepEngineViews(instances));
+                new StepEngineViews(instances),
+                new StepEngineExpire());
     }
 
     private TaskClaimAppService(
@@ -243,7 +247,8 @@ public class TaskClaimAppService {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
-            StepEngineViews engineViews) {
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -255,7 +260,7 @@ public class TaskClaimAppService {
         this.clock = clock;
         this.settings = settings;
         this.enter = new ClaimEnterEngine(
-                instances, events, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews);
+                instances, events, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

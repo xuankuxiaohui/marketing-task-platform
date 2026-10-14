@@ -16,7 +16,7 @@ import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.AbandonSources;
 import com.mkt.task.domain.InstanceStatuses;
-import com.mkt.task.engine.StepEngine;
+import com.mkt.task.engine.StepEngineExpire;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
@@ -165,7 +165,7 @@ public class TaskInstanceAppService {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
         rejectIfFrozen(userId);
-        if (StepEngine.expired(row, clock.instant())) {
+        if (StepEngineExpire.expired(row, clock.instant())) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
         }
         if (InstanceStatuses.ABANDONED.equals(row.getStatus())) {
