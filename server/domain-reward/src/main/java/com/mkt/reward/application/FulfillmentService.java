@@ -43,8 +43,7 @@ public class FulfillmentService {
 
     private final PointsPort points;
     private final GrantRecordStore grants;
-    private final PrizeStore prizes;
-    private final PrizeCategoryStore categories;
+    private final FulfillmentLookups lookups;
     private final EventPublisher events;
     private final RewardRuntimeSettings settings;
     private final Clock clock;
@@ -53,16 +52,14 @@ public class FulfillmentService {
     public FulfillmentService(
             ObjectProvider<PointsPort> points,
             GrantRecordStore grants,
-            ObjectProvider<PrizeStore> prizes,
-            ObjectProvider<PrizeCategoryStore> categories,
+            FulfillmentLookups lookups,
             ObjectProvider<EventPublisher> events,
             ObjectProvider<RewardRuntimeSettings> settings,
             Clock clock) {
         this(
                 points.getIfAvailable(),
                 grants,
-                prizes.getIfAvailable(),
-                categories.getIfAvailable(),
+                lookups,
                 events.getIfAvailable(),
                 settings.getIfAvailable() == null ? new RewardRuntimeSettings() : settings.getIfAvailable(),
                 clock);
@@ -80,10 +77,19 @@ public class FulfillmentService {
             EventPublisher events,
             RewardRuntimeSettings settings,
             Clock clock) {
+        this(points, grants, new FulfillmentLookups(prizes, categories), events, settings, clock);
+    }
+
+    private FulfillmentService(
+            PointsPort points,
+            GrantRecordStore grants,
+            FulfillmentLookups lookups,
+            EventPublisher events,
+            RewardRuntimeSettings settings,
+            Clock clock) {
         this.points = points;
         this.grants = grants;
-        this.prizes = prizes;
-        this.categories = categories;
+        this.lookups = lookups;
         this.events = events;
         this.settings = settings == null ? new RewardRuntimeSettings() : settings;
         this.clock = clock;
@@ -167,8 +173,8 @@ public class FulfillmentService {
         if (affected != 1) {
             throw new BusinessException(RewardErrorCodes.FULFILL_NOT_RETRYABLE);
         }
-        PrizeEntity prize = prizeOf(row);
-        PrizeCategoryEntity category = categoryOf(prize);
+        PrizeEntity prize = lookups.prizeOf(row);
+        PrizeCategoryEntity category = lookups.categoryOf(prize);
         if (prize != null) {
             armThirdPartyStub(row, prize, category);
         }
@@ -188,8 +194,8 @@ public class FulfillmentService {
     private int retryDue(LocalDateTime now) {
         int ran = 0;
         for (GrantRecordEntity row : grants.listFulfillRetryDue(now, BATCH)) {
-            PrizeEntity prize = prizeOf(row);
-            PrizeCategoryEntity category = categoryOf(prize);
+            PrizeEntity prize = lookups.prizeOf(row);
+            PrizeCategoryEntity category = lookups.categoryOf(prize);
             if (prize != null) {
                 armThirdPartyStub(row, prize, category);
             }
@@ -212,7 +218,7 @@ public class FulfillmentService {
         LocalDateTime dayStart = com.mkt.reward.domain.ClaimWindows.dailyStartUtc(clock);
         int ran = 0;
         for (GrantRecordEntity row : grants.listCrossDaySending(dayStart, BATCH)) {
-            if (reconRequired(row)) {
+            if (lookups.reconRequired(row)) {
                 grants.markReconPending(row.getId(), now);
                 ran++;
             }
@@ -247,7 +253,7 @@ public class FulfillmentService {
     }
 
     private FulfillmentCallbackResponse failAttempt(GrantRecordEntity row, LocalDateTime now, String failReason) {
-        String reason = mappedFailReason(failReason);
+        String reason = lookups.mappedFailReason(failReason);
         int retry = row.getRetryCount() == null ? 0 : row.getRetryCount();
         retry = retry + 1;
         row.setRetryCount(retry);
@@ -255,7 +261,7 @@ public class FulfillmentService {
         if (retry >= settings.fulfillRetryMax()) {
             row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_FAILED);
             row.setFulfillFailReason(reason);
-            if (reconRequired(row)) {
+            if (lookups.reconRequired(row)) {
                 row.setReconStatus(GrantRecordStatuses.RECON_PENDING);
             }
             int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
@@ -277,7 +283,7 @@ public class FulfillmentService {
         row.setFulfillmentStatus(GrantRecordStatuses.FULFILL_FAILED);
         row.setFulfillFailReason(FulfillFailReasons.TIMEOUT);
         row.setUpdatedAt(now);
-        if (reconRequired(row)) {
+        if (lookups.reconRequired(row)) {
             row.setReconStatus(GrantRecordStatuses.RECON_PENDING);
         }
         int affected = grants.updateIfFulfillment(row, GrantRecordStatuses.FULFILL_SENDING);
@@ -291,41 +297,9 @@ public class FulfillmentService {
         row.setFulfilledAt(now);
         row.setFulfillFailReason(null);
         row.setUpdatedAt(now);
-        if (reconRequired(row)) {
+        if (lookups.reconRequired(row)) {
             row.setReconStatus(GrantRecordStatuses.RECON_PENDING);
         }
-    }
-
-    private boolean reconRequired(GrantRecordEntity row) {
-        PrizeCategoryEntity category = categoryOf(prizeOf(row));
-        if (category == null && categories != null && row.getCategoryCode() != null) {
-            category = categories.getByCode(row.getCategoryCode());
-        }
-        return category != null && category.reconRequiredFlag();
-    }
-
-    private PrizeEntity prizeOf(GrantRecordEntity row) {
-        if (prizes == null || row.getPrizeId() == null) {
-            return null;
-        }
-        return prizes.getByIdIncludingDeleted(row.getPrizeId());
-    }
-
-    private PrizeCategoryEntity categoryOf(PrizeEntity prize) {
-        if (categories == null || prize == null || prize.getCategoryCode() == null) {
-            return null;
-        }
-        return categories.getByCode(prize.getCategoryCode());
-    }
-
-    private static String mappedFailReason(String failReason) {
-        if (failReason != null
-                && FulfillFailReasons.closed(failReason)
-                && !FulfillFailReasons.MANUAL.equals(failReason)
-                && !FulfillFailReasons.TIMEOUT.equals(failReason)) {
-            return failReason;
-        }
-        return FulfillFailReasons.CALLBACK_FAILED;
     }
 
     private void earnPoints(GrantRecordEntity record, PrizeEntity prize, Instant now) {
