@@ -18,6 +18,7 @@ import com.mkt.task.engine.StepAdvanceResult;
 import com.mkt.task.engine.StepEngine;
 import com.mkt.task.engine.StepEngineAdvance;
 import com.mkt.task.engine.StepEngineCascadeSupport;
+import com.mkt.task.engine.StepEngineExpire;
 import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.engine.StepEngineViews;
 import com.mkt.task.entity.TaskDefinitionEntity;
@@ -68,7 +69,8 @@ public class TaskStepAppService {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
-            StepEngineViews engineViews) {
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps) {
         this(
                 definitions,
                 snapshots,
@@ -85,7 +87,8 @@ public class TaskStepAppService {
                 rewardOps,
                 cascadeOps,
                 advanceOps,
-                engineViews);
+                engineViews,
+                expireOps);
     }
 
     public TaskStepAppService(
@@ -212,7 +215,8 @@ public class TaskStepAppService {
                 rewardOps,
                 cascadeOps,
                 advanceOps,
-                new StepEngineViews(instances));
+                new StepEngineViews(instances),
+                new StepEngineExpire());
     }
 
     private TaskStepAppService(
@@ -231,7 +235,8 @@ public class TaskStepAppService {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
-            StepEngineViews engineViews) {
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -242,7 +247,7 @@ public class TaskStepAppService {
         this.views = views;
         this.guards = guards;
         this.engine = new StepEngine(
-                instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews);
+                instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -352,7 +357,7 @@ public class TaskStepAppService {
         }
         TaskInstanceEntity instance = instances.getByIdForUpdate(step.getInstanceId());
         if (instance == null || InstanceStatuses.terminal(instance.getStatus())
-                || StepEngine.expired(instance, clock.instant())) {
+                || StepEngineExpire.expired(instance, clock.instant())) {
             return;
         }
         step = instances.getStepById(stepId);

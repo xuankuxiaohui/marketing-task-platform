@@ -77,7 +77,8 @@ public final class ClaimEnterEngine {
                 rewardOps,
                 cascadeOps,
                 advanceOps,
-                new StepEngineViews(instances));
+                new StepEngineViews(instances),
+                new StepEngineExpire());
     }
 
     public ClaimEnterEngine(
@@ -88,9 +89,10 @@ public final class ClaimEnterEngine {
             StepEngineReward rewardOps,
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
-            StepEngineViews engineViews) {
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps) {
         this.engine = new StepEngine(
-                instances, null, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews);
+                instances, null, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
     }
 
     public void enter(

@@ -45,6 +45,7 @@ public final class StepEngine {
     private final StepEngineCascadeSupport cascadeOps;
     private final StepEngineAdvance advanceOps;
     private final StepEngineViews views;
+    private final StepEngineExpire expireOps;
 
     public StepEngine(
             TaskInstanceStore instances,
@@ -117,6 +118,28 @@ public final class StepEngine {
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
             StepEngineViews views) {
+        this(
+                instances,
+                reports,
+                clock,
+                settings,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                views,
+                new StepEngineExpire());
+    }
+
+    public StepEngine(
+            TaskInstanceStore instances,
+            TaskProgressReportStore reports,
+            Clock clock,
+            TaskSettings settings,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews views,
+            StepEngineExpire expireOps) {
         this.instances = instances;
         this.reports = reports;
         this.clock = clock;
@@ -124,6 +147,7 @@ public final class StepEngine {
         this.cascadeOps = cascadeOps;
         this.advanceOps = advanceOps;
         this.views = views;
+        this.expireOps = expireOps;
     }
 
     public void enter(
@@ -139,7 +163,7 @@ public final class StepEngine {
             String ip,
             String deviceId) {
         Instant now = clock.instant();
-        rejectIfExpired(instance, now);
+        expireOps.rejectIfExpired(instance, now);
         if (!InstanceStatuses.IN_PROGRESS.equals(instance.getStatus())) {
             throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
         }
@@ -199,7 +223,7 @@ public final class StepEngine {
             String bizNo,
             String ip,
             String deviceId) {
-        rejectIfExpired(instance, clock.instant());
+        expireOps.rejectIfExpired(instance, clock.instant());
         views.requireEntryType(Entry.CALLBACK, step);
         if (bizNo != null && !bizNo.isBlank()) {
             instances.updateLastBizNo(step.getId(), bizNo.trim());
@@ -216,7 +240,7 @@ public final class StepEngine {
             CrowdResolver crowds,
             int value,
             String reportId) {
-        rejectIfExpired(instance, clock.instant());
+        expireOps.rejectIfExpired(instance, clock.instant());
         views.requireEntryType(Entry.PROGRESS, step);
         if (reports == null) {
             throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
@@ -230,7 +254,7 @@ public final class StepEngine {
         try {
             reports.insert(report);
         } catch (DuplicateKeyException ex) {
-            rejectIfExpired(instance, clock.instant());
+            expireOps.rejectIfExpired(instance, clock.instant());
             TaskInstanceStepEntity fresh = views.reloadStep(instance.getId(), step.getStepCode());
             return views.snapshotOf(instance, fresh == null ? step : fresh, snapshot, List.of(), true);
         }
@@ -264,7 +288,7 @@ public final class StepEngine {
             return;
         }
         Instant now = clock.instant();
-        if (expired(instance, now)) {
+        if (expireOps.expired(instance, now)) {
             return;
         }
         try {
@@ -278,23 +302,6 @@ public final class StepEngine {
             }
             // A retry has already granted the reward. Stop the now-expired cascade
             // without rolling back that entitlement.
-        }
-    }
-
-    public static boolean expired(TaskInstanceEntity instance, Instant now) {
-        if (InstanceStatuses.EXPIRED.equals(instance.getStatus())) {
-            return true;
-        }
-        if (!InstanceStatuses.IN_PROGRESS.equals(instance.getStatus())) {
-            return false;
-        }
-        Instant expireAt = TaskTime.toInstant(instance.getExpireAt());
-        return expireAt != null && !now.isBefore(expireAt);
-    }
-
-    private static void rejectIfExpired(TaskInstanceEntity instance, Instant now) {
-        if (expired(instance, now)) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
         }
     }
 
