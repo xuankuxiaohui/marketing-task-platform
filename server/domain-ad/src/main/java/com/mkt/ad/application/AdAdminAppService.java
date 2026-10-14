@@ -32,8 +32,8 @@ import com.mkt.kernel.PageQuery;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,16 +45,28 @@ public class AdAdminAppService {
     private final AdMaterialStore materials;
     private final AdPlacementStore placements;
     private final PlatformCache cache;
+    private final AdAdminValidate validate;
+
+    @Autowired
+    public AdAdminAppService(
+            AdPositionStore positions,
+            AdMaterialStore materials,
+            AdPlacementStore placements,
+            PlatformCache cache,
+            AdAdminValidate validate) {
+        this.positions = positions;
+        this.materials = materials;
+        this.placements = placements;
+        this.cache = cache;
+        this.validate = validate;
+    }
 
     public AdAdminAppService(
             AdPositionStore positions,
             AdMaterialStore materials,
             AdPlacementStore placements,
             PlatformCache cache) {
-        this.positions = positions;
-        this.materials = materials;
-        this.placements = placements;
-        this.cache = cache;
+        this(positions, materials, placements, cache, new AdAdminValidate());
     }
 
     public PageData<AdPositionView> pagePositions(AdPositionQuery query) {
@@ -149,7 +161,7 @@ public class AdAdminAppService {
 
     @Transactional
     public AdSaveResponse saveMaterial(AdMaterialSaveCommand command) {
-        validateMaterial(command);
+        validate.validateMaterial(command);
         if (command.id() == null) {
             AdMaterialEntity entity = new AdMaterialEntity();
             applyMaterial(entity, command);
@@ -178,7 +190,7 @@ public class AdAdminAppService {
     public AdSaveResponse bind(long positionId, AdPlacementSaveCommand command) {
         AdPositionEntity position = requirePosition(positionId);
         AdMaterialEntity material = requireMaterial(command.materialId());
-        validatePlacement(command);
+        validate.validatePlacement(command);
         AdPositionMaterialEntity existing =
                 placements.getByPositionAndMaterial(positionId, command.materialId());
         if (existing == null) {
@@ -211,29 +223,6 @@ public class AdAdminAppService {
         return OkResponse.yes();
     }
 
-    private void validateMaterial(AdMaterialSaveCommand command) {
-        if (command.weight() == null || command.weight() < 1 || command.weight() > 999) {
-            throw new BusinessException(AdErrorCodes.MATERIAL_WEIGHT_INVALID);
-        }
-        if (command.startTime() == null
-                || command.endTime() == null
-                || !command.startTime().isBefore(command.endTime())) {
-            throw new BusinessException(AdErrorCodes.TIME_WINDOW_INVALID);
-        }
-        String jump = AdJumpSchemas.normalize(command.jumpType());
-        if (!AdJumpSchemas.validType(jump) || !AdJumpSchemas.validParams(jump, command.jumpParams())) {
-            throw new BusinessException(AdErrorCodes.MATERIAL_JUMP_INVALID);
-        }
-        String image = command.imageUrl() == null ? "" : command.imageUrl().trim();
-        if (!image.toLowerCase(Locale.ROOT).startsWith("https://") || image.length() > 512) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "图片须为 https 外链");
-        }
-        String status = AdStatuses.normalize(command.status());
-        if (!AdStatuses.valid(status)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "状态无效");
-        }
-    }
-
     private void applyMaterial(AdMaterialEntity entity, AdMaterialSaveCommand command) {
         entity.setTitle(command.title());
         entity.setSubtitle(command.subtitle());
@@ -244,38 +233,6 @@ public class AdAdminAppService {
         entity.setStartTime(AdDates.toUtc(command.startTime()));
         entity.setEndTime(AdDates.toUtc(command.endTime()));
         entity.setStatus(AdStatuses.normalize(command.status()));
-    }
-
-    private void validatePlacement(AdPlacementSaveCommand command) {
-        if (command.weight() == null || command.weight() < 1 || command.weight() > 999) {
-            throw new BusinessException(AdErrorCodes.MATERIAL_WEIGHT_INVALID);
-        }
-        if (command.startTime() == null
-                || command.endTime() == null
-                || !command.startTime().isBefore(command.endTime())) {
-            throw new BusinessException(AdErrorCodes.TIME_WINDOW_INVALID);
-        }
-        String gray = AdGrayTypes.normalize(command.grayType());
-        if (!AdGrayTypes.valid(gray)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "灰度配置无效");
-        }
-        if (AdGrayTypes.RATIO.equals(gray)
-                && (command.grayRatio() == null || command.grayRatio() < 0 || command.grayRatio() > 100)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "灰度比例无效");
-        }
-        String status = AdStatuses.normalize(command.status());
-        if (!AdStatuses.valid(status)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "状态无效");
-        }
-        if (command.platforms() != null) {
-            for (String platform : command.platforms()) {
-                if (platform != null
-                        && !platform.isBlank()
-                        && !AdPlatforms.valid(platform.trim().toUpperCase(Locale.ROOT))) {
-                    throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "端定向无效");
-                }
-            }
-        }
     }
 
     private void applyPlacement(AdPositionMaterialEntity entity, AdPlacementSaveCommand command, int fallbackWeight) {

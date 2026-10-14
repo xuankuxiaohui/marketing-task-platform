@@ -66,7 +66,7 @@
 | # | 产品假设 | 核实结论 | 证据 | 级 | 量 |
 |---|---|---|---|---|---|
 | U1 | 任务/奖品列表失败态（P1） | **部分成立。** 门户「我的任务/我的奖品」、首页活动、活动中心已有失败态+重试。**缺口 1：** 活动详情页（任务列表所在）`fetchActivityDetail` 失败时先弹 `response.message` 原文，再落到「暂无进行中的活动」空态，失败看起来像没活动，且没有重试。**缺口 2：** Admin 任务定义/奖品等列表失败只出顶部提示条，表格不清空、空态仍显示「暂无数据」，`runWithLoading` 无 catch，网络异常不会落成页面提示 | `client/src/views/activity/index.vue:94-98,138`；`admin/src/views/reward/prize/index.vue:80-84`；`admin/src/composables/runWithLoading.ts` | P1 | S（门户）/ M（Admin 通用） |
-| U2 | Admin 风控页英文码（P2S） | **成立。** 规则表列头写死 `code`；「动作」列和编辑下拉直接显示 `REJECT / SILENT_REJECT / MARK`；风控案例页 `actionResult`、名单页 `listType` 也是原值 | `admin/src/views/risk/rule/index.vue:99,116,151`；`risk/case/index.vue:169`；`risk/list-item/index.vue:218` | P2 | S |
+| U2 | Admin 风控页英文码（P2S） | **成立。** 规则表列头写死 `code`；「动作」列和编辑下拉直接显示 `REJECT / SILENT_REJECT / MARK`；风控案例页 `actionResult`、名单页 `listType` 也是原值 | `admin/src/views/risk/rule/index.vue:99,116,151`；`risk/case/index.vue:169`；`risk/list-item/index.vue:218` | P2 | S | **done 2026-10-14** → #214 Admin 风控页中文化（本刀不改前端） |
 | U3 | 门户 toast 技术码（P1） | **基本已收口，剩 1 处。** UX-1/UX-2 的 `portal-error.ts` 已把登录/领取拒绝码映射成中文，未知码兜底成网络错误。漏网：活动详情页直接 `showFailToast(response.message)`，绕过映射，后端回码时会露原文 | `client/src/utils/portal-error.ts`；`client/src/views/activity/index.vue:96` | P1 | S（与 U1 门户缺口同一处） |
 | U4 | 空态引导（P3） | **部分成立。** 「我的任务/我的奖品」空态已有「去做任务」按钮；首页活动空态、活动详情空态只有一句文字，没有下一步 | `client/src/views/home/index.vue:378-382`；`client/src/views/activity/index.vue:138` | P3 | S |
 
@@ -75,7 +75,7 @@
 | 序 | 项 | 级 | 量 | 为什么 |
 |---|---|---|---|---|
 | 1 | **U1+U3 门户活动详情失败态**：失败走 `showPortalFail` 映射，失败与空态分开，加重试按钮，补 spec | P1 | S | 一处修两条产品项，门户主旅程 |
-| 2 | **U2 Admin 风控页中文化**：列头 + 动作/案例结果/名单类型加中文标签（复用 `status-label.ts` 模式） | P2 | S | 产品点名、改动小、无后端变更 |
+| 2 | **U2 Admin 风控页中文化**：列头 + 动作/案例结果/名单类型加中文标签（复用 `status-label.ts` 模式） | P2 | S | **done 2026-10-14** → #214（本刀不改前端） |
 | 3 | **T1+T3 补测**：6 个 Controller 的 WebMvc 切片测试 + `FulfillmentService` 单测 | P2 | M | **done 2026-10-14** → T1 #216 + 本刀对账明细；T3 #215 / #223 |
 | 4 | **D5 容量文档归档**：`docs/capacity`、`deploy/drills` 的 FAIL 证据挪进 `docs/archive/`，留一份活状态页 | P2 | M | **2026-10-13 Top4 done**（本刀）；与 replan P0 文档分诊合并，只动文档 |
 | 5 | **R1 第一刀**：从 `TaskPortalAppService` 抽一个方法簇（只搬不改语义，前后测试不变） | P1 | L→S 切 | 热路径可读性最大债；须在 #3 之后、架构定切口 |
