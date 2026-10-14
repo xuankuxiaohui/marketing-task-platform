@@ -18,6 +18,7 @@ import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
+import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.Result;
 import com.mkt.kernel.web.GlobalExceptionHandler;
 import com.mkt.reward.application.ReconAppService;
@@ -26,6 +27,7 @@ import com.mkt.reward.command.ReconBatchCreateCommand;
 import com.mkt.reward.command.ReconImportCommand;
 import com.mkt.reward.response.ReconActionResponse;
 import com.mkt.reward.response.ReconBatchResponse;
+import com.mkt.reward.response.ReconItemView;
 import com.mkt.reward.response.ReconMatchResponse;
 import com.mkt.reward.response.ReconReviewResponse;
 import com.mkt.reward.support.RewardPermissions;
@@ -152,6 +154,52 @@ class ReconAdminControllerTest {
                 .andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.records[0].id").value(4))
                 .andExpect(jsonPath("$.data.records[0].categoryCode").value("TOKEN_A"));
+    }
+
+    @Test
+    void itemsWithoutQueryPermissionIs403() throws Exception {
+        mvc.perform(get("/admin/reward/recon/batches/4/items"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("common.permission-denied"));
+        verifyNoInteractions(recon);
+    }
+
+    @Test
+    void itemsHappyPathPassesFilters() throws Exception {
+        stp.grant(RewardPermissions.RECON_QUERY);
+        when(recon.items(eq(4L), eq("PLATFORM_ONLY"), eq("PENDING_REVIEW"), any()))
+                .thenReturn(new PageData<>(
+                        1,
+                        List.of(new ReconItemView(
+                                8L,
+                                4L,
+                                100L,
+                                "F-1",
+                                100,
+                                80,
+                                "PLATFORM_ONLY",
+                                null,
+                                null,
+                                "PENDING_REVIEW",
+                                null,
+                                null,
+                                null))));
+        mvc.perform(get("/admin/reward/recon/batches/4/items")
+                        .param("result", "PLATFORM_ONLY")
+                        .param("reviewStatus", "PENDING_REVIEW")
+                        .param("page", "2")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.records[0].id").value(8))
+                .andExpect(jsonPath("$.data.records[0].fulfillmentRef").value("F-1"))
+                .andExpect(jsonPath("$.data.records[0].result").value("PLATFORM_ONLY"))
+                .andExpect(jsonPath("$.data.records[0].reviewStatus").value("PENDING_REVIEW"));
+        ArgumentCaptor<PageQuery> page = ArgumentCaptor.forClass(PageQuery.class);
+        verify(recon).items(eq(4L), eq("PLATFORM_ONLY"), eq("PENDING_REVIEW"), page.capture());
+        assertThat(page.getValue().page()).isEqualTo(2);
+        assertThat(page.getValue().pageSize()).isEqualTo(10);
     }
 
     @Test

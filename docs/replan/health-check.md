@@ -27,9 +27,9 @@
 
 | # | 发现 | 证据 | 级 | 量 |
 |---|---|---|---|---|
-| T1 | 6 个 Controller 无任何测试引用 | `AdAdminController`(144 行)、`ReconAdminController`(107)、`DictEntryAdminController`(59)、`RiskRuleAdminController`(52)、`AdPortalController`(50)、`SpendAdminController`(37) | P2 | M |
+| T1 | 6 个 Controller 无任何测试引用 | `AdAdminController`(144 行)、`ReconAdminController`(107)、`DictEntryAdminController`(59)、`RiskRuleAdminController`(52)、`AdPortalController`(50)、`SpendAdminController`(37) | P2 | M | **done 2026-10-14** → #216 六个 standalone MockMvc 切片；本刀补 `ReconAdminController` `GET /batches/{id}/items` |
 | T2 | domain-ad 测试密度最低（main 2446 行 / 7 个测试文件） | 广告后台 CRUD + 门户投放仅少量用例 | P2 | M |
-| T3 | `FulfillmentService`(400 行) 无专属单测，仅经 9 处间接引用覆盖 | 发放履约是资金相关路径 | P2 | S |
+| T3 | `FulfillmentService`(400 行) 无专属单测，仅经 9 处间接引用覆盖 | 发放履约是资金相关路径 | P2 | S | **done 2026-10-14** → #215 / #223 `FulfillmentServiceTest`（本刀不改） |
 | T4 | 其余前 12 大服务类均有专属 `*Test` | TaskPublish/TaskPortal/StepEngine/Grant/… | — | — |
 | T5 | 前端：client 80 源文件 / 52 spec，admin 89 / 52，e2e 4 条旅程 spec | 覆盖面合理；见 UX 节缺的失败态用例 | P3 | S |
 
@@ -76,7 +76,7 @@
 |---|---|---|---|---|
 | 1 | **U1+U3 门户活动详情失败态**：失败走 `showPortalFail` 映射，失败与空态分开，加重试按钮，补 spec | P1 | S | 一处修两条产品项，门户主旅程 |
 | 2 | **U2 Admin 风控页中文化**：列头 + 动作/案例结果/名单类型加中文标签（复用 `status-label.ts` 模式） | P2 | S | 产品点名、改动小、无后端变更 |
-| 3 | **T1+T3 补测**：6 个 Controller 的 WebMvc 切片测试 + `FulfillmentService` 单测 | P2 | M | 零行为改动，给后续可读性小切打底 |
+| 3 | **T1+T3 补测**：6 个 Controller 的 WebMvc 切片测试 + `FulfillmentService` 单测 | P2 | M | **done 2026-10-14** → T1 #216 + 本刀对账明细；T3 #215 / #223 |
 | 4 | **D5 容量文档归档**：`docs/capacity`、`deploy/drills` 的 FAIL 证据挪进 `docs/archive/`，留一份活状态页 | P2 | M | **2026-10-13 Top4 done**（本刀）；与 replan P0 文档分诊合并，只动文档 |
 | 5 | **R1 第一刀**：从 `TaskPortalAppService` 抽一个方法簇（只搬不改语义，前后测试不变） | P1 | L→S 切 | 热路径可读性最大债；须在 #3 之后、架构定切口 |
 
