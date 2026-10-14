@@ -1,23 +1,19 @@
 package com.mkt.task.application;
 
 import com.mkt.contract.RiskCheckPort;
-import com.mkt.contract.RiskListType;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.contract.UserAttributes;
-import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.json.JsonUtil;
-import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.CycleKeyResolver;
 import com.mkt.task.domain.InstanceStatuses;
-import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.VisibilityEvaluator;
 import com.mkt.task.domain.VisibilityResult;
 import com.mkt.task.domain.CrowdMembership;
@@ -28,8 +24,6 @@ import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.expression.CrowdResolver;
 import com.mkt.task.expression.EvalContext;
 import com.mkt.task.expression.EvalContexts;
-import com.mkt.task.response.CurrentStepView;
-import com.mkt.task.response.InstanceStepView;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskBriefView;
 import com.mkt.task.response.TaskStepSource;
@@ -55,11 +49,10 @@ public class TaskPortalAppService {
     private final TaskInstanceStore instances;
     private final TaskCrowdStore crowds;
     private final UserAttributePort users;
-    private final RiskCheckPort risk;
     private final Clock clock;
-    private final PlatformCache cache;
     private final TaskPortalPublishedCatalog publishedCatalog;
     private final TaskPortalCardViews cardViews;
+    private final TaskPortalDetail detail;
 
     @Autowired
     public TaskPortalAppService(
@@ -72,7 +65,8 @@ public class TaskPortalAppService {
             ObjectProvider<PlatformCache> cache,
             Clock clock,
             TaskPortalPublishedCatalog publishedCatalog,
-            TaskPortalCardViews cardViews) {
+            TaskPortalCardViews cardViews,
+            TaskPortalDetail detail) {
         this(
                 definitions,
                 snapshots,
@@ -83,7 +77,8 @@ public class TaskPortalAppService {
                 clock,
                 cache.getIfAvailable(),
                 publishedCatalog,
-                cardViews);
+                cardViews,
+                detail);
     }
 
     public TaskPortalAppService(
@@ -94,7 +89,7 @@ public class TaskPortalAppService {
             UserAttributePort users,
             RiskCheckPort risk,
             Clock clock) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null, null);
     }
 
     public TaskPortalAppService(
@@ -106,7 +101,7 @@ public class TaskPortalAppService {
             RiskCheckPort risk,
             Clock clock,
             PlatformCache cache) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null, null);
     }
 
     TaskPortalAppService(
@@ -119,15 +114,14 @@ public class TaskPortalAppService {
             Clock clock,
             PlatformCache cache,
             TaskPortalPublishedCatalog publishedCatalog,
-            TaskPortalCardViews cardViews) {
+            TaskPortalCardViews cardViews,
+            TaskPortalDetail detail) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
         this.crowds = crowds;
         this.users = users;
-        this.risk = risk;
         this.clock = clock;
-        this.cache = cache;
         this.publishedCatalog =
                 publishedCatalog != null
                         ? publishedCatalog
@@ -136,6 +130,10 @@ public class TaskPortalAppService {
                 cardViews != null
                         ? cardViews
                         : new TaskPortalCardViews(snapshots, instances);
+        this.detail =
+                detail != null
+                        ? detail
+                        : new TaskPortalDetail(snapshots, instances, crowds, users, risk, cache);
     }
 
     public TaskStepSource sourceForStep(long stepId) {
@@ -161,7 +159,7 @@ public class TaskPortalAppService {
         if (userId != null && users == null) {
             return new PageData<>(0, List.of());
         }
-        if (userId != null && blacklisted(userId)) {
+        if (userId != null && detail.blacklisted(userId)) {
             return new PageData<>(0, List.of());
         }
         UserAttributes attrs = userId == null ? null : users.attributes(userId);
@@ -259,9 +257,9 @@ public class TaskPortalAppService {
         }
         Instant now = clock.instant();
         if (userId == null) {
-            return anonymousDetail(definition, now);
+            return detail.anonymousDetail(definition, now);
         }
-        SnapshotContent live = snapshotOf(definition);
+        SnapshotContent live = detail.snapshotOf(definition);
         String cycleKey = live == null
                 ? CycleKeyResolver.resolve(
                         definition.getCycleType(),
@@ -272,19 +270,19 @@ public class TaskPortalAppService {
                 : CycleKeyResolver.resolve(
                         live.cycleType(), live.cronExpr(), live.specialStart(), live.specialEnd(), now);
         TaskInstanceEntity current = instances.getByUserTaskCycle(userId, taskId, cycleKey);
-        TaskInstanceEntity inProgress = pickInProgress(taskId, userId, cycleKey);
+        TaskInstanceEntity inProgress = detail.pickInProgress(taskId, userId, cycleKey);
         if (inProgress != null) {
-            return inProgressDetail(inProgress, platform);
+            return detail.inProgressDetail(inProgress, platform);
         }
         if (current != null && InstanceStatuses.terminal(current.getStatus())) {
             return new TaskDetailResponse(current.getStatus(), current.getId(), null, null, null, null, null);
         }
-        SnapshotContent snapshot = snapshotOf(definition);
+        SnapshotContent snapshot = detail.snapshotOf(definition);
         UserAttributes attrs = users == null ? UserAttributes.notFound() : users.attributes(userId);
         VisibilityResult visibility =
                 snapshot == null
                         ? VisibilityResult.deny(List.of())
-                        : visibility(definition, snapshot, userId, attrs, now);
+                        : detail.visibility(definition, snapshot, userId, attrs, now);
         if (snapshot == null || !visibility.visible()) {
             return new TaskDetailResponse(InstanceStatuses.OFFLINE, null, null, null, null, null, null);
         }
@@ -345,150 +343,6 @@ public class TaskPortalAppService {
         }
         return new PageData<>(total, views);
     }
-
-    private TaskDetailResponse anonymousDetail(TaskDefinitionEntity definition, Instant now) {
-        SnapshotContent snapshot = snapshotOf(definition);
-        if (snapshot == null
-                || !VisibilityEvaluator.publicCard(
-                        definition.getStatus(),
-                        snapshot.startTime(),
-                        snapshot.endTime(),
-                        snapshot.gray(),
-                        snapshot.filter(),
-                        now)) {
-            return new TaskDetailResponse(InstanceStatuses.OFFLINE, null, null, null, null, null, null);
-        }
-        return new TaskDetailResponse(
-                InstanceStatuses.NOT_STARTED,
-                null,
-                new TaskBriefView(snapshot.name(), snapshot.iconUrl(), snapshot.description(), snapshot.category()),
-                SnapshotViews.stepsPreview(snapshot),
-                SnapshotViews.rewardPreview(snapshot),
-                null,
-                null);
-    }
-
-    private TaskDetailResponse inProgressDetail(TaskInstanceEntity instance, String platform) {
-        TaskVersionSnapshotEntity snap = snapshots.getById(instance.getSnapshotId());
-        SnapshotContent snapshot =
-                snap == null ? null : JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-        List<TaskInstanceStepEntity> steps = instances.listSteps(instance.getId());
-        List<InstanceStepView> stepViews = new ArrayList<>();
-        CurrentStepView current = null;
-        if (steps != null && snapshot != null) {
-            for (TaskInstanceStepEntity step : steps) {
-                TaskStepCommand def = SnapshotViews.step(snapshot, step.getStepCode());
-                String name = def == null ? step.getStepCode() : def.name();
-                Integer target = def == null ? null : def.progressTarget();
-                stepViews.add(new InstanceStepView(
-                        step.getStepCode(),
-                        name,
-                        step.getType(),
-                        step.getStatus(),
-                        step.getProgressCurrent() == null ? 0 : step.getProgressCurrent(),
-                        target));
-                if (current == null && StepStatuses.ACTIVE.equals(step.getStatus())) {
-                    current = new CurrentStepView(
-                            step.getStepCode(),
-                            name,
-                            step.getType(),
-                            step.getProgressCurrent(),
-                            target,
-                            SnapshotViews.action(snapshot, step.getStepCode(), platform));
-                }
-            }
-        }
-        return new TaskDetailResponse(
-                InstanceStatuses.IN_PROGRESS,
-                instance.getId(),
-                null,
-                null,
-                SnapshotViews.rewardPreview(snapshot),
-                stepViews,
-                current);
-    }
-
-    private VisibilityResult visibility(
-            TaskDefinitionEntity definition,
-            SnapshotContent snapshot,
-            long userId,
-            UserAttributes attrs,
-            Instant now) {
-        StoreCrowdMembership membership = new StoreCrowdMembership(crowds);
-        CrowdResolver resolver = new StoreCrowdResolver(crowds, users, userId);
-        return visibility(
-                definition, snapshot, userId, attrs, now, membership, EvalContexts.filter(attrs, now, resolver));
-    }
-
-    private VisibilityResult visibility(
-            TaskDefinitionEntity definition,
-            SnapshotContent snapshot,
-            long userId,
-            UserAttributes attrs,
-            Instant now,
-            CrowdMembership membership,
-            EvalContext filterCtx) {
-        return VisibilityEvaluator.evaluate(
-                definition.getStatus(),
-                snapshot.startTime(),
-                snapshot.endTime(),
-                snapshot.gray(),
-                snapshot.filter(),
-                definition.getId(),
-                userId,
-                attrs,
-                now,
-                membership,
-                filterCtx);
-    }
-
-    private SnapshotContent snapshotOf(TaskDefinitionEntity definition) {
-        if (definition.getVersion() == null || definition.getVersion() < 1) {
-            return null;
-        }
-        String json = snapshotJson(definition.getId(), definition.getVersion());
-        return json == null ? null : JsonUtil.fromJson(json, SnapshotContent.class);
-    }
-
-    private String snapshotJson(long taskId, int version) {
-        if (cache != null) {
-            return cache.get(
-                    CacheNamespace.TASK_SNAPSHOT,
-                    taskId + ":" + version,
-                    String.class,
-                    () -> loadSnapshotJson(taskId, version));
-        }
-        return loadSnapshotJson(taskId, version);
-    }
-
-    private String loadSnapshotJson(long taskId, int version) {
-        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(taskId, version);
-        return snap == null ? null : snap.getContent();
-    }
-
-    private boolean blacklisted(long userId) {
-        if (risk == null) {
-            return false;
-        }
-        return risk.onUserList(userId, RiskListType.BLACK);
-    }
-
-    private TaskInstanceEntity pickInProgress(long taskId, long userId, String cycleKey) {
-        TaskInstanceEntity fallback = null;
-        for (TaskInstanceEntity row : instances.listInProgressByUser(userId)) {
-            if (taskId != row.getTaskId()) {
-                continue;
-            }
-            if (cycleKey.equals(row.getCycleKey())) {
-                return row;
-            }
-            if (fallback == null) {
-                fallback = row;
-            }
-        }
-        return fallback;
-    }
-
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
