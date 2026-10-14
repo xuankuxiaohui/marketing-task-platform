@@ -505,7 +505,7 @@ class TaskPublishAppServiceTest {
                 "发布校验失败",
                 "checkErrors",
                 List.of(Map.of("item", "reachability", "reason", "存在不可达或死锁步骤"))));
-        var view = TaskPublishAppService.failureView(
+        var view = TaskPublishScheduleFailures.failureView(
                 1L, summary, "发布校验失败", Timestamp.from(Instant.parse("2026-08-19T00:00:00Z")));
         assertThat(view.taskId()).isEqualTo(9L);
         assertThat(view.taskCode()).isEqualTo("due_bad");

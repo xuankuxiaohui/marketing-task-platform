@@ -27,9 +27,7 @@ import com.mkt.task.response.ScheduleFailureView;
 import com.mkt.task.response.TaskVersionView;
 import com.mkt.task.response.VersionDiffResponse;
 import com.mkt.task.support.AlertWebhook;
-import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -39,7 +37,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +47,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import tools.jackson.databind.JsonNode;
 
 @Service
 public class TaskPublishAppService {
@@ -58,8 +54,6 @@ public class TaskPublishAppService {
     private static final Logger log = LoggerFactory.getLogger(TaskPublishAppService.class);
     private static final int SCAN_BATCH = 100;
     private static final int OFFLINE_BATCH = 100;
-    static final String SCHEDULE_FAILURE_ACTION = "schedule-publish-failure";
-    private final ConcurrentHashMap<Long, String> lastFailureFingerprint = new ConcurrentHashMap<>();
 
     private final TaskDefinitionStore definitions;
     private final TaskMutexGroupStore mutexGroups;
@@ -69,17 +63,12 @@ public class TaskPublishAppService {
     private final TaskInstanceStore instances;
     private final TaskSettings settings;
     private final Clock clock;
-    private final ObjectProvider<TaskAuditAppender> audits;
-    private final ObjectProvider<AlertWebhook> alerts;
-    private final ObjectProvider<JdbcTemplate> jdbc;
     private final ObjectProvider<PlatformTransactionManager> txm;
-    private final TaskAuditAppender auditsDirect;
-    private final AlertWebhook alertsDirect;
-    private final JdbcTemplate jdbcDirect;
     private final TransactionTemplate txDirect;
     private final TaskPublishChecks publishChecks;
     private final TaskPublishVersionDiff versionDiff;
     private final TaskPublishFreeze publishFreeze;
+    private final TaskPublishScheduleFailures scheduleFailures;
 
     @Autowired
     public TaskPublishAppService(
@@ -91,13 +80,11 @@ public class TaskPublishAppService {
             TaskInstanceStore instances,
             TaskSettings settings,
             Clock clock,
-            ObjectProvider<TaskAuditAppender> audits,
-            ObjectProvider<AlertWebhook> alerts,
-            ObjectProvider<JdbcTemplate> jdbc,
             ObjectProvider<PlatformTransactionManager> txm,
             TaskPublishChecks publishChecks,
             TaskPublishVersionDiff versionDiff,
-            TaskPublishFreeze publishFreeze) {
+            TaskPublishFreeze publishFreeze,
+            TaskPublishScheduleFailures scheduleFailures) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -106,17 +93,12 @@ public class TaskPublishAppService {
         this.instances = instances;
         this.settings = settings;
         this.clock = clock;
-        this.audits = audits;
-        this.alerts = alerts;
-        this.jdbc = jdbc;
         this.txm = txm;
-        this.auditsDirect = null;
-        this.alertsDirect = null;
-        this.jdbcDirect = null;
         this.txDirect = null;
         this.publishChecks = publishChecks;
         this.versionDiff = versionDiff;
         this.publishFreeze = publishFreeze;
+        this.scheduleFailures = scheduleFailures;
     }
 
     public TaskPublishAppService(
@@ -141,18 +123,13 @@ public class TaskPublishAppService {
         this.instances = instances;
         this.settings = settings;
         this.clock = clock;
-        this.audits = null;
-        this.alerts = null;
-        this.jdbc = null;
         this.txm = null;
-        this.auditsDirect = audits;
-        this.alertsDirect = alerts;
-        this.jdbcDirect = jdbc;
         this.txDirect = tx;
         this.publishChecks = new TaskPublishChecks(definitions, definitionsApp, prizes);
         this.versionDiff = new TaskPublishVersionDiff(snapshots);
         this.publishFreeze = new TaskPublishFreeze(
                 definitions, mutexGroups, snapshots, definitionsApp, clock, cache);
+        this.scheduleFailures = new TaskPublishScheduleFailures(audits, alerts, jdbc, tx);
     }
 
     @Transactional
@@ -338,34 +315,7 @@ public class TaskPublishAppService {
     }
 
     public PageData<ScheduleFailureView> scheduleFailures(PageQuery page) {
-        JdbcTemplate db = jdbc();
-        if (db == null) {
-            return new PageData<>(0, List.of());
-        }
-        PageQuery query = page == null ? PageQuery.of(1, 20) : page;
-        Long total = db.queryForObject(
-                "SELECT COUNT(*) FROM sys_audit_log WHERE module = ? AND action = ?",
-                Long.class,
-                "task",
-                SCHEDULE_FAILURE_ACTION);
-        List<ScheduleFailureView> rows = db.query(
-                """
-                SELECT id, request_summary, error_message, created_at
-                FROM sys_audit_log
-                WHERE module = ? AND action = ?
-                ORDER BY created_at DESC, id DESC
-                LIMIT ? OFFSET ?
-                """,
-                (rs, rowNum) -> failureView(
-                        rs.getLong("id"),
-                        rs.getString("request_summary"),
-                        rs.getString("error_message"),
-                        rs.getTimestamp("created_at")),
-                "task",
-                SCHEDULE_FAILURE_ACTION,
-                query.pageSize(),
-                query.offset());
-        return new PageData<>(total == null ? 0L : total, rows);
+        return this.scheduleFailures.scheduleFailures(page);
     }
 
     public int scanDue() {
@@ -375,14 +325,15 @@ public class TaskPublishAppService {
         for (TaskDefinitionEntity row : due) {
             try {
                 if (runInTx(() -> publishDue(row.getId()))) {
-                    lastFailureFingerprint.remove(row.getId());
+                    scheduleFailures.removeFailureFingerprint(row.getId());
                     published++;
                 }
             } catch (BusinessException ex) {
-                recordScheduleFailure(row, ex.getMessage(), TaskPublishChecks.checkErrorsOf(ex.data()));
+                scheduleFailures.recordScheduleFailure(
+                        row, ex.getMessage(), TaskPublishChecks.checkErrorsOf(ex.data()));
             } catch (RuntimeException ex) {
                 log.error("sched:publish-scan failed, taskId={}", row.getId(), ex);
-                recordScheduleFailure(
+                scheduleFailures.recordScheduleFailure(
                         row,
                         ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage(),
                         List.of());
@@ -431,39 +382,6 @@ public class TaskPublishAppService {
         return out;
     }
 
-    private void recordScheduleFailure(
-            TaskDefinitionEntity row, String reason, List<PublishCheckError> checkErrors) {
-        String message = reason == null || reason.isBlank()
-                ? TaskErrorCodes.PUBLISH_VALIDATE_FAILED.message()
-                : reason;
-        String fingerprint = failureAuditText(message, checkErrors);
-        String previous = lastFailureFingerprint.put(row.getId(), fingerprint);
-        if (fingerprint.equals(previous)) {
-            return;
-        }
-        try {
-            runInTx(() -> {
-                TaskAuditAppender appender = audits();
-                if (appender != null) {
-                    appender.schedulePublishFailure(row.getId(), row.getCode(), message, checkErrors);
-                }
-            });
-        } catch (RuntimeException ex) {
-            log.warn("schedule-publish-failure audit failed, taskId={}", row.getId(), ex);
-        }
-        AlertWebhook webhook = alerts();
-        if (webhook != null) {
-            webhook.notifySchedulePublishFailure(row.getId(), row.getCode(), failureAuditText(message, checkErrors));
-        }
-    }
-
-    private static String failureAuditText(String reason, List<PublishCheckError> checkErrors) {
-        if (checkErrors != null && !checkErrors.isEmpty()) {
-            return JsonUtil.toJson(checkErrors);
-        }
-        return reason;
-    }
-
     private void runInTx(Runnable action) {
         runInTx(() -> {
             action.run();
@@ -480,18 +398,6 @@ public class TaskPublishAppService {
         return action.getAsBoolean();
     }
 
-    private TaskAuditAppender audits() {
-        return auditsDirect != null ? auditsDirect : (audits == null ? null : audits.getIfAvailable());
-    }
-
-    private AlertWebhook alerts() {
-        return alertsDirect != null ? alertsDirect : (alerts == null ? null : alerts.getIfAvailable());
-    }
-
-    private JdbcTemplate jdbc() {
-        return jdbcDirect != null ? jdbcDirect : (jdbc == null ? null : jdbc.getIfAvailable());
-    }
-
     private TransactionTemplate tx() {
         if (txDirect != null) {
             return txDirect;
@@ -501,31 +407,6 @@ public class TaskPublishAppService {
         }
         PlatformTransactionManager manager = txm.getIfAvailable();
         return manager == null ? null : new TransactionTemplate(manager);
-    }
-
-    static ScheduleFailureView failureView(long id, String summary, String error, Timestamp created) {
-        Long taskId = null;
-        String code = null;
-        String reason = error;
-        if (summary != null && !summary.isBlank()) {
-            try {
-                JsonNode node = JsonUtil.readTree(summary);
-                if (node.get("taskId") != null && node.get("taskId").isNumber()) {
-                    taskId = node.get("taskId").asLong();
-                }
-                if (node.get("code") != null && !node.get("code").isNull()) {
-                    code = node.get("code").asString();
-                }
-                JsonNode checkErrors = node.get("checkErrors");
-                if (checkErrors != null && checkErrors.isArray() && checkErrors.size() > 0) {
-                    reason = JsonUtil.toJson(checkErrors);
-                }
-            } catch (RuntimeException ignored) {
-                // keep raw error
-            }
-        }
-        Instant at = created == null ? null : created.toInstant();
-        return new ScheduleFailureView(id, taskId, code, reason, at);
     }
 
     private TaskDefinitionEntity requireLive(long id) {
