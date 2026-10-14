@@ -15,7 +15,6 @@ import com.mkt.task.entity.TaskInstanceStepEntity;
 import com.mkt.task.expression.CrowdResolver;
 import com.mkt.task.response.RewardFeedbackView;
 import com.mkt.task.support.TaskErrorCodes;
-import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,7 +25,8 @@ import org.springframework.stereotype.Component;
 /**
  * Advance helpers extracted from {@link StepEngine} (R9-3).
  * Move-only: completeExternal / accumulate / precheck semantics unchanged.
- * {@code cascade}, {@code snapshotOf}, {@code rejectIfExpired} (and the helpers they call)
+ * {@code cascade} delegates to {@link StepEngineCascadeSupport} (R9-5).
+ * {@code snapshotOf}, {@code rejectIfExpired} (and the helpers they call)
  * are copied so the moved bodies stay verbatim.
  */
 @Component
@@ -36,21 +36,12 @@ public class StepEngineAdvance {
 
     private final TaskInstanceStore instances;
     private final Clock clock;
-    private final TaskSettings settings;
-    private final StepEngineReward rewardOps;
     private final StepEngineCascadeSupport cascadeOps;
 
     @Autowired
-    public StepEngineAdvance(
-            TaskInstanceStore instances,
-            Clock clock,
-            TaskSettings settings,
-            StepEngineReward rewardOps,
-            StepEngineCascadeSupport cascadeOps) {
+    public StepEngineAdvance(TaskInstanceStore instances, Clock clock, StepEngineCascadeSupport cascadeOps) {
         this.instances = instances;
         this.clock = clock;
-        this.settings = settings;
-        this.rewardOps = rewardOps;
         this.cascadeOps = cascadeOps;
     }
 
@@ -94,7 +85,7 @@ public class StepEngineAdvance {
                 }
                 cascadeOps.appendStepComplete(instance, current);
                 List<RewardFeedbackView> feedback = new ArrayList<>();
-                cascade(instance, snapshot, attrs, crowds, seqOf(current), false, feedback, ip, deviceId);
+                cascadeOps.cascade(instance, snapshot, attrs, crowds, seqOf(current), false, feedback, ip, deviceId);
                 TaskInstanceEntity fresh = instances.getById(instance.getId());
                 TaskInstanceStepEntity after = reloadStep(instance.getId(), current.getStepCode());
                 return snapshotOf(fresh == null ? instance : fresh, after == null ? current : after, snapshot, feedback, false);
@@ -191,49 +182,6 @@ public class StepEngineAdvance {
         };
         if (expected != null && !expected.equals(step.getType())) {
             throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-    }
-
-    private void cascade(
-            TaskInstanceEntity instance,
-            SnapshotContent snapshot,
-            UserAttributes attrs,
-            CrowdResolver crowds,
-            int fromSeq,
-            boolean sameRequestInsert,
-            List<RewardFeedbackView> feedback,
-            String ip,
-            String deviceId) {
-        int max = settings.stepMaxCount();
-        int seq = fromSeq;
-        for (int i = 0; i < max; i++) {
-            TaskInstanceStepEntity next = cascadeOps.resolveNext(instance.getId(), snapshot, attrs, crowds, seq);
-            if (next == null) {
-                cascadeOps.completeInstance(instance);
-                return;
-            }
-            Instant now = clock.instant();
-            rejectIfExpired(instance, now);
-            if (instances.activateStep(next.getId(), TaskTime.toUtc(now)) != 1) {
-                return;
-            }
-            next.setStatus(StepStatuses.ACTIVE);
-            next.setActivatedAt(TaskTime.toUtc(now));
-            if (StepTypes.PASSIVE.equals(next.getType())) {
-                if (!rewardOps.holdComplete(instance, next)) {
-                    return;
-                }
-                seq = seqOf(next);
-                continue;
-            }
-            if (StepTypes.REWARD.equals(next.getType())) {
-                if (!rewardOps.grantReward(instance, next, snapshot, sameRequestInsert, now, feedback, ip, deviceId)) {
-                    return;
-                }
-                seq = seqOf(next);
-                continue;
-            }
-            return;
         }
     }
 

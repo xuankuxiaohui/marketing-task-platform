@@ -58,7 +58,7 @@ public final class ClaimEnterEngine {
                 settings,
                 rewardOps,
                 cascadeOps,
-                new StepEngineAdvance(instances, clock, settings, rewardOps, cascadeOps));
+                new StepEngineAdvance(instances, clock, cascadeOps));
     }
 
     public ClaimEnterEngine(
