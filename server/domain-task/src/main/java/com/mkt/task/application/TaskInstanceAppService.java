@@ -44,8 +44,8 @@ public class TaskInstanceAppService {
     private final TaskInstanceStore instances;
     private final InstanceViews views;
     private final InstanceEventStore events;
-    private final EventPublisher publisher;
     private final InstanceGuards guards;
+    private final InstanceAbandonOps abandonOps;
     private final Clock clock;
     private final TransactionTemplate tx;
 
@@ -67,17 +67,17 @@ public class TaskInstanceAppService {
     public TaskInstanceAppService(
             TaskInstanceStore instances,
             ObjectProvider<InstanceEventStore> events,
-            ObjectProvider<EventPublisher> publisher,
             Clock clock,
             ObjectProvider<TransactionTemplate> tx,
             InstanceViews views,
-            InstanceGuards guards) {
+            InstanceGuards guards,
+            InstanceAbandonOps abandonOps) {
         this(
                 instances,
                 views,
                 events.getIfAvailable(),
-                publisher.getIfAvailable(),
                 guards,
+                abandonOps,
                 clock,
                 tx.getIfAvailable());
     }
@@ -90,22 +90,29 @@ public class TaskInstanceAppService {
             RiskCheckPort risk,
             Clock clock,
             TransactionTemplate tx) {
-        this(instances, new InstanceViews(snapshots), events, publisher, new InstanceGuards(risk), clock, tx);
+        this(
+                instances,
+                new InstanceViews(snapshots),
+                events,
+                new InstanceGuards(risk),
+                new InstanceAbandonOps(instances, publisher, clock),
+                clock,
+                tx);
     }
 
     private TaskInstanceAppService(
             TaskInstanceStore instances,
             InstanceViews views,
             InstanceEventStore events,
-            EventPublisher publisher,
             InstanceGuards guards,
+            InstanceAbandonOps abandonOps,
             Clock clock,
             TransactionTemplate tx) {
         this.instances = instances;
         this.views = views;
         this.events = events;
-        this.publisher = publisher;
         this.guards = guards;
+        this.abandonOps = abandonOps;
         this.clock = clock;
         this.tx = tx;
     }
@@ -162,7 +169,7 @@ public class TaskInstanceAppService {
         if (!InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
             return new InstanceAbandonResponse(row.getStatus());
         }
-        return abandon(row, AbandonSources.ADMIN);
+        return abandonOps.abandon(row, AbandonSources.ADMIN);
     }
 
     @Transactional
@@ -181,7 +188,7 @@ public class TaskInstanceAppService {
         if (!InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
             throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
         }
-        return abandon(row, AbandonSources.USER);
+        return abandonOps.abandon(row, AbandonSources.USER);
     }
 
     public int expireDue() {
@@ -218,41 +225,12 @@ public class TaskInstanceAppService {
         if (affected != 1) {
             return false;
         }
-        append(EventCodes.TASK_INSTANCE_EXPIRE, row, Map.of(
+        abandonOps.append(EventCodes.TASK_INSTANCE_EXPIRE, row, Map.of(
                 "instanceId", row.getId(),
                 "taskId", row.getTaskId(),
                 "userId", row.getUserId(),
                 "costSeconds", cost));
         return true;
-    }
-
-    private InstanceAbandonResponse abandon(TaskInstanceEntity row, String source) {
-        Instant now = clock.instant();
-        int cost = costSeconds(row, now);
-        int affected = instances.abandonCas(row.getId(), source, TaskTime.toUtc(now), cost);
-        if (affected != 1) {
-            TaskInstanceEntity fresh = instances.getById(row.getId());
-            if (fresh == null) {
-                throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-            }
-            if (AbandonSources.ADMIN.equals(source) || InstanceStatuses.ABANDONED.equals(fresh.getStatus())) {
-                return new InstanceAbandonResponse(fresh.getStatus());
-            }
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        append(EventCodes.TASK_INSTANCE_ABANDON, row, Map.of(
-                "instanceId", row.getId(),
-                "taskId", row.getTaskId(),
-                "userId", row.getUserId(),
-                "abandonSource", source));
-        return new InstanceAbandonResponse(InstanceStatuses.ABANDONED);
-    }
-
-    private void append(String eventCode, TaskInstanceEntity row, Map<String, Object> payload) {
-        if (publisher == null) {
-            return;
-        }
-        publisher.append(eventCode, "task_instance", String.valueOf(row.getId()), payload);
     }
 
     private static int costSeconds(TaskInstanceEntity row, Instant now) {
