@@ -9,7 +9,6 @@ import com.mkt.contract.event.EventCodes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.PageData;
-import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.command.TaskStepCommand;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
@@ -19,7 +18,6 @@ import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.engine.StepEngineExpire;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskInstanceStepEntity;
-import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.query.InstanceQuery;
 import com.mkt.task.response.AdminInstanceDetailResponse;
 import com.mkt.task.response.AdminInstanceStepView;
@@ -46,7 +44,7 @@ public class TaskInstanceAppService {
     static final int EXPIRE_BATCH = 100;
 
     private final TaskInstanceStore instances;
-    private final TaskVersionSnapshotStore snapshots;
+    private final InstanceViews views;
     private final InstanceEventStore events;
     private final EventPublisher publisher;
     private final RiskCheckPort risk;
@@ -70,15 +68,15 @@ public class TaskInstanceAppService {
     @Autowired
     public TaskInstanceAppService(
             TaskInstanceStore instances,
-            TaskVersionSnapshotStore snapshots,
             ObjectProvider<InstanceEventStore> events,
             ObjectProvider<EventPublisher> publisher,
             ObjectProvider<RiskCheckPort> risk,
             Clock clock,
-            ObjectProvider<TransactionTemplate> tx) {
+            ObjectProvider<TransactionTemplate> tx,
+            InstanceViews views) {
         this(
                 instances,
-                snapshots,
+                views,
                 events.getIfAvailable(),
                 publisher.getIfAvailable(),
                 risk.getIfAvailable(),
@@ -94,8 +92,19 @@ public class TaskInstanceAppService {
             RiskCheckPort risk,
             Clock clock,
             TransactionTemplate tx) {
+        this(instances, new InstanceViews(snapshots), events, publisher, risk, clock, tx);
+    }
+
+    private TaskInstanceAppService(
+            TaskInstanceStore instances,
+            InstanceViews views,
+            InstanceEventStore events,
+            EventPublisher publisher,
+            RiskCheckPort risk,
+            Clock clock,
+            TransactionTemplate tx) {
         this.instances = instances;
-        this.snapshots = snapshots;
+        this.views = views;
         this.events = events;
         this.publisher = publisher;
         this.risk = risk;
@@ -117,7 +126,7 @@ public class TaskInstanceAppService {
                 instances.listAdmin(taskId, userId, status, simulated, from, to, query.page().offset(), query.page().pageSize());
         List<AdminInstanceView> views = new ArrayList<>(rows.size());
         for (TaskInstanceEntity row : rows) {
-            views.add(toView(row));
+            views.add(this.views.toView(row));
         }
         return new PageData<>(total, views);
     }
@@ -127,7 +136,7 @@ public class TaskInstanceAppService {
         if (row == null) {
             throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
         }
-        SnapshotContent snapshot = snapshotOf(row);
+        SnapshotContent snapshot = views.snapshotOf(row);
         List<AdminInstanceStepView> steps = new ArrayList<>();
         for (TaskInstanceStepEntity step : instances.listSteps(id)) {
             TaskStepCommand def = snapshot == null ? null : SnapshotViews.step(snapshot, step.getStepCode());
@@ -143,7 +152,7 @@ public class TaskInstanceAppService {
         }
         List<InstanceEventView> timeline =
                 events == null ? List.of() : events.listByInstance(id, row.getUserId());
-        return new AdminInstanceDetailResponse(toView(row), steps, timeline);
+        return new AdminInstanceDetailResponse(views.toView(row), steps, timeline);
     }
 
     @Transactional
@@ -260,35 +269,6 @@ public class TaskInstanceAppService {
         }
         UserRiskSummary summary = risk.userSummary(userId);
         return summary != null && summary.listStatus().contains(RiskListType.BLACK);
-    }
-
-    private SnapshotContent snapshotOf(TaskInstanceEntity row) {
-        if (row.getSnapshotId() == null || snapshots == null) {
-            return null;
-        }
-        TaskVersionSnapshotEntity snap = snapshots.getById(row.getSnapshotId());
-        if (snap == null || snap.getContent() == null) {
-            return null;
-        }
-        return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-    }
-
-    private static AdminInstanceView toView(TaskInstanceEntity row) {
-        return new AdminInstanceView(
-                row.getId(),
-                row.getTaskId(),
-                row.getTaskCode(),
-                row.getUserId(),
-                row.getVersion() == null ? 0 : row.getVersion(),
-                row.getCycleKey(),
-                row.getStatus(),
-                row.getAbandonSource(),
-                TaskTime.toInstant(row.getAbandonedAt()),
-                TaskTime.toInstant(row.getExpireAt()),
-                TaskTime.toInstant(row.getStartedAt()),
-                TaskTime.toInstant(row.getCompletedAt()),
-                row.getCostSeconds(),
-                row.getSimulated() == null ? 0 : row.getSimulated());
     }
 
     private static int costSeconds(TaskInstanceEntity row, Instant now) {
