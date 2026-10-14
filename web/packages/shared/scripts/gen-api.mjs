@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Consume springdoc JSON from the two apps (design §4.1 / 07 §2).
- * MUST NOT use KernelTestApplication or spike/5 JSON.
+ * MUST NOT use KernelTestApplication or docs/archive/spike/5-springdoc JSON.
  *
  *   pnpm --filter @mkt/shared gen:api         # generate TS from committed JSON
  *   pnpm --filter @mkt/shared gen:api:fetch   # pull live JSON then generate
