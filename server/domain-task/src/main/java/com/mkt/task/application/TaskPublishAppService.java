@@ -1,6 +1,5 @@
 package com.mkt.task.application;
 
-import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
@@ -25,12 +24,10 @@ import com.mkt.task.response.BatchItemResponse;
 import com.mkt.task.response.PublishCheckError;
 import com.mkt.task.response.PublishResponse;
 import com.mkt.task.response.ScheduleFailureView;
-import com.mkt.task.response.TaskDefinitionAggregateResponse;
 import com.mkt.task.response.TaskVersionView;
 import com.mkt.task.response.VersionDiffResponse;
 import com.mkt.task.support.AlertWebhook;
 import com.mkt.task.support.TaskErrorCodes;
-import com.mkt.task.support.TaskOperator;
 import com.mkt.task.support.TaskSettings;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -48,7 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -73,18 +69,17 @@ public class TaskPublishAppService {
     private final TaskInstanceStore instances;
     private final TaskSettings settings;
     private final Clock clock;
-    private final ObjectProvider<PlatformCache> cache;
     private final ObjectProvider<TaskAuditAppender> audits;
     private final ObjectProvider<AlertWebhook> alerts;
     private final ObjectProvider<JdbcTemplate> jdbc;
     private final ObjectProvider<PlatformTransactionManager> txm;
-    private final PlatformCache cacheDirect;
     private final TaskAuditAppender auditsDirect;
     private final AlertWebhook alertsDirect;
     private final JdbcTemplate jdbcDirect;
     private final TransactionTemplate txDirect;
     private final TaskPublishChecks publishChecks;
     private final TaskPublishVersionDiff versionDiff;
+    private final TaskPublishFreeze publishFreeze;
 
     @Autowired
     public TaskPublishAppService(
@@ -96,13 +91,13 @@ public class TaskPublishAppService {
             TaskInstanceStore instances,
             TaskSettings settings,
             Clock clock,
-            ObjectProvider<PlatformCache> cache,
             ObjectProvider<TaskAuditAppender> audits,
             ObjectProvider<AlertWebhook> alerts,
             ObjectProvider<JdbcTemplate> jdbc,
             ObjectProvider<PlatformTransactionManager> txm,
             TaskPublishChecks publishChecks,
-            TaskPublishVersionDiff versionDiff) {
+            TaskPublishVersionDiff versionDiff,
+            TaskPublishFreeze publishFreeze) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -111,18 +106,17 @@ public class TaskPublishAppService {
         this.instances = instances;
         this.settings = settings;
         this.clock = clock;
-        this.cache = cache;
         this.audits = audits;
         this.alerts = alerts;
         this.jdbc = jdbc;
         this.txm = txm;
-        this.cacheDirect = null;
         this.auditsDirect = null;
         this.alertsDirect = null;
         this.jdbcDirect = null;
         this.txDirect = null;
         this.publishChecks = publishChecks;
         this.versionDiff = versionDiff;
+        this.publishFreeze = publishFreeze;
     }
 
     public TaskPublishAppService(
@@ -147,18 +141,18 @@ public class TaskPublishAppService {
         this.instances = instances;
         this.settings = settings;
         this.clock = clock;
-        this.cache = null;
         this.audits = null;
         this.alerts = null;
         this.jdbc = null;
         this.txm = null;
-        this.cacheDirect = cache;
         this.auditsDirect = audits;
         this.alertsDirect = alerts;
         this.jdbcDirect = jdbc;
         this.txDirect = tx;
         this.publishChecks = new TaskPublishChecks(definitions, definitionsApp, prizes);
         this.versionDiff = new TaskPublishVersionDiff(snapshots);
+        this.publishFreeze = new TaskPublishFreeze(
+                definitions, mutexGroups, snapshots, definitionsApp, clock, cache);
     }
 
     @Transactional
@@ -176,11 +170,11 @@ public class TaskPublishAppService {
         String status = entity.getStatus();
         if (DefinitionStatuses.DRAFT.equals(status)) {
             publishChecks.rejectIfInvalid(entity);
-            requireCas(freezeToPublished(entity, false));
+            requireCas(publishFreeze.freezeToPublished(entity, false));
         } else if (DefinitionStatuses.SCHEDULED.equals(status)) {
             if (cmd.earlyTrue()) {
                 publishChecks.rejectIfInvalid(entity);
-                requireCas(freezeToPublished(entity, false));
+                requireCas(publishFreeze.freezeToPublished(entity, false));
             } else {
                 entity.setPendingRevision(0);
                 entity.setUpdatedAt(nowUtc());
@@ -191,7 +185,7 @@ public class TaskPublishAppService {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "无待发布修订");
             }
             publishChecks.rejectIfInvalid(entity);
-            requireCas(freezeToPublished(entity, true));
+            requireCas(publishFreeze.freezeToPublished(entity, true));
         } else {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "当前状态不可发布");
         }
@@ -246,7 +240,7 @@ public class TaskPublishAppService {
         entity.setUpdatedAt(now);
         definitions.update(entity);
         recomputeInProgressExpiry(id, now);
-        evictPublishedIndex();
+        publishFreeze.evictPublishedIndex();
         return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
     }
 
@@ -411,65 +405,7 @@ public class TaskPublishAppService {
             return false;
         }
         publishChecks.rejectIfInvalid(entity);
-        return freezeToPublished(entity, false);
-    }
-
-    private boolean freezeToPublished(TaskDefinitionEntity entity, boolean stayPublished) {
-        LocalDateTime now = nowUtc();
-        String expectedStatus = entity.getStatus();
-        int expectedVersion = versionOf(entity);
-        int expectedPending = pending(entity) ? 1 : 0;
-        int nextVersion = expectedVersion + 1;
-        insertSnapshot(entity, nextVersion, now);
-        int rows = definitions.casPublish(
-                entity.getId(), expectedStatus, expectedVersion, expectedPending, nextVersion, now);
-        if (rows == 0) {
-            return false;
-        }
-        entity.setVersion(nextVersion);
-        entity.setStatus(DefinitionStatuses.PUBLISHED);
-        entity.setPendingRevision(0);
-        entity.setSchedulePublishAt(null);
-        entity.setOfflineAt(null);
-        entity.setUpdatedAt(now);
-        evictPublishedIndex();
-        cacheSnapshot(entity.getId(), nextVersion);
-        if (stayPublished) {
-            log.info("published revision, taskId={}, version={}", entity.getId(), nextVersion);
-        } else {
-            log.info("published task, taskId={}, version={}", entity.getId(), nextVersion);
-        }
-        return true;
-    }
-
-    private void insertSnapshot(TaskDefinitionEntity entity, int version, LocalDateTime now) {
-        if (snapshots.getByTaskAndVersion(entity.getId(), version) != null) {
-            return;
-        }
-        TaskDefinitionAggregateResponse view = definitionsApp.get(entity.getId());
-        String mutexCode = null;
-        if (entity.getMutexGroupId() != null) {
-            TaskMutexGroupEntity group = mutexGroups.getById(entity.getMutexGroupId());
-            mutexCode = group == null ? null : group.getCode();
-        }
-        SnapshotContent content = TaskDefinitionConvert.toSnapshot(view, mutexCode);
-        TaskVersionSnapshotEntity row = new TaskVersionSnapshotEntity();
-        row.setTaskId(entity.getId());
-        row.setVersion(version);
-        row.setContent(JsonUtil.toJson(content));
-        row.setPublishedAt(now);
-        long publisher;
-        try {
-            publisher = TaskOperator.requireUserId();
-        } catch (BusinessException ex) {
-            publisher = 0L;
-        }
-        row.setPublishedBy(publisher);
-        try {
-            snapshots.insert(row);
-        } catch (DuplicateKeyException ignored) {
-            // peer already froze this version
-        }
+        return publishFreeze.freezeToPublished(entity, false);
     }
 
     private List<BatchItemResponse> batch(List<Long> ids, IdAction action) {
@@ -544,10 +480,6 @@ public class TaskPublishAppService {
         return action.getAsBoolean();
     }
 
-    private PlatformCache cache() {
-        return cacheDirect != null ? cacheDirect : (cache == null ? null : cache.getIfAvailable());
-    }
-
     private TaskAuditAppender audits() {
         return auditsDirect != null ? auditsDirect : (audits == null ? null : audits.getIfAvailable());
     }
@@ -594,25 +526,6 @@ public class TaskPublishAppService {
         }
         Instant at = created == null ? null : created.toInstant();
         return new ScheduleFailureView(id, taskId, code, reason, at);
-    }
-
-    private void evictPublishedIndex() {
-        PlatformCache platformCache = cache();
-        if (platformCache == null) {
-            return;
-        }
-        platformCache.evictAfterCommit(CacheNamespace.TASK_PUBLISHED_INDEX, "all");
-    }
-
-    private void cacheSnapshot(long taskId, int version) {
-        PlatformCache platformCache = cache();
-        if (platformCache == null) {
-            return;
-        }
-        TaskVersionSnapshotEntity snap = snapshots.getByTaskAndVersion(taskId, version);
-        if (snap != null) {
-            platformCache.putAfterCommit(CacheNamespace.TASK_SNAPSHOT, taskId + ":" + version, snap.getContent());
-        }
     }
 
     private TaskDefinitionEntity requireLive(long id) {
