@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -61,6 +62,31 @@ public class ReconAppService {
     private final FulfillmentService fulfillment;
     private final RewardRuntimeSettings settings;
     private final Clock clock;
+    private final ReconViews views;
+
+    @Autowired
+    public ReconAppService(
+            ReconBatchStore batches,
+            ReconItemStore items,
+            GrantRecordStore grants,
+            PrizeStore prizes,
+            PrizeCategoryStore categories,
+            GrantAppService grantApp,
+            FulfillmentService fulfillment,
+            RewardRuntimeSettings settings,
+            Clock clock,
+            ReconViews views) {
+        this.batches = batches;
+        this.items = items;
+        this.grants = grants;
+        this.prizes = prizes;
+        this.categories = categories;
+        this.grantApp = grantApp;
+        this.fulfillment = fulfillment;
+        this.settings = settings;
+        this.clock = clock;
+        this.views = views;
+    }
 
     public ReconAppService(
             ReconBatchStore batches,
@@ -72,15 +98,17 @@ public class ReconAppService {
             FulfillmentService fulfillment,
             RewardRuntimeSettings settings,
             Clock clock) {
-        this.batches = batches;
-        this.items = items;
-        this.grants = grants;
-        this.prizes = prizes;
-        this.categories = categories;
-        this.grantApp = grantApp;
-        this.fulfillment = fulfillment;
-        this.settings = settings;
-        this.clock = clock;
+        this(
+                batches,
+                items,
+                grants,
+                prizes,
+                categories,
+                grantApp,
+                fulfillment,
+                settings,
+                clock,
+                new ReconViews(batches, grants, prizes, categories));
     }
 
     public PageData<ReconBatchResponse> page(String categoryCode, LocalDate billDate, String status, PageQuery page) {
@@ -88,7 +116,7 @@ public class ReconAppService {
         long total = batches.count(categoryCode, billDate, status);
         List<ReconBatchResponse> views = new ArrayList<>();
         for (ReconBatchEntity row : batches.list(categoryCode, billDate, status, pager.offset(), pager.pageSize())) {
-            views.add(toBatch(row));
+            views.add(this.views.toBatch(row));
         }
         return new PageData<>(total, views);
     }
@@ -120,7 +148,7 @@ public class ReconAppService {
         } catch (DuplicateKeyException ex) {
             throw new BusinessException(RewardErrorCodes.RECON_DUPLICATE_DAY);
         }
-        return toBatch(entity);
+        return views.toBatch(entity);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -236,7 +264,7 @@ public class ReconAppService {
         long total = items.count(batchId, result, reviewStatus);
         List<ReconItemView> views = new ArrayList<>();
         for (ReconItemEntity row : items.list(batchId, result, reviewStatus, pager.offset(), pager.pageSize())) {
-            views.add(toItem(row));
+            views.add(this.views.toItem(row));
         }
         return new PageData<>(total, views);
     }
@@ -420,48 +448,6 @@ public class ReconAppService {
         return ReconPolicies.effective(prizePolicy, categoryPolicy);
     }
 
-    private ReconItemView toItem(ReconItemEntity row) {
-        GrantRecordEntity grant = row.getGrantRecordId() == null ? null : grants.getById(row.getGrantRecordId());
-        String failReason = grant == null ? null : grant.getFulfillFailReason();
-        String policy;
-        if (grant != null) {
-            policy = effectivePolicy(grant);
-        } else {
-            ReconBatchEntity batch = batches.getById(row.getBatchId());
-            PrizeCategoryEntity category = batch == null ? null : categories.getByCode(batch.getCategoryCode());
-            policy = category == null ? ReconPolicies.REVIEW : category.getReconActionPolicy();
-        }
-        return new ReconItemView(
-                row.getId(),
-                row.getBatchId(),
-                row.getGrantRecordId(),
-                row.getFulfillmentRef(),
-                row.getPlatformCostFen(),
-                row.getChannelAmountFen(),
-                row.getResult(),
-                row.getAction(),
-                row.getActionRef(),
-                row.getReviewStatus(),
-                failReason,
-                policy,
-                row.getRemark());
-    }
-
-    private static ReconBatchResponse toBatch(ReconBatchEntity row) {
-        return new ReconBatchResponse(
-                row.getId(),
-                row.getCategoryCode(),
-                row.getBillDate(),
-                row.getStatus(),
-                nz(row.getPlatformCount()),
-                nz(row.getChannelCount()),
-                nz(row.getMatchedCount()),
-                nz(row.getPlatformOnly()),
-                nz(row.getChannelOnly()),
-                nz(row.getAmountMismatch()),
-                RewardTime.toInstant(row.getCreatedAt()));
-    }
-
     private ReconBatchEntity requireDraft(long batchId) {
         ReconBatchEntity batch = requireBatch(batchId);
         if (!ReconBatchStatuses.DRAFT.equals(batch.getStatus())) {
@@ -484,10 +470,6 @@ public class ReconAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return item;
-    }
-
-    private static int nz(Integer value) {
-        return value == null ? 0 : value;
     }
 
     private static void afterCommit(Runnable task) {
