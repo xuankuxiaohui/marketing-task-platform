@@ -10,7 +10,6 @@ import com.mkt.activity.convert.ActivityFieldCodec;
 import com.mkt.activity.domain.ActivityCodes;
 import com.mkt.activity.domain.ActivityDates;
 import com.mkt.activity.domain.ActivityStatuses;
-import com.mkt.activity.domain.ContentHasher;
 import com.mkt.activity.entity.ActActivityEntity;
 import com.mkt.activity.query.ActivityQuery;
 import com.mkt.activity.query.ParticipationQuery;
@@ -47,6 +46,7 @@ public class ActivityAdminAppService {
     private final Clock clock;
     private final ActivityAdminNormalize normalize;
     private final ActivityAdminViews views;
+    private final ActivityAdminDraft drafts;
 
     @Autowired
     public ActivityAdminAppService(
@@ -55,13 +55,15 @@ public class ActivityAdminAppService {
             RewardPort rewards,
             Clock clock,
             ActivityAdminNormalize normalize,
-            ActivityAdminViews views) {
+            ActivityAdminViews views,
+            ActivityAdminDraft drafts) {
         this.activities = activities;
         this.participations = participations;
         this.rewards = rewards;
         this.clock = clock;
         this.normalize = normalize;
         this.views = views;
+        this.drafts = drafts;
     }
 
     public ActivityAdminAppService(
@@ -70,7 +72,14 @@ public class ActivityAdminAppService {
             RewardPort rewards,
             ActivitySettings settings,
             Clock clock) {
-        this(activities, participations, rewards, clock, new ActivityAdminNormalize(settings), new ActivityAdminViews());
+        this(
+                activities,
+                participations,
+                rewards,
+                clock,
+                new ActivityAdminNormalize(settings),
+                new ActivityAdminViews(),
+                new ActivityAdminDraft(new ActivityAdminNormalize(settings), rewards));
     }
 
     public PageData<ActivityView> page(ActivityQuery query) {
@@ -177,7 +186,7 @@ public class ActivityAdminAppService {
             if (!publishAt.isAfter(now)) {
                 throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "定时发布时间必须晚于当前时间");
             }
-            validateDraft(entity);
+            drafts.validateDraft(entity);
             entity.setSchedulePublishAt(publishAt);
             entity.setStatus(ActivityStatuses.SCHEDULED);
             entity.setPendingRevision(0);
@@ -275,7 +284,7 @@ public class ActivityAdminAppService {
         }
         ActActivityEntity entity = new ActActivityEntity();
         entity.setCode(command.code());
-        applyDraft(entity, draft, true);
+        drafts.applyDraft(entity, draft, true);
         entity.setStatus(ActivityStatuses.DRAFT);
         entity.setVersion(0);
         entity.setPendingRevision(0);
@@ -303,11 +312,11 @@ public class ActivityAdminAppService {
         if (ActivityStatuses.OFFLINE.equals(existing.getStatus())) {
             existing.setStatus(ActivityStatuses.DRAFT);
             existing.setPendingRevision(0);
-            applyDraft(existing, draft, true);
+            drafts.applyDraft(existing, draft, true);
         } else if (ActivityStatuses.publishedFamily(existing.getStatus())) {
             existing.setPendingRevision(1);
         } else {
-            applyDraft(existing, draft, true);
+            drafts.applyDraft(existing, draft, true);
         }
         existing.setUpdatedAt(now);
         activities.update(existing);
@@ -324,68 +333,13 @@ public class ActivityAdminAppService {
         if (draft.participationPrizeId() != null && !rewards.prizeEnabled(draft.participationPrizeId())) {
             throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
         }
-        applyDraft(entity, withHtml(draft, html), true);
+        drafts.applyDraft(entity, ActivityAdminDraft.withHtml(draft, html), true);
         entity.setStatus(ActivityStatuses.PUBLISHED);
         entity.setVersion(entity.versionOrZero() + 1);
         entity.setPendingRevision(0);
         entity.setSchedulePublishAt(null);
         entity.setUpdatedAt(ActivityDates.toUtc(clock.instant()));
         activities.update(entity);
-    }
-
-    private void validateDraft(ActActivityEntity entity) {
-        ActivityDraftContent draft = ActivityFieldCodec.draft(entity.getDraftContent());
-        if (draft == null) {
-            throw new BusinessException(ActivityErrorCodes.HTML_EMPTY);
-        }
-        normalize.sanitizeHtml(draft.richText());
-        if (draft.participationPrizeId() != null && !rewards.prizeEnabled(draft.participationPrizeId())) {
-            throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
-        }
-    }
-
-    private static ActivityDraftContent withHtml(ActivityDraftContent draft, String html) {
-        return new ActivityDraftContent(
-                draft.name(),
-                draft.startTime(),
-                draft.endTime(),
-                html,
-                draft.gray(),
-                draft.submodules(),
-                draft.participationPrizeId(),
-                draft.allowUserIds(),
-                draft.allowCrowdCodes(),
-                draft.newUserOnly(),
-                draft.newUserDays(),
-                draft.userDailyLimit(),
-                draft.userTotalLimit(),
-                draft.globalDailyLimit(),
-                draft.regions(),
-                draft.scheduleOfflineAt());
-    }
-
-    private void applyDraft(ActActivityEntity entity, ActivityDraftContent draft, boolean live) {
-        if (!live) {
-            return;
-        }
-        entity.setName(draft.name());
-        entity.setStartTime(ActivityDates.toUtc(draft.startTime()));
-        entity.setEndTime(ActivityDates.toUtc(draft.endTime()));
-        entity.setRichText(draft.richText());
-        entity.setContentHash(ContentHasher.sha256(draft.richText()));
-        ActivityGrayCommand gray = normalize.normalizeGray(draft.gray());
-        entity.setGrayType(gray.type());
-        entity.setGrayRatio(gray.ratio());
-        entity.setSubmodules(ActivityFieldCodec.json(normalize.normalizeSubmodules(draft.submodules())));
-        entity.setParticipationPrizeId(draft.participationPrizeId());
-        entity.setAllowUserIds(ActivityFieldCodec.json(draft.allowUserIds()));
-        entity.setAllowCrowdCodes(ActivityFieldCodec.json(draft.allowCrowdCodes()));
-        entity.setNewUserOnly(Boolean.TRUE.equals(draft.newUserOnly()) ? 1 : 0);
-        entity.setNewUserDays(normalize.normalizeNewUserDays(draft.newUserDays()));
-        entity.setUserDailyLimit(draft.userDailyLimit());
-        entity.setUserTotalLimit(draft.userTotalLimit());
-        entity.setGlobalDailyLimit(draft.globalDailyLimit());
-        entity.setRegions(ActivityFieldCodec.json(draft.regions()));
     }
 
     private ActActivityEntity requireLive(long id) {
