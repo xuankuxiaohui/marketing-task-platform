@@ -7,7 +7,6 @@ import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import com.mkt.task.command.PublishCommand;
 import com.mkt.task.command.ScheduleCommand;
-import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.response.BatchItemResponse;
 import com.mkt.task.response.PublishResponse;
@@ -17,8 +16,6 @@ import com.mkt.task.response.VersionDiffResponse;
 import com.mkt.task.support.AlertWebhook;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -38,18 +35,17 @@ public class TaskPublishAppService {
     private final TaskVersionSnapshotStore snapshots;
     private final TaskDefinitionAppService definitionsApp;
     private final PrizeEnabledLookup prizes;
-    private final Clock clock;
     private final ObjectProvider<PlatformTransactionManager> txm;
     private final TransactionTemplate txDirect;
     private final TaskPublishChecks publishChecks;
     private final TaskPublishVersionDiff versionDiff;
     private final TaskPublishFreeze publishFreeze;
     private final TaskPublishScheduleFailures scheduleFailures;
-    private final PublishOfflineExpiry offlineExpiry;
     private final PublishScanDue publishScanDue;
     private final PublishExecute publishExecute;
     private final PublishSchedule publishSchedule;
     private final PublishResetRevision publishResetRevision;
+    private final PublishOffline publishOffline;
 
     @Autowired
     public TaskPublishAppService(
@@ -58,34 +54,32 @@ public class TaskPublishAppService {
             TaskVersionSnapshotStore snapshots,
             TaskDefinitionAppService definitionsApp,
             PrizeEnabledLookup prizes,
-            Clock clock,
             ObjectProvider<PlatformTransactionManager> txm,
             TaskPublishChecks publishChecks,
             TaskPublishVersionDiff versionDiff,
             TaskPublishFreeze publishFreeze,
             TaskPublishScheduleFailures scheduleFailures,
-            PublishOfflineExpiry offlineExpiry,
             PublishScanDue publishScanDue,
             PublishExecute publishExecute,
             PublishSchedule publishSchedule,
-            PublishResetRevision publishResetRevision) {
+            PublishResetRevision publishResetRevision,
+            PublishOffline publishOffline) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
-        this.clock = clock;
         this.txm = txm;
         this.txDirect = null;
         this.publishChecks = publishChecks;
         this.versionDiff = versionDiff;
         this.publishFreeze = publishFreeze;
         this.scheduleFailures = scheduleFailures;
-        this.offlineExpiry = offlineExpiry;
         this.publishScanDue = publishScanDue;
         this.publishExecute = publishExecute;
         this.publishSchedule = publishSchedule;
         this.publishResetRevision = publishResetRevision;
+        this.publishOffline = publishOffline;
     }
 
     public TaskPublishAppService(
@@ -107,7 +101,6 @@ public class TaskPublishAppService {
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
-        this.clock = clock;
         this.txm = null;
         this.txDirect = tx;
         this.publishChecks = new TaskPublishChecks(definitions, definitionsApp, prizes);
@@ -115,12 +108,13 @@ public class TaskPublishAppService {
         this.publishFreeze = new TaskPublishFreeze(
                 definitions, mutexGroups, snapshots, definitionsApp, clock, cache);
         this.scheduleFailures = new TaskPublishScheduleFailures(audits, alerts, jdbc, tx);
-        this.offlineExpiry = new PublishOfflineExpiry(instances, snapshots, settings);
+        PublishOfflineExpiry offlineExpiry = new PublishOfflineExpiry(instances, snapshots, settings);
         this.publishScanDue = new PublishScanDue(
                 definitions, this.publishChecks, this.publishFreeze, this.scheduleFailures, clock, tx);
         this.publishExecute = new PublishExecute(definitions, this.publishChecks, this.publishFreeze, clock);
         this.publishSchedule = new PublishSchedule(definitions, this.publishChecks, clock);
         this.publishResetRevision = new PublishResetRevision(definitions, mutexGroups, snapshots, definitionsApp);
+        this.publishOffline = new PublishOffline(definitions, offlineExpiry, this.publishFreeze, clock);
     }
 
     @Transactional
@@ -140,18 +134,7 @@ public class TaskPublishAppService {
 
     @Transactional
     public PublishResponse offline(long id) {
-        TaskDefinitionEntity entity = requireLockedLive(id);
-        if (!DefinitionStatuses.PUBLISHED.equals(entity.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅已发布任务可下线");
-        }
-        LocalDateTime now = nowUtc();
-        entity.setStatus(DefinitionStatuses.OFFLINE);
-        entity.setOfflineAt(now);
-        entity.setUpdatedAt(now);
-        definitions.update(entity);
-        offlineExpiry.recomputeInProgressExpiry(id, now);
-        publishFreeze.evictPublishedIndex();
-        return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
+        return publishOffline.offline(id);
     }
 
     @Transactional
@@ -249,22 +232,6 @@ public class TaskPublishAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return existing;
-    }
-
-    private TaskDefinitionEntity requireLockedLive(long id) {
-        TaskDefinitionEntity existing = definitions.getByIdForUpdate(id);
-        if (existing == null || existing.deletedFlag()) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        return existing;
-    }
-
-    private LocalDateTime nowUtc() {
-        return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
-    }
-
-    private static int versionOf(TaskDefinitionEntity entity) {
-        return entity.getVersion() == null ? 0 : entity.getVersion();
     }
 
     @FunctionalInterface
