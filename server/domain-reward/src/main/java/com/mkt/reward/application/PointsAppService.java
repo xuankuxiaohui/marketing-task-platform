@@ -20,42 +20,29 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /** Points ledger (design §5.8 / R20). */
 @Service
 public class PointsAppService {
 
-    static final int EXPIRE_BATCH = 5000;
-
     private final PointsStore store;
-    private final TransactionTemplate tx;
     private final Clock clock;
+    private final PointsExpire pointsExpire;
 
     @Autowired
-    public PointsAppService(
-            PointsStore store, ObjectProvider<PlatformTransactionManager> txm, Clock clock) {
-        this(store, txm.getIfAvailable(), clock);
+    public PointsAppService(PointsStore store, Clock clock, PointsExpire pointsExpire) {
+        this.store = store;
+        this.clock = clock;
+        this.pointsExpire = pointsExpire;
     }
 
     public PointsAppService(PointsStore store, PlatformTransactionManager txm, Clock clock) {
-        this.store = store;
-        this.clock = clock;
-        if (txm == null) {
-            this.tx = null;
-        } else {
-            TransactionTemplate template = new TransactionTemplate(txm);
-            template.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
-            template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-            this.tx = template;
-        }
+        this(store, clock, new PointsExpire(store, txm, clock));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -140,21 +127,7 @@ public class PointsAppService {
      * Not the earn/grant path — does not change grant atomicity.
      */
     public int expireDue() {
-        LocalDateTime now = RewardTime.toUtc(clock.instant());
-        int total = 0;
-        while (true) {
-            List<PntTransactionEntity> batch = store.listExpireDue(now, EXPIRE_BATCH);
-            if (batch.isEmpty()) {
-                break;
-            }
-            for (PntTransactionEntity earn : batch) {
-                total += runTx(() -> expireOne(earn));
-            }
-            if (batch.size() < EXPIRE_BATCH) {
-                break;
-            }
-        }
-        return total;
+        return pointsExpire.expireDue(this);
     }
 
     public PageData<PointsAccountView> pageAccounts(PointsAccountQuery query) {
@@ -220,51 +193,7 @@ public class PointsAppService {
         return after;
     }
 
-    private int expireOne(PntTransactionEntity earn) {
-        String bizId = String.valueOf(earn.getId());
-        if (store.expireExists(bizId)) {
-            return 0;
-        }
-        PntAccountEntity locked = store.lockByUserId(earn.getUserId());
-        if (locked == null) {
-            return 0;
-        }
-        if (store.expireExists(bizId)) {
-            return 0;
-        }
-        long due = earn.getAmount() == null ? 0L : Math.abs(earn.getAmount());
-        long current = locked.getBalance() == null ? 0L : locked.getBalance();
-        long deduct = Math.min(current, due);
-        if (deduct > 0) {
-            int affected = store.applyDelta(earn.getUserId(), -deduct);
-            if (affected != 1) {
-                return 0;
-            }
-        }
-        long after = current - deduct;
-        String remark = deduct < due ? "truncated; requested=" + due + " deducted=" + deduct : null;
-        store.insertTx(newRow(
-                earn.getUserId(),
-                PointTypes.EXPIRE,
-                -deduct,
-                after,
-                null,
-                bizId,
-                null,
-                remark,
-                earn.getSimulated() == null ? 0 : earn.getSimulated()));
-        return 1;
-    }
-
-    private int runTx(java.util.function.Supplier<Integer> action) {
-        if (tx == null) {
-            return action.get();
-        }
-        Integer value = tx.execute(status -> action.get());
-        return value == null ? 0 : value;
-    }
-
-    private PntTransactionEntity newRow(
+    PntTransactionEntity newRow(
             long userId,
             String type,
             long amount,
