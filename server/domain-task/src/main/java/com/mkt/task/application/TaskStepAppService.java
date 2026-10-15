@@ -51,6 +51,7 @@ public class TaskStepAppService {
     private final TaskStepPreload preload;
     private final TaskStepGuards guards;
     private final StepClick stepClick;
+    private final StepCallback stepCallback;
 
     @Autowired
     public TaskStepAppService(
@@ -71,7 +72,8 @@ public class TaskStepAppService {
             StepEngineAdvance advanceOps,
             StepEngineViews engineViews,
             StepEngineExpire expireOps,
-            StepClick stepClick) {
+            StepClick stepClick,
+            StepCallback stepCallback) {
         this(
                 definitions,
                 snapshots,
@@ -90,7 +92,8 @@ public class TaskStepAppService {
                 advanceOps,
                 engineViews,
                 expireOps,
-                stepClick);
+                stepClick,
+                stepCallback);
     }
 
     public TaskStepAppService(
@@ -279,6 +282,48 @@ public class TaskStepAppService {
             StepEngineViews engineViews,
             StepEngineExpire expireOps,
             StepClick stepClick) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                events,
+                clock,
+                settings,
+                preload,
+                views,
+                guards,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                engineViews,
+                expireOps,
+                stepClick,
+                null);
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload,
+            TaskStepViews views,
+            TaskStepGuards guards,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps,
+            StepClick stepClick,
+            StepCallback stepCallback) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -289,10 +334,13 @@ public class TaskStepAppService {
         this.guards = guards;
         this.engine = new StepEngine(
                 instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
-        // Manual/IT chain passes null and shares this engine. Production passes the injected StepClick.
+        // Manual/IT chain passes null and shares this engine. Production passes the injected collaborators.
         this.stepClick = stepClick != null
                 ? stepClick
                 : new StepClick(instances, snapshots, crowds, users, guards, views, this.engine);
+        this.stepCallback = stepCallback != null
+                ? stepCallback
+                : new StepCallback(preload, crowds, users, guards, this.engine);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -303,21 +351,7 @@ public class TaskStepAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskCallbackResponse callback(InternalCallbackCommand command) {
-        // Hold-lock knife: attrs/crowds/snapshot (+ frozen check) BEFORE getByIdForUpdate.
-        // Lock window: CAS + report/outbox same-TX only (DEC-002 unchanged; no sync evt wait).
-        TaskInstanceEntity soft = preload.locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
-        guards.rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
-        SnapshotContent snapshot = preload.cachedSnapshot(soft);
-        UserAttributes userAttrs = preload.cachedAttrs(soft.getUserId());
-        CrowdResolver crowdResolver = crowds(soft.getUserId());
-        TaskInstanceEntity instance = preload.lockInstance(soft);
-        TaskInstanceStepEntity step = guards.requireStep(instance.getId(), command.stepCode());
-        StepAdvanceResult result =
-                engine.callback(instance, step, snapshot, userAttrs, crowdResolver, command.bizNo());
-        TaskInstanceEntity fresh = result.instance();
-        TaskInstanceStepEntity after = result.step();
-        return new TaskCallbackResponse(
-                fresh.getId(), after.getStepCode(), after.getStatus(), fresh.getStatus());
+        return stepCallback.callback(command);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
