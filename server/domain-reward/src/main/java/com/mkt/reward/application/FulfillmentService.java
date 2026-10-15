@@ -11,7 +11,6 @@ import com.mkt.reward.domain.BuiltinCategories;
 import com.mkt.reward.domain.FulfillFailReasons;
 import com.mkt.reward.domain.FulfillmentModes;
 import com.mkt.reward.domain.GrantRecordStatuses;
-import com.mkt.reward.domain.RewardTargets;
 import com.mkt.reward.domain.TypeParams;
 import com.mkt.reward.entity.GrantRecordEntity;
 import com.mkt.reward.entity.PrizeCategoryEntity;
@@ -29,8 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** startFulfillment on GRANTED (design §5.6.3). P0 third-party adapters are stubs. */
 @Service
@@ -41,6 +38,7 @@ public class FulfillmentService {
     private final FulfillmentLookups lookups;
     private final FulfillmentSettleOps settleOps;
     private final FulfillmentEvents fulfillmentEvents;
+    private final FulfillmentDispatch dispatch;
     private final FulfillmentTickOps tickOps;
     private final Clock clock;
 
@@ -51,6 +49,7 @@ public class FulfillmentService {
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
             FulfillmentEvents fulfillmentEvents,
+            FulfillmentDispatch dispatch,
             FulfillmentTickOps tickOps,
             Clock clock) {
         this(
@@ -59,6 +58,7 @@ public class FulfillmentService {
                 lookups,
                 settleOps,
                 fulfillmentEvents,
+                dispatch,
                 tickOps,
                 clock);
     }
@@ -89,8 +89,10 @@ public class FulfillmentService {
         RewardRuntimeSettings resolved = settings == null ? new RewardRuntimeSettings() : settings;
         FulfillmentSettleOps settleOps =
                 new FulfillmentSettleOps(grants, lookups, fulfillmentEvents, resolved, clock);
-        FulfillmentTickOps tickOps = new FulfillmentTickOps(grants, lookups, settleOps, resolved, clock);
-        this(points, grants, lookups, settleOps, fulfillmentEvents, tickOps, clock);
+        FulfillmentDispatch dispatch = new FulfillmentDispatch(grants);
+        FulfillmentTickOps tickOps =
+                new FulfillmentTickOps(grants, lookups, settleOps, dispatch, resolved, clock);
+        this(points, grants, lookups, settleOps, fulfillmentEvents, dispatch, tickOps, clock);
     }
 
     private FulfillmentService(
@@ -99,6 +101,7 @@ public class FulfillmentService {
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
             FulfillmentEvents fulfillmentEvents,
+            FulfillmentDispatch dispatch,
             FulfillmentTickOps tickOps,
             Clock clock) {
         this.points = points;
@@ -106,9 +109,9 @@ public class FulfillmentService {
         this.lookups = lookups;
         this.settleOps = settleOps;
         this.fulfillmentEvents = fulfillmentEvents;
+        this.dispatch = dispatch;
         this.tickOps = tickOps;
         this.clock = clock;
-        tickOps.bind(this);
     }
 
     public void start(GrantRecordEntity record, PrizeEntity prize, PrizeCategoryEntity category) {
@@ -132,7 +135,7 @@ public class FulfillmentService {
     }
 
     public void armThirdPartyStub(GrantRecordEntity record, PrizeEntity prize, PrizeCategoryEntity category) {
-        dispatchAfterCommit(record, prize, category);
+        dispatch.armThirdPartyStub(record, prize, category);
     }
 
     public void emitArrived(GrantRecordEntity record) {
@@ -190,7 +193,7 @@ public class FulfillmentService {
         PrizeEntity prize = lookups.prizeOf(row);
         PrizeCategoryEntity category = lookups.categoryOf(prize);
         if (prize != null) {
-            armThirdPartyStub(row, prize, category);
+            dispatch.armThirdPartyStub(row, prize, category);
         }
         return new FulfillmentCallbackResponse(GrantRecordStatuses.FULFILL_SENDING, false);
     }
@@ -226,35 +229,6 @@ public class FulfillmentService {
                     record.getSimulated() != null && record.getSimulated() == 1);
         } catch (RuntimeException ex) {
             throw new RetryableGrantException(RetryableGrantReason.SYSTEM_ERROR);
-        }
-    }
-
-    private void dispatchAfterCommit(
-            GrantRecordEntity record, PrizeEntity prize, PrizeCategoryEntity category) {
-        if (prize == null || !RewardTargets.THIRD_PARTY.equals(prize.getRewardTarget())) {
-            return;
-        }
-        if (record.getFulfillmentRef() != null && !record.getFulfillmentRef().isBlank()) {
-            return;
-        }
-        String adapter = TypeParams.text(RewardJson.map(prize.getTypeParams()), TypeParams.ADAPTER_CODE);
-        if (adapter == null && category != null) {
-            adapter = category.getAdapterCode();
-        }
-        if (adapter == null || adapter.isBlank()) {
-            adapter = "stub";
-        }
-        String ref = adapter + ":stub-" + record.getId();
-        Runnable write = () -> grants.updateFulfillmentRef(record.getId(), ref);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    write.run();
-                }
-            });
-        } else {
-            write.run();
         }
     }
 }
