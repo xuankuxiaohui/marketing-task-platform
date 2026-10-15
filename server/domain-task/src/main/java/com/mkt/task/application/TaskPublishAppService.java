@@ -55,6 +55,7 @@ public class TaskPublishAppService {
     private final TaskPublishScheduleFailures scheduleFailures;
     private final PublishOfflineExpiry offlineExpiry;
     private final PublishScanDue publishScanDue;
+    private final PublishExecute publishExecute;
 
     @Autowired
     public TaskPublishAppService(
@@ -70,7 +71,8 @@ public class TaskPublishAppService {
             TaskPublishFreeze publishFreeze,
             TaskPublishScheduleFailures scheduleFailures,
             PublishOfflineExpiry offlineExpiry,
-            PublishScanDue publishScanDue) {
+            PublishScanDue publishScanDue,
+            PublishExecute publishExecute) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -85,6 +87,7 @@ public class TaskPublishAppService {
         this.scheduleFailures = scheduleFailures;
         this.offlineExpiry = offlineExpiry;
         this.publishScanDue = publishScanDue;
+        this.publishExecute = publishExecute;
     }
 
     public TaskPublishAppService(
@@ -117,43 +120,12 @@ public class TaskPublishAppService {
         this.offlineExpiry = new PublishOfflineExpiry(instances, snapshots, settings);
         this.publishScanDue = new PublishScanDue(
                 definitions, this.publishChecks, this.publishFreeze, this.scheduleFailures, clock, tx);
+        this.publishExecute = new PublishExecute(definitions, this.publishChecks, this.publishFreeze, clock);
     }
 
     @Transactional
     public PublishResponse publish(long id, PublishCommand command) {
-        PublishCommand cmd = command == null ? new PublishCommand(null, null) : command;
-        TaskDefinitionEntity entity = requireLockedLive(id);
-        if (pending(entity) && !cmd.confirmTrue()) {
-            return PublishResponse.preview(
-                    entity.getId(),
-                    entity.getCode(),
-                    versionOf(entity),
-                    entity.getStatus(),
-                    definitions.countInProgressInstances(id));
-        }
-        String status = entity.getStatus();
-        if (DefinitionStatuses.DRAFT.equals(status)) {
-            publishChecks.rejectIfInvalid(entity);
-            requireCas(publishFreeze.freezeToPublished(entity, false));
-        } else if (DefinitionStatuses.SCHEDULED.equals(status)) {
-            if (cmd.earlyTrue()) {
-                publishChecks.rejectIfInvalid(entity);
-                requireCas(publishFreeze.freezeToPublished(entity, false));
-            } else {
-                entity.setPendingRevision(0);
-                entity.setUpdatedAt(nowUtc());
-                definitions.update(entity);
-            }
-        } else if (DefinitionStatuses.PUBLISHED.equals(status)) {
-            if (!pending(entity)) {
-                throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "无待发布修订");
-            }
-            publishChecks.rejectIfInvalid(entity);
-            requireCas(publishFreeze.freezeToPublished(entity, true));
-        } else {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "当前状态不可发布");
-        }
-        return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
+        return publishExecute.publish(id, command);
     }
 
     @Transactional
@@ -336,16 +308,6 @@ public class TaskPublishAppService {
 
     private LocalDateTime nowUtc() {
         return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
-    }
-
-    private static void requireCas(boolean applied) {
-        if (!applied) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "发布冲突，请重试");
-        }
-    }
-
-    private static boolean pending(TaskDefinitionEntity entity) {
-        return entity.getPendingRevision() != null && entity.getPendingRevision() == 1;
     }
 
     private static int versionOf(TaskDefinitionEntity entity) {
