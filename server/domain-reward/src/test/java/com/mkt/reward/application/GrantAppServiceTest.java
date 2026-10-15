@@ -611,7 +611,8 @@ class GrantAppServiceTest {
                         assembly,
                         persistence);
         GrantDoGrant grantDoGrant = new GrantDoGrant(grants, assembly, persistence, execute);
-        grant = new GrantAppService(grants, resumerOp, clock, checks, grantDoGrant);
+        GrantRetryBatch retryBatch = new GrantRetryBatch(grants, clock);
+        grant = new GrantAppService(grants, resumerOp, clock, checks, grantDoGrant, retryBatch);
 
         long prizeId = enableAlipay("red_op", 1);
         prizes.getById(prizeId).setRemainingStock(0);
