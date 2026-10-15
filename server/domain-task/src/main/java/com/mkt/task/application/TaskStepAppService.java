@@ -3,17 +3,11 @@ package com.mkt.task.application;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.RewardPort;
 import com.mkt.contract.UserAttributePort;
-import com.mkt.contract.UserAttributes;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
-import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.command.InternalCallbackCommand;
 import com.mkt.task.command.InternalProgressCommand;
-import com.mkt.task.convert.SnapshotContent;
-import com.mkt.task.domain.InstanceStatuses;
-import com.mkt.task.domain.StepStatuses;
-import com.mkt.task.domain.StepTypes;
 import com.mkt.task.engine.StepEngine;
 import com.mkt.task.engine.StepEngineAdvance;
 import com.mkt.task.engine.StepEngineCascadeSupport;
@@ -22,9 +16,6 @@ import com.mkt.task.engine.StepEngineReward;
 import com.mkt.task.engine.StepEngineViews;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskInstanceEntity;
-import com.mkt.task.entity.TaskInstanceStepEntity;
-import com.mkt.task.entity.TaskVersionSnapshotEntity;
-import com.mkt.task.expression.CrowdResolver;
 import com.mkt.task.response.TaskCallbackResponse;
 import com.mkt.task.response.TaskClickResponse;
 import com.mkt.task.response.TaskProgressResponse;
@@ -41,15 +32,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskStepAppService {
 
     private final TaskDefinitionStore definitions;
-    private final TaskVersionSnapshotStore snapshots;
     private final TaskInstanceStore instances;
-    private final TaskCrowdStore crowds;
-    private final UserAttributePort users;
-    private final StepEngine engine;
-    private final Clock clock;
     private final StepClick stepClick;
     private final StepCallback stepCallback;
     private final StepProgress stepProgress;
+    private final StepResume stepResume;
 
     @Autowired
     public TaskStepAppService(
@@ -72,7 +59,8 @@ public class TaskStepAppService {
             StepEngineExpire expireOps,
             StepClick stepClick,
             StepCallback stepCallback,
-            StepProgress stepProgress) {
+            StepProgress stepProgress,
+            StepResume stepResume) {
         this(
                 definitions,
                 snapshots,
@@ -93,7 +81,8 @@ public class TaskStepAppService {
                 expireOps,
                 stepClick,
                 stepCallback,
-                stepProgress);
+                stepProgress,
+                stepResume);
     }
 
     public TaskStepAppService(
@@ -368,24 +357,69 @@ public class TaskStepAppService {
             StepClick stepClick,
             StepCallback stepCallback,
             StepProgress stepProgress) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                events,
+                clock,
+                settings,
+                preload,
+                views,
+                guards,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                engineViews,
+                expireOps,
+                stepClick,
+                stepCallback,
+                stepProgress,
+                null);
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload,
+            TaskStepViews views,
+            TaskStepGuards guards,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps,
+            StepClick stepClick,
+            StepCallback stepCallback,
+            StepProgress stepProgress,
+            StepResume stepResume) {
         this.definitions = definitions;
-        this.snapshots = snapshots;
         this.instances = instances;
-        this.crowds = crowds;
-        this.users = users;
-        this.clock = clock;
-        this.engine = new StepEngine(
+        StepEngine engine = new StepEngine(
                 instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
         // Manual/IT chain passes null and shares this engine. Production passes the injected collaborators.
         this.stepClick = stepClick != null
                 ? stepClick
-                : new StepClick(instances, snapshots, crowds, users, guards, views, this.engine);
+                : new StepClick(instances, snapshots, crowds, users, guards, views, engine);
         this.stepCallback = stepCallback != null
                 ? stepCallback
-                : new StepCallback(preload, crowds, users, guards, this.engine);
+                : new StepCallback(preload, crowds, users, guards, engine);
         this.stepProgress = stepProgress != null
                 ? stepProgress
-                : new StepProgress(preload, crowds, users, guards, this.engine);
+                : new StepProgress(preload, crowds, users, guards, engine);
+        this.stepResume = stepResume != null
+                ? stepResume
+                : new StepResume(instances, snapshots, crowds, users, clock, engine);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -433,49 +467,6 @@ public class TaskStepAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void resumeAfterGrant(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
-            return;
-        }
-        long stepId;
-        try {
-            stepId = Long.parseLong(sourceId.trim());
-        } catch (NumberFormatException ex) {
-            return;
-        }
-        TaskInstanceStepEntity step = instances.getStepById(stepId);
-        if (step == null || !StepStatuses.ACTIVE.equals(step.getStatus())
-                || !StepTypes.REWARD.equals(step.getType())) {
-            return;
-        }
-        TaskInstanceEntity instance = instances.getByIdForUpdate(step.getInstanceId());
-        if (instance == null || InstanceStatuses.terminal(instance.getStatus())
-                || StepEngineExpire.expired(instance, clock.instant())) {
-            return;
-        }
-        step = instances.getStepById(stepId);
-        if (step == null) {
-            return;
-        }
-        engine.resumeFromReward(
-                instance, step, snapshotOf(instance), attrs(instance.getUserId()), crowds(instance.getUserId()));
-    }
-
-    private SnapshotContent snapshotOf(TaskInstanceEntity instance) {
-        TaskVersionSnapshotEntity snap = snapshots.getById(instance.getSnapshotId());
-        if (snap == null || snap.getContent() == null) {
-            throw new BusinessException(CommonErrorCodes.SERVER_ERROR);
-        }
-        return JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-    }
-
-    private UserAttributes attrs(long userId) {
-        if (users == null) {
-            return UserAttributes.notFound();
-        }
-        return users.attributes(userId);
-    }
-
-    private CrowdResolver crowds(long userId) {
-        return new StoreCrowdResolver(crowds, users, userId);
+        stepResume.resumeAfterGrant(sourceId);
     }
 }
