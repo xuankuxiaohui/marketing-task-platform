@@ -49,8 +49,8 @@ public class TaskStepAppService {
     private final StepEngine engine;
     private final Clock clock;
     private final TaskStepPreload preload;
-    private final TaskStepViews views;
     private final TaskStepGuards guards;
+    private final StepClick stepClick;
 
     @Autowired
     public TaskStepAppService(
@@ -70,7 +70,8 @@ public class TaskStepAppService {
             StepEngineCascadeSupport cascadeOps,
             StepEngineAdvance advanceOps,
             StepEngineViews engineViews,
-            StepEngineExpire expireOps) {
+            StepEngineExpire expireOps,
+            StepClick stepClick) {
         this(
                 definitions,
                 snapshots,
@@ -88,7 +89,8 @@ public class TaskStepAppService {
                 cascadeOps,
                 advanceOps,
                 engineViews,
-                expireOps);
+                expireOps,
+                stepClick);
     }
 
     public TaskStepAppService(
@@ -237,6 +239,46 @@ public class TaskStepAppService {
             StepEngineAdvance advanceOps,
             StepEngineViews engineViews,
             StepEngineExpire expireOps) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                events,
+                clock,
+                settings,
+                preload,
+                views,
+                guards,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                engineViews,
+                expireOps,
+                null);
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload,
+            TaskStepViews views,
+            TaskStepGuards guards,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps,
+            StepClick stepClick) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -244,24 +286,19 @@ public class TaskStepAppService {
         this.users = users;
         this.clock = clock;
         this.preload = preload;
-        this.views = views;
         this.guards = guards;
         this.engine = new StepEngine(
                 instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
+        // Manual/IT chain passes null and shares this engine. Production passes the injected StepClick.
+        this.stepClick = stepClick != null
+                ? stepClick
+                : new StepClick(instances, snapshots, crowds, users, guards, views, this.engine);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskClickResponse click(
             long instanceId, String stepCode, long userId, String ip, String deviceId, String platform) {
-        TaskInstanceEntity instance = instances.getByIdForUpdate(instanceId);
-        if (instance == null || instance.getUserId() == null || instance.getUserId() != userId) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-        }
-        guards.rejectIfFrozen(userId, TaskErrorCodes.INSTANCE_FROZEN);
-        TaskInstanceStepEntity step = guards.requireStep(instanceId, stepCode);
-        StepAdvanceResult result =
-                engine.click(instance, step, snapshotOf(instance), attrs(userId), crowds(userId), ip, deviceId);
-        return views.toClick(result, platform);
+        return stepClick.click(instanceId, stepCode, userId, ip, deviceId, platform);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
