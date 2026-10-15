@@ -1,17 +1,13 @@
 package com.mkt.reward.application;
 
-import com.mkt.contract.RetryableGrantException;
-import com.mkt.contract.RetryableGrantReason;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
-import com.mkt.reward.convert.RewardJson;
 import com.mkt.reward.convert.RewardTime;
 import com.mkt.reward.domain.BuiltinCategories;
 import com.mkt.reward.domain.FulfillFailReasons;
 import com.mkt.reward.domain.FulfillmentModes;
 import com.mkt.reward.domain.GrantRecordStatuses;
-import com.mkt.reward.domain.TypeParams;
 import com.mkt.reward.entity.GrantRecordEntity;
 import com.mkt.reward.entity.PrizeCategoryEntity;
 import com.mkt.reward.entity.PrizeEntity;
@@ -20,10 +16,8 @@ import com.mkt.reward.response.FulfillmentCallbackResponse;
 import com.mkt.reward.support.RewardErrorCodes;
 import com.mkt.reward.support.RewardRuntimeSettings;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -33,34 +27,33 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FulfillmentService {
 
-    private final PointsPort points;
     private final GrantRecordStore grants;
     private final FulfillmentLookups lookups;
     private final FulfillmentSettleOps settleOps;
     private final FulfillmentEvents fulfillmentEvents;
     private final FulfillmentTickOps tickOps;
     private final FulfillmentDispatch dispatch;
+    private final FulfillmentEarn earn;
     private final Clock clock;
 
     @Autowired
     public FulfillmentService(
-            ObjectProvider<PointsPort> points,
             GrantRecordStore grants,
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
             FulfillmentEvents fulfillmentEvents,
             FulfillmentTickOps tickOps,
             FulfillmentDispatch dispatch,
+            FulfillmentEarn earn,
             Clock clock) {
-        this(
-                points.getIfAvailable(),
-                grants,
-                lookups,
-                settleOps,
-                fulfillmentEvents,
-                tickOps,
-                dispatch,
-                clock);
+        this.grants = grants;
+        this.lookups = lookups;
+        this.settleOps = settleOps;
+        this.fulfillmentEvents = fulfillmentEvents;
+        this.tickOps = tickOps;
+        this.dispatch = dispatch;
+        this.earn = earn;
+        this.clock = clock;
     }
 
     public FulfillmentService(PointsPort points, GrantRecordStore grants, EventPublisher events, Clock clock) {
@@ -92,25 +85,13 @@ public class FulfillmentService {
         FulfillmentDispatch dispatch = new FulfillmentDispatch(grants);
         FulfillmentTickOps tickOps =
                 new FulfillmentTickOps(grants, lookups, settleOps, dispatch, resolved, clock);
-        this(points, grants, lookups, settleOps, fulfillmentEvents, tickOps, dispatch, clock);
-    }
-
-    private FulfillmentService(
-            PointsPort points,
-            GrantRecordStore grants,
-            FulfillmentLookups lookups,
-            FulfillmentSettleOps settleOps,
-            FulfillmentEvents fulfillmentEvents,
-            FulfillmentTickOps tickOps,
-            FulfillmentDispatch dispatch,
-            Clock clock) {
-        this.points = points;
         this.grants = grants;
         this.lookups = lookups;
         this.settleOps = settleOps;
         this.fulfillmentEvents = fulfillmentEvents;
         this.tickOps = tickOps;
         this.dispatch = dispatch;
+        this.earn = new FulfillmentEarn(points);
         this.clock = clock;
     }
 
@@ -119,7 +100,7 @@ public class FulfillmentService {
         record.setFulfillFailReason(null);
         if (FulfillmentModes.INSTANT.equals(prize.getFulfillmentMode())) {
             if (BuiltinCategories.POINTS.equals(prize.getCategoryCode())) {
-                earnPoints(record, prize, now);
+                earn.earnPoints(record, prize, now);
             }
             record.setFulfillmentStatus(GrantRecordStatuses.FULFILL_ARRIVED);
             record.setFulfilledAt(RewardTime.toUtc(now));
@@ -206,29 +187,5 @@ public class FulfillmentService {
         ran += tickOps.timeoutDue(now);
         ran += tickOps.crossDayPending(now);
         return ran;
-    }
-
-    private void earnPoints(GrantRecordEntity record, PrizeEntity prize, Instant now) {
-        if (points == null) {
-            return;
-        }
-        Integer amount = TypeParams.positiveInt(RewardJson.map(prize.getTypeParams()), TypeParams.POINTS);
-        if (amount == null) {
-            throw new RetryableGrantException(RetryableGrantReason.SYSTEM_ERROR);
-        }
-        Instant expireAt = prize.getExpireHours() == null
-                ? null
-                : now.plus(Duration.ofHours(prize.getExpireHours()));
-        try {
-            points.earn(
-                    record.getUserId(),
-                    amount,
-                    expireAt,
-                    record.getGrantSource(),
-                    record.getSourceId(),
-                    record.getSimulated() != null && record.getSimulated() == 1);
-        } catch (RuntimeException ex) {
-            throw new RetryableGrantException(RetryableGrantReason.SYSTEM_ERROR);
-        }
     }
 }
