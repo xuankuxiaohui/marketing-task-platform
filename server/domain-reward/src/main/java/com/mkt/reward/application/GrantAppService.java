@@ -15,7 +15,6 @@ import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.reward.command.ManualGrantCommand;
 import com.mkt.reward.convert.RewardTime;
-import com.mkt.reward.domain.FailReasons;
 import com.mkt.reward.domain.GrantRecordStatuses;
 import com.mkt.reward.entity.GrantRecordEntity;
 import com.mkt.reward.response.GrantRetryResponse;
@@ -44,9 +43,7 @@ public class GrantAppService {
     private final GrantStepResumer resumerDirect;
     private final Clock clock;
     private final GrantChecks checks;
-    private final GrantResultAssembly assembly;
-    private final GrantPersistence persistence;
-    private final GrantExecute execute;
+    private final GrantDoGrant doGrant;
 
     @Autowired
     public GrantAppService(
@@ -54,17 +51,13 @@ public class GrantAppService {
             ObjectProvider<GrantStepResumer> resumer,
             Clock clock,
             GrantChecks checks,
-            GrantResultAssembly assembly,
-            GrantPersistence persistence,
-            GrantExecute execute) {
+            GrantDoGrant doGrant) {
         this.grants = grants;
         this.resumerProvider = resumer;
         this.resumerDirect = null;
         this.clock = clock;
         this.checks = checks;
-        this.assembly = assembly;
-        this.persistence = persistence;
-        this.execute = execute;
+        this.doGrant = doGrant;
     }
 
     public GrantAppService(
@@ -84,9 +77,9 @@ public class GrantAppService {
         this.resumerDirect = resumer;
         this.clock = clock;
         this.checks = new GrantChecks(grants, risk, clock);
-        this.assembly = new GrantResultAssembly(events, prizes);
-        this.persistence = new GrantPersistence(grants, prizes, this.assembly, failures, clock);
-        this.execute = new GrantExecute(
+        GrantResultAssembly assembly = new GrantResultAssembly(events, prizes);
+        GrantPersistence persistence = new GrantPersistence(grants, prizes, assembly, failures, clock);
+        GrantExecute execute = new GrantExecute(
                 prizes,
                 categories,
                 grants,
@@ -95,8 +88,9 @@ public class GrantAppService {
                 clock,
                 this.checks,
                 new GrantStockLogs(stockLogs, clock),
-                this.assembly,
-                this.persistence);
+                assembly,
+                persistence);
+        this.doGrant = new GrantDoGrant(grants, assembly, persistence, execute);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = PermanentGrantException.class)
@@ -106,52 +100,7 @@ public class GrantAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
         GrantContext context = ctx == null ? GrantContext.defaults() : ctx;
-        return doGrant(prizeId, userId, grantSource, sourceId, context, false);
-    }
-
-    private GrantResult doGrant(
-            long prizeId,
-            long userId,
-            GrantSource grantSource,
-            String sourceId,
-            GrantContext context,
-            boolean retryPermanent) {
-        GrantRecordEntity existing = grants.getByIdempotent(grantSource.name(), sourceId, prizeId);
-        if (existing != null
-                && !GrantRecordStatuses.RETRY_PENDING.equals(existing.getStatus())
-                && !(retryPermanent && GrantRecordStatuses.PERMANENT_FAILED.equals(existing.getStatus()))) {
-            return assembly.toResult(existing, true);
-        }
-        if (retryPermanent
-                && existing != null
-                && GrantRecordStatuses.PERMANENT_FAILED.equals(existing.getStatus())) {
-            existing.setRetryCount(0);
-            existing.setFailReason(null);
-        }
-        try {
-            return execute.execute(prizeId, userId, grantSource, sourceId, context, existing);
-        } catch (GrantPersistence.IdempotentHit hit) {
-            return assembly.toResult(hit.winner, true);
-        } catch (RetryableGrantException ex) {
-            persistence.leaveRetry(prizeId, userId, grantSource, sourceId, context, existing, ex.reason().name());
-            throw ex;
-        } catch (PermanentGrantException ex) {
-            persistence.persistPermanent(
-                    prizeId, userId, grantSource, sourceId, context, existing, ex.reason().name());
-            throw ex;
-        } catch (BusinessException ex) {
-            throw ex;
-        } catch (RuntimeException ex) {
-            persistence.leaveRetry(
-                    prizeId,
-                    userId,
-                    grantSource,
-                    sourceId,
-                    context,
-                    existing,
-                    FailReasons.SYSTEM_ERROR);
-            throw new RetryableGrantException(RetryableGrantReason.SYSTEM_ERROR);
-        }
+        return doGrant.doGrant(prizeId, userId, grantSource, sourceId, context, false);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -168,7 +117,7 @@ public class GrantAppService {
         GrantContext ctx = new GrantContext(null, List.of(), RewardOperator.optionalUserId(), simulated(row), null);
         GrantResult result;
         try {
-            result = doGrant(row.getPrizeId(), row.getUserId(), source, row.getSourceId(), ctx, true);
+            result = doGrant.doGrant(row.getPrizeId(), row.getUserId(), source, row.getSourceId(), ctx, true);
         } catch (RetryableGrantException ex) {
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -208,8 +157,8 @@ public class GrantAppService {
         GrantContext ctx = new GrantContext(command.reason().trim(), bypass, operatorId, false, null);
         String sourceId = GrantSourceIds.nextManual(clock);
         try {
-            GrantResult result =
-                    doGrant(command.prizeId(), command.userId(), GrantSource.MANUAL_GRANT, sourceId, ctx, false);
+            GrantResult result = doGrant.doGrant(
+                    command.prizeId(), command.userId(), GrantSource.MANUAL_GRANT, sourceId, ctx, false);
             return new ManualGrantResponse(result.recordId(), result.status().name());
         } catch (PermanentGrantException ex) {
             throw mapPermanent(ex);
@@ -226,7 +175,7 @@ public class GrantAppService {
         long operatorId = RewardOperator.requireUserId();
         GrantContext ctx = new GrantContext(reason.trim(), List.of(), operatorId, false, null);
         try {
-            GrantResult result = doGrant(prizeId, userId, GrantSource.MANUAL_GRANT, sourceId, ctx, false);
+            GrantResult result = doGrant.doGrant(prizeId, userId, GrantSource.MANUAL_GRANT, sourceId, ctx, false);
             return new ManualGrantResponse(result.recordId(), result.status().name());
         } catch (PermanentGrantException ex) {
             throw mapPermanent(ex);
