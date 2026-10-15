@@ -16,14 +16,10 @@ import com.mkt.task.response.VersionDiffResponse;
 import com.mkt.task.support.AlertWebhook;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BooleanSupplier;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -35,8 +31,6 @@ public class TaskPublishAppService {
     private final TaskVersionSnapshotStore snapshots;
     private final TaskDefinitionAppService definitionsApp;
     private final PrizeEnabledLookup prizes;
-    private final ObjectProvider<PlatformTransactionManager> txm;
-    private final TransactionTemplate txDirect;
     private final TaskPublishChecks publishChecks;
     private final TaskPublishVersionDiff versionDiff;
     private final TaskPublishFreeze publishFreeze;
@@ -46,6 +40,7 @@ public class TaskPublishAppService {
     private final PublishSchedule publishSchedule;
     private final PublishResetRevision publishResetRevision;
     private final PublishOffline publishOffline;
+    private final PublishBatch publishBatch;
 
     @Autowired
     public TaskPublishAppService(
@@ -54,7 +49,6 @@ public class TaskPublishAppService {
             TaskVersionSnapshotStore snapshots,
             TaskDefinitionAppService definitionsApp,
             PrizeEnabledLookup prizes,
-            ObjectProvider<PlatformTransactionManager> txm,
             TaskPublishChecks publishChecks,
             TaskPublishVersionDiff versionDiff,
             TaskPublishFreeze publishFreeze,
@@ -63,14 +57,13 @@ public class TaskPublishAppService {
             PublishExecute publishExecute,
             PublishSchedule publishSchedule,
             PublishResetRevision publishResetRevision,
-            PublishOffline publishOffline) {
+            PublishOffline publishOffline,
+            PublishBatch publishBatch) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
-        this.txm = txm;
-        this.txDirect = null;
         this.publishChecks = publishChecks;
         this.versionDiff = versionDiff;
         this.publishFreeze = publishFreeze;
@@ -80,6 +73,7 @@ public class TaskPublishAppService {
         this.publishSchedule = publishSchedule;
         this.publishResetRevision = publishResetRevision;
         this.publishOffline = publishOffline;
+        this.publishBatch = publishBatch;
     }
 
     public TaskPublishAppService(
@@ -101,8 +95,6 @@ public class TaskPublishAppService {
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
-        this.txm = null;
-        this.txDirect = tx;
         this.publishChecks = new TaskPublishChecks(definitions, definitionsApp, prizes);
         this.versionDiff = new TaskPublishVersionDiff(snapshots);
         this.publishFreeze = new TaskPublishFreeze(
@@ -115,6 +107,7 @@ public class TaskPublishAppService {
         this.publishSchedule = new PublishSchedule(definitions, this.publishChecks, clock);
         this.publishResetRevision = new PublishResetRevision(definitions, mutexGroups, snapshots, definitionsApp);
         this.publishOffline = new PublishOffline(definitions, offlineExpiry, this.publishFreeze, clock);
+        this.publishBatch = new PublishBatch(this.publishExecute, this.publishOffline, tx);
     }
 
     @Transactional
@@ -143,11 +136,11 @@ public class TaskPublishAppService {
     }
 
     public List<BatchItemResponse> batchPublish(List<Long> ids) {
-        return batch(ids, id -> publish(id, new PublishCommand(true, false)));
+        return publishBatch.batchPublish(ids);
     }
 
     public List<BatchItemResponse> batchOffline(List<Long> ids) {
-        return batch(ids, this::offline);
+        return publishBatch.batchOffline(ids);
     }
 
     public List<TaskVersionView> versions(long id) {
@@ -176,66 +169,11 @@ public class TaskPublishAppService {
         return publishScanDue.publishDue(id);
     }
 
-    private List<BatchItemResponse> batch(List<Long> ids, IdAction action) {
-        if (ids == null || ids.isEmpty()) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "ids 不能为空");
-        }
-        if (ids.size() > 50) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "单批最多 50 条");
-        }
-        List<BatchItemResponse> out = new ArrayList<>();
-        for (Long id : ids) {
-            if (id == null) {
-                out.add(BatchItemResponse.fail(0, CommonErrorCodes.PARAM_INVALID.code()));
-                continue;
-            }
-            try {
-                runInTx(() -> action.run(id));
-                out.add(BatchItemResponse.ok(id));
-            } catch (BusinessException ex) {
-                out.add(BatchItemResponse.fail(id, ex.errorCode().code()));
-            }
-        }
-        return out;
-    }
-
-    private void runInTx(Runnable action) {
-        runInTx(() -> {
-            action.run();
-            return true;
-        });
-    }
-
-    private boolean runInTx(BooleanSupplier action) {
-        TransactionTemplate template = tx();
-        if (template != null) {
-            Boolean result = template.execute(status -> action.getAsBoolean());
-            return Boolean.TRUE.equals(result);
-        }
-        return action.getAsBoolean();
-    }
-
-    private TransactionTemplate tx() {
-        if (txDirect != null) {
-            return txDirect;
-        }
-        if (txm == null) {
-            return null;
-        }
-        PlatformTransactionManager manager = txm.getIfAvailable();
-        return manager == null ? null : new TransactionTemplate(manager);
-    }
-
     private TaskDefinitionEntity requireLive(long id) {
         TaskDefinitionEntity existing = definitions.getById(id);
         if (existing == null || existing.deletedFlag()) {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return existing;
-    }
-
-    @FunctionalInterface
-    private interface IdAction {
-        void run(long id);
     }
 }
