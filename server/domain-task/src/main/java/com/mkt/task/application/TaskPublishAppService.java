@@ -11,13 +11,11 @@ import com.mkt.task.command.ScheduleCommand;
 import com.mkt.task.command.TaskDefinitionSaveCommand;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.TaskDefinitionConvert;
-import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.entity.TaskMutexGroupEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.response.BatchItemResponse;
-import com.mkt.task.response.PublishCheckError;
 import com.mkt.task.response.PublishResponse;
 import com.mkt.task.response.ScheduleFailureView;
 import com.mkt.task.response.TaskVersionView;
@@ -56,6 +54,7 @@ public class TaskPublishAppService {
     private final PublishOfflineExpiry offlineExpiry;
     private final PublishScanDue publishScanDue;
     private final PublishExecute publishExecute;
+    private final PublishSchedule publishSchedule;
 
     @Autowired
     public TaskPublishAppService(
@@ -72,7 +71,8 @@ public class TaskPublishAppService {
             TaskPublishScheduleFailures scheduleFailures,
             PublishOfflineExpiry offlineExpiry,
             PublishScanDue publishScanDue,
-            PublishExecute publishExecute) {
+            PublishExecute publishExecute,
+            PublishSchedule publishSchedule) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -88,6 +88,7 @@ public class TaskPublishAppService {
         this.offlineExpiry = offlineExpiry;
         this.publishScanDue = publishScanDue;
         this.publishExecute = publishExecute;
+        this.publishSchedule = publishSchedule;
     }
 
     public TaskPublishAppService(
@@ -121,6 +122,7 @@ public class TaskPublishAppService {
         this.publishScanDue = new PublishScanDue(
                 definitions, this.publishChecks, this.publishFreeze, this.scheduleFailures, clock, tx);
         this.publishExecute = new PublishExecute(definitions, this.publishChecks, this.publishFreeze, clock);
+        this.publishSchedule = new PublishSchedule(definitions, this.publishChecks, clock);
     }
 
     @Transactional
@@ -130,38 +132,12 @@ public class TaskPublishAppService {
 
     @Transactional
     public PublishResponse schedule(long id, ScheduleCommand command) {
-        if (command == null || command.publishAt() == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "publishAt 必填");
-        }
-        TaskDefinitionEntity entity = requireLockedLive(id);
-        if (!DefinitionStatuses.DRAFT.equals(entity.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅草稿可设定时发布");
-        }
-        LocalDateTime publishAt = TaskTime.toUtc(command.publishAt());
-        if (!publishAt.isAfter(nowUtc())) {
-            throw publishChecks.validateFailed(List.of(new PublishCheckError("schedule", "定时发布时间必须晚于当前时间")));
-        }
-        entity.setSchedulePublishAt(publishAt);
-        publishChecks.rejectIfInvalid(entity);
-        entity.setStatus(DefinitionStatuses.SCHEDULED);
-        entity.setPendingRevision(0);
-        entity.setUpdatedAt(nowUtc());
-        definitions.update(entity);
-        return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
+        return publishSchedule.schedule(id, command);
     }
 
     @Transactional
     public PublishResponse cancelSchedule(long id) {
-        TaskDefinitionEntity entity = requireLockedLive(id);
-        if (!DefinitionStatuses.SCHEDULED.equals(entity.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅定时任务可取消定时");
-        }
-        entity.setStatus(DefinitionStatuses.DRAFT);
-        entity.setSchedulePublishAt(null);
-        entity.setPendingRevision(0);
-        entity.setUpdatedAt(nowUtc());
-        definitions.update(entity);
-        return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
+        return publishSchedule.cancelSchedule(id);
     }
 
     @Transactional
