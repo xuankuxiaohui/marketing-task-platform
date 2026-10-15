@@ -10,8 +10,6 @@ import com.mkt.reward.command.ReconImportCommand;
 import com.mkt.reward.command.ReconImportLineCommand;
 import com.mkt.reward.command.ReconReviewCommand;
 import com.mkt.reward.convert.RewardTime;
-import com.mkt.reward.domain.ClaimWindows;
-import com.mkt.reward.domain.GrantRecordStatuses;
 import com.mkt.reward.domain.ReconActions;
 import com.mkt.reward.domain.ReconBatchStatuses;
 import com.mkt.reward.domain.ReconGates;
@@ -32,18 +30,14 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** Recon batches, match, review, and gated actions (design §5.11). */
 @Service
@@ -56,8 +50,8 @@ public class ReconAppService {
     private final FulfillmentService fulfillment;
     private final Clock clock;
     private final ReconViews views;
-    private final ReconMatchSupport matchSupport;
     private final ReconActionOps actionOps;
+    private final ReconMatch reconMatch;
 
     @Autowired
     public ReconAppService(
@@ -68,8 +62,8 @@ public class ReconAppService {
             FulfillmentService fulfillment,
             Clock clock,
             ReconViews views,
-            ReconMatchSupport matchSupport,
-            ReconActionOps actionOps) {
+            ReconActionOps actionOps,
+            ReconMatch reconMatch) {
         this.batches = batches;
         this.items = items;
         this.grants = grants;
@@ -77,8 +71,8 @@ public class ReconAppService {
         this.fulfillment = fulfillment;
         this.clock = clock;
         this.views = views;
-        this.matchSupport = matchSupport;
         this.actionOps = actionOps;
+        this.reconMatch = reconMatch;
     }
 
     public ReconAppService(
@@ -99,8 +93,14 @@ public class ReconAppService {
                 fulfillment,
                 clock,
                 new ReconViews(batches, grants, prizes, categories),
-                new ReconMatchSupport(items, grants, prizes, categories, settings, clock),
-                new ReconActionOps(grants, prizes, grantApp, clock));
+                new ReconActionOps(grants, prizes, grantApp, clock),
+                new ReconMatch(
+                        batches,
+                        items,
+                        grants,
+                        fulfillment,
+                        clock,
+                        new ReconMatchSupport(items, grants, prizes, categories, settings, clock)));
     }
 
     public PageData<ReconBatchResponse> page(String categoryCode, LocalDate billDate, String status, PageQuery page) {
@@ -175,79 +175,7 @@ public class ReconAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReconMatchResponse match(long batchId) {
-        ReconBatchEntity batch = requireDraft(batchId);
-        batch.setStatus(ReconBatchStatuses.MATCHING);
-        batches.update(batch);
-        LocalDateTime from = ClaimWindows.businessDayStartUtc(batch.getBillDate());
-        LocalDateTime to = ClaimWindows.businessDayStartUtc(batch.getBillDate().plusDays(1));
-        List<GrantRecordEntity> platform = grants.listPlatformRecon(batch.getCategoryCode(), from, to);
-        List<ReconItemEntity> channel = items.listAll(batch.getId());
-        Map<String, ReconItemEntity> byRef = new HashMap<>();
-        for (ReconItemEntity item : channel) {
-            if (item.getFulfillmentRef() != null) {
-                byRef.put(item.getFulfillmentRef(), item);
-            }
-        }
-        int matched = 0;
-        int mismatch = 0;
-        int platformOnly = 0;
-        LocalDateTime now = RewardTime.toUtc(clock.instant());
-        for (GrantRecordEntity grant : platform) {
-            String ref = grant.getFulfillmentRef();
-            ReconItemEntity hit = ref == null ? null : byRef.remove(ref);
-            if (hit == null) {
-                matchSupport.insertPlatformOnly(batch.getId(), grant, now);
-                platformOnly++;
-                continue;
-            }
-            hit.setGrantRecordId(grant.getId());
-            hit.setPlatformCostFen(grant.getCostFen());
-            int channelFen = hit.getChannelAmountFen() == null ? 0 : hit.getChannelAmountFen();
-            int platformFen = grant.getCostFen() == null ? 0 : grant.getCostFen();
-            if (platformFen == channelFen) {
-                hit.setResult(ReconResults.MATCHED);
-                hit.setReviewStatus(ReconReviewStatuses.NONE);
-                grant.setReconStatus(GrantRecordStatuses.RECON_MATCHED);
-                matched++;
-            } else {
-                hit.setResult(ReconResults.AMOUNT_MISMATCH);
-                hit.setReviewStatus(ReconReviewStatuses.NONE);
-                grant.setReconStatus(GrantRecordStatuses.RECON_DIFF);
-                mismatch++;
-            }
-            hit.setUpdatedAt(now);
-            items.update(hit);
-            grants.update(grant);
-        }
-        int channelOnly = byRef.size();
-        for (ReconItemEntity leftover : byRef.values()) {
-            leftover.setResult(ReconResults.CHANNEL_ONLY);
-            leftover.setReviewStatus(ReconReviewStatuses.NONE);
-            leftover.setUpdatedAt(now);
-            items.update(leftover);
-        }
-        matchSupport.applyReviewFlags(batch.getId());
-        batch.setPlatformCount(platform.size());
-        batch.setChannelCount(channel.size());
-        batch.setMatchedCount(matched);
-        batch.setPlatformOnly(platformOnly);
-        batch.setChannelOnly(channelOnly);
-        batch.setAmountMismatch(mismatch);
-        batch.setStatus(ReconBatchStatuses.DONE);
-        batch.setUpdatedAt(now);
-        batches.update(batch);
-        List<Long> autoIds = matchSupport.autoRefulfillIds(batch.getId());
-        afterCommit(() -> {
-            for (Long id : autoIds) {
-                try {
-                    fulfillment.retry(id);
-                } catch (RuntimeException ignored) {
-                    // match already DONE; auto REFULFILL is best-effort
-                }
-            }
-        });
-        return new ReconMatchResponse(
-                platform.size(), channel.size(), matched, platformOnly, channelOnly, mismatch);
+        return reconMatch.match(this, batchId);
     }
 
     public PageData<ReconItemView> items(long batchId, String result, String reviewStatus, PageQuery page) {
@@ -333,7 +261,7 @@ public class ReconAppService {
         return new ReconActionResponse(action, actionRef);
     }
 
-    private ReconBatchEntity requireDraft(long batchId) {
+    ReconBatchEntity requireDraft(long batchId) {
         ReconBatchEntity batch = requireBatch(batchId);
         if (!ReconBatchStatuses.DRAFT.equals(batch.getStatus())) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
@@ -355,18 +283,5 @@ public class ReconAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return item;
-    }
-
-    private static void afterCommit(Runnable task) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    task.run();
-                }
-            });
-        } else {
-            task.run();
-        }
     }
 }
