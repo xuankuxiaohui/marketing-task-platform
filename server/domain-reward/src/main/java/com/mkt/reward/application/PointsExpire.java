@@ -18,7 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Points expiry extracted from {@link PointsAppService} (R18-1).
  * Move-only: expireDue / expireOne / EXPIRE_BATCH semantics unchanged.
  * Per-row {@code REQUIRES_NEW} stays here.
- * {@code expireDue} takes the service so {@code newRow} stays a direct call.
+ * Ledger rows are built by {@link PointsApply#newRow} (R18-2); no service back-reference.
  */
 @Component
 public class PointsExpire {
@@ -28,15 +28,18 @@ public class PointsExpire {
     private final PointsStore store;
     private final TransactionTemplate tx;
     private final Clock clock;
+    private final PointsApply pointsApply;
 
     @Autowired
-    public PointsExpire(PointsStore store, ObjectProvider<PlatformTransactionManager> txm, Clock clock) {
-        this(store, txm.getIfAvailable(), clock);
+    public PointsExpire(
+            PointsStore store, ObjectProvider<PlatformTransactionManager> txm, Clock clock, PointsApply pointsApply) {
+        this(store, txm.getIfAvailable(), clock, pointsApply);
     }
 
-    public PointsExpire(PointsStore store, PlatformTransactionManager txm, Clock clock) {
+    public PointsExpire(PointsStore store, PlatformTransactionManager txm, Clock clock, PointsApply pointsApply) {
         this.store = store;
         this.clock = clock;
+        this.pointsApply = pointsApply;
         if (txm == null) {
             this.tx = null;
         } else {
@@ -47,7 +50,7 @@ public class PointsExpire {
         }
     }
 
-    int expireDue(PointsAppService service) {
+    int expireDue() {
         LocalDateTime now = RewardTime.toUtc(clock.instant());
         int total = 0;
         while (true) {
@@ -56,7 +59,7 @@ public class PointsExpire {
                 break;
             }
             for (PntTransactionEntity earn : batch) {
-                total += runTx(() -> expireOne(service, earn));
+                total += runTx(() -> expireOne(earn));
             }
             if (batch.size() < EXPIRE_BATCH) {
                 break;
@@ -65,7 +68,7 @@ public class PointsExpire {
         return total;
     }
 
-    private int expireOne(PointsAppService service, PntTransactionEntity earn) {
+    private int expireOne(PntTransactionEntity earn) {
         String bizId = String.valueOf(earn.getId());
         if (store.expireExists(bizId)) {
             return 0;
@@ -88,7 +91,7 @@ public class PointsExpire {
         }
         long after = current - deduct;
         String remark = deduct < due ? "truncated; requested=" + due + " deducted=" + deduct : null;
-        store.insertTx(service.newRow(
+        store.insertTx(pointsApply.newRow(
                 earn.getUserId(),
                 PointTypes.EXPIRE,
                 -deduct,

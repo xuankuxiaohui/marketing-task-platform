@@ -31,18 +31,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class PointsAppService {
 
     private final PointsStore store;
-    private final Clock clock;
     private final PointsExpire pointsExpire;
+    private final PointsApply pointsApply;
 
     @Autowired
-    public PointsAppService(PointsStore store, Clock clock, PointsExpire pointsExpire) {
+    public PointsAppService(PointsStore store, PointsExpire pointsExpire, PointsApply pointsApply) {
         this.store = store;
-        this.clock = clock;
         this.pointsExpire = pointsExpire;
+        this.pointsApply = pointsApply;
     }
 
     public PointsAppService(PointsStore store, PlatformTransactionManager txm, Clock clock) {
-        this(store, clock, new PointsExpire(store, txm, clock));
+        PointsApply apply = new PointsApply(store, clock);
+        this.store = store;
+        this.pointsExpire = new PointsExpire(store, txm, clock, apply);
+        this.pointsApply = apply;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -57,7 +60,8 @@ public class PointsAppService {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
         store.insertIgnoreAccount(userId);
-        return apply(userId, PointTypes.EARN, points, sourceType, sourceId, expireAt, null, simulated ? 1 : 0, true);
+        return pointsApply.apply(
+                userId, PointTypes.EARN, points, sourceType, sourceId, expireAt, null, simulated ? 1 : 0, true);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -65,7 +69,8 @@ public class PointsAppService {
         if (points <= 0) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
-        return apply(userId, PointTypes.CONSUME, -points, sourceType, sourceId, null, remark, 0, false);
+        return pointsApply.apply(
+                userId, PointTypes.CONSUME, -points, sourceType, sourceId, null, remark, 0, false);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -79,7 +84,7 @@ public class PointsAppService {
         if (points <= 0) {
             throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
         }
-        return apply(
+        return pointsApply.apply(
                 userId, PointTypes.REVERSAL, -points, sourceType, sourceId, null, remark, simulated ? 1 : 0, false);
     }
 
@@ -96,7 +101,7 @@ public class PointsAppService {
         if (credit) {
             store.insertIgnoreAccount(command.userId());
         }
-        long after = apply(
+        long after = pointsApply.apply(
                 command.userId(),
                 PointTypes.ADJUST,
                 amount,
@@ -127,7 +132,7 @@ public class PointsAppService {
      * Not the earn/grant path — does not change grant atomicity.
      */
     public int expireDue() {
-        return pointsExpire.expireDue(this);
+        return pointsExpire.expireDue();
     }
 
     public PageData<PointsAccountView> pageAccounts(PointsAccountQuery query) {
@@ -162,59 +167,6 @@ public class PointsAppService {
                 .map(PointsAppService::toPortalView)
                 .toList();
         return new PageData<>(total, records);
-    }
-
-    private long apply(
-            long userId,
-            String type,
-            long amount,
-            String bizSource,
-            String bizId,
-            Instant expireAt,
-            String remark,
-            int simulated,
-            boolean created) {
-        int affected = store.applyDelta(userId, amount);
-        if (affected != 1) {
-            PntAccountEntity existing = store.getByUserId(userId);
-            if (existing == null) {
-                throw new BusinessException(PointsErrorCodes.ACCOUNT_NOT_FOUND);
-            }
-            throw new BusinessException(PointsErrorCodes.INSUFFICIENT_BALANCE);
-        }
-        PntAccountEntity account = store.getByUserId(userId);
-        long after = account == null || account.getBalance() == null ? 0L : account.getBalance();
-        PntTransactionEntity row = newRow(
-                userId, type, amount, after, bizSource, bizId, expireAt, remark, simulated);
-        store.insertTx(row);
-        if (PointTypes.EARN.equals(type) && created && row.getId() != null) {
-            return row.getId();
-        }
-        return after;
-    }
-
-    PntTransactionEntity newRow(
-            long userId,
-            String type,
-            long amount,
-            long balanceAfter,
-            String bizSource,
-            String bizId,
-            Instant expireAt,
-            String remark,
-            int simulated) {
-        PntTransactionEntity row = new PntTransactionEntity();
-        row.setUserId(userId);
-        row.setType(type);
-        row.setAmount(amount);
-        row.setBalanceAfter(balanceAfter);
-        row.setBizSource(bizSource);
-        row.setBizId(bizId);
-        row.setExpireAt(RewardTime.toUtc(expireAt));
-        row.setRemark(remark);
-        row.setSimulated(simulated);
-        row.setCreatedAt(RewardTime.toUtc(clock.instant()));
-        return row;
     }
 
     private static String normalizeType(String type) {
