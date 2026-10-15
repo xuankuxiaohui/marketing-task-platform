@@ -30,8 +30,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,9 +40,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class TaskPublishAppService {
-
-    private static final Logger log = LoggerFactory.getLogger(TaskPublishAppService.class);
-    private static final int SCAN_BATCH = 100;
 
     private final TaskDefinitionStore definitions;
     private final TaskMutexGroupStore mutexGroups;
@@ -59,6 +54,7 @@ public class TaskPublishAppService {
     private final TaskPublishFreeze publishFreeze;
     private final TaskPublishScheduleFailures scheduleFailures;
     private final PublishOfflineExpiry offlineExpiry;
+    private final PublishScanDue publishScanDue;
 
     @Autowired
     public TaskPublishAppService(
@@ -73,7 +69,8 @@ public class TaskPublishAppService {
             TaskPublishVersionDiff versionDiff,
             TaskPublishFreeze publishFreeze,
             TaskPublishScheduleFailures scheduleFailures,
-            PublishOfflineExpiry offlineExpiry) {
+            PublishOfflineExpiry offlineExpiry,
+            PublishScanDue publishScanDue) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
@@ -87,6 +84,7 @@ public class TaskPublishAppService {
         this.publishFreeze = publishFreeze;
         this.scheduleFailures = scheduleFailures;
         this.offlineExpiry = offlineExpiry;
+        this.publishScanDue = publishScanDue;
     }
 
     public TaskPublishAppService(
@@ -117,6 +115,8 @@ public class TaskPublishAppService {
                 definitions, mutexGroups, snapshots, definitionsApp, clock, cache);
         this.scheduleFailures = new TaskPublishScheduleFailures(audits, alerts, jdbc, tx);
         this.offlineExpiry = new PublishOfflineExpiry(instances, snapshots, settings);
+        this.publishScanDue = new PublishScanDue(
+                definitions, this.publishChecks, this.publishFreeze, this.scheduleFailures, clock, tx);
     }
 
     @Transactional
@@ -260,44 +260,12 @@ public class TaskPublishAppService {
     }
 
     public int scanDue() {
-        LocalDateTime now = nowUtc();
-        List<TaskDefinitionEntity> due = definitions.listDueScheduled(now, SCAN_BATCH);
-        int published = 0;
-        for (TaskDefinitionEntity row : due) {
-            try {
-                if (runInTx(() -> publishDue(row.getId()))) {
-                    scheduleFailures.removeFailureFingerprint(row.getId());
-                    published++;
-                }
-            } catch (BusinessException ex) {
-                scheduleFailures.recordScheduleFailure(
-                        row, ex.getMessage(), TaskPublishChecks.checkErrorsOf(ex.data()));
-            } catch (RuntimeException ex) {
-                log.error("sched:publish-scan failed, taskId={}", row.getId(), ex);
-                scheduleFailures.recordScheduleFailure(
-                        row,
-                        ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage(),
-                        List.of());
-            }
-        }
-        return published;
+        return publishScanDue.scanDue();
     }
 
     @Transactional
     public boolean publishDue(long id) {
-        TaskDefinitionEntity entity = definitions.getByIdForUpdate(id);
-        if (entity == null || entity.deletedFlag()) {
-            return false;
-        }
-        if (!DefinitionStatuses.SCHEDULED.equals(entity.getStatus())) {
-            return false;
-        }
-        LocalDateTime now = nowUtc();
-        if (entity.getSchedulePublishAt() == null || entity.getSchedulePublishAt().isAfter(now)) {
-            return false;
-        }
-        publishChecks.rejectIfInvalid(entity);
-        return publishFreeze.freezeToPublished(entity, false);
+        return publishScanDue.publishDue(id);
     }
 
     private List<BatchItemResponse> batch(List<Long> ids, IdAction action) {
