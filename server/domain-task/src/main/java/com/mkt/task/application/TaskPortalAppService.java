@@ -7,7 +7,6 @@ import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
-import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.json.JsonUtil;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.SnapshotViews;
@@ -26,9 +25,7 @@ import com.mkt.task.response.TaskCardView;
 import com.mkt.task.response.TaskDetailResponse;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -45,6 +42,7 @@ public class TaskPortalAppService {
     private final TaskPortalCardViews cardViews;
     private final TaskPortalDetail detail;
     private final PortalList portalList;
+    private final PortalMine portalMine;
 
     @Autowired
     public TaskPortalAppService(
@@ -59,7 +57,8 @@ public class TaskPortalAppService {
             TaskPortalPublishedCatalog publishedCatalog,
             TaskPortalCardViews cardViews,
             TaskPortalDetail detail,
-            PortalList portalList) {
+            PortalList portalList,
+            PortalMine portalMine) {
         this(
                 definitions,
                 snapshots,
@@ -72,7 +71,8 @@ public class TaskPortalAppService {
                 publishedCatalog,
                 cardViews,
                 detail,
-                portalList);
+                portalList,
+                portalMine);
     }
 
     public TaskPortalAppService(
@@ -83,7 +83,7 @@ public class TaskPortalAppService {
             UserAttributePort users,
             RiskCheckPort risk,
             Clock clock) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null, null, null, null);
     }
 
     public TaskPortalAppService(
@@ -95,7 +95,7 @@ public class TaskPortalAppService {
             RiskCheckPort risk,
             Clock clock,
             PlatformCache cache) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null, null, null, null);
     }
 
     TaskPortalAppService(
@@ -110,7 +110,8 @@ public class TaskPortalAppService {
             TaskPortalPublishedCatalog publishedCatalog,
             TaskPortalCardViews cardViews,
             TaskPortalDetail detail,
-            PortalList portalList) {
+            PortalList portalList,
+            PortalMine portalMine) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
@@ -132,6 +133,10 @@ public class TaskPortalAppService {
                 portalList != null
                         ? portalList
                         : new PortalList(users, this.detail, clock, this.publishedCatalog, crowds);
+        this.portalMine =
+                portalMine != null
+                        ? portalMine
+                        : new PortalMine(instances, this.publishedCatalog, this.cardViews);
     }
 
     public TaskStepSource sourceForStep(long stepId) {
@@ -204,62 +209,6 @@ public class TaskPortalAppService {
     }
 
     public PageData<MineTaskView> mine(long userId, String status, String category, Integer page, Integer pageSize) {
-        PageQuery query = PageQuery.of(page, pageSize);
-        List<Long> categoryTaskIds = null;
-        String categoryFilter = allCategoryToNull(category);
-        if (categoryFilter != null) {
-            categoryTaskIds = new ArrayList<>();
-            TaskPortalPublishedCatalog.PublishedBundle publishedBundle = publishedCatalog.publishedBundle();
-            List<TaskDefinitionEntity> published = publishedBundle.definitions();
-            Map<Long, SnapshotContent> publishedSnaps = publishedBundle.snapshots();
-            for (TaskDefinitionEntity definition : published) {
-                SnapshotContent snapshot = publishedSnaps.get(definition.getId());
-                if (snapshot != null && categoryFilter.equals(snapshot.category())) {
-                    categoryTaskIds.add(definition.getId());
-                }
-            }
-            List<TaskInstanceEntity> history = instances.listByUser(userId);
-            List<Long> snapIds = new ArrayList<>();
-            for (TaskInstanceEntity row : history) {
-                if (categoryTaskIds.contains(row.getTaskId()) || row.getSnapshotId() == null) {
-                    continue;
-                }
-                snapIds.add(row.getSnapshotId());
-            }
-            Map<Long, SnapshotContent> historySnaps = cardViews.loadSnapshotsByIds(snapIds);
-            for (TaskInstanceEntity row : history) {
-                if (categoryTaskIds.contains(row.getTaskId()) || row.getSnapshotId() == null) {
-                    continue;
-                }
-                SnapshotContent content = historySnaps.get(row.getSnapshotId());
-                if (content != null && categoryFilter.equals(content.category())) {
-                    categoryTaskIds.add(row.getTaskId());
-                }
-            }
-            if (categoryTaskIds.isEmpty()) {
-                return new PageData<>(0, List.of());
-            }
-        }
-        String statusFilter = InstanceStatuses.mineFilter(status);
-        long total = instances.countMine(userId, statusFilter, categoryTaskIds);
-        List<TaskInstanceEntity> rows =
-                instances.listMine(userId, statusFilter, categoryTaskIds, query.offset(), query.pageSize());
-        List<MineTaskView> views = new ArrayList<>(rows.size());
-        for (TaskInstanceEntity row : rows) {
-            views.add(cardViews.toMine(row));
-        }
-        return new PageData<>(total, views);
-    }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
-
-    private static String allCategoryToNull(String category) {
-        String raw = blankToNull(category);
-        if (raw == null || "ALL".equalsIgnoreCase(raw) || InstanceStatuses.tabIndexLeak(raw)) {
-            return null;
-        }
-        return raw;
+        return portalMine.mine(userId, status, category, page, pageSize);
     }
 }
