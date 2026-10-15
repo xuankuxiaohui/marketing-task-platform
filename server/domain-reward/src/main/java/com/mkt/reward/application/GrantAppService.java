@@ -14,7 +14,6 @@ import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.reward.command.ManualGrantCommand;
-import com.mkt.reward.convert.RewardTime;
 import com.mkt.reward.domain.GrantRecordStatuses;
 import com.mkt.reward.entity.GrantRecordEntity;
 import com.mkt.reward.response.GrantRetryResponse;
@@ -36,14 +35,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 public class GrantAppService {
 
-    static final int RETRY_BATCH = 100;
-
     private final GrantRecordStore grants;
     private final ObjectProvider<GrantStepResumer> resumerProvider;
     private final GrantStepResumer resumerDirect;
     private final Clock clock;
     private final GrantChecks checks;
     private final GrantDoGrant doGrant;
+    private final GrantRetryBatch retryBatch;
 
     @Autowired
     public GrantAppService(
@@ -51,13 +49,15 @@ public class GrantAppService {
             ObjectProvider<GrantStepResumer> resumer,
             Clock clock,
             GrantChecks checks,
-            GrantDoGrant doGrant) {
+            GrantDoGrant doGrant,
+            GrantRetryBatch retryBatch) {
         this.grants = grants;
         this.resumerProvider = resumer;
         this.resumerDirect = null;
         this.clock = clock;
         this.checks = checks;
         this.doGrant = doGrant;
+        this.retryBatch = retryBatch;
     }
 
     public GrantAppService(
@@ -91,6 +91,7 @@ public class GrantAppService {
                 assembly,
                 persistence);
         this.doGrant = new GrantDoGrant(grants, assembly, persistence, execute);
+        this.retryBatch = new GrantRetryBatch(grants, clock);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = PermanentGrantException.class)
@@ -185,29 +186,14 @@ public class GrantAppService {
     }
 
     public List<GrantRecordEntity> listDueRetry() {
-        return grants.listDueRetry(RewardTime.toUtc(clock.instant()), RETRY_BATCH);
+        return retryBatch.listDueRetry();
     }
 
     public int retryDue() {
-        List<GrantRecordEntity> due = listDueRetry();
-        int ran = 0;
-        for (GrantRecordEntity row : due) {
-            try {
-                GrantSource source = GrantSource.valueOf(row.getGrantSource());
-                GrantContext ctx = new GrantContext(null, List.of(), null, simulated(row), null);
-                GrantResult result = grant(row.getPrizeId(), row.getUserId(), source, row.getSourceId(), ctx);
-                if (result.status() == GrantStatus.GRANTED || result.status() == GrantStatus.WON) {
-                    resume(source, row.getSourceId());
-                }
-                ran++;
-            } catch (RuntimeException ex) {
-                ran++;
-            }
-        }
-        return ran;
+        return retryBatch.retryDue(this);
     }
 
-    private void resume(GrantSource source, String sourceId) {
+    void resume(GrantSource source, String sourceId) {
         GrantStepResumer resumer = resumerDirect;
         if (resumer == null && resumerProvider != null) {
             resumer = resumerProvider.getIfAvailable();
