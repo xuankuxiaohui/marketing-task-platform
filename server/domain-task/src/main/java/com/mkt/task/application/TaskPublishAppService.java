@@ -12,12 +12,8 @@ import com.mkt.task.command.TaskDefinitionSaveCommand;
 import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.convert.TaskDefinitionConvert;
 import com.mkt.task.convert.TaskTime;
-import com.mkt.task.domain.CycleKeyResolver;
 import com.mkt.task.domain.DefinitionStatuses;
-import com.mkt.task.domain.ExpireAtCalculator;
-import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
-import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.entity.TaskMutexGroupEntity;
 import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.response.BatchItemResponse;
@@ -29,14 +25,10 @@ import com.mkt.task.response.VersionDiffResponse;
 import com.mkt.task.support.AlertWebhook;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,15 +45,12 @@ public class TaskPublishAppService {
 
     private static final Logger log = LoggerFactory.getLogger(TaskPublishAppService.class);
     private static final int SCAN_BATCH = 100;
-    private static final int OFFLINE_BATCH = 100;
 
     private final TaskDefinitionStore definitions;
     private final TaskMutexGroupStore mutexGroups;
     private final TaskVersionSnapshotStore snapshots;
     private final TaskDefinitionAppService definitionsApp;
     private final PrizeEnabledLookup prizes;
-    private final TaskInstanceStore instances;
-    private final TaskSettings settings;
     private final Clock clock;
     private final ObjectProvider<PlatformTransactionManager> txm;
     private final TransactionTemplate txDirect;
@@ -69,6 +58,7 @@ public class TaskPublishAppService {
     private final TaskPublishVersionDiff versionDiff;
     private final TaskPublishFreeze publishFreeze;
     private final TaskPublishScheduleFailures scheduleFailures;
+    private final PublishOfflineExpiry offlineExpiry;
 
     @Autowired
     public TaskPublishAppService(
@@ -77,21 +67,18 @@ public class TaskPublishAppService {
             TaskVersionSnapshotStore snapshots,
             TaskDefinitionAppService definitionsApp,
             PrizeEnabledLookup prizes,
-            TaskInstanceStore instances,
-            TaskSettings settings,
             Clock clock,
             ObjectProvider<PlatformTransactionManager> txm,
             TaskPublishChecks publishChecks,
             TaskPublishVersionDiff versionDiff,
             TaskPublishFreeze publishFreeze,
-            TaskPublishScheduleFailures scheduleFailures) {
+            TaskPublishScheduleFailures scheduleFailures,
+            PublishOfflineExpiry offlineExpiry) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
-        this.instances = instances;
-        this.settings = settings;
         this.clock = clock;
         this.txm = txm;
         this.txDirect = null;
@@ -99,6 +86,7 @@ public class TaskPublishAppService {
         this.versionDiff = versionDiff;
         this.publishFreeze = publishFreeze;
         this.scheduleFailures = scheduleFailures;
+        this.offlineExpiry = offlineExpiry;
     }
 
     public TaskPublishAppService(
@@ -120,8 +108,6 @@ public class TaskPublishAppService {
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
-        this.instances = instances;
-        this.settings = settings;
         this.clock = clock;
         this.txm = null;
         this.txDirect = tx;
@@ -130,6 +116,7 @@ public class TaskPublishAppService {
         this.publishFreeze = new TaskPublishFreeze(
                 definitions, mutexGroups, snapshots, definitionsApp, clock, cache);
         this.scheduleFailures = new TaskPublishScheduleFailures(audits, alerts, jdbc, tx);
+        this.offlineExpiry = new PublishOfflineExpiry(instances, snapshots, settings);
     }
 
     @Transactional
@@ -216,55 +203,9 @@ public class TaskPublishAppService {
         entity.setOfflineAt(now);
         entity.setUpdatedAt(now);
         definitions.update(entity);
-        recomputeInProgressExpiry(id, now);
+        offlineExpiry.recomputeInProgressExpiry(id, now);
         publishFreeze.evictPublishedIndex();
         return PublishResponse.done(entity.getId(), entity.getCode(), versionOf(entity), entity.getStatus());
-    }
-
-    private void recomputeInProgressExpiry(long taskId, LocalDateTime offlineAt) {
-        Instant offline = TaskTime.toInstant(offlineAt);
-        int days = settings.expireAfterWindowDays();
-        long afterId = 0L;
-        List<TaskInstanceEntity> batch;
-        do {
-            batch = instances.listInProgressByTaskAfterId(taskId, afterId, OFFLINE_BATCH);
-            List<Long> snapshotIds = batch.stream()
-                    .map(TaskInstanceEntity::getSnapshotId)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .toList();
-            Map<Long, SnapshotContent> contents = new LinkedHashMap<>(snapshotIds.size());
-            for (TaskVersionSnapshotEntity snapshot : snapshots.listByIds(snapshotIds)) {
-                contents.put(snapshot.getId(), JsonUtil.fromJson(snapshot.getContent(), SnapshotContent.class));
-            }
-            for (TaskInstanceEntity instance : batch) {
-                afterId = instance.getId();
-                LocalDateTime expectedExpiry = instance.getExpireAt();
-                if (expectedExpiry != null && !expectedExpiry.isAfter(offlineAt)) {
-                    continue;
-                }
-                SnapshotContent content = contents.get(instance.getSnapshotId());
-                Instant startedAt = TaskTime.toInstant(instance.getStartedAt());
-                if (content == null || startedAt == null) {
-                    throw new BusinessException(CommonErrorCodes.SERVER_ERROR, "实例快照或开始时间缺失");
-                }
-                Instant cycleEnd = CycleKeyResolver.cycleEndForKey(
-                        content.cycleType(), content.cronExpr(), content.specialEnd(), instance.getCycleKey());
-                LocalDateTime expiry = TaskTime.toUtc(ExpireAtCalculator.compute(
-                        content.endTime(), offline, cycleEnd, startedAt, days));
-                if (Objects.equals(expectedExpiry, expiry)) {
-                    continue;
-                }
-                int affected = instances.updateExpireAtCas(instance.getId(), expectedExpiry, expiry, offlineAt);
-                if (affected != 1) {
-                    TaskInstanceEntity fresh = instances.getByIdForUpdate(instance.getId());
-                    if (fresh != null && InstanceStatuses.IN_PROGRESS.equals(fresh.getStatus())
-                            && (fresh.getExpireAt() == null || fresh.getExpireAt().isAfter(offlineAt))) {
-                        throw new BusinessException(CommonErrorCodes.SERVER_ERROR, "实例期限更新冲突，请重试");
-                    }
-                }
-            }
-        } while (batch.size() == OFFLINE_BATCH);
     }
 
     @Transactional
