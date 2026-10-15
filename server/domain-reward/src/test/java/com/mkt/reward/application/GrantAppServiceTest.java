@@ -598,18 +598,19 @@ class GrantAppServiceTest {
         GrantStockLogs stockLogs = new GrantStockLogs(logs, clock);
         GrantResultAssembly assembly = new GrantResultAssembly(eventsOp, prizes);
         GrantPersistence persistence = new GrantPersistence(grants, prizes, assembly, ledger, clock);
-        grant = new GrantAppService(
-                prizes,
-                categories,
-                grants,
-                usersOp,
-                fulfillment,
-                resumerOp,
-                clock,
-                checks,
-                stockLogs,
-                assembly,
-                persistence);
+        GrantExecute execute =
+                new GrantExecute(
+                        prizes,
+                        categories,
+                        grants,
+                        usersOp,
+                        fulfillment,
+                        clock,
+                        checks,
+                        stockLogs,
+                        assembly,
+                        persistence);
+        grant = new GrantAppService(grants, resumerOp, clock, checks, assembly, persistence, execute);
 
         long prizeId = enableAlipay("red_op", 1);
         prizes.getById(prizeId).setRemainingStock(0);
