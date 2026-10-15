@@ -14,7 +14,6 @@ import com.mkt.task.convert.SnapshotContent;
 import com.mkt.task.domain.InstanceStatuses;
 import com.mkt.task.domain.StepStatuses;
 import com.mkt.task.domain.StepTypes;
-import com.mkt.task.engine.StepAdvanceResult;
 import com.mkt.task.engine.StepEngine;
 import com.mkt.task.engine.StepEngineAdvance;
 import com.mkt.task.engine.StepEngineCascadeSupport;
@@ -48,10 +47,9 @@ public class TaskStepAppService {
     private final UserAttributePort users;
     private final StepEngine engine;
     private final Clock clock;
-    private final TaskStepPreload preload;
-    private final TaskStepGuards guards;
     private final StepClick stepClick;
     private final StepCallback stepCallback;
+    private final StepProgress stepProgress;
 
     @Autowired
     public TaskStepAppService(
@@ -73,7 +71,8 @@ public class TaskStepAppService {
             StepEngineViews engineViews,
             StepEngineExpire expireOps,
             StepClick stepClick,
-            StepCallback stepCallback) {
+            StepCallback stepCallback,
+            StepProgress stepProgress) {
         this(
                 definitions,
                 snapshots,
@@ -93,7 +92,8 @@ public class TaskStepAppService {
                 engineViews,
                 expireOps,
                 stepClick,
-                stepCallback);
+                stepCallback,
+                stepProgress);
     }
 
     public TaskStepAppService(
@@ -324,14 +324,56 @@ public class TaskStepAppService {
             StepEngineExpire expireOps,
             StepClick stepClick,
             StepCallback stepCallback) {
+        this(
+                definitions,
+                snapshots,
+                instances,
+                crowds,
+                reports,
+                users,
+                events,
+                clock,
+                settings,
+                preload,
+                views,
+                guards,
+                rewardOps,
+                cascadeOps,
+                advanceOps,
+                engineViews,
+                expireOps,
+                stepClick,
+                stepCallback,
+                null);
+    }
+
+    private TaskStepAppService(
+            TaskDefinitionStore definitions,
+            TaskVersionSnapshotStore snapshots,
+            TaskInstanceStore instances,
+            TaskCrowdStore crowds,
+            TaskProgressReportStore reports,
+            UserAttributePort users,
+            EventPublisher events,
+            Clock clock,
+            TaskSettings settings,
+            TaskStepPreload preload,
+            TaskStepViews views,
+            TaskStepGuards guards,
+            StepEngineReward rewardOps,
+            StepEngineCascadeSupport cascadeOps,
+            StepEngineAdvance advanceOps,
+            StepEngineViews engineViews,
+            StepEngineExpire expireOps,
+            StepClick stepClick,
+            StepCallback stepCallback,
+            StepProgress stepProgress) {
         this.definitions = definitions;
         this.snapshots = snapshots;
         this.instances = instances;
         this.crowds = crowds;
         this.users = users;
         this.clock = clock;
-        this.preload = preload;
-        this.guards = guards;
         this.engine = new StepEngine(
                 instances, reports, clock, settings, rewardOps, cascadeOps, advanceOps, engineViews, expireOps);
         // Manual/IT chain passes null and shares this engine. Production passes the injected collaborators.
@@ -341,6 +383,9 @@ public class TaskStepAppService {
         this.stepCallback = stepCallback != null
                 ? stepCallback
                 : new StepCallback(preload, crowds, users, guards, this.engine);
+        this.stepProgress = stepProgress != null
+                ? stepProgress
+                : new StepProgress(preload, crowds, users, guards, this.engine);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -356,31 +401,7 @@ public class TaskStepAppService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TaskProgressResponse progress(InternalProgressCommand command) {
-        if (command.reportId() == null || command.reportId().isBlank()) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
-        }
-        if (command.value() == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID);
-        }
-        TaskInstanceEntity soft = preload.locateSoft(command.instanceId(), command.userId(), command.taskCode(), command.cycleKey());
-        guards.rejectIfFrozen(soft.getUserId(), TaskErrorCodes.ACCOUNT_RESTRICTED);
-        SnapshotContent snapshot = preload.cachedSnapshot(soft);
-        UserAttributes userAttrs = preload.cachedAttrs(soft.getUserId());
-        CrowdResolver crowdResolver = crowds(soft.getUserId());
-        TaskInstanceEntity instance = preload.lockInstance(soft);
-        TaskInstanceStepEntity step = guards.requireStep(instance.getId(), command.stepCode());
-        StepAdvanceResult result = engine.progress(
-                instance,
-                step,
-                snapshot,
-                userAttrs,
-                crowdResolver,
-                command.value(),
-                command.reportId().trim());
-        TaskInstanceStepEntity after = result.step();
-        int current = after.getProgressCurrent() == null ? 0 : after.getProgressCurrent();
-        return new TaskProgressResponse(
-                result.instance().getId(), after.getStepCode(), current, result.progressTarget(), after.getStatus());
+        return stepProgress.progress(command);
     }
 
     /** Legacy locate with FOR UPDATE — used by click/resume paths unchanged. */
