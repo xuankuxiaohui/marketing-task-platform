@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 /**
  * Fulfillment tick helpers extracted from {@link FulfillmentService} (R13-4).
  * Move-only: retryDue / timeoutDue / crossDayPending semantics unchanged.
+ * Third-party stub arming goes through {@link FulfillmentDispatch}.
  */
 @Component
 public class FulfillmentTickOps {
@@ -21,29 +22,24 @@ public class FulfillmentTickOps {
     private final GrantRecordStore grants;
     private final FulfillmentLookups lookups;
     private final FulfillmentSettleOps settleOps;
+    private final FulfillmentDispatch dispatch;
     private final RewardRuntimeSettings settings;
     private final Clock clock;
-    private FulfillmentService fulfillment;
 
     @Autowired
     public FulfillmentTickOps(
             GrantRecordStore grants,
             FulfillmentLookups lookups,
             FulfillmentSettleOps settleOps,
+            FulfillmentDispatch dispatch,
             RewardRuntimeSettings settings,
             Clock clock) {
         this.grants = grants;
         this.lookups = lookups;
         this.settleOps = settleOps;
+        this.dispatch = dispatch;
         this.settings = settings == null ? new RewardRuntimeSettings() : settings;
         this.clock = clock;
-    }
-
-    /**
-     * Wires the owning service after both objects exist. {@code armThirdPartyStub} stays on the service.
-     */
-    void bind(FulfillmentService fulfillment) {
-        this.fulfillment = fulfillment;
     }
 
     int retryDue(LocalDateTime now) {
@@ -52,7 +48,7 @@ public class FulfillmentTickOps {
             PrizeEntity prize = lookups.prizeOf(row);
             PrizeCategoryEntity category = lookups.categoryOf(prize);
             if (prize != null) {
-                fulfillment.armThirdPartyStub(row, prize, category);
+                dispatch.armThirdPartyStub(row, prize, category);
             }
             ran++;
         }
