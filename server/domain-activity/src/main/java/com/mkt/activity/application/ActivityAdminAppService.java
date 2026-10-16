@@ -11,7 +11,6 @@ import com.mkt.activity.query.ParticipationQuery;
 import com.mkt.activity.response.ActivityPublishResponse;
 import com.mkt.activity.response.ActivitySaveResponse;
 import com.mkt.activity.response.ActivityView;
-import com.mkt.activity.response.HitRuleCountView;
 import com.mkt.activity.response.OkResponse;
 import com.mkt.activity.response.ParticipationStatsView;
 import com.mkt.activity.response.ParticipationView;
@@ -20,7 +19,6 @@ import com.mkt.activity.support.ActivitySettings;
 import com.mkt.contract.RewardPort;
 import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.PageData;
-import com.mkt.kernel.PageQuery;
 import java.time.Clock;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,12 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ActivityAdminAppService {
 
     private final ActivityActivityStore activities;
-    private final ActivityParticipationStore participations;
     private final Clock clock;
-    private final ActivityAdminViews views;
     private final ActivityAdminPersist persist;
     private final ActivityAdminSave activityAdminSave;
     private final ActivityAdminLifecycle activityAdminLifecycle;
+    private final ActivityAdminReads activityAdminReads;
 
     @Autowired
     public ActivityAdminAppService(
@@ -49,11 +46,10 @@ public class ActivityAdminAppService {
             ActivityAdminDraft drafts,
             ActivityAdminPersist persist,
             ActivityAdminSave activityAdminSave,
-            ActivityAdminLifecycle activityAdminLifecycle) {
+            ActivityAdminLifecycle activityAdminLifecycle,
+            ActivityAdminReads activityAdminReads) {
         this.activities = activities;
-        this.participations = participations;
         this.clock = clock;
-        this.views = views;
         this.persist = persist;
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.activityAdminSave = activityAdminSave != null
@@ -62,6 +58,9 @@ public class ActivityAdminAppService {
         this.activityAdminLifecycle = activityAdminLifecycle != null
                 ? activityAdminLifecycle
                 : new ActivityAdminLifecycle(activities, persist, drafts, clock);
+        this.activityAdminReads = activityAdminReads != null
+                ? activityAdminReads
+                : new ActivityAdminReads(activities, participations, views, persist);
     }
 
     public ActivityAdminAppService(
@@ -85,22 +84,16 @@ public class ActivityAdminAppService {
                         rewards,
                         clock),
                 null,
+                null,
                 null);
     }
 
     public PageData<ActivityView> page(ActivityQuery query) {
-        PageQuery page = query.page() == null ? PageQuery.of(null, null) : query.page();
-        long total = activities.countByQuery(query.code(), query.name(), query.status());
-        List<ActivityView> rows = activities
-                .listByQuery(query.code(), query.name(), query.status(), page.offset(), page.pageSize())
-                .stream()
-                .map(views::toView)
-                .toList();
-        return new PageData<>(total, rows);
+        return activityAdminReads.page(query);
     }
 
     public ActivityView get(long id) {
-        return views.toView(persist.requireLive(id));
+        return activityAdminReads.get(id);
     }
 
     @Transactional
@@ -164,29 +157,10 @@ public class ActivityAdminAppService {
     }
 
     public PageData<ParticipationView> pageParticipations(ParticipationQuery query) {
-        PageQuery page = query.page() == null ? PageQuery.of(null, null) : query.page();
-        long total = participations.countByQuery(query.activityId(), query.userId(), query.result(), query.periodKey());
-        List<ParticipationView> rows = participations
-                .listByQuery(
-                        query.activityId(),
-                        query.userId(),
-                        query.result(),
-                        query.periodKey(),
-                        page.offset(),
-                        page.pageSize())
-                .stream()
-                .map(ActivityAdminViews::toParticipationView)
-                .toList();
-        return new PageData<>(total, rows);
+        return activityAdminReads.pageParticipations(query);
     }
 
     public ParticipationStatsView stats(long activityId) {
-        persist.requireLive(activityId);
-        long total = participations.countAll(activityId);
-        long pass = participations.countPassByActivity(activityId);
-        long reject = total - pass;
-        double rate = total == 0 ? 0d : (double) pass / (double) total;
-        List<HitRuleCountView> reasons = participations.countRejectByRule(activityId);
-        return new ParticipationStatsView(total, pass, reject, rate, reasons);
+        return activityAdminReads.stats(activityId);
     }
 }
