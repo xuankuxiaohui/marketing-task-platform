@@ -5,7 +5,6 @@ import com.mkt.identity.command.DictEntryUpdateCommand;
 import com.mkt.identity.command.DictTypeCreateCommand;
 import com.mkt.identity.command.DictTypeUpdateCommand;
 import com.mkt.identity.convert.DictConvert;
-import com.mkt.identity.convert.IdentityTime;
 import com.mkt.identity.domain.DictValues;
 import com.mkt.identity.domain.RoleStatuses;
 import com.mkt.identity.entity.DictEntryEntity;
@@ -24,11 +23,11 @@ import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import com.mkt.kernel.json.JsonUtil;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +39,23 @@ public class DictAppService {
     private final DictEntryMapper entries;
     private final PlatformCache cache;
     private final IdentityAuditAppender audits;
-    private final Clock clock;
+    private final DictTypeSave dictTypeSave;
+
+    @Autowired
+    public DictAppService(
+            DictTypeMapper types,
+            DictEntryMapper entries,
+            PlatformCache cache,
+            IdentityAuditAppender audits,
+            Clock clock,
+            DictTypeSave dictTypeSave) {
+        this.types = types;
+        this.entries = entries;
+        this.cache = cache;
+        this.audits = audits;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.dictTypeSave = dictTypeSave != null ? dictTypeSave : new DictTypeSave(types, cache, audits, clock);
+    }
 
     public DictAppService(
             DictTypeMapper types,
@@ -48,11 +63,7 @@ public class DictAppService {
             PlatformCache cache,
             IdentityAuditAppender audits,
             Clock clock) {
-        this.types = types;
-        this.entries = entries;
-        this.cache = cache;
-        this.audits = audits;
-        this.clock = clock;
+        this(types, entries, cache, audits, clock, null);
     }
 
     public PageData<DictTypeView> pageTypes(PageQuery page) {
@@ -78,56 +89,12 @@ public class DictAppService {
 
     @Transactional
     public DictTypeEntity createType(DictTypeCreateCommand command) {
-        String code = blankToNull(command.code());
-        if (code == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "字典类型编码不能为空");
-        }
-        DictTypeEntity entity = new DictTypeEntity();
-        entity.setCode(code);
-        entity.setName(command.name().trim());
-        entity.setStatus(RoleStatuses.ENABLED);
-        entity.setRemark(blankToNull(command.remark()));
-        LocalDateTime now = IdentityTime.toUtc(clock.instant());
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-        try {
-            types.insert(entity);
-        } catch (DuplicateKeyException ex) {
-            throw new BusinessException(SystemErrorCodes.DICT_DUPLICATE_CODE, ex);
-        }
-        cache.evictAfterCommit(CacheNamespace.DICT, code);
-        audits.append(
-                "system",
-                "dict-type-create",
-                "sys_dict_type",
-                String.valueOf(entity.getId()),
-                "SUCCESS",
-                summary("create", code, null, command.name()));
-        return entity;
+        return dictTypeSave.createType(command);
     }
 
     @Transactional
     public void updateType(long id, DictTypeUpdateCommand command) {
-        DictTypeEntity existing = requireType(id);
-        if (!RoleStatuses.valid(command.status())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "字典类型状态不合法");
-        }
-        String old = JsonUtil.toJson(
-                Map.of("name", nullToEmpty(existing.getName()), "status", nullToEmpty(existing.getStatus())));
-        existing.setName(command.name().trim());
-        existing.setStatus(command.status());
-        existing.setRemark(blankToNull(command.remark()));
-        existing.setUpdatedAt(IdentityTime.toUtc(clock.instant()));
-        types.updateById(existing);
-        cache.evictAfterCommit(CacheNamespace.DICT, existing.getCode());
-        String now = JsonUtil.toJson(Map.of("name", existing.getName(), "status", existing.getStatus()));
-        audits.append(
-                "system",
-                "dict-type-update",
-                "sys_dict_type",
-                String.valueOf(id),
-                "SUCCESS",
-                summary("update", existing.getCode(), old, now));
+        dictTypeSave.updateType(id, command);
     }
 
     @Transactional
@@ -270,10 +237,6 @@ public class DictAppService {
             return null;
         }
         return value.trim();
-    }
-
-    private static String nullToEmpty(String value) {
-        return value == null ? "" : value;
     }
 
     private static String summary(String action, String typeCode, String oldValue, String newValue) {
