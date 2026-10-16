@@ -13,7 +13,7 @@ import com.mkt.task.support.TaskErrorCodes;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,21 +24,28 @@ public class TaskMutexGroupAppService {
     private final TaskMutexGroupStore store;
     private final TaskDefinitionStore definitions;
     private final Clock clock;
+    private final MutexReads mutexReads;
 
-    public TaskMutexGroupAppService(TaskMutexGroupStore store, TaskDefinitionStore definitions, Clock clock) {
+    @Autowired
+    public TaskMutexGroupAppService(
+            TaskMutexGroupStore store, TaskDefinitionStore definitions, Clock clock, MutexReads mutexReads) {
         this.store = store;
         this.definitions = definitions;
         this.clock = clock;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.mutexReads = mutexReads != null ? mutexReads : new MutexReads(store);
+    }
+
+    public TaskMutexGroupAppService(TaskMutexGroupStore store, TaskDefinitionStore definitions, Clock clock) {
+        this(store, definitions, clock, null);
     }
 
     public MutexGroupResponse get(long id) {
-        return toResponse(require(id));
+        return mutexReads.get(id);
     }
 
     public PageData<MutexGroupResponse> page(PageQuery page) {
-        long total = store.countAll();
-        List<TaskMutexGroupEntity> rows = store.list(page.offset(), page.pageSize());
-        return new PageData<>(total, rows.stream().map(TaskMutexGroupAppService::toResponse).toList());
+        return mutexReads.page(page);
     }
 
     @Transactional
