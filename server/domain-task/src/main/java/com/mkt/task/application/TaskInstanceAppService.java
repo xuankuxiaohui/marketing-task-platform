@@ -1,7 +1,5 @@
 package com.mkt.task.application;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.BusinessException;
@@ -23,7 +21,6 @@ import com.mkt.task.response.InstanceAbandonResponse;
 import com.mkt.task.response.InstanceEventView;
 import com.mkt.task.support.TaskErrorCodes;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,20 +43,7 @@ public class TaskInstanceAppService {
     private final InstanceAbandonOps abandonOps;
     private final InstanceExpireOps expireOps;
     private final Clock clock;
-
-    /**
-     * Architect 2026-10-12: admin-list instances 减压 — COUNT(*) on ~500k rows avg≈493ms
-     * under load (P95 near 800). Caffeine TTL 3s + {@code get(key, loader)} singleflight
-     * coalesces concurrent unfiltered/filter counts. List query stays live (PK DESC LIMIT).
-     * Caps locked (Tomcat120; Redisson≤32; portal 1536M not raised). 禁降Δ门禁.
-     */
-    private static final Duration ADMIN_COUNT_TTL = Duration.ofSeconds(3);
-
-    private final Cache<AdminCountKey, Long> adminCountCache =
-            Caffeine.newBuilder()
-                    .expireAfterWrite(ADMIN_COUNT_TTL)
-                    .maximumSize(1_024)
-                    .build();
+    private final InstancePage instancePage;
 
     @Autowired
     public TaskInstanceAppService(
@@ -69,7 +53,8 @@ public class TaskInstanceAppService {
             InstanceViews views,
             InstanceGuards guards,
             InstanceAbandonOps abandonOps,
-            InstanceExpireOps expireOps) {
+            InstanceExpireOps expireOps,
+            InstancePage instancePage) {
         this(
                 instances,
                 views,
@@ -77,7 +62,8 @@ public class TaskInstanceAppService {
                 guards,
                 abandonOps,
                 expireOps,
-                clock);
+                clock,
+                instancePage);
     }
 
     public TaskInstanceAppService(
@@ -96,7 +82,8 @@ public class TaskInstanceAppService {
                 new InstanceGuards(risk),
                 abandonOps,
                 new InstanceExpireOps(instances, abandonOps, tx),
-                clock);
+                clock,
+                null);
     }
 
     private TaskInstanceAppService(
@@ -106,7 +93,8 @@ public class TaskInstanceAppService {
             InstanceGuards guards,
             InstanceAbandonOps abandonOps,
             InstanceExpireOps expireOps,
-            Clock clock) {
+            Clock clock,
+            InstancePage instancePage) {
         this.instances = instances;
         this.views = views;
         this.events = events;
@@ -114,25 +102,15 @@ public class TaskInstanceAppService {
         this.abandonOps = abandonOps;
         this.expireOps = expireOps;
         this.clock = clock;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.instancePage =
+                instancePage != null
+                        ? instancePage
+                        : new InstancePage(instances, views);
     }
 
     public PageData<AdminInstanceView> page(InstanceQuery query) {
-        LocalDateTime from = TaskTime.toUtc(query.from());
-        LocalDateTime to = TaskTime.toUtc(query.to());
-        String status = blankToNull(query.status());
-        Long taskId = query.taskId();
-        Long userId = query.userId();
-        Integer simulated = query.simulated();
-        AdminCountKey countKey = new AdminCountKey(taskId, userId, status, simulated, from, to);
-        long total = adminCountCache.get(
-                countKey, k -> instances.countAdmin(k.taskId(), k.userId(), k.status(), k.simulated(), k.from(), k.to()));
-        List<TaskInstanceEntity> rows =
-                instances.listAdmin(taskId, userId, status, simulated, from, to, query.page().offset(), query.page().pageSize());
-        List<AdminInstanceView> views = new ArrayList<>(rows.size());
-        for (TaskInstanceEntity row : rows) {
-            views.add(this.views.toView(row));
-        }
-        return new PageData<>(total, views);
+        return instancePage.page(query);
     }
 
     public AdminInstanceDetailResponse get(long id) {
@@ -206,12 +184,4 @@ public class TaskInstanceAppService {
         } while (due.size() == EXPIRE_BATCH);
         return total;
     }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
-
-    /** Cache key for admin instance COUNT; equals/hash via record components. */
-    private record AdminCountKey(
-            Long taskId, Long userId, String status, Integer simulated, LocalDateTime from, LocalDateTime to) {}
 }
