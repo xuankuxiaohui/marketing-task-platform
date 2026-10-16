@@ -5,8 +5,6 @@ import com.mkt.identity.command.DictEntryUpdateCommand;
 import com.mkt.identity.command.DictTypeCreateCommand;
 import com.mkt.identity.command.DictTypeUpdateCommand;
 import com.mkt.identity.convert.DictConvert;
-import com.mkt.identity.domain.DictValues;
-import com.mkt.identity.domain.RoleStatuses;
 import com.mkt.identity.entity.DictEntryEntity;
 import com.mkt.identity.entity.DictTypeEntity;
 import com.mkt.identity.mapper.DictEntryMapper;
@@ -14,7 +12,6 @@ import com.mkt.identity.mapper.DictTypeMapper;
 import com.mkt.identity.response.DictEntriesCache;
 import com.mkt.identity.response.DictEntryOption;
 import com.mkt.identity.response.DictTypeView;
-import com.mkt.identity.support.SystemErrorCodes;
 import com.mkt.infra.cache.CacheNamespace;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.BusinessException;
@@ -28,7 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +36,7 @@ public class DictAppService {
     private final PlatformCache cache;
     private final IdentityAuditAppender audits;
     private final DictTypeSave dictTypeSave;
+    private final DictEntrySave dictEntrySave;
 
     @Autowired
     public DictAppService(
@@ -48,13 +45,17 @@ public class DictAppService {
             PlatformCache cache,
             IdentityAuditAppender audits,
             Clock clock,
-            DictTypeSave dictTypeSave) {
+            DictTypeSave dictTypeSave,
+            DictEntrySave dictEntrySave) {
         this.types = types;
         this.entries = entries;
         this.cache = cache;
         this.audits = audits;
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.dictTypeSave = dictTypeSave != null ? dictTypeSave : new DictTypeSave(types, cache, audits, clock);
+        this.dictEntrySave = dictEntrySave != null
+                ? dictEntrySave
+                : new DictEntrySave(types, entries, cache, audits);
     }
 
     public DictAppService(
@@ -63,7 +64,7 @@ public class DictAppService {
             PlatformCache cache,
             IdentityAuditAppender audits,
             Clock clock) {
-        this(types, entries, cache, audits, clock, null);
+        this(types, entries, cache, audits, clock, null, null);
     }
 
     public PageData<DictTypeView> pageTypes(PageQuery page) {
@@ -116,67 +117,12 @@ public class DictAppService {
 
     @Transactional
     public DictEntryEntity createEntry(DictEntryCreateCommand command) {
-        DictTypeEntity type = requireTypeByCode(command.typeCode());
-        String value = DictValues.normalizeOrNull(command.value());
-        if (value == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "字典项键值格式不正确");
-        }
-        DictEntryEntity entity = new DictEntryEntity();
-        entity.setTypeId(type.getId());
-        entity.setLabel(command.label().trim());
-        entity.setValue(value);
-        entity.setSort(command.sort());
-        entity.setStatus(RoleStatuses.ENABLED);
-        entity.setRemark(blankToNull(command.remark()));
-        try {
-            entries.insert(entity);
-        } catch (DuplicateKeyException ex) {
-            throw new BusinessException(SystemErrorCodes.DICT_ENTRY_DUPLICATE_VALUE, ex);
-        }
-        cache.evictAfterCommit(CacheNamespace.DICT, type.getCode());
-        audits.append(
-                "system",
-                "dict-entry-create",
-                "sys_dict_entry",
-                String.valueOf(entity.getId()),
-                "SUCCESS",
-                summary("create", type.getCode(), null, value));
-        return entity;
+        return dictEntrySave.createEntry(command);
     }
 
     @Transactional
     public void updateEntry(long id, DictEntryUpdateCommand command) {
-        DictEntryEntity existing = entries.selectById(id);
-        if (existing == null) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        if (!RoleStatuses.valid(command.status())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "字典项状态不合法");
-        }
-        String value = DictValues.normalizeOrNull(command.value());
-        if (value == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "字典项键值格式不正确");
-        }
-        DictTypeEntity type = requireType(existing.getTypeId());
-        String old = existing.getValue();
-        existing.setLabel(command.label().trim());
-        existing.setValue(value);
-        existing.setSort(command.sort());
-        existing.setStatus(command.status());
-        existing.setRemark(blankToNull(command.remark()));
-        try {
-            entries.updateById(existing);
-        } catch (DuplicateKeyException ex) {
-            throw new BusinessException(SystemErrorCodes.DICT_ENTRY_DUPLICATE_VALUE, ex);
-        }
-        cache.evictAfterCommit(CacheNamespace.DICT, type.getCode());
-        audits.append(
-                "system",
-                "dict-entry-update",
-                "sys_dict_entry",
-                String.valueOf(id),
-                "SUCCESS",
-                summary("update", type.getCode(), old, value));
+        dictEntrySave.updateEntry(id, command);
     }
 
     @Transactional
@@ -218,25 +164,6 @@ public class DictAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return existing;
-    }
-
-    private DictTypeEntity requireTypeByCode(String raw) {
-        String code = blankToNull(raw);
-        if (code == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "字典类型编码不能为空");
-        }
-        DictTypeEntity type = types.getByCode(code);
-        if (type == null) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        return type;
-    }
-
-    private static String blankToNull(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
     }
 
     private static String summary(String action, String typeCode, String oldValue, String newValue) {
