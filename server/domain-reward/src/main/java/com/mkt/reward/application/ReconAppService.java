@@ -36,13 +36,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ReconAppService {
 
-    private final ReconBatchStore batches;
     private final ReconItemStore items;
     private final GrantRecordStore grants;
-    private final PrizeCategoryStore categories;
     private final FulfillmentService fulfillment;
     private final Clock clock;
-    private final ReconViews views;
     private final ReconActionOps actionOps;
     private final ReconMatch reconMatch;
     private final ReconReads reconReads;
@@ -61,13 +58,10 @@ public class ReconAppService {
             ReconMatch reconMatch,
             ReconReads reconReads,
             ReconBatchWrites reconBatchWrites) {
-        this.batches = batches;
         this.items = items;
         this.grants = grants;
-        this.categories = categories;
         this.fulfillment = fulfillment;
         this.clock = clock;
-        this.views = views;
         this.actionOps = actionOps;
         this.reconMatch = reconMatch;
         // Manual/IT chain passes null. Production passes the injected collaborator.
