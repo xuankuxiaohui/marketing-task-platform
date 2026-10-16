@@ -9,7 +9,6 @@ import com.mkt.task.command.TaskDefinitionSaveCommand;
 import com.mkt.task.convert.TaskDefinitionConvert;
 import com.mkt.task.convert.TaskTime;
 import com.mkt.task.domain.DefinitionStatuses;
-import com.mkt.task.domain.TaskCodes;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.query.TaskDefinitionQuery;
 import com.mkt.task.response.TaskDefinitionAggregateResponse;
@@ -33,6 +32,7 @@ public class TaskDefinitionAppService {
     private final TaskDefinitionPersist persist;
     private final TaskDefinitionRead read;
     private final DefinitionPage definitionPage;
+    private final DefinitionCopy definitionCopy;
 
     @Autowired
     public TaskDefinitionAppService(
@@ -41,7 +41,8 @@ public class TaskDefinitionAppService {
             TaskDefinitionValidate validate,
             TaskDefinitionPersist persist,
             TaskDefinitionRead read,
-            DefinitionPage definitionPage) {
+            DefinitionPage definitionPage,
+            DefinitionCopy definitionCopy) {
         this.definitions = definitions;
         this.clock = clock;
         this.validate = validate;
@@ -52,6 +53,11 @@ public class TaskDefinitionAppService {
                 definitionPage != null
                         ? definitionPage
                         : new DefinitionPage(definitions);
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.definitionCopy =
+                definitionCopy != null
+                        ? definitionCopy
+                        : new DefinitionCopy(read, this);
     }
 
     public TaskDefinitionAppService(
@@ -67,6 +73,7 @@ public class TaskDefinitionAppService {
                 new TaskDefinitionValidate(definitions, mutexGroups, crowds, settings),
                 new TaskDefinitionPersist(definitions, children, clock),
                 new TaskDefinitionRead(definitions, children),
+                null,
                 null);
     }
 
@@ -90,33 +97,7 @@ public class TaskDefinitionAppService {
 
     @Transactional
     public TaskDefinitionSaveResponse copy(long id, TaskCopyCommand command) {
-        if (!TaskCodes.valid(command.code())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 格式非法");
-        }
-        TaskDefinitionEntity source = read.requireLive(id);
-        TaskDefinitionAggregateResponse view = read.toAggregate(source);
-        TaskDefinitionSaveCommand copy = new TaskDefinitionSaveCommand(
-                null,
-                command.code().trim(),
-                command.name().trim(),
-                view.description(),
-                view.category(),
-                view.iconUrl(),
-                view.badgeText(),
-                view.startTime(),
-                view.endTime(),
-                view.sortWeight(),
-                view.cycleType(),
-                view.cronExpr(),
-                view.specialStart(),
-                view.specialEnd(),
-                view.mutexGroupId(),
-                view.gray(),
-                view.filter(),
-                view.steps(),
-                view.transitions(),
-                view.actions());
-        return saveAggregate(copy);
+        return definitionCopy.copy(id, command);
     }
 
     @Transactional
