@@ -3,16 +3,11 @@ package com.mkt.task.application;
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.infra.outbox.EventPublisher;
 import com.mkt.kernel.PageData;
-import com.mkt.task.convert.TaskTime;
-import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.query.InstanceQuery;
 import com.mkt.task.response.AdminInstanceDetailResponse;
 import com.mkt.task.response.AdminInstanceView;
 import com.mkt.task.response.InstanceAbandonResponse;
 import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,14 +17,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class TaskInstanceAppService {
 
-    static final int EXPIRE_BATCH = 100;
-
-    private final TaskInstanceStore instances;
-    private final InstanceExpireOps expireOps;
-    private final Clock clock;
     private final InstancePage instancePage;
     private final InstanceGet instanceGet;
     private final InstanceAbandon instanceAbandon;
+    private final InstanceExpire instanceExpire;
 
     @Autowired
     public TaskInstanceAppService(
@@ -42,7 +33,8 @@ public class TaskInstanceAppService {
             InstanceExpireOps expireOps,
             InstancePage instancePage,
             InstanceGet instanceGet,
-            InstanceAbandon instanceAbandon) {
+            InstanceAbandon instanceAbandon,
+            InstanceExpire instanceExpire) {
         this(
                 instances,
                 views,
@@ -53,7 +45,8 @@ public class TaskInstanceAppService {
                 clock,
                 instancePage,
                 instanceGet,
-                instanceAbandon);
+                instanceAbandon,
+                instanceExpire);
     }
 
     public TaskInstanceAppService(
@@ -75,6 +68,7 @@ public class TaskInstanceAppService {
                 clock,
                 null,
                 null,
+                null,
                 null);
     }
 
@@ -88,10 +82,8 @@ public class TaskInstanceAppService {
             Clock clock,
             InstancePage instancePage,
             InstanceGet instanceGet,
-            InstanceAbandon instanceAbandon) {
-        this.instances = instances;
-        this.expireOps = expireOps;
-        this.clock = clock;
+            InstanceAbandon instanceAbandon,
+            InstanceExpire instanceExpire) {
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.instancePage =
                 instancePage != null
@@ -107,6 +99,11 @@ public class TaskInstanceAppService {
                 instanceAbandon != null
                         ? instanceAbandon
                         : new InstanceAbandon(instances, guards, abandonOps, clock);
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.instanceExpire =
+                instanceExpire != null
+                        ? instanceExpire
+                        : new InstanceExpire(instances, expireOps, clock);
     }
 
     public PageData<AdminInstanceView> page(InstanceQuery query) {
@@ -128,19 +125,6 @@ public class TaskInstanceAppService {
     }
 
     public int expireDue() {
-        Instant now = clock.instant();
-        LocalDateTime nowUtc = TaskTime.toUtc(now);
-        int total = 0;
-        List<TaskInstanceEntity> due;
-        do {
-            due = instances.listDueToExpire(nowUtc, EXPIRE_BATCH);
-            for (TaskInstanceEntity row : due) {
-                boolean flipped = expireOps.runInTx(() -> expireOps.expireOne(row.getId(), now));
-                if (flipped) {
-                    total++;
-                }
-            }
-        } while (due.size() == EXPIRE_BATCH);
-        return total;
+        return instanceExpire.expireDue();
     }
 }
