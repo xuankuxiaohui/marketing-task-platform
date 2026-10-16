@@ -10,20 +10,14 @@ import com.mkt.kernel.PageQuery;
 import com.mkt.task.command.CrowdImportCommand;
 import com.mkt.task.command.CrowdSaveCommand;
 import com.mkt.task.convert.TaskTime;
-import com.mkt.task.domain.CrowdStatuses;
-import com.mkt.task.domain.TaskCodes;
 import com.mkt.task.entity.TaskCrowdEntity;
 import com.mkt.task.response.CrowdImportResponse;
 import com.mkt.task.response.CrowdResponse;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Locale;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,9 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskCrowdAppService {
 
     private final TaskCrowdStore store;
-    private final TaskDefinitionStore definitions;
     private final PlatformCache cache;
-    private final Clock clock;
+    private final CrowdWrites crowdWrites;
     private final CrowdImport crowdImport;
 
     @Autowired
@@ -44,8 +37,17 @@ public class TaskCrowdAppService {
             TaskSettings settings,
             ObjectProvider<PlatformCache> cache,
             Clock clock,
+            CrowdWrites crowdWrites,
             CrowdImport crowdImport) {
-        this(store, definitions, users.getIfAvailable(), settings, cache.getIfAvailable(), clock, crowdImport);
+        this(
+                store,
+                definitions,
+                users.getIfAvailable(),
+                settings,
+                cache.getIfAvailable(),
+                clock,
+                crowdWrites,
+                crowdImport);
     }
 
     public TaskCrowdAppService(
@@ -55,7 +57,7 @@ public class TaskCrowdAppService {
             TaskSettings settings,
             PlatformCache cache,
             Clock clock) {
-        this(store, definitions, users, settings, cache, clock, null);
+        this(store, definitions, users, settings, cache, clock, null, null);
     }
 
     private TaskCrowdAppService(
@@ -65,12 +67,14 @@ public class TaskCrowdAppService {
             TaskSettings settings,
             PlatformCache cache,
             Clock clock,
+            CrowdWrites crowdWrites,
             CrowdImport crowdImport) {
         this.store = store;
-        this.definitions = definitions;
         this.cache = cache;
-        this.clock = clock;
-        // Manual/IT chain passes null. Production passes the injected collaborator.
+        // Manual/IT chain passes null. Production passes the injected collaborators.
+        this.crowdWrites = crowdWrites != null
+                ? crowdWrites
+                : new CrowdWrites(store, definitions, cache, clock);
         this.crowdImport = crowdImport != null
                 ? crowdImport
                 : new CrowdImport(store, users, settings, cache, clock);
@@ -88,67 +92,22 @@ public class TaskCrowdAppService {
 
     @Transactional
     public CrowdResponse create(CrowdSaveCommand command) {
-        CrowdSaveCommand normalized = requireValid(command);
-        if (store.getByCode(normalized.code()) != null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "人群包编码已存在");
-        }
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
-        TaskCrowdEntity entity = new TaskCrowdEntity();
-        entity.setCode(normalized.code());
-        entity.setName(normalized.name());
-        entity.setStatus(normalized.status());
-        entity.setItemCount(0);
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-        try {
-            store.insert(entity);
-        } catch (DuplicateKeyException ex) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "人群包编码已存在", ex);
-        }
-        return toResponse(entity);
+        return crowdWrites.create(command);
     }
 
     @Transactional
     public CrowdResponse update(long id, CrowdSaveCommand command) {
-        TaskCrowdEntity existing = require(id);
-        CrowdSaveCommand normalized = requireValid(command);
-        if (!existing.getCode().equals(normalized.code())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 不可修改");
-        }
-        existing.setName(normalized.name());
-        existing.setStatus(normalized.status());
-        existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        store.update(existing);
-        evictCrowd(id);
-        return toResponse(existing);
+        return crowdWrites.update(id, command);
     }
 
     @Transactional
     public void delete(long id) {
-        require(id);
-        if (definitions.countReferencingCrowd(id) > 0) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "人群包仍被任务引用");
-        }
-        store.deleteById(id);
-        evictCrowd(id);
+        crowdWrites.delete(id);
     }
 
     @Transactional
     public CrowdImportResponse importUsers(long id, CrowdImportCommand command) {
         return crowdImport.importUsers(id, command);
-    }
-
-    private CrowdSaveCommand requireValid(CrowdSaveCommand command) {
-        if (command == null || !TaskCodes.valid(command.code())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "code 格式非法");
-        }
-        String status = command.status() == null || command.status().isBlank()
-                ? CrowdStatuses.ENABLED
-                : command.status().trim().toUpperCase(Locale.ROOT);
-        if (!CrowdStatuses.valid(status)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "status 仅允许 ENABLED|DISABLED");
-        }
-        return new CrowdSaveCommand(command.code().trim(), command.name().trim(), status);
     }
 
     private TaskCrowdEntity require(long id) {
