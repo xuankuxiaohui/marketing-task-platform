@@ -1,20 +1,15 @@
 package com.mkt.task.application;
 
-import com.mkt.kernel.BusinessException;
-import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.task.application.TaskDefinitionValidate.ValidatedAggregate;
 import com.mkt.task.command.TaskCopyCommand;
 import com.mkt.task.command.TaskDefinitionSaveCommand;
-import com.mkt.task.convert.TaskDefinitionConvert;
 import com.mkt.task.convert.TaskTime;
-import com.mkt.task.domain.DefinitionStatuses;
 import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.query.TaskDefinitionQuery;
 import com.mkt.task.response.TaskDefinitionAggregateResponse;
 import com.mkt.task.response.TaskDefinitionSaveResponse;
 import com.mkt.task.response.TaskDefinitionView;
-import com.mkt.task.support.TaskErrorCodes;
 import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -26,13 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TaskDefinitionAppService {
 
-    private final TaskDefinitionStore definitions;
     private final Clock clock;
     private final TaskDefinitionValidate validate;
     private final TaskDefinitionPersist persist;
     private final TaskDefinitionRead read;
     private final DefinitionPage definitionPage;
     private final DefinitionCopy definitionCopy;
+    private final DefinitionWrites definitionWrites;
 
     @Autowired
     public TaskDefinitionAppService(
@@ -42,8 +37,8 @@ public class TaskDefinitionAppService {
             TaskDefinitionPersist persist,
             TaskDefinitionRead read,
             DefinitionPage definitionPage,
-            DefinitionCopy definitionCopy) {
-        this.definitions = definitions;
+            DefinitionCopy definitionCopy,
+            DefinitionWrites definitionWrites) {
         this.clock = clock;
         this.validate = validate;
         this.persist = persist;
@@ -58,6 +53,11 @@ public class TaskDefinitionAppService {
                 definitionCopy != null
                         ? definitionCopy
                         : new DefinitionCopy(read, this);
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.definitionWrites =
+                definitionWrites != null
+                        ? definitionWrites
+                        : new DefinitionWrites(definitions, clock, validate, persist);
     }
 
     public TaskDefinitionAppService(
@@ -73,6 +73,7 @@ public class TaskDefinitionAppService {
                 new TaskDefinitionValidate(definitions, mutexGroups, crowds, settings),
                 new TaskDefinitionPersist(definitions, children, clock),
                 new TaskDefinitionRead(definitions, children),
+                null,
                 null,
                 null);
     }
@@ -102,32 +103,11 @@ public class TaskDefinitionAppService {
 
     @Transactional
     public void restoreEditState(long id, TaskDefinitionSaveCommand command) {
-        ValidatedAggregate validated = validate.validate(command);
-        TaskDefinitionEntity existing = requireLockedLive(id);
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
-        TaskDefinitionConvert.applyHeader(validated.command(), existing);
-        existing.setPendingRevision(0);
-        existing.setUpdatedAt(now);
-        definitions.update(existing);
-        persist.persistChildren(existing.getId(), validated);
+        definitionWrites.restoreEditState(id, command);
     }
 
     @Transactional
     public void delete(long id) {
-        TaskDefinitionEntity existing = requireLockedLive(id);
-        if (!DefinitionStatuses.deletable(existing.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.PUBLISHED_NOT_DELETABLE);
-        }
-        existing.setDeleted(1);
-        existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        definitions.update(existing);
-    }
-
-    private TaskDefinitionEntity requireLockedLive(long id) {
-        TaskDefinitionEntity existing = definitions.getByIdForUpdate(id);
-        if (existing == null || existing.deletedFlag()) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        return existing;
+        definitionWrites.delete(id);
     }
 }
