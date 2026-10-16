@@ -2,18 +2,13 @@ package com.mkt.task.application;
 
 import com.mkt.contract.RiskCheckPort;
 import com.mkt.infra.outbox.EventPublisher;
-import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.PageData;
 import com.mkt.task.convert.TaskTime;
-import com.mkt.task.domain.AbandonSources;
-import com.mkt.task.domain.InstanceStatuses;
-import com.mkt.task.engine.StepEngineExpire;
 import com.mkt.task.entity.TaskInstanceEntity;
 import com.mkt.task.query.InstanceQuery;
 import com.mkt.task.response.AdminInstanceDetailResponse;
 import com.mkt.task.response.AdminInstanceView;
 import com.mkt.task.response.InstanceAbandonResponse;
-import com.mkt.task.support.TaskErrorCodes;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -30,12 +25,11 @@ public class TaskInstanceAppService {
     static final int EXPIRE_BATCH = 100;
 
     private final TaskInstanceStore instances;
-    private final InstanceGuards guards;
-    private final InstanceAbandonOps abandonOps;
     private final InstanceExpireOps expireOps;
     private final Clock clock;
     private final InstancePage instancePage;
     private final InstanceGet instanceGet;
+    private final InstanceAbandon instanceAbandon;
 
     @Autowired
     public TaskInstanceAppService(
@@ -47,7 +41,8 @@ public class TaskInstanceAppService {
             InstanceAbandonOps abandonOps,
             InstanceExpireOps expireOps,
             InstancePage instancePage,
-            InstanceGet instanceGet) {
+            InstanceGet instanceGet,
+            InstanceAbandon instanceAbandon) {
         this(
                 instances,
                 views,
@@ -57,7 +52,8 @@ public class TaskInstanceAppService {
                 expireOps,
                 clock,
                 instancePage,
-                instanceGet);
+                instanceGet,
+                instanceAbandon);
     }
 
     public TaskInstanceAppService(
@@ -78,6 +74,7 @@ public class TaskInstanceAppService {
                 new InstanceExpireOps(instances, abandonOps, tx),
                 clock,
                 null,
+                null,
                 null);
     }
 
@@ -90,10 +87,9 @@ public class TaskInstanceAppService {
             InstanceExpireOps expireOps,
             Clock clock,
             InstancePage instancePage,
-            InstanceGet instanceGet) {
+            InstanceGet instanceGet,
+            InstanceAbandon instanceAbandon) {
         this.instances = instances;
-        this.guards = guards;
-        this.abandonOps = abandonOps;
         this.expireOps = expireOps;
         this.clock = clock;
         // Manual/IT chain passes null. Production passes the injected collaborator.
@@ -106,6 +102,11 @@ public class TaskInstanceAppService {
                 instanceGet != null
                         ? instanceGet
                         : new InstanceGet(instances, views, events);
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.instanceAbandon =
+                instanceAbandon != null
+                        ? instanceAbandon
+                        : new InstanceAbandon(instances, guards, abandonOps, clock);
     }
 
     public PageData<AdminInstanceView> page(InstanceQuery query) {
@@ -118,33 +119,12 @@ public class TaskInstanceAppService {
 
     @Transactional
     public InstanceAbandonResponse abandonAdmin(long id) {
-        TaskInstanceEntity row = instances.getByIdForUpdate(id);
-        if (row == null) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-        }
-        if (!InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
-            return new InstanceAbandonResponse(row.getStatus());
-        }
-        return abandonOps.abandon(row, AbandonSources.ADMIN);
+        return instanceAbandon.abandonAdmin(id);
     }
 
     @Transactional
     public InstanceAbandonResponse abandonUser(long instanceId, long userId, String ip, String deviceId) {
-        TaskInstanceEntity row = instances.getByIdForUpdate(instanceId);
-        if (row == null || row.getUserId() == null || row.getUserId() != userId) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_NOT_FOUND);
-        }
-        guards.rejectIfFrozen(userId);
-        if (StepEngineExpire.expired(row, clock.instant())) {
-            throw new BusinessException(TaskErrorCodes.INSTANCE_EXPIRED);
-        }
-        if (InstanceStatuses.ABANDONED.equals(row.getStatus())) {
-            return new InstanceAbandonResponse(InstanceStatuses.ABANDONED);
-        }
-        if (!InstanceStatuses.IN_PROGRESS.equals(row.getStatus())) {
-            throw new BusinessException(TaskErrorCodes.STEP_STATE_MISMATCH);
-        }
-        return abandonOps.abandon(row, AbandonSources.USER);
+        return instanceAbandon.abandonUser(instanceId, userId, ip, deviceId);
     }
 
     public int expireDue() {
