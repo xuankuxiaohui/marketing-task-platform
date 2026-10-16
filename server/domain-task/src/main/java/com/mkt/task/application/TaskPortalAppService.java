@@ -4,11 +4,6 @@ import com.mkt.contract.RiskCheckPort;
 import com.mkt.contract.UserAttributePort;
 import com.mkt.infra.cache.PlatformCache;
 import com.mkt.kernel.PageData;
-import com.mkt.kernel.json.JsonUtil;
-import com.mkt.task.convert.SnapshotContent;
-import com.mkt.task.entity.TaskInstanceEntity;
-import com.mkt.task.entity.TaskInstanceStepEntity;
-import com.mkt.task.entity.TaskVersionSnapshotEntity;
 import com.mkt.task.response.MineTaskView;
 import com.mkt.task.response.TaskStepSource;
 import com.mkt.task.response.TaskCardView;
@@ -21,14 +16,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class TaskPortalAppService {
 
-    private final TaskVersionSnapshotStore snapshots;
-    private final TaskInstanceStore instances;
     private final TaskPortalPublishedCatalog publishedCatalog;
     private final TaskPortalCardViews cardViews;
     private final TaskPortalDetail detail;
     private final PortalList portalList;
     private final PortalMine portalMine;
     private final PortalDetailEntry portalDetailEntry;
+    private final PortalSourceForStep portalSourceForStep;
 
     @Autowired
     public TaskPortalAppService(
@@ -45,7 +39,8 @@ public class TaskPortalAppService {
             TaskPortalDetail detail,
             PortalList portalList,
             PortalMine portalMine,
-            PortalDetailEntry portalDetailEntry) {
+            PortalDetailEntry portalDetailEntry,
+            PortalSourceForStep portalSourceForStep) {
         this(
                 definitions,
                 snapshots,
@@ -60,7 +55,8 @@ public class TaskPortalAppService {
                 detail,
                 portalList,
                 portalMine,
-                portalDetailEntry);
+                portalDetailEntry,
+                portalSourceForStep);
     }
 
     public TaskPortalAppService(
@@ -71,7 +67,7 @@ public class TaskPortalAppService {
             UserAttributePort users,
             RiskCheckPort risk,
             Clock clock) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null, null, null, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, null, null, null, null, null, null, null, null);
     }
 
     public TaskPortalAppService(
@@ -83,7 +79,7 @@ public class TaskPortalAppService {
             RiskCheckPort risk,
             Clock clock,
             PlatformCache cache) {
-        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null, null, null, null, null);
+        this(definitions, snapshots, instances, crowds, users, risk, clock, cache, null, null, null, null, null, null, null);
     }
 
     TaskPortalAppService(
@@ -100,9 +96,8 @@ public class TaskPortalAppService {
             TaskPortalDetail detail,
             PortalList portalList,
             PortalMine portalMine,
-            PortalDetailEntry portalDetailEntry) {
-        this.snapshots = snapshots;
-        this.instances = instances;
+            PortalDetailEntry portalDetailEntry,
+            PortalSourceForStep portalSourceForStep) {
         this.publishedCatalog =
                 publishedCatalog != null
                         ? publishedCatalog
@@ -128,25 +123,15 @@ public class TaskPortalAppService {
                 portalDetailEntry != null
                         ? portalDetailEntry
                         : new PortalDetailEntry(definitions, instances, users, clock, this.detail);
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.portalSourceForStep =
+                portalSourceForStep != null
+                        ? portalSourceForStep
+                        : new PortalSourceForStep(snapshots, instances);
     }
 
     public TaskStepSource sourceForStep(long stepId) {
-        TaskInstanceStepEntity step = instances.getStepById(stepId);
-        if (step == null || step.getInstanceId() == null) {
-            return null;
-        }
-        TaskInstanceEntity instance = instances.getById(step.getInstanceId());
-        if (instance == null || instance.getTaskId() == null) {
-            return null;
-        }
-        TaskVersionSnapshotEntity snap =
-                instance.getSnapshotId() == null ? null : snapshots.getById(instance.getSnapshotId());
-        SnapshotContent content =
-                snap == null ? null : JsonUtil.fromJson(snap.getContent(), SnapshotContent.class);
-        String name = content == null || content.name() == null || content.name().isBlank()
-                ? instance.getTaskCode()
-                : content.name();
-        return new TaskStepSource(instance.getTaskId(), name);
+        return portalSourceForStep.sourceForStep(stepId);
     }
 
     public PageData<TaskCardView> list(Long userId, String category, Integer page, Integer pageSize) {
