@@ -1,23 +1,16 @@
 package com.mkt.reward.application;
 
-import com.mkt.kernel.BusinessException;
-import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import com.mkt.reward.command.PrizeConfirmCommand;
 import com.mkt.reward.command.PrizeSaveCommand;
 import com.mkt.reward.command.StockReplenishCommand;
-import com.mkt.reward.domain.PrizeStatuses;
-import com.mkt.reward.entity.PrizeEntity;
 import com.mkt.reward.query.PrizeQuery;
 import com.mkt.reward.response.PrizeImpactResponse;
 import com.mkt.reward.response.PrizeResponse;
 import com.mkt.reward.response.StockLogView;
 import com.mkt.reward.response.StockReplenishResponse;
-import com.mkt.reward.support.RewardErrorCodes;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PrizeAppService {
 
-    private final PrizeStore prizes;
-    private final SnapshotPrizeLookup snapshots;
-    private final Clock clock;
     private final PrizeSave prizeSave;
     private final PrizeLifecycle prizeLifecycle;
     private final PrizeStock prizeStock;
     private final PrizeReads prizeReads;
+    private final PrizeDelete prizeDelete;
 
     @Autowired
     public PrizeAppService(
@@ -45,10 +36,8 @@ public class PrizeAppService {
             PrizeSave prizeSave,
             PrizeLifecycle prizeLifecycle,
             PrizeStock prizeStock,
-            PrizeReads prizeReads) {
-        this.prizes = prizes;
-        this.snapshots = snapshots;
-        this.clock = clock;
+            PrizeReads prizeReads,
+            PrizeDelete prizeDelete) {
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.prizeSave = prizeSave != null ? prizeSave : new PrizeSave(prizes, clock, validate, apply, views);
         this.prizeLifecycle = prizeLifecycle != null
@@ -56,6 +45,9 @@ public class PrizeAppService {
                 : new PrizeLifecycle(prizes, snapshots, clock, validate);
         this.prizeStock = prizeStock != null ? prizeStock : new PrizeStock(prizes, stockLogs, clock);
         this.prizeReads = prizeReads != null ? prizeReads : new PrizeReads(prizes, stockLogs, views);
+        this.prizeDelete = prizeDelete != null
+                ? prizeDelete
+                : new PrizeDelete(prizes, snapshots, clock, this.prizeReads);
     }
 
     public PrizeAppService(
@@ -72,6 +64,7 @@ public class PrizeAppService {
                 new PrizeValidate(categories),
                 new PrizeApply(),
                 new PrizeViews(),
+                null,
                 null,
                 null,
                 null,
@@ -98,16 +91,7 @@ public class PrizeAppService {
 
     @Transactional
     public void delete(long id) {
-        PrizeEntity existing = require(id);
-        if (!PrizeStatuses.DRAFT.equals(existing.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅草稿态可删除");
-        }
-        if (snapshots.referencedByAnySnapshot(id)) {
-            throw new BusinessException(RewardErrorCodes.PRIZE_REFERENCED_BY_SNAPSHOT);
-        }
-        existing.setDeleted(1);
-        existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        prizes.update(existing);
+        prizeDelete.delete(id);
     }
 
     @Transactional
@@ -127,9 +111,5 @@ public class PrizeAppService {
 
     public PageData<StockLogView> stockLogs(long id, PageQuery page) {
         return prizeReads.stockLogs(id, page);
-    }
-
-    private PrizeEntity require(long id) {
-        return prizeReads.require(id);
     }
 }
