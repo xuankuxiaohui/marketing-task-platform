@@ -4,7 +4,6 @@ import com.mkt.activity.command.ActivityPublishCommand;
 import com.mkt.activity.command.ActivitySaveCommand;
 import com.mkt.activity.command.ActivityScheduleCommand;
 import com.mkt.activity.domain.ActivityDates;
-import com.mkt.activity.domain.ActivityStatuses;
 import com.mkt.activity.entity.ActActivityEntity;
 import com.mkt.activity.query.ActivityQuery;
 import com.mkt.activity.query.ParticipationQuery;
@@ -14,10 +13,8 @@ import com.mkt.activity.response.ActivityView;
 import com.mkt.activity.response.OkResponse;
 import com.mkt.activity.response.ParticipationStatsView;
 import com.mkt.activity.response.ParticipationView;
-import com.mkt.activity.support.ActivityErrorCodes;
 import com.mkt.activity.support.ActivitySettings;
 import com.mkt.contract.RewardPort;
-import com.mkt.kernel.BusinessException;
 import com.mkt.kernel.PageData;
 import java.time.Clock;
 import java.util.List;
@@ -30,10 +27,10 @@ public class ActivityAdminAppService {
 
     private final ActivityActivityStore activities;
     private final Clock clock;
-    private final ActivityAdminPersist persist;
     private final ActivityAdminSave activityAdminSave;
     private final ActivityAdminLifecycle activityAdminLifecycle;
     private final ActivityAdminReads activityAdminReads;
+    private final ActivityAdminDelete activityAdminDelete;
 
     @Autowired
     public ActivityAdminAppService(
@@ -47,10 +44,10 @@ public class ActivityAdminAppService {
             ActivityAdminPersist persist,
             ActivityAdminSave activityAdminSave,
             ActivityAdminLifecycle activityAdminLifecycle,
-            ActivityAdminReads activityAdminReads) {
+            ActivityAdminReads activityAdminReads,
+            ActivityAdminDelete activityAdminDelete) {
         this.activities = activities;
         this.clock = clock;
-        this.persist = persist;
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.activityAdminSave = activityAdminSave != null
                 ? activityAdminSave
@@ -61,6 +58,9 @@ public class ActivityAdminAppService {
         this.activityAdminReads = activityAdminReads != null
                 ? activityAdminReads
                 : new ActivityAdminReads(activities, participations, views, persist);
+        this.activityAdminDelete = activityAdminDelete != null
+                ? activityAdminDelete
+                : new ActivityAdminDelete(activities, persist, clock);
     }
 
     public ActivityAdminAppService(
@@ -85,6 +85,7 @@ public class ActivityAdminAppService {
                         clock),
                 null,
                 null,
+                null,
                 null);
     }
 
@@ -103,14 +104,7 @@ public class ActivityAdminAppService {
 
     @Transactional
     public OkResponse delete(long id) {
-        ActActivityEntity entity = persist.requireLive(id);
-        if (!ActivityStatuses.deletable(entity.getStatus())) {
-            throw new BusinessException(ActivityErrorCodes.PUBLISHED_NOT_DELETABLE);
-        }
-        entity.setDeleted(1);
-        entity.setUpdatedAt(ActivityDates.toUtc(clock.instant()));
-        activities.update(entity);
-        return OkResponse.yes();
+        return activityAdminDelete.delete(id);
     }
 
     @Transactional
