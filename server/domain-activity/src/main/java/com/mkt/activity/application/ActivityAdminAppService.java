@@ -19,11 +19,9 @@ import com.mkt.activity.support.ActivityErrorCodes;
 import com.mkt.activity.support.ActivitySettings;
 import com.mkt.contract.RewardPort;
 import com.mkt.kernel.BusinessException;
-import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,9 +34,9 @@ public class ActivityAdminAppService {
     private final ActivityParticipationStore participations;
     private final Clock clock;
     private final ActivityAdminViews views;
-    private final ActivityAdminDraft drafts;
     private final ActivityAdminPersist persist;
     private final ActivityAdminSave activityAdminSave;
+    private final ActivityAdminLifecycle activityAdminLifecycle;
 
     @Autowired
     public ActivityAdminAppService(
@@ -50,17 +48,20 @@ public class ActivityAdminAppService {
             ActivityAdminViews views,
             ActivityAdminDraft drafts,
             ActivityAdminPersist persist,
-            ActivityAdminSave activityAdminSave) {
+            ActivityAdminSave activityAdminSave,
+            ActivityAdminLifecycle activityAdminLifecycle) {
         this.activities = activities;
         this.participations = participations;
         this.clock = clock;
         this.views = views;
-        this.drafts = drafts;
         this.persist = persist;
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.activityAdminSave = activityAdminSave != null
                 ? activityAdminSave
                 : new ActivityAdminSave(normalize, rewards, clock, persist);
+        this.activityAdminLifecycle = activityAdminLifecycle != null
+                ? activityAdminLifecycle
+                : new ActivityAdminLifecycle(activities, persist, drafts, clock);
     }
 
     public ActivityAdminAppService(
@@ -83,6 +84,7 @@ public class ActivityAdminAppService {
                         new ActivityAdminNormalize(settings),
                         rewards,
                         clock),
+                null,
                 null);
     }
 
@@ -120,75 +122,17 @@ public class ActivityAdminAppService {
 
     @Transactional
     public ActivityPublishResponse publish(long id, ActivityPublishCommand command) {
-        ActivityPublishCommand cmd = command == null ? new ActivityPublishCommand(null, null) : command;
-        ActActivityEntity entity = activities.getByIdForUpdate(id);
-        if (entity == null || entity.deletedFlag()) {
-            throw new BusinessException(ActivityErrorCodes.NOT_FOUND);
-        }
-        if (entity.pendingFlag() && !cmd.confirmTrue()) {
-            return ActivityPublishResponse.preview(
-                    entity.getId(), entity.getCode(), entity.versionOrZero(), entity.getStatus());
-        }
-        String status = entity.getStatus();
-        if (ActivityStatuses.DRAFT.equals(status)
-                || ActivityStatuses.SCHEDULED.equals(status)
-                || (ActivityStatuses.PUBLISHED.equals(status) && entity.pendingFlag())) {
-            persist.freezeToPublished(entity);
-        } else {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "当前状态不可发布");
-        }
-        ActActivityEntity fresh = persist.requireLive(id);
-        return ActivityPublishResponse.done(
-                fresh.getId(), fresh.getCode(), fresh.versionOrZero(), fresh.getStatus());
+        return activityAdminLifecycle.publish(id, command);
     }
 
     @Transactional
     public ActivityPublishResponse schedule(long id, ActivityScheduleCommand command) {
-        ActActivityEntity entity = persist.requireLive(id);
-        LocalDateTime now = ActivityDates.toUtc(clock.instant());
-        if (command.publishAt() != null) {
-            if (!ActivityStatuses.DRAFT.equals(entity.getStatus())) {
-                throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅草稿可设定时发布");
-            }
-            LocalDateTime publishAt = ActivityDates.toUtc(command.publishAt());
-            if (!publishAt.isAfter(now)) {
-                throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "定时发布时间必须晚于当前时间");
-            }
-            drafts.validateDraft(entity);
-            entity.setSchedulePublishAt(publishAt);
-            entity.setStatus(ActivityStatuses.SCHEDULED);
-            entity.setPendingRevision(0);
-        }
-        if (command.offlineAt() != null) {
-            if (!ActivityStatuses.PUBLISHED.equals(entity.getStatus())
-                    && !ActivityStatuses.SCHEDULED.equals(entity.getStatus())) {
-                throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅已排期或已发布可设定时下线");
-            }
-            LocalDateTime offlineAt = ActivityDates.toUtc(command.offlineAt());
-            if (!offlineAt.isAfter(now)) {
-                throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "定时下线时间必须晚于当前时间");
-            }
-            entity.setScheduleOfflineAt(offlineAt);
-        }
-        if (command.publishAt() == null && command.offlineAt() == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "须指定定时发布或下线时间");
-        }
-        entity.setUpdatedAt(now);
-        activities.update(entity);
-        return ActivityPublishResponse.done(entity.getId(), entity.getCode(), entity.versionOrZero(), entity.getStatus());
+        return activityAdminLifecycle.schedule(id, command);
     }
 
     @Transactional
     public ActivityPublishResponse offline(long id) {
-        ActActivityEntity entity = persist.requireLive(id);
-        if (!ActivityStatuses.PUBLISHED.equals(entity.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅已发布活动可下线");
-        }
-        entity.setStatus(ActivityStatuses.OFFLINE);
-        entity.setScheduleOfflineAt(null);
-        entity.setUpdatedAt(ActivityDates.toUtc(clock.instant()));
-        activities.update(entity);
-        return ActivityPublishResponse.done(entity.getId(), entity.getCode(), entity.versionOrZero(), entity.getStatus());
+        return activityAdminLifecycle.offline(id);
     }
 
     public int publishDue(int limit) {
