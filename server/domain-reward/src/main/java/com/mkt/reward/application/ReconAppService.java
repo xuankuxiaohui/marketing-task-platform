@@ -29,9 +29,7 @@ import com.mkt.reward.support.RewardRuntimeSettings;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -52,6 +50,7 @@ public class ReconAppService {
     private final ReconViews views;
     private final ReconActionOps actionOps;
     private final ReconMatch reconMatch;
+    private final ReconReads reconReads;
 
     @Autowired
     public ReconAppService(
@@ -63,7 +62,8 @@ public class ReconAppService {
             Clock clock,
             ReconViews views,
             ReconActionOps actionOps,
-            ReconMatch reconMatch) {
+            ReconMatch reconMatch,
+            ReconReads reconReads) {
         this.batches = batches;
         this.items = items;
         this.grants = grants;
@@ -73,6 +73,8 @@ public class ReconAppService {
         this.views = views;
         this.actionOps = actionOps;
         this.reconMatch = reconMatch;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.reconReads = reconReads != null ? reconReads : new ReconReads(batches, items, views);
     }
 
     public ReconAppService(
@@ -100,17 +102,12 @@ public class ReconAppService {
                         grants,
                         fulfillment,
                         clock,
-                        new ReconMatchSupport(items, grants, prizes, categories, settings, clock)));
+                        new ReconMatchSupport(items, grants, prizes, categories, settings, clock)),
+                null);
     }
 
     public PageData<ReconBatchResponse> page(String categoryCode, LocalDate billDate, String status, PageQuery page) {
-        PageQuery pager = page == null ? PageQuery.of(null, null) : page;
-        long total = batches.count(categoryCode, billDate, status);
-        List<ReconBatchResponse> views = new ArrayList<>();
-        for (ReconBatchEntity row : batches.list(categoryCode, billDate, status, pager.offset(), pager.pageSize())) {
-            views.add(this.views.toBatch(row));
-        }
-        return new PageData<>(total, views);
+        return reconReads.page(categoryCode, billDate, status, page);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -179,14 +176,7 @@ public class ReconAppService {
     }
 
     public PageData<ReconItemView> items(long batchId, String result, String reviewStatus, PageQuery page) {
-        requireBatch(batchId);
-        PageQuery pager = page == null ? PageQuery.of(null, null) : page;
-        long total = items.count(batchId, result, reviewStatus);
-        List<ReconItemView> views = new ArrayList<>();
-        for (ReconItemEntity row : items.list(batchId, result, reviewStatus, pager.offset(), pager.pageSize())) {
-            views.add(this.views.toItem(row));
-        }
-        return new PageData<>(total, views);
+        return reconReads.items(batchId, result, reviewStatus, page);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
