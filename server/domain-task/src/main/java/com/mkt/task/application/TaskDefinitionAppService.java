@@ -47,7 +47,11 @@ public class TaskDefinitionAppService {
         this.validate = validate;
         this.persist = persist;
         this.read = read;
-        this.definitionPage = definitionPage;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.definitionPage =
+                definitionPage != null
+                        ? definitionPage
+                        : new DefinitionPage(definitions);
     }
 
     public TaskDefinitionAppService(
@@ -63,7 +67,7 @@ public class TaskDefinitionAppService {
                 new TaskDefinitionValidate(definitions, mutexGroups, crowds, settings),
                 new TaskDefinitionPersist(definitions, children, clock),
                 new TaskDefinitionRead(definitions, children),
-                new DefinitionPage(definitions));
+                null);
     }
 
     public TaskDefinitionAggregateResponse get(long id) {
