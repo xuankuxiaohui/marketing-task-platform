@@ -1,12 +1,8 @@
 package com.mkt.activity.application;
 
-import com.mkt.activity.command.ActivityGrayCommand;
 import com.mkt.activity.command.ActivityPublishCommand;
 import com.mkt.activity.command.ActivitySaveCommand;
 import com.mkt.activity.command.ActivityScheduleCommand;
-import com.mkt.activity.command.ActivitySubmoduleCommand;
-import com.mkt.activity.convert.ActivityDraftContent;
-import com.mkt.activity.domain.ActivityCodes;
 import com.mkt.activity.domain.ActivityDates;
 import com.mkt.activity.domain.ActivityStatuses;
 import com.mkt.activity.entity.ActActivityEntity;
@@ -38,12 +34,11 @@ public class ActivityAdminAppService {
 
     private final ActivityActivityStore activities;
     private final ActivityParticipationStore participations;
-    private final RewardPort rewards;
     private final Clock clock;
-    private final ActivityAdminNormalize normalize;
     private final ActivityAdminViews views;
     private final ActivityAdminDraft drafts;
     private final ActivityAdminPersist persist;
+    private final ActivityAdminSave activityAdminSave;
 
     @Autowired
     public ActivityAdminAppService(
@@ -54,15 +49,18 @@ public class ActivityAdminAppService {
             ActivityAdminNormalize normalize,
             ActivityAdminViews views,
             ActivityAdminDraft drafts,
-            ActivityAdminPersist persist) {
+            ActivityAdminPersist persist,
+            ActivityAdminSave activityAdminSave) {
         this.activities = activities;
         this.participations = participations;
-        this.rewards = rewards;
         this.clock = clock;
-        this.normalize = normalize;
         this.views = views;
         this.drafts = drafts;
         this.persist = persist;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.activityAdminSave = activityAdminSave != null
+                ? activityAdminSave
+                : new ActivityAdminSave(normalize, rewards, clock, persist);
     }
 
     public ActivityAdminAppService(
@@ -84,7 +82,8 @@ public class ActivityAdminAppService {
                         new ActivityAdminDraft(new ActivityAdminNormalize(settings), rewards),
                         new ActivityAdminNormalize(settings),
                         rewards,
-                        clock));
+                        clock),
+                null);
     }
 
     public PageData<ActivityView> page(ActivityQuery query) {
@@ -104,43 +103,7 @@ public class ActivityAdminAppService {
 
     @Transactional
     public ActivitySaveResponse save(ActivitySaveCommand command) {
-        String html = normalize.sanitizeHtml(command.richText());
-        ActivityGrayCommand gray = normalize.normalizeGray(command.gray());
-        List<ActivitySubmoduleCommand> submodules = normalize.normalizeSubmodules(command.submodules());
-        if (!ActivityCodes.valid(command.code())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "活动编码格式不正确");
-        }
-        if (!command.startTime().isBefore(command.endTime())) {
-            throw new BusinessException(ActivityErrorCodes.TIME_WINDOW_INVALID);
-        }
-        int newUserDays = normalize.normalizeNewUserDays(command.newUserDays());
-        ActivityAdminNormalize.validateLimits(
-                command.userDailyLimit(), command.userTotalLimit(), command.globalDailyLimit());
-        if (command.participationPrizeId() != null && !rewards.prizeEnabled(command.participationPrizeId())) {
-            throw new BusinessException(ActivityErrorCodes.PRIZE_INVALID);
-        }
-        LocalDateTime now = ActivityDates.toUtc(clock.instant());
-        ActivityDraftContent draft = new ActivityDraftContent(
-                command.name(),
-                command.startTime(),
-                command.endTime(),
-                html,
-                gray,
-                submodules,
-                command.participationPrizeId(),
-                command.allowUserIds() == null ? List.of() : List.copyOf(command.allowUserIds()),
-                command.allowCrowdCodes() == null ? List.of() : List.copyOf(command.allowCrowdCodes()),
-                Boolean.TRUE.equals(command.newUserOnly()),
-                newUserDays,
-                command.userDailyLimit(),
-                command.userTotalLimit(),
-                command.globalDailyLimit(),
-                command.regions() == null ? List.of() : List.copyOf(command.regions()),
-                null);
-        if (command.id() == null) {
-            return persist.insertNew(command, draft, now);
-        }
-        return persist.updateExisting(command, draft, now);
+        return activityAdminSave.save(command);
     }
 
     @Transactional
