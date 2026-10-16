@@ -20,7 +20,6 @@ import com.mkt.task.support.TaskSettings;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +32,7 @@ public class TaskDefinitionAppService {
     private final TaskDefinitionValidate validate;
     private final TaskDefinitionPersist persist;
     private final TaskDefinitionRead read;
+    private final DefinitionPage definitionPage;
 
     @Autowired
     public TaskDefinitionAppService(
@@ -40,12 +40,18 @@ public class TaskDefinitionAppService {
             Clock clock,
             TaskDefinitionValidate validate,
             TaskDefinitionPersist persist,
-            TaskDefinitionRead read) {
+            TaskDefinitionRead read,
+            DefinitionPage definitionPage) {
         this.definitions = definitions;
         this.clock = clock;
         this.validate = validate;
         this.persist = persist;
         this.read = read;
+        // Manual/IT chain passes null. Production passes the injected collaborator.
+        this.definitionPage =
+                definitionPage != null
+                        ? definitionPage
+                        : new DefinitionPage(definitions);
     }
 
     public TaskDefinitionAppService(
@@ -60,7 +66,8 @@ public class TaskDefinitionAppService {
                 clock,
                 new TaskDefinitionValidate(definitions, mutexGroups, crowds, settings),
                 new TaskDefinitionPersist(definitions, children, clock),
-                new TaskDefinitionRead(definitions, children));
+                new TaskDefinitionRead(definitions, children),
+                null);
     }
 
     public TaskDefinitionAggregateResponse get(long id) {
@@ -69,17 +76,7 @@ public class TaskDefinitionAppService {
     }
 
     public PageData<TaskDefinitionView> page(TaskDefinitionQuery query) {
-        String code = blankToNull(query.code());
-        String name = blankToNull(query.name());
-        String status = blankToNull(query.status());
-        String category = blankToNull(query.category());
-        if (status != null && !DefinitionStatuses.valid(status)) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "status 非法");
-        }
-        long total = definitions.countByQuery(code, name, status, category);
-        List<TaskDefinitionEntity> rows = definitions.listByQuery(
-                code, name, status, category, query.page().offset(), query.page().pageSize());
-        return new PageData<>(total, rows.stream().map(TaskDefinitionConvert::toView).toList());
+        return definitionPage.page(query);
     }
 
     @Transactional
@@ -151,9 +148,5 @@ public class TaskDefinitionAppService {
             throw new BusinessException(CommonErrorCodes.NOT_FOUND);
         }
         return existing;
-    }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
     }
 }
