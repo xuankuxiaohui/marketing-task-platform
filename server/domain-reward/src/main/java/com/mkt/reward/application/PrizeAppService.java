@@ -33,9 +33,9 @@ public class PrizeAppService {
     private final StockLogStore stockLogs;
     private final SnapshotPrizeLookup snapshots;
     private final Clock clock;
-    private final PrizeValidate validate;
     private final PrizeViews views;
     private final PrizeSave prizeSave;
+    private final PrizeLifecycle prizeLifecycle;
 
     @Autowired
     public PrizeAppService(
@@ -46,15 +46,18 @@ public class PrizeAppService {
             PrizeValidate validate,
             PrizeApply apply,
             PrizeViews views,
-            PrizeSave prizeSave) {
+            PrizeSave prizeSave,
+            PrizeLifecycle prizeLifecycle) {
         this.prizes = prizes;
         this.stockLogs = stockLogs;
         this.snapshots = snapshots;
         this.clock = clock;
-        this.validate = validate;
         this.views = views;
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.prizeSave = prizeSave != null ? prizeSave : new PrizeSave(prizes, clock, validate, apply, views);
+        this.prizeLifecycle = prizeLifecycle != null
+                ? prizeLifecycle
+                : new PrizeLifecycle(prizes, snapshots, clock, validate);
     }
 
     public PrizeAppService(
@@ -71,6 +74,7 @@ public class PrizeAppService {
                 new PrizeValidate(categories),
                 new PrizeApply(),
                 new PrizeViews(),
+                null,
                 null);
     }
 
@@ -118,47 +122,12 @@ public class PrizeAppService {
 
     @Transactional
     public PrizeImpactResponse disable(long id, PrizeConfirmCommand command) {
-        PrizeEntity existing = require(id);
-        if (!PrizeStatuses.ENABLED.equals(existing.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "仅启用态可停用");
-        }
-        int affected = snapshots.affectedPublishedTaskCount(id);
-        int inFlight = snapshots.inFlightInstanceCount(id);
-        if (!Boolean.TRUE.equals(command.confirm())) {
-            return new PrizeImpactResponse(false, affected, inFlight);
-        }
-        existing.setStatus(PrizeStatuses.DISABLED);
-        existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        prizes.update(existing);
-        return new PrizeImpactResponse(true, affected, inFlight);
+        return prizeLifecycle.disable(id, command);
     }
 
     @Transactional
     public PrizeImpactResponse enable(long id, PrizeConfirmCommand command) {
-        PrizeEntity existing = require(id);
-        if (PrizeStatuses.ENABLED.equals(existing.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "奖品已启用");
-        }
-        if (PrizeStatuses.DRAFT.equals(existing.getStatus())) {
-            validate.requireEnabledCategory(existing.getCategoryCode());
-            existing.setStatus(PrizeStatuses.ENABLED);
-            existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-            prizes.update(existing);
-            return new PrizeImpactResponse(true, 0, 0);
-        }
-        if (!PrizeStatuses.DISABLED.equals(existing.getStatus())) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "状态流转非法");
-        }
-        validate.requireEnabledCategory(existing.getCategoryCode());
-        int affected = snapshots.affectedPublishedTaskCount(id);
-        int inFlight = snapshots.inFlightInstanceCount(id);
-        if (!Boolean.TRUE.equals(command.confirm())) {
-            return new PrizeImpactResponse(false, affected, inFlight);
-        }
-        existing.setStatus(PrizeStatuses.ENABLED);
-        existing.setUpdatedAt(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
-        prizes.update(existing);
-        return new PrizeImpactResponse(true, affected, inFlight);
+        return prizeLifecycle.enable(id, command);
     }
 
     @Transactional
