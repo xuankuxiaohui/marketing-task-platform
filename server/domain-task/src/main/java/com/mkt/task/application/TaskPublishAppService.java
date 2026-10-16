@@ -1,13 +1,10 @@
 package com.mkt.task.application;
 
 import com.mkt.infra.cache.PlatformCache;
-import com.mkt.kernel.BusinessException;
-import com.mkt.kernel.CommonErrorCodes;
 import com.mkt.kernel.PageData;
 import com.mkt.kernel.PageQuery;
 import com.mkt.task.command.PublishCommand;
 import com.mkt.task.command.ScheduleCommand;
-import com.mkt.task.entity.TaskDefinitionEntity;
 import com.mkt.task.response.BatchItemResponse;
 import com.mkt.task.response.PublishResponse;
 import com.mkt.task.response.ScheduleFailureView;
@@ -32,7 +29,6 @@ public class TaskPublishAppService {
     private final TaskDefinitionAppService definitionsApp;
     private final PrizeEnabledLookup prizes;
     private final TaskPublishChecks publishChecks;
-    private final TaskPublishVersionDiff versionDiff;
     private final TaskPublishFreeze publishFreeze;
     private final TaskPublishScheduleFailures scheduleFailures;
     private final PublishScanDue publishScanDue;
@@ -41,6 +37,7 @@ public class TaskPublishAppService {
     private final PublishResetRevision publishResetRevision;
     private final PublishOffline publishOffline;
     private final PublishBatch publishBatch;
+    private final PublishVersionReads publishVersionReads;
 
     @Autowired
     public TaskPublishAppService(
@@ -50,7 +47,6 @@ public class TaskPublishAppService {
             TaskDefinitionAppService definitionsApp,
             PrizeEnabledLookup prizes,
             TaskPublishChecks publishChecks,
-            TaskPublishVersionDiff versionDiff,
             TaskPublishFreeze publishFreeze,
             TaskPublishScheduleFailures scheduleFailures,
             PublishScanDue publishScanDue,
@@ -58,14 +54,14 @@ public class TaskPublishAppService {
             PublishSchedule publishSchedule,
             PublishResetRevision publishResetRevision,
             PublishOffline publishOffline,
-            PublishBatch publishBatch) {
+            PublishBatch publishBatch,
+            PublishVersionReads publishVersionReads) {
         this.definitions = definitions;
         this.mutexGroups = mutexGroups;
         this.snapshots = snapshots;
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
         this.publishChecks = publishChecks;
-        this.versionDiff = versionDiff;
         this.publishFreeze = publishFreeze;
         this.scheduleFailures = scheduleFailures;
         this.publishScanDue = publishScanDue;
@@ -74,6 +70,7 @@ public class TaskPublishAppService {
         this.publishResetRevision = publishResetRevision;
         this.publishOffline = publishOffline;
         this.publishBatch = publishBatch;
+        this.publishVersionReads = publishVersionReads;
     }
 
     public TaskPublishAppService(
@@ -96,7 +93,6 @@ public class TaskPublishAppService {
         this.definitionsApp = definitionsApp;
         this.prizes = prizes;
         this.publishChecks = new TaskPublishChecks(definitions, definitionsApp, prizes);
-        this.versionDiff = new TaskPublishVersionDiff(snapshots);
         this.publishFreeze = new TaskPublishFreeze(
                 definitions, mutexGroups, snapshots, definitionsApp, clock, cache);
         this.scheduleFailures = new TaskPublishScheduleFailures(audits, alerts, jdbc, tx);
@@ -108,6 +104,7 @@ public class TaskPublishAppService {
         this.publishResetRevision = new PublishResetRevision(definitions, mutexGroups, snapshots, definitionsApp);
         this.publishOffline = new PublishOffline(definitions, offlineExpiry, this.publishFreeze, clock);
         this.publishBatch = new PublishBatch(this.publishExecute, this.publishOffline, tx);
+        this.publishVersionReads = new PublishVersionReads(definitions, new TaskPublishVersionDiff(snapshots));
     }
 
     @Transactional
@@ -144,16 +141,11 @@ public class TaskPublishAppService {
     }
 
     public List<TaskVersionView> versions(long id) {
-        requireLive(id);
-        return versionDiff.listVersions(id);
+        return publishVersionReads.versions(id);
     }
 
     public VersionDiffResponse diff(long id, Integer left, Integer right) {
-        requireLive(id);
-        if (left == null || right == null) {
-            throw new BusinessException(CommonErrorCodes.PARAM_INVALID, "left 与 right 必填");
-        }
-        return versionDiff.diff(id, left, right);
+        return publishVersionReads.diff(id, left, right);
     }
 
     public PageData<ScheduleFailureView> scheduleFailures(PageQuery page) {
@@ -167,13 +159,5 @@ public class TaskPublishAppService {
     @Transactional
     public boolean publishDue(long id) {
         return publishScanDue.publishDue(id);
-    }
-
-    private TaskDefinitionEntity requireLive(long id) {
-        TaskDefinitionEntity existing = definitions.getById(id);
-        if (existing == null || existing.deletedFlag()) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        return existing;
     }
 }
