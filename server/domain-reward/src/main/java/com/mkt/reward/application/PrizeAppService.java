@@ -9,7 +9,6 @@ import com.mkt.reward.command.PrizeSaveCommand;
 import com.mkt.reward.command.StockReplenishCommand;
 import com.mkt.reward.domain.PrizeStatuses;
 import com.mkt.reward.entity.PrizeEntity;
-import com.mkt.reward.entity.StockLogEntity;
 import com.mkt.reward.query.PrizeQuery;
 import com.mkt.reward.response.PrizeImpactResponse;
 import com.mkt.reward.response.PrizeResponse;
@@ -19,7 +18,6 @@ import com.mkt.reward.support.RewardErrorCodes;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,13 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class PrizeAppService {
 
     private final PrizeStore prizes;
-    private final StockLogStore stockLogs;
     private final SnapshotPrizeLookup snapshots;
     private final Clock clock;
-    private final PrizeViews views;
     private final PrizeSave prizeSave;
     private final PrizeLifecycle prizeLifecycle;
     private final PrizeStock prizeStock;
+    private final PrizeReads prizeReads;
 
     @Autowired
     public PrizeAppService(
@@ -47,18 +44,18 @@ public class PrizeAppService {
             PrizeViews views,
             PrizeSave prizeSave,
             PrizeLifecycle prizeLifecycle,
-            PrizeStock prizeStock) {
+            PrizeStock prizeStock,
+            PrizeReads prizeReads) {
         this.prizes = prizes;
-        this.stockLogs = stockLogs;
         this.snapshots = snapshots;
         this.clock = clock;
-        this.views = views;
         // Manual/IT chain passes null. Production passes the injected collaborator.
         this.prizeSave = prizeSave != null ? prizeSave : new PrizeSave(prizes, clock, validate, apply, views);
         this.prizeLifecycle = prizeLifecycle != null
                 ? prizeLifecycle
                 : new PrizeLifecycle(prizes, snapshots, clock, validate);
         this.prizeStock = prizeStock != null ? prizeStock : new PrizeStock(prizes, stockLogs, clock);
+        this.prizeReads = prizeReads != null ? prizeReads : new PrizeReads(prizes, stockLogs, views);
     }
 
     public PrizeAppService(
@@ -77,25 +74,16 @@ public class PrizeAppService {
                 new PrizeViews(),
                 null,
                 null,
+                null,
                 null);
     }
 
     public PrizeResponse get(long id) {
-        return views.toResponse(require(id));
+        return prizeReads.get(id);
     }
 
     public PageData<PrizeResponse> page(PrizeQuery query) {
-        PageQuery page = query.page() == null ? PageQuery.of(null, null) : query.page();
-        long total = prizes.count(query.code(), query.name(), query.categoryCode(), query.status(), query.groupId());
-        List<PrizeEntity> rows = prizes.list(
-                query.code(),
-                query.name(),
-                query.categoryCode(),
-                query.status(),
-                query.groupId(),
-                page.offset(),
-                page.pageSize());
-        return new PageData<>(total, rows.stream().map(views::toResponse).toList());
+        return prizeReads.page(query);
     }
 
     @Transactional
@@ -138,17 +126,10 @@ public class PrizeAppService {
     }
 
     public PageData<StockLogView> stockLogs(long id, PageQuery page) {
-        require(id);
-        long total = stockLogs.countByPrize(id);
-        List<StockLogEntity> rows = stockLogs.listByPrize(id, page.offset(), page.pageSize());
-        return new PageData<>(total, rows.stream().map(views::toLogView).toList());
+        return prizeReads.stockLogs(id, page);
     }
 
     private PrizeEntity require(long id) {
-        PrizeEntity existing = prizes.getById(id);
-        if (existing == null) {
-            throw new BusinessException(CommonErrorCodes.NOT_FOUND);
-        }
-        return existing;
+        return prizeReads.require(id);
     }
 }
